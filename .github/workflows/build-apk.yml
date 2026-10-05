@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack retro_cam.zip
+      - name: Unpack darkroom.zip
         run: |
           unzip -q "$(ls *.zip | head -1)" -d unpacked
           echo "APP=$(dirname $(find unpacked -name pubspec.yaml | awk '{print length, $0}' | sort -n | head -1 | cut -d' ' -f2))" >> "$GITHUB_ENV"

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../../features/cameras/domain/camera_spec.dart';
+import 'cine_strip.dart';
 import 'crop_math.dart';
 import 'film/film_profile.dart';
 import 'look_spec.dart';
@@ -202,8 +203,10 @@ class VideoFilters {
   }
 
   /// Super 8. Inputs: [0:v] camera clip, [1:v] looping dust/hair PNG
-  /// sequence, [2:v] projector gate mask PNG. [cubePath] is the stock's LUT
-  /// with sRGB input (same film model as the preview and the stills).
+  /// sequence, [2:v] the film strip around the frame (CineStrip, canvas
+  /// [canvasW]x[canvasH]). [cubePath] is the stock's LUT with sRGB input
+  /// (same film model as the preview and the stills). The picture is
+  /// [outW]x[outH]; the reel is the full-gate scan around it.
   static String filmGraph({
     required FilmProfile film,
     required GrainStrength grain,
@@ -213,33 +216,53 @@ class VideoFilters {
     required int outH,
     required VideoProfile profile,
     int rotateTurns = 0,
+    int? canvasW,
+    int? canvasH,
   }) {
+    final cw = canvasW ?? outW, chh = canvasH ?? outH;
     final weaveX = math.max(1.0, outH * 0.0035 * film.weave);
     final weaveY = math.max(1.0, outH * 0.0055 * film.weave);
     final pad = (math.max(weaveX, weaveY) * 2).ceil() + 2;
     final halSigma = _f(math.max(2.0, outH * 0.014));
     final res = film.grainResolution * grain.resolution;
-    final grainW = (outW * res / outH / 2.6).round().clamp(64, outW) & ~1;
-    final grainH = (res / 2.6).round().clamp(48, outH) & ~1;
+    final grainW = (outW * res / outH / 1.3).round().clamp(64, outW) & ~1;
+    final grainH = (res / 1.3).round().clamp(48, outH) & ~1;
     // The grain stream below has a std of ~24 levels; grainmerge adds it.
-    final grainOpacity = _f((film.grainAmount * grain.factor * 255 / 24 * 0.6).clamp(0.0, 1.0));
+    // Matched to Gabe's Super 8 scans (fine, ~0.015 high-pass in the frame).
+    final grainOpacity = _f((film.grainAmount * grain.factor * 255 / 24 * 0.3).clamp(0.0, 1.0));
     final halOpacity = _f((film.halation * 1.6).clamp(0.0, 1.0));
     final hr = (255 * film.halationColor[0]).round(), hg = (255 * film.halationColor[1]).round();
     final hb = (255 * film.halationColor[2]).round();
 
     final base = [
       ..._geometry(crop, rotateTurns, outW, outH, profile),
-      // Gate weave: the frame hops a pixel or two every frame.
-      'pad=${outW + 2 * pad}:${outH + 2 * pad}:$pad:$pad:black',
-      "crop=$outW:$outH:'$pad+${_f(weaveX)}*(random(1)-0.5)':'$pad+${_f(weaveY)}*(random(2)-0.5)'",
+      // Super 8 is soft: a small lens on a 5.8 mm frame.
+      'gblur=sigma=${_f(math.max(0.6, outH / 720 * 1.1))}',
       'format=gbrp',
       "lut3d=file='$cubePath':interp=tetrahedral",
-      // Exposure flicker (luma offset per frame).
+      // Exposure flicker: a jump every frame plus a slow pulse (uneven
+      // shutter and lamp), clearly visible like real home movies.
       'format=yuv444p',
-      "hue=b='${_f(0.35 * film.flicker)}*(random(3)-0.5)'",
+      "hue=b='${_f(1.1 * film.flicker)}*(random(3)-0.5)+${_f(0.35 * film.flicker)}*sin(6.1*t)*sin(1.7*t)'",
       'format=gbrp',
       'split=2[img][hi]',
     ].join(',');
+    // Full-gate composite: the frame, slivers of its neighbours across the
+    // frame lines, then the strip (edges, sprocket hole) on top.
+    final x0 = (CineStrip.picX * cw).round(), y0 = (CineStrip.picY * chh).round();
+    final gapPx = (CineStrip.gap * chh).round();
+    final topH = math.max(2, y0 - gapPx), botY = y0 + outH + gapPx, botH = math.max(2, chh - botY);
+    final strip = film.gate > 0
+        ? [
+            '[dusty]split=3[fa][fb][fc]',
+            '[fb]crop=$outW:$topH:0:${outH - topH}[ftop]',
+            '[fc]crop=$outW:$botH:0:0[fbot]',
+            '[fa]pad=$cw:$chh:$x0:$y0:color=0x120c0a[c0]',
+            '[c0][ftop]overlay=$x0:0[c1]',
+            '[c1][fbot]overlay=$x0:$botY[c2]',
+            '[c2][2:v]overlay=0:0:format=auto[gated]',
+          ]
+        : ['[dusty]null[gated]'];
 
     return [
       '[0:v]$base',
@@ -255,8 +278,11 @@ class VideoFilters {
       '[hal][grain]blend=all_mode=grainmerge:all_opacity=$grainOpacity:shortest=1[grained]',
       '[grained]format=yuv444p,vignette=a=${_f(film.vignette * 2.2)}[vig]',
       '[vig][1:v]overlay=0:0:shortest=1:format=auto[dusty]',
-      '[dusty][2:v]overlay=0:0:format=auto[gated]',
-      '[gated]format=yuv420p[vout]',
+      ...strip,
+      // Gate weave: the film hops a pixel or two in the gate every frame.
+      '[gated]pad=${cw + 2 * pad}:${chh + 2 * pad}:$pad:$pad:color=0x120c0a,'
+          "crop=$cw:$chh:'$pad+${_f(weaveX)}*(random(1)-0.5)':'$pad+${_f(weaveY)}*(random(2)-0.5)',"
+          'format=yuv420p[vout]',
     ].join(';');
   }
 

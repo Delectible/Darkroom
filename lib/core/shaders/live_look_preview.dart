@@ -30,6 +30,8 @@ class LiveLookPreview extends ConsumerStatefulWidget {
     required this.crop,
     required this.child,
     this.grain = GrainStrength.normal,
+    this.canvas,
+    this.turns = 0,
   });
 
   final CameraSpec spec;
@@ -38,6 +40,11 @@ class LiveLookPreview extends ConsumerStatefulWidget {
   /// Unmasked area of the preview (normalised) — keeps vignette, gate and
   /// grain relative to the frame that will actually be exported.
   final UnitRect crop;
+
+  /// Super 8: the full-gate film strip's area of the preview (CineStrip),
+  /// and the viewer's quarter turns so the strip stays upright for them.
+  final UnitRect? canvas;
+  final int turns;
   final Widget child;
 
   @override
@@ -127,6 +134,8 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
           lut: lut!,
           grainImage: grain!,
           size: size,
+          canvas: widget.canvas,
+          turns: widget.turns,
         );
       } else {
         LookUniforms.apply(shader, widget.spec.look!, time: t, crop: widget.crop, size: size);

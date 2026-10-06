@@ -111,6 +111,7 @@ class CameraSpec {
     this.photoPrefix = 'IMG_',
     this.videoPrefix = 'MOV',
     this.videoMaxSeconds = 600,
+    this.landscapeOnly = false,
     this.developTime = defaultDevelopTime,
     this.printStyle = PrintStyle.print,
     this.roll = const FilmRoll(),
@@ -151,6 +152,10 @@ class CameraSpec {
   final String photoPrefix;
   final String videoPrefix;
   final int videoMaxSeconds;
+
+  /// Always frames landscape, even with the phone held upright (a landscape
+  /// slice of the view). Super 8.
+  final bool landscapeOnly;
 
   /// Film: how long a shot spends in the darkroom.
   final Duration developTime;

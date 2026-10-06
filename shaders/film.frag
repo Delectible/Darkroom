@@ -29,9 +29,11 @@ uniform vec3 uHalColor;      // 15-17
 uniform float uWeave;        // 18    Super 8: gate weave
 uniform float uFlicker;      // 19    Super 8: exposure flicker
 uniform float uDust;         // 20    Super 8: dust specks
-uniform float uGate;         // 21    Super 8: rounded projector gate
+uniform float uGate;         // 21    Super 8: full-gate film strip (CineStrip)
 uniform float uFps;          // 22    cadence of grain / weave / dust
 uniform float uGrainHi;      // 23    extra grain toward white (B&W negatives)
+uniform vec4 uCanvas;        // 24-27 Super 8: film-strip canvas in the box (normalised)
+uniform float uTurns;        // 28    Super 8: quarter turns from box to the viewer's upright frame
 
 uniform sampler2D uTexture;  // camera (bound by the engine)
 uniform sampler2D uLut;      // (size*size) x size strip, blue slices side by side
@@ -101,9 +103,66 @@ float highlight(vec2 frag, float gain) {
   return max(0.0, dot(c, kLuma) - 0.82) * 2.2;
 }
 
-float roundRectSdf(vec2 p, vec2 b, float r) {
-  vec2 q = abs(p) - b + r;
+// ---- Super 8 film strip (mirrors lib/core/processing/cine_strip.dart) ----
+const float kLeft = 0.16;
+const float kRight = 0.035;
+const float kSliver = 0.05;
+const float kGap = 0.014;
+const float kPicX = kLeft;
+const float kPicW = 1.0 - kLeft - kRight;
+const float kPicY = kSliver + kGap;
+const float kPicH = 1.0 - 2.0 * (kSliver + kGap);
+const float kHoleW = 0.115;
+const float kHoleH = 0.25;
+const float kHoleX = kLeft - kHoleW - 0.008;
+const float kHoleY = 0.5 - kHoleH / 2.0;
+const float kHoleR = 0.035;
+const float kFrameR = 0.02;
+
+// Box uv -> viewer's upright uv (undo RotatedBox clockwise quarter turns).
+vec2 toUpright(vec2 b, float q) {
+  vec2 u = b;
+  for (int i = 0; i < 3; i++) {
+    if (float(i) >= q) break;
+    u = vec2(u.y, 1.0 - u.x);
+  }
+  return u;
+}
+
+vec2 toBox(vec2 u, float q) {
+  vec2 b = u;
+  for (int i = 0; i < 3; i++) {
+    if (float(i) >= q) break;
+    b = vec2(1.0 - b.y, b.x);
+  }
+  return b;
+}
+
+float boxSdf(vec2 p, vec2 c, vec2 h, float r) {
+  vec2 q = abs(p - c) - h + r;
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+// Strip colour (rgb) and coverage (a) at upright canvas uv [u].
+vec4 stripColor(vec2 u, float aspect, float px) {
+  vec2 p = vec2(u.x * aspect, u.y);
+  float pitch = kPicH + kGap;
+  float k = clamp(floor((p.y - kPicY - kPicH / 2.0) / pitch + 0.5), -1.0, 1.0);
+  float frame = boxSdf(p, vec2((kPicX + kPicW / 2.0) * aspect, kPicY + kPicH / 2.0 + k * pitch),
+      vec2(kPicW / 2.0 * aspect, kPicH / 2.0), kFrameR);
+  float cov = smoothstep(-px, px, frame);
+  float hole = boxSdf(p, vec2((kHoleX + kHoleW / 2.0) * aspect, kHoleY + kHoleH / 2.0),
+      vec2(kHoleW / 2.0 * aspect, kHoleH / 2.0), kHoleR);
+  vec3 col = vec3(18.0, 12.0, 10.0) / 255.0;
+  float e = (p.x - 0.012 * aspect) / 0.0016;
+  col = mix(col, vec3(62.0, 74.0, 104.0) / 255.0, 0.55 * exp(-e * e));
+  if (hole > 0.0) {
+    float t = hole / 0.0035;
+    float glow = min(1.0, exp(-t * t) + 0.35 * exp(-hole / 0.012));
+    col = mix(col, vec3(255.0, 192.0, 125.0) / 255.0, glow);
+  }
+  col *= 1.0 - smoothstep(px, -px, hole);
+  return vec4(col, cov);
 }
 
 void main() {
@@ -116,8 +175,35 @@ void main() {
   vec2 src = frag + weave;
   vec2 cropUv = (src / uSize - uCrop.xy) / max(uCrop.zw, vec2(1e-4));
 
+  // Super 8 full-gate strip: lay the canvas out in the viewer's upright
+  // frame, show the frame (and slivers of its neighbours) through it, and
+  // map each frame point back to the captured crop.
+  vec4 strip = vec4(0.0);
+  if (uGate > 0.5) {
+    vec2 cb = (frag / uSize - uCanvas.xy) / max(uCanvas.zw, vec2(1e-4));
+    if (cb.x < 0.0 || cb.y < 0.0 || cb.x > 1.0 || cb.y > 1.0) {
+      fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+      return;
+    }
+    bool odd = mod(uTurns, 2.0) > 0.5;
+    vec2 canvasPx = uCanvas.zw * uSize;
+    float aspect = odd ? canvasPx.y / canvasPx.x : canvasPx.x / canvasPx.y;
+    float px = 1.0 / (odd ? canvasPx.x : canvasPx.y);
+    vec2 cu = toUpright(cb, uTurns);
+    // Weave moves the whole film in the gate.
+    cu += (vec2(hash11(frame + 1.7), hash11(frame + 9.3)) - 0.5) * vec2(0.0035, 0.0055) * uWeave;
+    strip = stripColor(cu, aspect, px);
+    float pitch = kPicH + kGap;
+    float k = clamp(floor((cu.y - kPicY - kPicH / 2.0) / pitch + 0.5), -1.0, 1.0);
+    vec2 pv = vec2((cu.x - kPicX) / kPicW, (cu.y - kPicY - k * pitch) / kPicH);
+    cropUv = toBox(clamp(pv, 0.0, 1.0), uTurns);
+    src = (uCrop.xy + cropUv * uCrop.zw) * uSize;
+  }
+
   float gain = uExposure * spatialExposure(cropUv);
-  gain *= 1.0 + (hash11(frame * 1.37 + 4.1) - 0.5) * 0.11 * uFlicker;
+  // Flicker: a jump every frame plus a slow pulse (uneven shutter and lamp).
+  gain *= 1.0 + (hash11(frame * 1.37 + 4.1) - 0.5) * 0.16 * uFlicker
+      + 0.05 * uFlicker * sin(6.1 * uTime) * sin(1.7 * uTime);
 
   vec3 lin = srgbToLinear(texture(uTexture, inputUv(src)).rgb) * gain;
   lin *= vec3(1.0 - 0.03 * uFlash, 1.0, 1.0 + 0.06 * uFlash);
@@ -166,13 +252,8 @@ void main() {
     }
   }
 
-  // Super 8: soft rounded projector gate.
-  if (uGate > 0.0) {
-    vec2 p = (cropUv - 0.5) * vec2(frameSize.x / frameSize.y, 1.0);
-    vec2 halfSize = vec2(0.5 * frameSize.x / frameSize.y, 0.5);
-    float d = roundRectSdf(p, halfSize - 0.012, 0.06);
-    c *= 1.0 - uGate * smoothstep(-0.03, 0.004, d);
-  }
+  // Super 8: the film strip over the frames.
+  if (uGate > 0.5) c = mix(c, strip.rgb, strip.a);
 
   fragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
 }

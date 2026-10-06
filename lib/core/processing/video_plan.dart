@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../../features/cameras/domain/camera_catalog.dart';
 import '../../features/cameras/domain/camera_spec.dart';
 import '../utils/pixel_font.dart';
+import 'cine_strip.dart';
 import 'crop_math.dart';
 import 'film/film_lut.dart';
 import 'film/film_profile.dart';
@@ -143,15 +144,19 @@ class VideoPlanner {
     final profile = VideoProfile.forSpec(spec);
     Directory(job.workDir).createSync(recursive: true);
 
+    final turns = (probeHeight > probeWidth) ? job.rotationTurns % 4 : 0;
     final crop = CropMath.stillCrop(
       width: probeWidth,
       height: probeHeight,
       previewAspect: job.previewAspect,
       ratio: job.aspect,
+      // Super 8 is landscape even with the phone upright.
+      acrossShortSide: spec.landscapeOnly && probeHeight > probeWidth && turns.isEven,
     );
-    final turns = (probeHeight > probeWidth) ? job.rotationTurns % 4 : 0;
     final (cw, ch) = VideoFilters.outputSize(crop, profile);
     final (outW, outH) = turns.isOdd ? (ch, cw) : (cw, ch);
+    // What gets encoded: the picture, or the full-gate film strip around it.
+    var (planW, planH) = (outW, outH);
 
     final inputs = <String>['-y', '-i', job.rawPath];
     final String graph;
@@ -163,7 +168,10 @@ class VideoPlanner {
         cube,
       ).writeAsStringSync(FilmLut.build(film, input: LutInput.srgb, size: 33).toCube(title: spec.name));
       _renderDustFrames(job.workDir, outW, outH, seed: job.id.hashCode);
-      File(p.join(job.workDir, 'gate.png')).writeAsBytesSync(_gatePng(outW, outH, film.gate));
+      if (film.gate > 0) (planW, planH) = CineStrip.canvasSize(outW, outH);
+      File(
+        p.join(job.workDir, 'gate.png'),
+      ).writeAsBytesSync(film.gate > 0 ? _stripPng(planW, planH) : _gatePng(outW, outH, 0));
       inputs
         ..addAll([
           '-stream_loop',
@@ -183,6 +191,8 @@ class VideoPlanner {
         outH: outH,
         profile: profile,
         rotateTurns: turns,
+        canvasW: planW,
+        canvasH: planH,
       );
     } else {
       final look = spec.look!;
@@ -245,52 +255,55 @@ class VideoPlanner {
       ],
       mainOutputArgs: ['-movflags', '+faststart', '-shortest', pass1],
       bitrateKbps: profile.bitrateKbps,
-      outW: outW,
-      outH: outH,
+      outW: planW,
+      outH: planH,
       upscale: profile.upscale,
       pass1Path: pass1,
     );
   }
 
-  /// 36 frames of dust specks, the odd hair and a wandering scratch, looped
-  /// over the clip (dark marks: dirt on reversal film projects black).
+  /// 54 frames of dirt looped over the clip: specks (dark dirt and bright
+  /// emulsion pinholes), the odd hair, a wandering scratch or two that lasts
+  /// a while, and now and then a warm flare creeping in from an edge.
   static void _renderDustFrames(String dir, int w, int h, {required int seed}) {
     final rnd = math.Random(seed);
-    const frames = 36;
-    final scratchStart = rnd.nextInt(frames), scratchLen = 8 + rnd.nextInt(10);
-    var scratchX = rnd.nextDouble() * w;
+    const frames = 54;
+    final scratches = [
+      for (var i = 0; i < 1 + rnd.nextInt(2); i++)
+        (start: rnd.nextInt(frames), len: 12 + rnd.nextInt(24), x: rnd.nextDouble() * w),
+    ];
+    final scratchX = [for (final sc in scratches) sc.x];
+    final flare = rnd.nextDouble() < 0.6
+        ? (start: rnd.nextInt(frames), len: 6 + rnd.nextInt(10), left: rnd.nextBool(), y: rnd.nextDouble())
+        : null;
     final unit = h / 480.0;
+    bool inRun(int f, int start, int len) => ((f - start) % frames + frames) % frames < len;
     for (var f = 0; f < frames; f++) {
       final im = img.Image(width: w, height: h, numChannels: 4);
       // specks
-      final specks = rnd.nextDouble() < 0.45 ? 0 : 1 + rnd.nextInt(3);
+      final specks = rnd.nextDouble() < 0.3 ? 0 : 1 + rnd.nextInt(5);
       for (var k = 0; k < specks; k++) {
         final cx = rnd.nextInt(w), cy = rnd.nextInt(h);
-        final r = ((0.8 + rnd.nextDouble() * 2.6) * unit).round().clamp(1, 12);
-        img.fillCircle(
-          im,
-          x: cx,
-          y: cy,
-          radius: r,
-          color: img.ColorRgba8(8, 6, 4, 210 + rnd.nextInt(40)),
-          antialias: true,
-        );
+        final r = ((0.7 + rnd.nextDouble() * 2.4) * unit).round().clamp(1, 12);
+        final light = rnd.nextDouble() < 0.4;
+        final c = light ? img.ColorRgba8(240, 236, 222, 170) : img.ColorRgba8(8, 6, 4, 210 + rnd.nextInt(40));
+        img.fillCircle(im, x: cx, y: cy, radius: r, color: c, antialias: true);
         if (rnd.nextBool()) {
           img.fillCircle(
             im,
             x: cx + r,
             y: cy + (r ~/ 2),
             radius: math.max(1, r ~/ 2),
-            color: img.ColorRgba8(8, 6, 4, 200),
+            color: c,
             antialias: true,
           );
         }
       }
       // a hair now and then
-      if (rnd.nextDouble() < 0.14) {
+      if (rnd.nextDouble() < 0.22) {
         var x = rnd.nextDouble() * w, y = rnd.nextDouble() * h;
         var a = rnd.nextDouble() * math.pi * 2;
-        final len = (40 + rnd.nextInt(90)) * unit;
+        final len = (40 + rnd.nextInt(110)) * unit;
         for (var t = 0.0; t < len; t += 1) {
           a += (rnd.nextDouble() - 0.5) * 0.12;
           x += math.cos(a);
@@ -300,18 +313,53 @@ class VideoPlanner {
           if (unit > 1.2) im.setPixelRgba((x + 1).toInt().clamp(0, w - 1), y.toInt(), 10, 8, 6, 150);
         }
       }
-      // a fine vertical scratch for a few frames
-      final inScratch = (f - scratchStart) % frames < scratchLen && (f - scratchStart) % frames >= 0;
-      if (inScratch) {
-        scratchX = (scratchX + (rnd.nextDouble() - 0.5) * 2).clamp(0, w - 1);
+      // fine scratches along the film, for a stretch of frames
+      for (var i = 0; i < scratches.length; i++) {
+        final sc = scratches[i];
+        if (!inRun(f, sc.start, sc.len)) continue;
+        scratchX[i] = (scratchX[i] + (rnd.nextDouble() - 0.5) * 2).clamp(0, w - 1);
         for (var y = 0; y < h; y++) {
-          if (rnd.nextDouble() < 0.85) im.setPixelRgba(scratchX.toInt(), y, 235, 235, 225, 110);
+          if (rnd.nextDouble() < 0.85) im.setPixelRgba(scratchX[i].toInt(), y, 235, 235, 225, 110);
+        }
+      }
+      // warm flare from one side (light struck the film end)
+      if (flare != null && inRun(f, flare.start, flare.len)) {
+        final u = ((f - flare.start) % frames + frames) % frames / flare.len;
+        final strength = math.sin(math.pi * u) * 150;
+        final cy = flare.y * h, reach = w * 0.35;
+        for (var y = 0; y < h; y += 1) {
+          final dy = (y - cy) / (h * 0.45);
+          for (var x = 0; x < reach; x++) {
+            final a = strength * math.exp(-x / (reach * 0.35)) * math.exp(-dy * dy);
+            if (a < 2) continue;
+            im.setPixelRgba(flare.left ? x : w - 1 - x, y, 255, 120, 40, a.round().clamp(0, 255));
+          }
         }
       }
       File(
         p.join(dir, 'dust_${f.toString().padLeft(3, '0')}.png'),
       ).writeAsBytesSync(img.encodePng(im, level: 1));
     }
+  }
+
+  /// The film around the frame, for a full-gate scan [w]x[h] (CineStrip
+  /// layout): opaque near-black edges and frame lines with the sprocket hole
+  /// and its glowing rim, see-through where the frames are (rounded corners).
+  static Uint8List _stripPng(int w, int h) {
+    final im = img.Image(width: w, height: h, numChannels: 4);
+    double smooth(double e0, double e1, double x) {
+      final t = ((x - e0) / (e1 - e0)).clamp(0.0, 1.0);
+      return t * t * (3 - 2 * t);
+    }
+
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        final (cov, r, g, b) = CineStripPixel.at((x + 0.5) / w, (y + 0.5) / h, w / h, 1 / h, smooth);
+        if (cov <= 0) continue;
+        im.setPixelRgba(x, y, r, g, b, (cov * 255).round());
+      }
+    }
+    return img.encodePng(im, level: 1);
   }
 
   /// Black frame with a soft, rounded opening (the projector gate).

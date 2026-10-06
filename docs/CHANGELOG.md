@@ -203,7 +203,14 @@ darkroom, corkboard, ambience).
     undeveloped edge, a fogged corner); the frame everywhere in the app is
     now off-white with an embossed texture instead of flat white.
     → 1.3.11 · 2026-10-06 · a085f1e (build 26)
-  - [ ] Super 8 and the digital bodies: waiting on reference photos.
+  - [x] Super 8 against Gabe's 4 reference scans: always landscape (a
+    landscape slice when the phone is upright); reels are full-gate scans
+    with the sprocket hole on the left and slivers of the neighbouring frames,
+    in the viewfinder too (rotates with the phone); faded colour (lifted
+    blacks, soft highlights, olive mids), soft focus, clearly visible
+    flicker, more dust / hairs / scratches and the odd warm flare.
+    → 1.3.12 · 2026-10-06 · (pending)
+  - [ ] The digital bodies: waiting on reference photos.
 - [x] **8.2 Film defects:** small, tasteful flaws here and there, different on
   every frame (most have none worth noticing): dust specks, the odd hair, a
   faint scratch along the film, a rare light leak. Developed photos only.

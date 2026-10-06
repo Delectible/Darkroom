@@ -102,11 +102,16 @@ class CropMath {
   /// The crop's long side is always aligned with the sensor's long axis
   /// because the UI is locked to portrait and the mask's long side is drawn
   /// along the preview's long (vertical) side.
+  ///
+  /// [acrossShortSide] lays the crop's long side across the frame's short
+  /// side instead (a landscape crop from a portrait frame: Super 8 is always
+  /// landscape, even with the phone held upright).
   static PixelRect stillCrop({
     required int width,
     required int height,
     required double previewAspect,
     required AspectRatioOption ratio,
+    bool acrossShortSide = false,
   }) {
     final landscape = width >= height;
     final stillLong = landscape ? width : height;
@@ -116,7 +121,12 @@ class CropMath {
       stillShort: stillShort,
       previewAspect: previewAspect,
     );
-    final (cropLong, cropShort) = fitRatio(fovLong, fovShort, ratio.ratio);
+    var (cropLong, cropShort) = fitRatio(fovLong, fovShort, ratio.ratio);
+    if (acrossShortSide) {
+      // Long side along the frame's short axis.
+      final (l, s) = fitRatio(fovShort, fovLong, ratio.ratio);
+      (cropLong, cropShort) = (s, l);
+    }
     // Round to even numbers: keeps chroma-subsampled encoders (JPEG 4:2:0,
     // H.264 yuv420p) happy and avoids a 1px drift between runs.
     int even(double v) => math.max(2, (v.floor() ~/ 2) * 2);
@@ -133,9 +143,18 @@ class CropMath {
   /// mask is the largest centred rect of width/height == 1/ratio inside it.
   /// This is the *same* computation as [stillCrop] when the still has the
   /// preview's aspect ratio, which is what guarantees viewport/export parity.
-  static UnitRect previewMask({required double previewAspect, required AspectRatioOption ratio}) {
+  static UnitRect previewMask({
+    required double previewAspect,
+    required AspectRatioOption ratio,
+    bool acrossShortSide = false,
+  }) {
     final ap = previewAspect >= 1 ? previewAspect : 1 / previewAspect;
     // Work in a box of width 1 and height ap (portrait).
+    if (acrossShortSide) {
+      // Landscape mask across the portrait box ([stillCrop] likewise).
+      final (cropLong, cropShort) = fitRatio(1.0, ap, ratio.ratio);
+      return UnitRect((1 - cropLong) / 2, (1 - cropShort / ap) / 2, cropLong, cropShort / ap);
+    }
     final (cropLong, cropShort) = fitRatio(ap, 1.0, ratio.ratio);
     final w = cropShort; // portrait: short side is horizontal
     final h = cropLong / ap;

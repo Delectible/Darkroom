@@ -7,7 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/physical_orientation.dart';
 import '../../../core/device/upright.dart';
+import '../../../core/processing/cine_strip.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
@@ -42,7 +44,19 @@ class CameraViewport extends ConsumerWidget {
     final previewAspect = (controller != null && controller.value.previewSize != null)
         ? controller.value.aspectRatio
         : 16 / 9;
-    final mask = CropMath.previewMask(previewAspect: previewAspect, ratio: aspect);
+    // Super 8 frames landscape however the phone is held, inside a full-gate
+    // film strip that stays upright for the viewer.
+    final turns = spec.landscapeOnly ? uprightQuarterTurns(ref.watch(physicalOrientationProvider)) : 0;
+    final mask = CropMath.previewMask(
+      previewAspect: previewAspect,
+      ratio: aspect,
+      acrossShortSide: spec.landscapeOnly && turns.isEven,
+    );
+    final strip = (spec.film?.gate ?? 0) > 0
+        ? CineStrip.previewCanvas(boxAspect: previewAspect, turns: turns, pictureAspect: aspect.ratio)
+        : null;
+    // What the viewer sees unmasked: the strip, or just the frame.
+    final shown = strip ?? mask;
 
     return LayoutBuilder(
       builder: (context, box) {
@@ -52,7 +66,7 @@ class CameraViewport extends ConsumerWidget {
           h = box.maxHeight;
           w = h * portrait;
         }
-        final maskRect = Rect.fromLTWH(mask.left * w, mask.top * h, mask.width * w, mask.height * h);
+        final maskRect = Rect.fromLTWH(shown.left * w, shown.top * h, shown.width * w, shown.height * h);
 
         return Center(
           child: SizedBox(
@@ -71,6 +85,8 @@ class CameraViewport extends ConsumerWidget {
                         spec: spec,
                         grain: local.grain,
                         crop: mask,
+                        canvas: strip,
+                        turns: turns,
                         child: _RotationCorrectedPreview(controller: controller),
                       ),
                     )

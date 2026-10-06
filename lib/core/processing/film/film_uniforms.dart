@@ -2,12 +2,12 @@ import '../crop_math.dart';
 import 'film_lut.dart';
 import 'film_profile.dart';
 
-/// Float uniforms of shaders/film.frag after `uSize` (indices 2..23), in
+/// Float uniforms of shaders/film.frag after `uSize` (indices 2..28), in
 /// declaration order. Pure Dart so tests can check it against the .frag.
 class FilmUniformLayout {
   const FilmUniformLayout._();
 
-  static const int floatCount = 24; // including uSize
+  static const int floatCount = 29; // including uSize
 
   static List<double> floats(
     FilmProfile p, {
@@ -16,6 +16,8 @@ class FilmUniformLayout {
     required GrainStrength grain,
     required double fps,
     double flash = 0,
+    UnitRect? canvas,
+    int turns = 0,
   }) => [
     time,
     crop.left, crop.top, crop.width, crop.height,
@@ -34,5 +36,8 @@ class FilmUniformLayout {
     p.gate,
     fps,
     p.grainHighlights,
+    // Super 8 strip: canvas in the box, and the viewer's quarter turns.
+    (canvas ?? crop).left, (canvas ?? crop).top, (canvas ?? crop).width, (canvas ?? crop).height,
+    turns.toDouble(),
   ];
 }

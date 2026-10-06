@@ -104,6 +104,8 @@ class FilmUniforms {
     required ui.Image lut,
     required ui.Image grainImage,
     ui.Size? size,
+    UnitRect? canvas,
+    int turns = 0,
   }) {
     if (size != null) {
       shader
@@ -111,7 +113,15 @@ class FilmUniforms {
         ..setFloat(1, size.height);
     }
     var i = 2;
-    for (final v in FilmUniformLayout.floats(p, time: time, crop: crop, grain: grain, fps: fps)) {
+    for (final v in FilmUniformLayout.floats(
+      p,
+      time: time,
+      crop: crop,
+      grain: grain,
+      fps: fps,
+      canvas: canvas,
+      turns: turns,
+    )) {
       shader.setFloat(i++, v);
     }
     assert(i == FilmUniformLayout.floatCount, 'film uniform layout drifted from shaders/film.frag');

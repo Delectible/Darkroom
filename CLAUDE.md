@@ -134,7 +134,16 @@ Film Mode
 - Photos are deliberately "physical": **nothing reaches the phone gallery until
   he taps Save on a print, or Save all.** Album: "Darkroom Film".
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;
-  playback is a film-styled projector screen.
+  playback is a film-styled projector screen. Always landscape
+  (`CameraSpec.landscapeOnly`: held upright it records a landscape slice,
+  `CropMath` `acrossShortSide`). Reels are full-gate scans (`CineStrip`,
+  `core/processing/cine_strip.dart`): black film edge with the sprocket hole
+  (glowing rim) on the viewer's left, slivers of the neighbouring frames
+  across frame lines. The viewfinder shader draws the same strip (uniforms
+  `uCanvas`, `uTurns`: it rotates with the phone so the hole stays on the
+  viewer's left); FFmpeg composites it from `gate.png`. Faded look tuned to
+  Gabe's scans, strong flicker, dust (dark + light), hairs, long scratches
+  and the odd warm flare (`_renderDustFrames`).
 - Corkboard pins must sit **on** the photo, not in the cork above it.
 - The cork wall scrolls with the prints (shader tiles keyed to the scroll
   offset, with wear: pin holes, stains, faded patches). Easter eggs: tap a

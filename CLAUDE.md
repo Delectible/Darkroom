@@ -35,7 +35,11 @@ Read this first. It's the hand-off from the earlier development sessions
   one makes Flutter run CocoaPods and the build dies with "sandbox is not in
   sync with the Podfile.lock". `ios/` holds only Info.plist,
   AppDelegate.swift and the AppIcon set; CI generates the rest.
-  Background developing (WorkManager) is Android-only.
+  Developing never needs the app running: prints store an absolute
+  `ready_at`. Android re-arms notifications with WorkManager; iOS schedules
+  them ahead (`scheduleIosBatches`) and holds a ~30 s background task while
+  shots are still processing (`BackgroundTime`, channel `darkroom/background`
+  in AppDelegate.swift). No battery-optimisation prompts on either.
 - `android/` and `ios/` only contain the files we customised. CI runs
   `flutter create --org com.dingo --project-name darkroom --platforms android .`
   to fill in the rest (it never overwrites existing files). Don't delete

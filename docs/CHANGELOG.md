@@ -263,4 +263,9 @@ darkroom, corkboard, ambience).
   iOS bundle id via `--org com.dingo`). CI uploads each `main` build's .aab
   to the internal testing track once the `PLAY_SERVICE_ACCOUNT_JSON` secret
   is set; GitHub Releases keep the APK/IPA. Privacy policy in
-  `docs/PRIVACY.md`. → 1.3.16 · 2026-10-06 · (this commit)
+  `docs/PRIVACY.md`. → 1.3.16 · 2026-10-06 · 0093c76
+- [x] **11.2 iPhone develops while closed:** it already did (prints carry an
+  absolute ready time and iOS notifications are scheduled ahead); the gap
+  was a shot still processing when you leave the app, which iOS paused until
+  the next launch. The app now asks iOS for ~30 s of background time while
+  shots are processing. No battery prompts. → 1.3.17 · 2026-10-06 · (this commit)

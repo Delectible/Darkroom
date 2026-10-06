@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../features/darkroom/application/darkroom_engine.dart';
+import 'background/background_time.dart';
 import 'background/background_worker.dart';
 import 'db/app_database.dart';
 import 'db/media_repository.dart';
@@ -74,7 +75,11 @@ final captureProcessorProvider = Provider<CaptureProcessor>((ref) {
     sdCard: ref.watch(sdCardRepositoryProvider),
     onFilmQueueChanged: () => ref.read(darkroomEngineProvider).reschedule(),
   );
-  ref.onDispose(processor.pending.dispose);
+  final backgroundTime = BackgroundTime(processor.pending);
+  ref.onDispose(() {
+    backgroundTime.dispose();
+    processor.pending.dispose();
+  });
   return processor;
 });
 

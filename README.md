@@ -30,7 +30,7 @@ Every update builds a new release automatically. Open **[Releases](../../release
 
 **Android:** Darkroom is in internal testing on Google Play; testers get each new build through the Play Store. The `Darkroom-N.apk` in Releases can also be installed by hand (allow your browser to install apps when asked), but it can't update a copy installed from Play, or the other way round.
 
-**iPhone (experimental):** download `Darkroom-N.ipa` and install it with [Sideloadly](https://sideloadly.io) and a free Apple ID. Free-account installs expire after 7 days; re-sideload to renew. Developing in the background is Android-only.
+**iPhone (experimental):** download `Darkroom-N.ipa` and install it with [Sideloadly](https://sideloadly.io) and a free Apple ID. Free-account installs expire after 7 days; re-sideload to renew. Film develops while the app is closed on both phones.
 
 ## Building from source
 

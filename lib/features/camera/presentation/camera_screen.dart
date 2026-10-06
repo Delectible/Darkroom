@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:ui' as ui;
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
@@ -9,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sfx.dart';
+import '../../../core/device/system_gestures.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/retro_theme.dart';
@@ -84,6 +84,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   @override
   void dispose() {
+    unawaited(GestureExclusion.clear());
     _swap.dispose();
     _outgoing?.dispose();
     for (final image in _lastLook.values) {
@@ -92,10 +93,38 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     super.dispose();
   }
 
+  /// Strips of both side edges, level with the peeking camera, that Android
+  /// keeps its back gesture off so the other camera can be pulled in from
+  /// the very edge. Elsewhere the edges stay the phone's.
+  List<Rect> _peekBands(Size size) {
+    final top = size.height * _ModePeek.topFraction - 20;
+    const height = _ModePeek.height + 40;
+    return [Rect.fromLTWH(0, top, 48, height), Rect.fromLTWH(size.width - 48, top, 48, height)];
+  }
+
+  Size? _excludedFor;
+
+  /// Hands the peek strips to the camera screen (again after any screen on
+  /// top of it, which gets the whole edge back).
+  void _claimEdges() {
+    if (!mounted) return;
+    final media = MediaQuery.of(context);
+    _excludedFor = media.size;
+    unawaited(GestureExclusion.set(_peekBands(media.size), media.devicePixelRatio));
+  }
+
+  void _releaseEdges() {
+    _excludedFor = null;
+    unawaited(GestureExclusion.clear());
+  }
+
   bool _canSwap() => !_swapBusy && !_selectorOpen && !ref.read(captureControllerProvider).isRecording;
 
   void _onDragStart(DragStartDetails d) {
     if (!_canSwap()) return;
+    // Back gesture from the sides, notification shade from the top.
+    final allowed = _peekBands(MediaQuery.sizeOf(context));
+    if (SystemGestureZones.startsInEdge(context, d.globalPosition, allowed: allowed)) return;
     _raw = 0;
     _swap.value = 0;
     setState(() => _dragging = true);
@@ -189,7 +218,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     }
     session.setScreenVisible(false);
     if (!mounted) return;
+    _releaseEdges();
     await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+    _claimEdges();
     session.setScreenVisible(true);
   }
 
@@ -204,7 +235,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     _selectorOpen = true;
     final session = ref.read(cameraSessionProvider.notifier);
     session.setScreenVisible(false);
+    _releaseEdges();
     await showStockSelector(context, ref.read(appModeProvider));
+    _claimEdges();
     _selectorOpen = false;
     session.setScreenVisible(true);
   }
@@ -240,6 +273,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
     final mode = ref.watch(appModeProvider);
     final palette = RetroPalette.forMode(mode);
+    final screenSize = MediaQuery.sizeOf(context);
+    if (_excludedFor != screenSize && !_selectorOpen && ModalRoute.of(context)?.isCurrent != false) {
+      _excludedFor = screenSize;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _claimEdges());
+    }
 
     // Instant theme: the new body slides in already in its own colours.
     return Theme(
@@ -253,8 +291,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
             behavior: HitTestBehavior.translucent,
             onVerticalDragStart: (d) {
               final media = MediaQuery.of(context);
-              final edge = math.max(56.0, media.systemGestureInsets.bottom + 32);
-              _swipeFromEdge = d.globalPosition.dy > media.size.height - edge;
+              final y = d.globalPosition.dy;
+              // Home gesture at the bottom, notification shade at the top.
+              _swipeFromEdge =
+                  y > media.size.height - SystemGestureZones.bottom(media) ||
+                  y < SystemGestureZones.top(media);
               _swipeStartY = d.globalPosition.dy;
             },
             onVerticalDragEnd: (d) {
@@ -546,6 +587,9 @@ class _DarkroomBannerOverlayState extends ConsumerState<_DarkroomBannerOverlay> 
 class _ModePeek extends StatelessWidget {
   const _ModePeek({required this.mode, required this.onSwap});
 
+  static const topFraction = 0.36;
+  static const height = 150.0;
+
   final AppMode mode;
   final VoidCallback onSwap;
 
@@ -554,14 +598,14 @@ class _ModePeek extends StatelessWidget {
     final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
     final p = RetroPalette.forMode(other);
     final onRight = mode == AppMode.film;
-    const w = 30.0, h = 150.0;
+    const w = 30.0, h = height;
     final radius = onRight
         ? const BorderRadius.horizontal(left: Radius.circular(12))
         : const BorderRadius.horizontal(right: Radius.circular(12));
     return Positioned(
       right: onRight ? 0 : null,
       left: onRight ? null : 0,
-      top: MediaQuery.sizeOf(context).height * 0.36,
+      top: MediaQuery.sizeOf(context).height * topFraction,
       child: Semantics(
         button: true,
         label: other == AppMode.film ? 'Switch to the film camera' : 'Switch to the digital camera',

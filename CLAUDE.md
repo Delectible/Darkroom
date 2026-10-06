@@ -41,7 +41,7 @@ Read this first. It's the hand-off from the earlier development sessions
   to fill in the rest (it never overwrites existing files). Don't delete
   `AndroidManifest.xml` or `android/app/build.gradle.kts`.
 - `applicationId` / `namespace` = `com.darkroom.darkroom`; must match the
-  MainActivity package that `flutter create` generates.
+  package of `MainActivity.kt` (ours, in the repo: gesture channel).
 - Release builds are signed with Gabe's **private upload key** (alias
   `upload`), which CI decodes from the repo secrets `ANDROID_KEYSTORE_BASE64`
   and `ANDROID_KEYSTORE_PASSWORD`. Never commit it. Without the secrets
@@ -167,8 +167,14 @@ UI
 - Under the viewfinder: film bodies show the box end in a memo holder
   (`CameraSpec.boxColor/boxInk`), digital bodies a segment-LCD panel with
   battery and card/tape remaining.
-- Swipe up on the camera opens the film/camera carousel (not from the bottom
-  ~56dp: that's the system home gesture); swipe down closes it.
+- Swipe up on the camera opens the film/camera carousel; swipe down closes it.
+- Phone gestures win at the edges (`core/device/system_gestures.dart`): our
+  drags ignore touches that start in the home strip (bottom ~56dp), the
+  notification strip (top) and the back strips (sides), except level with
+  the peeking camera, where `MainActivity.kt` (kept in the repo; channel
+  `darkroom/gestures`) asks Android 10+ to keep its back gesture off both
+  edges. The camera screen releases those strips while another screen is
+  on top.
   Carousel works in landscape. In the carousel, sideways swipes work anywhere
   on screen; closing needs a clearly downward swipe (deadzone).
 - On the camera screen, swiping sideways on the stock name or the film box

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/system_gestures.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../camera/application/camera_ui_state.dart';
@@ -178,12 +179,18 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
   /// close gesture: the deadzone that keeps sideways swipes from closing.
   static const _verticalBias = 1.7;
 
+  /// The drag began in the phone's back or notification strip: leave it to
+  /// the phone.
+  bool _systemDrag = false;
+
   void _onPanStart(DragStartDetails d) {
     _axis = _Axis.undecided;
     _travel = Offset.zero;
+    _systemDrag = SystemGestureZones.startsInEdge(context, d.globalPosition);
   }
 
   void _onPanUpdate(DragUpdateDetails d) {
+    if (_systemDrag) return;
     switch (_axis) {
       case _Axis.undecided:
         _travel += d.delta;
@@ -218,6 +225,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
   );
 
   void _onPanEnd(DragEndDetails d) {
+    if (_systemDrag) return;
     switch (_axis) {
       case _Axis.horizontal:
         final vx = d.velocity.pixelsPerSecond.dx;

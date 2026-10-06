@@ -3,13 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.6';
+  static const version = '1.3.7';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'Toss the camera aside with your thumb to grab the other one. Windows 98 uses a pixel font. '
+      'Toss the camera aside with your thumb to grab the other one; swipes from the screen edges stay the phone\'s. '
+          'Windows 98 uses a pixel font. '
           'Prints keep their shape when turned over. Windows 98 fits the screen. Softer swap sound. '
           'Swap cameras by pulling in the one peeking from the edge: the bodies slide past each other. '
           'Film backs have a memo holder, digicams an LCD. The corkboard wall scrolls with your prints '

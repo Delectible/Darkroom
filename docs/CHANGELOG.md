@@ -53,6 +53,11 @@ darkroom, corkboard, ambience).
 - [x] **0.7 Win98 font:** Roboto looked too modern. Windows 98 screens now use
   a pixel font (DotGothic16, OFL); □ ▲ ▶ ✓ etc. are painted pixel glyphs.
   → 1.3.5 · 2026-10-06 · 428d7e8
+- [x] **0.8 Edge gestures:** dragging from the screen edges fought the phone's
+  back gesture (sides) and could fight the notification shade (top). Our
+  drags now ignore touches starting in those strips (camera and carousel);
+  level with the peeking camera Android gives both edges to the app so it
+  can be pulled in from the very edge. → 1.3.7 · 2026-10-06 · (pending)
 
 ### 2. Photo & video previews (film & digital)
 

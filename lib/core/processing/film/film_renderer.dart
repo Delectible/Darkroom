@@ -18,8 +18,16 @@ class FilmSpatial {
     return v * (1 + flash * (1.1 * hot - 0.35 * (1 - hot)));
   }
 
-  /// Grain is most visible in the mid-tones.
-  static double grainWeight(double l) => 0.35 + 2.6 * l * (1 - l);
+  /// Grain is most visible in the mid-tones; deep blacks stay clean.
+  static double grainWeight(double l) => 0.22 + 3.1 * l * (1 - l);
+
+  /// Grain finer than a pixel can't be drawn: it averages out. Returns the
+  /// drawn texel size (>= 1 px) and the matching amplitude scale, so a
+  /// preview or a small export looks like the full photo seen at that size.
+  static (double texel, double gain) grainTexel(double framePx, double resolution) {
+    final t = framePx / resolution;
+    return t >= 1 ? (t, 1.0) : (1.0, t);
+  }
 
   /// Halation threshold / gain on display-linear luminance.
   static const double halThreshold = 0.82;
@@ -81,10 +89,10 @@ class FilmRenderer {
     final hw = (w + 7) ~/ 8, hh = (h + 7) ~/ 8;
     final hc = profile.halationColor;
 
-    final amount = profile.grainAmount * grain.factor;
+    final (texel, gain) = FilmSpatial.grainTexel(h.toDouble(), profile.grainResolution * grain.resolution);
+    final amount = profile.grainAmount * grain.factor * gain;
     final chroma = profile.grainChroma;
-    final texel = h / profile.grainResolution; // image px per grain texel
-    final inv = 1 / texel;
+    final inv = 1 / texel; // grain texels per image px
     final ox = rnd.nextDouble() * field.size, oy = rnd.nextDouble() * field.size;
     final out = List<double>.filled(3, 0);
 

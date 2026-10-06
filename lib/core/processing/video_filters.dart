@@ -218,8 +218,9 @@ class VideoFilters {
     final weaveY = math.max(1.0, outH * 0.0055 * film.weave);
     final pad = (math.max(weaveX, weaveY) * 2).ceil() + 2;
     final halSigma = _f(math.max(2.0, outH * 0.014));
-    final grainW = (outW * film.grainResolution / outH / 2.6).round().clamp(64, outW) & ~1;
-    final grainH = (film.grainResolution / 2.6).round().clamp(48, outH) & ~1;
+    final res = film.grainResolution * grain.resolution;
+    final grainW = (outW * res / outH / 2.6).round().clamp(64, outW) & ~1;
+    final grainH = (res / 2.6).round().clamp(48, outH) & ~1;
     // The grain stream below has a std of ~24 levels; grainmerge adds it.
     final grainOpacity = _f((film.grainAmount * grain.factor * 255 / 24 * 0.6).clamp(0.0, 1.0));
     final halOpacity = _f((film.halation * 1.6).clamp(0.0, 1.0));

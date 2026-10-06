@@ -138,14 +138,18 @@ void main() {
   }
 
   // Grain: tileable texture, sized relative to the frame, re-rolled per frame.
+  // Grain finer than a pixel averages out: draw it at 1 px, fainter
+  // (FilmSpatial.grainTexel).
   if (uGrainAmount > 0.0) {
-    float texel = frameSize.y / uGrainRes;
+    float t = frameSize.y / uGrainRes;
+    float texel = max(t, 1.0);
+    float gain = min(t, 1.0);
     vec2 offset = vec2(hash11(frame + 0.31), hash11(frame + 7.77)) * kGrainSize;
     vec2 guv = fract((src / texel + offset) / kGrainSize);
     vec3 g = (texture(uGrain, guv).rgb - 0.502) * kGrainDecode;
     vec3 n = mix(vec3(g.r), g, uGrainChroma);
     float l = dot(c, kLuma);
-    c += n * uGrainAmount * (0.35 + 2.6 * l * (1.0 - l));
+    c += n * uGrainAmount * gain * (0.22 + 3.1 * l * (1.0 - l));
   }
 
   // Super 8: dust specks (dark on reversal film), a few per frame.

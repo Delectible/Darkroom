@@ -86,9 +86,19 @@ curves, hue tweaks, split toning). The same LUT drives the live GPU preview
 for video. Plus a tileable grain texture, halation and exposure drift.
 
 - Stock ids: `ektar100`, `portra400`, `hp5plus400`, `polaroid600`, `super8`.
-- Grain strength: weak 0.55 / normal 1 / strong 1.65. Set **per film stock,
-  only in the settings menu**. When not "normal", the carousel shows a small
-  tag. Digital cameras have no grain setting.
+- Grain (`grain_field.dart`) is a Boolean model: thousands of tiny
+  overlapping grains + sparse clumps, crisp (not blurred noise), dye layers
+  mostly shared. Drawn at >= 1 px; finer grain is drawn fainter
+  (`FilmSpatial.grainTexel`), so preview and small exports read like the
+  photo seen at that size.
+- Grain strength scales amount and size: weak 0.4x / 1.35x finer, normal,
+  strong 2.4x / 0.55x (coarser). Set **per film stock, only in the settings
+  menu**. When not "normal", the carousel shows a small tag. Digital cameras
+  have no grain setting.
+- Ektar 100 is tuned against Gabe's reference scans; `grain_calibration_test`
+  pins its Normal grain to theirs (sky patch at scan size ~0.0076). Look
+  iteration: `dart run tool/film_preview.dart out.jpg photos...` (env STOCKS,
+  GRAIN, RES, CROP=1 for 1:1 crops).
 
 ## Adding a stock / camera
 

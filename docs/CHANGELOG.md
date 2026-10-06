@@ -57,7 +57,7 @@ darkroom, corkboard, ambience).
   back gesture (sides) and could fight the notification shade (top). Our
   drags now ignore touches starting in those strips (camera and carousel);
   level with the peeking camera Android gives both edges to the app so it
-  can be pulled in from the very edge. → 1.3.7 · 2026-10-06 · (pending)
+  can be pulled in from the very edge. → 1.3.7 · 2026-10-06 · 908cebb (build 22)
 
 ### 2. Photo & video previews (film & digital)
 
@@ -179,9 +179,18 @@ darkroom, corkboard, ambience).
 
 ### 8. Look quality (requested 2026-10-06)
 
-- [ ] **8.1 Film and digital looks:** the looks don't yet behave like the real
+- [~] **8.1 Film and digital looks:** the looks don't yet behave like the real
   formats and can read as a cheap filter. Plan to iterate (see chat): reference
   contact sheets per look, an on-phone tuning screen, then fixes per stock.
+  - [x] Ektar 100 against Gabe's 5 reference scans: azure skies (not navy),
+    warm true reds, golden yellows, deep greens, deep slightly warm blacks,
+    clean highlights, less halation. → 1.3.8 · 2026-10-06 · (pending)
+  - [x] Grain rebuilt for every stock: real grain structure (crisp, clumpy,
+    mostly luminance) instead of soft blurred noise; strength sets amount and
+    size (weak barely there, strong obviously film). Ektar Normal matches the
+    scans. → 1.3.8 · 2026-10-06 · (pending)
+  - [ ] Portra 400, HP5, Polaroid 600, Super 8 and the digital bodies: waiting
+    on reference photos.
 
 ### 9. Distribution (requested 2026-10-06)
 

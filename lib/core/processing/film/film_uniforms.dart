@@ -25,7 +25,7 @@ class FilmUniformLayout {
     FilmLut.defaultSize.toDouble(),
     p.grainAmount * grain.factor,
     p.grainChroma,
-    p.grainResolution,
+    p.grainResolution * grain.resolution,
     p.halation,
     p.halationColor[0], p.halationColor[1], p.halationColor[2],
     p.weave,

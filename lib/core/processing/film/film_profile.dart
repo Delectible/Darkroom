@@ -124,27 +124,31 @@ class FilmProfile {
   static FilmProfile? forStock(String id) => _profiles[id];
 
   static const _profiles = <String, FilmProfile>{
+    // Tuned against Gabe's Ektar 100 scans: clean and sharp, punchy but
+    // natural colour, bright azure skies leaning cyan (not navy), warm true
+    // reds and golden yellows, deep greens, deep slightly warm blacks with
+    // no lift, neutral clean highlights, very fine luminance grain.
     'ektar100': FilmProfile(
       id: 'ektar100',
-      balance: [1.0, 0.99, 1.0],
-      contrast: [1.34, 1.30, 1.31],
+      balance: [1.01, 1.0, 0.985],
+      contrast: [1.30, 1.28, 1.33],
       white: 1.04,
-      saturation: 1.22,
+      saturation: 1.2,
       hues: [
-        HueTweak(27, 26, shift: -5, chroma: 1.12),
-        HueTweak(55, 26, shift: -6, chroma: 1.06),
-        HueTweak(110, 30, chroma: 1.06),
-        HueTweak(142, 38, shift: 4, chroma: 1.08),
-        HueTweak(235, 40, shift: 6, chroma: 1.16, light: -0.035),
-        HueTweak(264, 24, chroma: 1.08, light: -0.025),
+        HueTweak(27, 24, shift: 4, chroma: 1.12),
+        HueTweak(55, 24, shift: 1, chroma: 1.05),
+        HueTweak(100, 30, shift: -5, chroma: 1.08),
+        HueTweak(142, 36, shift: 3, chroma: 1.10, light: -0.02),
+        HueTweak(232, 34, shift: -5, chroma: 0.92, light: 0.045),
+        HueTweak(264, 26, shift: -10, chroma: 0.92, light: 0.03),
       ],
-      shadowLift: 0.012,
-      shadowTint: [-0.004, 0.0, 0.008],
-      grainAmount: 0.034,
-      grainChroma: 0.30,
-      grainResolution: 1800,
-      halation: 0.16,
-      vignette: 0.16,
+      shadowTint: [0.006, 0.002, -0.012],
+      highlightTint: [0.004, -0.002, 0.0],
+      grainAmount: 0.018,
+      grainChroma: 0.2,
+      grainResolution: 2400,
+      halation: 0.08,
+      vignette: 0.14,
     ),
     'portra400': FilmProfile(
       id: 'portra400',
@@ -241,14 +245,17 @@ class FilmProfile {
   };
 }
 
-/// Grain strength chosen per film stock in settings.
+/// Grain strength chosen per film stock in settings: how strong the grain
+/// is ([factor]) and how fine ([resolution] scales the stock's grain
+/// resolution: weak is finer, strong is coarser, like a faster film).
 enum GrainStrength {
-  weak(0.55),
-  normal(1.0),
-  strong(1.65);
+  weak(0.4, 1.35),
+  normal(1.0, 1.0),
+  strong(2.4, 0.55);
 
-  const GrainStrength(this.factor);
+  const GrainStrength(this.factor, this.resolution);
   final double factor;
+  final double resolution;
 
   static GrainStrength fromName(String? n) =>
       GrainStrength.values.firstWhere((g) => g.name == n, orElse: () => GrainStrength.normal);

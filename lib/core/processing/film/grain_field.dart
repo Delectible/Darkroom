@@ -1,13 +1,15 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
 
-/// Tileable film-grain texture: fine noise plus a slightly coarser octave of
-/// the same noise, which gives the irregular "clumps" of silver-halide /
-/// dye-cloud grain rather than the flat look of per-pixel white noise.
+/// Tileable film-grain texture, built the way grain forms: many tiny dye
+/// clouds / silver grains of varying size scattered at random, overlapping
+/// and saturating where they pile up (a Boolean model), plus a sparser set
+/// of larger clumps. That gives crisp, irregular grain with real structure,
+/// rather than the soft "low-res" look of blurred noise.
 ///
-/// Three channels, partially correlated (colour negative layers share some
-/// structure); B&W stocks use channel 0 only. Each channel has zero mean and
-/// unit standard deviation.
+/// One texel is about one fine grain. Three channels (the three dye layers)
+/// share most of their grains, so colour noise stays subtle; B&W stocks use
+/// channel 0 only. Each channel has zero mean and unit standard deviation.
 class GrainField {
   GrainField._(this.size, this.data);
 
@@ -20,72 +22,73 @@ class GrainField {
 
   static const int defaultSize = 512;
 
+  /// Share of grains common to all three layers.
+  static const double _shared = 0.78;
+
   factory GrainField.generate({int size = defaultSize, int seed = 1977}) {
     final rnd = math.Random(seed);
-    double gauss() => rnd.nextDouble() + rnd.nextDouble() + rnd.nextDouble() - 1.5;
     final n = size * size;
-    final shared = Float32List(n);
-    for (var i = 0; i < n; i++) {
-      shared[i] = gauss();
-    }
-    const corr = 0.55;
-    final indep = math.sqrt(1 - corr * corr);
-    final data = Float32List(n * 3);
-    final ch = Float32List(n);
-    final fine = Float32List(n);
-    final coarse = Float32List(n);
-    final tmp = Float32List(n);
-    for (var c = 0; c < 3; c++) {
+    Float32List layer() {
+      final acc = Float32List(n);
+      // Fine grains: radius 0.45..1.25 texels, about half the area covered.
+      _scatter(acc, size, rnd, count: (n * 0.30).round(), rMin: 0.45, rMax: 1.25, weight: 1.0);
+      // Clumps: sparse, larger, fainter.
+      _scatter(acc, size, rnd, count: (n * 0.018).round(), rMin: 1.6, rMax: 2.8, weight: 0.45);
+      // Density saturates where grains pile up.
       for (var i = 0; i < n; i++) {
-        ch[i] = corr * shared[i] + indep * gauss();
+        acc[i] = 1 - math.exp(-1.4 * acc[i]);
       }
-      _blur(ch, fine, tmp, size, 0.6);
-      _blur(ch, coarse, tmp, size, 1.7);
+      return acc;
+    }
+
+    final common = layer();
+    final data = Float32List(n * 3);
+    final indep = math.sqrt(1 - _shared * _shared);
+    for (var c = 0; c < 3; c++) {
+      final own = layer();
       var sum = 0.0, sum2 = 0.0;
       for (var i = 0; i < n; i++) {
-        final v = fine[i] + 0.75 * coarse[i];
-        fine[i] = v;
+        final v = _shared * common[i] + indep * own[i];
+        own[i] = v;
         sum += v;
         sum2 += v * v;
       }
       final mean = sum / n;
       final std = math.sqrt(math.max(1e-12, sum2 / n - mean * mean));
       for (var i = 0; i < n; i++) {
-        data[i * 3 + c] = (fine[i] - mean) / std;
+        data[i * 3 + c] = (own[i] - mean) / std;
       }
     }
     return GrainField._(size, data);
   }
 
-  /// Separable, wrap-around gaussian blur (keeps the tile seamless).
-  static void _blur(Float32List src, Float32List dst, Float32List tmp, int size, double sigma) {
-    final r = (sigma * 3).ceil();
-    final k = Float64List(2 * r + 1);
-    var ks = 0.0;
-    for (var i = -r; i <= r; i++) {
-      k[i + r] = math.exp(-0.5 * (i / sigma) * (i / sigma));
-      ks += k[i + r];
-    }
-    for (var i = 0; i < k.length; i++) {
-      k[i] /= ks;
-    }
-    for (var y = 0; y < size; y++) {
-      final row = y * size;
-      for (var x = 0; x < size; x++) {
-        var s = 0.0;
-        for (var i = -r; i <= r; i++) {
-          s += src[row + (x + i + size) % size] * k[i + r];
+  /// Adds [count] anti-aliased discs (wrapping, so the tile stays seamless).
+  static void _scatter(
+    Float32List acc,
+    int size,
+    math.Random rnd, {
+    required int count,
+    required double rMin,
+    required double rMax,
+    required double weight,
+  }) {
+    for (var k = 0; k < count; k++) {
+      final cx = rnd.nextDouble() * size, cy = rnd.nextDouble() * size;
+      final r = rMin + (rMax - rMin) * rnd.nextDouble();
+      final ext = (r + 1).ceil();
+      final x0 = cx.floor(), y0 = cy.floor();
+      for (var dy = -ext; dy <= ext; dy++) {
+        final py = y0 + dy;
+        final fy = py + 0.5 - cy;
+        final row = (py % size + size) % size * size;
+        for (var dx = -ext; dx <= ext; dx++) {
+          final px = x0 + dx;
+          final fx = px + 0.5 - cx;
+          // Coverage of the texel by the disc, with a one-texel soft edge.
+          final cov = r + 0.5 - math.sqrt(fx * fx + fy * fy);
+          if (cov <= 0) continue;
+          acc[row + (px % size + size) % size] += weight * (cov >= 1 ? 1 : cov);
         }
-        tmp[row + x] = s;
-      }
-    }
-    for (var y = 0; y < size; y++) {
-      for (var x = 0; x < size; x++) {
-        var s = 0.0;
-        for (var i = -r; i <= r; i++) {
-          s += tmp[((y + i + size) % size) * size + x] * k[i + r];
-        }
-        dst[y * size + x] = s;
       }
     }
   }

@@ -34,7 +34,8 @@ class ShareThumbnailProvider : FileProvider() {
 
     private fun videoThumbnail(uri: Uri, opts: Bundle?): AssetFileDescriptor? {
         val ctx = context ?: return null
-        val frame = openFile(uri, "r").use { fd ->
+        val pfd = openFile(uri, "r") ?: return null
+        val frame = pfd.use { fd ->
             val retriever = MediaMetadataRetriever()
             try {
                 retriever.setDataSource(fd.fileDescriptor)

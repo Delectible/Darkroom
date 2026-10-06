@@ -39,6 +39,7 @@ class MediaItem {
     this.error,
     this.location = MediaLocation.sd,
     this.savedAt,
+    this.note,
   });
 
   final String id;
@@ -66,6 +67,9 @@ class MediaItem {
 
   /// When the file was copied into the phone's photo library (null = never).
   final DateTime? savedAt;
+
+  /// Instant prints: what the user wrote on the bottom border.
+  final String? note;
 
   bool get isVideo => kind == MediaKind.video;
   bool get isReady => status == MediaStatus.ready;
@@ -117,6 +121,7 @@ class MediaRepository {
     error: r['error'] as String?,
     location: (r['location'] as String?) == 'c' ? MediaLocation.c : MediaLocation.sd,
     savedAt: r['saved_at'] == null ? null : DateTime.fromMillisecondsSinceEpoch(r['saved_at']! as int),
+    note: r['note'] as String?,
   );
 
   Future<void> insertProcessing({
@@ -196,6 +201,13 @@ class MediaRepository {
       where: 'id IN (${List.filled(ids.length, '?').join(',')})',
       whereArgs: ids,
     );
+    notifyChanged();
+  }
+
+  /// Writes (or clears, with an empty string) an instant print's note.
+  Future<void> setNote(String id, String note) async {
+    final v = note.trim();
+    await _sql.update(table, {'note': v.isEmpty ? null : v}, where: 'id = ?', whereArgs: [id]);
     notifyChanged();
   }
 

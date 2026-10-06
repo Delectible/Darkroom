@@ -14,6 +14,7 @@ import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
 import '../../../cameras/presentation/artwork/camera_artwork.dart';
 import '../../application/capture_controller.dart';
+import '../../application/zoom_controller.dart';
 
 /// Big skeuomorphic shutter. Stills cameras take a photo; movie cameras
 /// (camcorder, Super 8) start / stop recording.
@@ -567,6 +568,88 @@ class GalleryButton extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// W | T zoom rocker on every digital body: hold to drive the zoom motor.
+class ZoomRocker extends ConsumerWidget {
+  const ZoomRocker({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final palette = RetroPalette.of(context);
+    final zoom = ref.watch(zoomProvider);
+    final enabled = zoom.canZoom;
+    Widget half(String label, int dir, BorderRadius radius) {
+      final pressed = zoom.direction == dir;
+      final atLimit = dir < 0 ? zoom.level <= zoom.min : zoom.level >= zoom.max;
+      return Expanded(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: (_) {
+            if (!enabled) return;
+            unawaited(HapticFeedback.selectionClick());
+            ref.read(zoomProvider.notifier).start(dir);
+          },
+          onTapUp: (_) => ref.read(zoomProvider.notifier).stop(),
+          onTapCancel: () => ref.read(zoomProvider.notifier).stop(),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 90),
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: pressed
+                    ? [palette.bodyShadow, palette.body]
+                    : [palette.bodyHighlight, palette.body],
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Upright(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                  color: palette.text.withValues(alpha: enabled && !atLimit ? 1 : 0.35),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Semantics(
+      label: 'Zoom',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 30,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.black.withValues(alpha: 0.4)),
+              boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 2, offset: Offset(0, 1))],
+            ),
+            child: Row(
+              children: [
+                half('W', -1, const BorderRadius.horizontal(left: Radius.circular(15))),
+                Container(width: 1, color: Colors.black.withValues(alpha: 0.35)),
+                half('T', 1, const BorderRadius.horizontal(right: Radius.circular(15))),
+              ],
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            'ZOOM',
+            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1, color: palette.textMuted),
+          ),
+        ],
       ),
     );
   }

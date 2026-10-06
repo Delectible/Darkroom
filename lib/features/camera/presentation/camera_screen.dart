@@ -17,6 +17,7 @@ import '../../settings/presentation/settings_sheet.dart';
 import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
+import '../application/zoom_controller.dart';
 import 'viewport.dart';
 import 'widgets/camera_controls.dart';
 
@@ -66,6 +67,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     // Keep the session + darkroom clock alive while the camera screen exists.
     ref.watch(cameraSessionProvider);
     ref.watch(darkroomControllerProvider);
+    // Keep the zoom motor alive (and resetting with each body) without
+    // rebuilding the whole screen on every zoom step.
+    ref.listen(zoomProvider, (_, _) {});
 
     ref.listen<String?>(pendingRouteProvider, (_, route) {
       if (route == 'corkboard') {
@@ -130,6 +134,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                           child: Row(
                             children: [
                               Expanded(child: StockLabel(onOpen: _openSelector)),
+                              // Every digital body has the same W|T rocker, so
+                              // nothing pops in or out when switching bodies.
+                              // Film bodies have no zoom at all.
+                              if (mode == AppMode.digital) ...[const SizedBox(width: 12), const ZoomRocker()],
                               const SizedBox(width: 12),
                               const ModeSwitch(),
                             ],

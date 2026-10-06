@@ -184,6 +184,35 @@ class FilmProfile {
       halation: 0.04,
       vignette: 0.20,
     ),
+    // Instant integral film: soft, low-contrast, milky blacks, cool shadows
+    // and warm creamy highlights, muted colour with greens leaning teal, a
+    // heavy vignette and almost no visible grain (the dyes are smooth).
+    'polaroid600': FilmProfile(
+      id: 'polaroid600',
+      exposureEv: 0.15,
+      balance: [1.02, 1.0, 0.97],
+      contrast: [0.92, 0.90, 0.86],
+      white: 0.97,
+      saturation: 0.84,
+      hues: [
+        HueTweak(27, 26, shift: 4, chroma: 0.95),
+        HueTweak(55, 30, shift: 4, chroma: 1.04, light: 0.015),
+        HueTweak(110, 28, shift: -6, chroma: 0.92),
+        HueTweak(142, 40, shift: 26, chroma: 0.78, light: -0.01),
+        HueTweak(235, 40, shift: -10, chroma: 0.82),
+      ],
+      shadowLift: 0.07,
+      highlightCap: 0.955,
+      shadowTint: [-0.012, 0.004, 0.022],
+      highlightTint: [0.018, 0.010, -0.020],
+      grainAmount: 0.022,
+      grainChroma: 0.25,
+      grainResolution: 1500,
+      halation: 0.06,
+      vignette: 0.42,
+      flashStrength: 0.9,
+      exposureDrift: 0.16,
+    ),
     'super8': FilmProfile(
       id: 'super8',
       balance: [0.99, 1.0, 1.02],

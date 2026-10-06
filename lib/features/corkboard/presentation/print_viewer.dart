@@ -10,6 +10,8 @@ import '../../../core/providers.dart';
 import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
 import '../../viewer/presentation/zoomable.dart';
+import '../../../core/processing/instant_frame.dart';
+import 'instant_print.dart';
 
 /// Inspecting prints on a dark light-table: swipe between them, pinch to
 /// look closer, Save copies one to the phone's photo library.
@@ -57,6 +59,33 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     setState(() => _saving = false);
     unawaited(HapticFeedback.lightImpact());
     messenger.showSnackBar(SnackBar(content: Text(err ?? 'Saved to your photo library ($filmAlbum).')));
+  }
+
+  /// Instant prints: write (or change) the note on the bottom border.
+  Future<void> _writeNote(MediaItem item) async {
+    final text = TextEditingController(text: item.note ?? '');
+    final note = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Write on the print'),
+        content: TextField(
+          controller: text,
+          autofocus: true,
+          maxLength: InstantFrame.maxNoteLength,
+          textCapitalization: TextCapitalization.sentences,
+          style: InstantFrame.noteStyle(260).copyWith(fontSize: 26),
+          decoration: const InputDecoration(hintText: 'summer \'26, the lake…'),
+          onSubmitted: (v) => Navigator.pop(context, v),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, text.text), child: const Text('Done')),
+        ],
+      ),
+    );
+    text.dispose();
+    if (note == null || !mounted) return;
+    await ref.read(filmRepositoryProvider).setNote(item.id, note);
   }
 
   Future<void> _delete(MediaItem item) async {
@@ -140,10 +169,15 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                     controller: _pages,
                     itemCount: items.length,
                     onPageChanged: (i) => setState(() => _index = i),
-                    itemBuilder: (context, i, onZoom) => _Print(item: items[i], onZoomChanged: onZoom),
+                    itemBuilder: (context, i, onZoom) => _Print(
+                      item: items[i],
+                      onZoomChanged: onZoom,
+                      onWrite: () => _writeNote(items[i]),
+                    ),
                   ),
                 ),
                 _ActionBar(
+                  onWrite: spec.isInstant ? () => _writeNote(item) : null,
                   saved: item.isSaved,
                   saving: _saving,
                   onSave: () => _save(item),
@@ -160,14 +194,32 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
 }
 
 class _Print extends StatelessWidget {
-  const _Print({required this.item, required this.onZoomChanged});
+  const _Print({required this.item, required this.onZoomChanged, required this.onWrite});
 
   final MediaItem item;
   final ValueChanged<bool> onZoomChanged;
+  final VoidCallback onWrite;
 
   @override
   Widget build(BuildContext context) {
     final path = item.outputPath;
+    if (CameraCatalog.byId(item.cameraId).isInstant) {
+      return Zoomable(
+        onZoomChanged: onZoomChanged,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: InstantPrint(
+              note: item.note,
+              onNoteTap: onWrite,
+              picture: path == null
+                  ? const ColoredBox(color: Colors.black12)
+                  : Image.file(File(path), fit: BoxFit.cover, filterQuality: FilterQuality.medium, gaplessPlayback: true),
+            ),
+          ),
+        ),
+      );
+    }
     final aspect = (item.width ?? 3) / (item.height ?? 2);
     return Zoomable(
       onZoomChanged: onZoomChanged,
@@ -200,6 +252,7 @@ class _Print extends StatelessWidget {
 
 class _ActionBar extends StatelessWidget {
   const _ActionBar({
+    this.onWrite,
     required this.saved,
     required this.saving,
     required this.onSave,
@@ -207,6 +260,7 @@ class _ActionBar extends StatelessWidget {
     required this.onShare,
   });
 
+  final VoidCallback? onWrite;
   final bool saved;
   final bool saving;
   final VoidCallback onSave;
@@ -236,6 +290,7 @@ class _ActionBar extends StatelessWidget {
                     primary: true,
                   ),
           ),
+          if (onWrite != null) _RoundAction(icon: Icons.edit_outlined, label: 'Write', onTap: onWrite),
           _RoundAction(icon: Icons.delete_outline, label: 'Throw away', onTap: onDelete),
         ],
       ),

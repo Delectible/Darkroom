@@ -110,11 +110,12 @@ class CaptureProcessor {
       final n = await db.nextCounter('reel');
       return '$prefix${n.toString().padLeft(3, '0')}.MP4';
     }
-    final n = await db.nextCounter(spec.mode == AppMode.film ? 'film' : prefix);
+    final n = await db.nextCounter(spec.mode == AppMode.film ? spec.roll.counter : prefix);
     if (spec.mode == AppMode.film) {
-      final frame = ((n - 1) % 36) + 1; // 36-exposure rolls
-      final roll = ((n - 1) ~/ 36) + 1;
-      return 'ROLL${roll.toString().padLeft(3, '0')}_${frame.toString().padLeft(2, '0')}'
+      final r = spec.roll;
+      final frame = ((n - 1) % r.frames) + 1;
+      final roll = ((n - 1) ~/ r.frames) + 1;
+      return '${r.prefix}${roll.toString().padLeft(3, '0')}_${frame.toString().padLeft(2, '0')}'
           '${kind == MediaKind.photo ? '.JPG' : '.MP4'}';
     }
     final digits = 8 - prefix.length;
@@ -135,7 +136,7 @@ class CaptureProcessor {
 
   DateTime _readyAt(CaptureContext ctx, DateTime now) =>
       ctx.spec.mode == AppMode.film && ctx.global.darkroomEnabled
-      ? now.add(GlobalSettings.developDuration)
+      ? now.add(ctx.spec.developTime)
       : now;
 
   /// Queues a still. Returns as soon as the capture is safely persisted.

@@ -54,7 +54,8 @@ class _SettingsSheet extends ConsumerWidget {
           _Toggle(
             title: 'Darkroom development',
             subtitle: global.darkroomEnabled
-                ? 'Film shots take ${GlobalSettings.developDuration.inMinutes} minutes to develop.'
+                ? 'Film shots take ${CameraSpec.defaultDevelopTime.inMinutes} minutes to develop '
+                      '(instant prints: under a minute).'
                 : 'Film shots develop instantly.',
             value: global.darkroomEnabled,
             onChanged: (v) => unawaited(g.setDarkroomEnabled(v)),

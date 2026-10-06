@@ -10,7 +10,7 @@ class AppDatabase {
   final Database db;
 
   static const _name = 'darkroom.db';
-  static const _version = 2;
+  static const _version = 3;
 
   static const filmTable = 'film_prints';
   static const sdTable = 'sd_card';
@@ -50,7 +50,8 @@ class AppDatabase {
               attempts INTEGER NOT NULL DEFAULT 0,
               error TEXT,
               location TEXT NOT NULL DEFAULT 'sd',
-              saved_at INTEGER
+              saved_at INTEGER,
+              note TEXT
             )''');
           batch.execute('CREATE INDEX idx_${table}_status ON $table(status, ready_at)');
         }
@@ -77,6 +78,12 @@ class AppDatabase {
             await db.execute('ALTER TABLE $table ADD COLUMN saved_at INTEGER');
           }
           await db.execute('ALTER TABLE camera_settings ADD COLUMN grain TEXT');
+        }
+        if (from < 3) {
+          // v3: instant prints carry a handwritten note.
+          for (final table in [filmTable, sdTable]) {
+            await db.execute('ALTER TABLE $table ADD COLUMN note TEXT');
+          }
         }
       },
     );

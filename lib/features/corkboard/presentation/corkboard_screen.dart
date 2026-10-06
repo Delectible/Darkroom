@@ -13,6 +13,7 @@ import '../../../core/providers.dart';
 import '../../../core/shaders/shader_library.dart';
 import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
+import 'instant_print.dart';
 import 'print_viewer.dart';
 import 'projector_screen.dart';
 import 'reel_painter.dart';
@@ -140,9 +141,12 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
                       ),
                       delegate: SliverChildBuilderDelegate(childCount: developed.length, (context, i) {
                         final m = developed[i];
+                        void open() => _open(context, developed, m);
                         final child = m.isVideo
-                            ? PinnedReel(item: m, onOpen: () => _open(context, developed, m))
-                            : PinnedPrint(item: m, onOpen: () => _open(context, developed, m));
+                            ? PinnedReel(item: m, onOpen: open)
+                            : CameraCatalog.byId(m.cameraId).isInstant
+                            ? PinnedInstant(item: m, onOpen: open)
+                            : PinnedPrint(item: m, onOpen: open);
                         if (!_animatePin(m, i)) return KeyedSubtree(key: ValueKey(m.id), child: child);
                         return _PinIn(
                           key: ValueKey(m.id),
@@ -491,6 +495,67 @@ class PinnedPrint extends StatelessWidget {
   }
 }
 
+/// An instant print pinned through its top border, note and all.
+class PinnedInstant extends StatelessWidget {
+  const PinnedInstant({super.key, required this.item, required this.onOpen});
+
+  final MediaItem item;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final rnd = math.Random(item.id.hashCode);
+    final angle = (rnd.nextDouble() - 0.5) * 0.12;
+    final dx = (rnd.nextDouble() - 0.5) * 10;
+    final pin = _pinColors[rnd.nextInt(_pinColors.length)];
+    final thumb = item.thumbPath;
+    return Builder(
+      builder: (anchor) => GestureDetector(
+        onTap: onOpen,
+        onLongPress: () {
+          unawaited(HapticFeedback.mediumImpact());
+          unawaited(shareMedia(anchor, item));
+        },
+        child: Transform.translate(
+          offset: Offset(dx, 0),
+          child: Center(
+            child: Transform.rotate(
+              angle: angle,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  InstantPrint(
+                    note: item.note,
+                    picture: thumb == null
+                        ? const ColoredBox(color: Colors.black12)
+                        : Image.file(
+                            File(thumb),
+                            fit: BoxFit.cover,
+                            cacheWidth: 420,
+                            gaplessPlayback: true,
+                            frameBuilder: (context, child, frame, sync) =>
+                                frame == null && !sync ? const ColoredBox(color: Color(0xFFE9E2D3)) : child,
+                            errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
+                          ),
+                  ),
+                  Positioned(
+                    top: -9,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: CustomPaint(size: const Size(26, 30), painter: PinPainter(pin)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A Super 8 reel hung on the board by a pin through its hub.
 class PinnedReel extends StatelessWidget {
   const PinnedReel({super.key, required this.item, required this.onOpen});
@@ -666,6 +731,38 @@ class _Tray extends ConsumerWidget {
     final mm = left.inMinutes.clamp(0, 99).toString();
     final ss = (left.inSeconds % 60).clamp(0, 59).toString().padLeft(2, '0');
     final thumb = item.thumbPath;
+
+    if (spec.isInstant && !failed) {
+      // Instant film develops in the light: the picture surfaces through the
+      // blue-grey sheet in front of you (eased between the 1 s ticks).
+      return SizedBox(
+        width: 84,
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(end: processing ? 0 : progress),
+                  duration: const Duration(seconds: 1),
+                  builder: (context, p, _) => InstantPrint(
+                    develop: p,
+                    shadow: false,
+                    picture: thumb == null || processing
+                        ? const SizedBox.shrink()
+                        : Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 160, gaplessPlayback: true),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}',
+              style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      );
+    }
 
     return GestureDetector(
       onTap: failed ? () => _explainRuined(context, ref) : null,

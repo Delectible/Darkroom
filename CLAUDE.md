@@ -75,10 +75,19 @@ curves, hue tweaks, split toning). The same LUT drives the live GPU preview
 (`shaders/film.frag`), the CPU renderer for stills, and FFmpeg `lut3d` (.cube)
 for video. Plus a tileable grain texture, halation and exposure drift.
 
-- Stock ids: `ektar100`, `portra400`, `hp5plus400`, `super8`.
+- Stock ids: `ektar100`, `portra400`, `hp5plus400`, `polaroid600`, `super8`.
 - Grain strength: weak 0.55 / normal 1 / strong 1.65. Set **per film stock,
   only in the settings menu**. When not "normal", the carousel shows a small
   tag. Digital cameras have no grain setting.
+
+## Adding a stock / camera
+
+Everything a body needs lives on its `CameraSpec` in `camera_catalog.dart`:
+look (`FilmProfile` in `film_profile.dart` for film, `LookSpec` for digital),
+artwork, aspects, `developTime`, `printStyle` (print / instant), `roll`
+(file prefix, frames, counter), `zoom` (digital only), `pickerTag`. No other
+file should switch on a camera id. `test/catalog_contract_test.dart` fails if
+an entry is incomplete. Gabe sends requests on `docs/NEW_CAMERA_FORM.md`.
 
 ## Product rules agreed with Gabe
 
@@ -90,12 +99,21 @@ Film Mode
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;
   playback is a film-styled projector screen.
 - Corkboard pins must sit **on** the photo, not in the cork above it.
+- **Polaroid 600** (`printStyle: instant`): square only, 8-shot packs,
+  develops in 20 s (watch it fade in on the corkboard's darkroom strip).
+  Notes are typed in the print viewer (Write / tap the border), drawn in the
+  bundled Caveat font, and baked into saved/shared files with the border
+  (`core/processing/instant_frame.dart`). Note is stored in `note` (DB v3).
 
 Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
 - Shots go to a virtual **SD card** in a Windows 98-style explorer.
 - Files on the SD card are **locked** until moved to C: (prompt with
   Move / Move All). Moving removes them from the SD card and copies them to
   the gallery (album "Darkroom"); they stay viewable under C:.
+- Zoom: W|T rocker on every digital body (none in film). Held = fixed-rate
+  motor zoom up to the body's `ZoomSpec.max` (floppy/CCD 3x, flip phone 4x,
+  camcorder 10x, capped by the phone). No pinch. Camcorder shows a sliding
+  W-T bar on its OSD, stills cameras a "2.4X" readout.
 - Toolbar button says **Transfer** (not Eject). Drive is named **SD Card**.
   Viewer has ◀ ▶ arrows. File/Edit/View/Help menus have settings, app info
   and easter eggs.

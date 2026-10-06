@@ -76,6 +76,24 @@ class CameraCatalog {
     videoPrefix: 'REEL',
     // One 50 ft cartridge runs 3 min 20 s at 18 fps.
     videoMaxSeconds: 200,
+    pickerTag: 'MOVIE · 18 FPS',
+  );
+
+  static const polaroid600 = CameraSpec(
+    id: 'polaroid600',
+    mode: AppMode.film,
+    name: 'Polaroid 600',
+    subtitle: 'Instant prints you can write on',
+    badge: 'ISO 640',
+    quality: CaptureQuality.high,
+    output: OutputProfile(maxLongEdge: 1600, jpegQuality: 90),
+    aspects: [AspectRatioOption.r1x1],
+    defaultAspect: AspectRatioOption.r1x1,
+    artwork: 'assets/artwork/polaroid600.webp',
+    developTime: Duration(seconds: 20),
+    printStyle: PrintStyle.instant,
+    roll: FilmRoll(prefix: 'PACK', frames: 8, counter: 'instant', countsDown: true),
+    pickerTag: 'INSTANT · 20 S',
   );
 
   // --------------------------------------------------------------------------
@@ -118,6 +136,7 @@ class CameraCatalog {
     defaultAspect: AspectRatioOption.r4x3,
     artwork: 'assets/artwork/floppy99.webp',
     photoPrefix: 'FLP0',
+    zoom: ZoomSpec(max: 3),
   );
 
   static const ccd2003 = CameraSpec(
@@ -160,6 +179,7 @@ class CameraCatalog {
     artwork: 'assets/artwork/ccd2003.webp',
     timestampStyle: TimestampStyle.ledDate,
     photoPrefix: 'DSC0',
+    zoom: ZoomSpec(max: 3),
   );
 
   static const flipPhone = CameraSpec(
@@ -204,6 +224,8 @@ class CameraCatalog {
     artwork: 'assets/artwork/flipphone.webp',
     timestampStyle: TimestampStyle.phone,
     photoPrefix: 'IMG_',
+    // Phone-camera digital zoom.
+    zoom: ZoomSpec(max: 4, endToEnd: Duration(milliseconds: 1600)),
   );
 
   static const camcorder = CameraSpec(
@@ -253,9 +275,12 @@ class CameraCatalog {
     photoPrefix: 'PICT',
     videoPrefix: 'CLIP',
     videoMaxSeconds: 900,
+    // Slow, steady motor zoom of a 90s camcorder.
+    zoom: ZoomSpec(max: 10, endToEnd: Duration(milliseconds: 4200)),
+    pickerTag: 'VIDEO',
   );
 
-  static const List<CameraSpec> film = [ektar100, portra400, hp5, super8];
+  static const List<CameraSpec> film = [ektar100, portra400, hp5, polaroid600, super8];
   static const List<CameraSpec> digital = [floppy, ccd2003, flipPhone, camcorder];
   static const List<CameraSpec> all = [...film, ...digital];
 

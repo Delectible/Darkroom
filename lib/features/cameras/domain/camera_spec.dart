@@ -46,6 +46,44 @@ class OutputProfile {
   final int upscale;
 }
 
+/// How a developed film still is presented on the corkboard, in the viewer
+/// and in exported files.
+enum PrintStyle {
+  /// Glossy print with a thin white border (the border is display-only).
+  print,
+
+  /// Instant print: square picture, deep bottom border you can write on. The
+  /// frame and the note are baked into saved / shared files.
+  instant,
+}
+
+/// The roll or pack a film body shoots (file names and the frame counter).
+class FilmRoll {
+  const FilmRoll({this.prefix = 'ROLL', this.frames = 36, this.counter = 'film', this.countsDown = false});
+
+  /// File names read PREFIX001_07.JPG (roll 1, frame 7).
+  final String prefix;
+  final int frames;
+
+  /// Shared numbering key: bodies using the same key share one roll.
+  final String counter;
+
+  /// Counter shows shots left (instant packs) instead of the next frame.
+  final bool countsDown;
+}
+
+/// Motorised zoom on digital bodies: held W/T buttons drive it at a fixed rate.
+class ZoomSpec {
+  const ZoomSpec({required this.max, this.endToEnd = const Duration(milliseconds: 2400)});
+
+  /// Longest focal length as a multiple of the widest (clamped to what the
+  /// phone's camera supports).
+  final double max;
+
+  /// Time for a full W-to-T sweep.
+  final Duration endToEnd;
+}
+
 class CameraSpec {
   const CameraSpec({
     required this.id,
@@ -64,7 +102,15 @@ class CameraSpec {
     this.photoPrefix = 'IMG_',
     this.videoPrefix = 'MOV',
     this.videoMaxSeconds = 600,
+    this.developTime = defaultDevelopTime,
+    this.printStyle = PrintStyle.print,
+    this.roll = const FilmRoll(),
+    this.zoom,
+    this.pickerTag,
   });
+
+  /// Darkroom time for film shots unless a stock says otherwise.
+  static const defaultDevelopTime = Duration(minutes: 5);
 
   final String id;
   final AppMode mode;
@@ -94,6 +140,21 @@ class CameraSpec {
   final String videoPrefix;
   final int videoMaxSeconds;
 
+  /// Film: how long a shot spends in the darkroom.
+  final Duration developTime;
+
+  /// Film stills: plain print or instant print.
+  final PrintStyle printStyle;
+
+  /// Film stills: roll / pack naming and the frame counter.
+  final FilmRoll roll;
+
+  /// Digital: motorised zoom range. Film bodies never zoom (null).
+  final ZoomSpec? zoom;
+
+  /// Optional tag under the name in the picker (e.g. "MOVIE · 18 FPS").
+  final String? pickerTag;
+
   /// Film stocks: the emulsion model shared by shader, stills and video.
   FilmProfile? get film => FilmProfile.forStock(id);
 
@@ -101,4 +162,5 @@ class CameraSpec {
   bool get isMono => film?.mono ?? look?.mono ?? false;
   bool get aspectLocked => aspects.length == 1;
   bool get supportsTimestamp => timestampStyle != TimestampStyle.none;
+  bool get isInstant => printStyle == PrintStyle.instant;
 }

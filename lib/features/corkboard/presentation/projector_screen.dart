@@ -9,6 +9,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
+import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
 
 /// Super 8 reels play on a home-movie projector: warm beam, running
@@ -218,7 +219,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
                           ),
                         ),
                         Text(
-                          'Super 8 · ${formatDuration(item.durationMs)} · ${MaterialLocalizations.of(context).formatMediumDate(item.capturedAt)}',
+                          '${CameraCatalog.byId(item.cameraId).name} · ${formatDuration(item.durationMs)} · ${MaterialLocalizations.of(context).formatMediumDate(item.capturedAt)}',
                           style: const TextStyle(color: Colors.white38, fontSize: 12),
                         ),
                       ],

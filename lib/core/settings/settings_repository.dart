@@ -23,8 +23,6 @@ class GlobalSettings {
   /// 2160p-class film capture (sharper prints, heavier live preview).
   final bool highResFilm;
 
-  static const developDuration = Duration(minutes: 5);
-
   GlobalSettings copyWith({
     bool? darkroomEnabled,
     bool? notificationsEnabled,

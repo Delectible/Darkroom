@@ -3,15 +3,17 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.0';
+  static const version = '1.3.1';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'Swipe anywhere in the picker; swipe the film name or box to switch stocks. '
+      'Polaroid 600: square instant prints that develop in 20 seconds, with notes '
+          'written on the border. Zoom buttons on every digital camera. '
+          'Swipe anywhere in the picker; swipe the film name or box to switch stocks. '
           'Zoomed photos pan instead of flipping. Reels replay after the end. '
-          'Videos show a preview when shared. Smoother corkboard. Flip phone opens the right way.',
+          'Smoother corkboard. Flip phone opens the right way.',
     ),
     (
       '1.2',

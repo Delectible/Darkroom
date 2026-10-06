@@ -5,9 +5,8 @@ send it over. Send as many as you like at once. Plain words are fine: I turn
 descriptions into the numbers. Anything left blank gets a sensible default,
 and I'll tell you what I picked.
 
-Fields marked *(after 7.1)* only take effect once the pipeline work in
-[`CHANGELOG.md`](CHANGELOG.md) item 7.1 has landed. Until then I can still
-build them, but it means code changes beyond the usual places.
+Fields marked *(after 4.5)* need that [`CHANGELOG.md`](CHANGELOG.md) item
+to land first; everything else is supported by the pipeline today.
 
 ---
 
@@ -45,9 +44,9 @@ Reference photos:               (2-5 real example shots — links or uploads.
 Grain:                          fine / medium / coarse / heavy
 Highlight glow (halation):      none / subtle / strong
 Vignette:                       none / subtle / strong
-Develop time:                   (default 5 min)                      *(after 7.1)*
-Print style on the corkboard:   plain print / Polaroid frame / other *(after 7.1)*
-Developing visual:              (default darkroom tray, or describe)  *(after 7.1)*
+Develop time:                   (default 5 min; Polaroid 600 is 20 s)
+Print style:                    plain print / instant (square, written-on border)
+Roll or pack:                   (default 36-exposure roll; e.g. "8-shot pack")
 
 -- Digital only --
 Date stamp:                     none / orange LED date / phone-style corner /
@@ -56,7 +55,7 @@ File name prefix on SD card:    (4 letters, e.g. DSC0, IMG_, PICT)
 Artefacts:                      soft lens / CCD smear on lights / JPEG blocks /
                                 pixelated / scanlines / colour bleed / noise
 Flash:                          harsh / weak / none
-Zoom range:                     (e.g. "3x optical", "none")          *(after 3.2)*
+Zoom range & speed:             (e.g. "3x, quick" or "10x, slow motor")
 Saves to:                       SD card / floppy / other             *(after 4.5)*
 
 -- Video only --
@@ -80,7 +79,8 @@ Product shot reference:         (optional link or photo)
 
 So you know what a "clean" addition looks like:
 
-1. **Catalog entry:** name, badge, aspects, quality and output size in
+1. **Catalog entry:** name, badge, aspects, quality, output size, develop
+   time, print style, roll/pack and zoom in
    `lib/features/cameras/domain/camera_catalog.dart`.
 2. **Look:**
    - Film: a `FilmProfile` in `lib/core/processing/film/film_profile.dart`.
@@ -89,8 +89,9 @@ So you know what a "clean" addition looks like:
      shader styles (CCD, JPEG/pixel, VHS).
 3. **Artwork:** a 3D render made with `tool/render/` and added to
    `assets/artwork/`.
-4. **Checks:** the existing contract tests cover the new look. I add a test
-   if the camera brings new behaviour.
+4. **Checks:** `test/catalog_contract_test.dart` checks every entry is
+   complete (look, artwork, aspects, zoom, file names); the shader contract
+   test covers the look. I add a test if the camera brings new behaviour.
 5. **Log:** version bump, a line in Help > About, and a tick in
    `CHANGELOG.md`.
 

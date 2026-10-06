@@ -5,15 +5,36 @@ import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/db/media_repository.dart';
+import '../../../core/processing/instant_frame.dart';
+import '../../cameras/domain/camera_catalog.dart';
+
+/// The file that leaves the app for [item]: instant prints get their border
+/// and handwritten note baked in; everything else is shared as stored.
+Future<String?> exportPathFor(MediaItem item) async {
+  final path = item.outputPath;
+  if (path == null || !File(path).existsSync()) return null;
+  if (item.isVideo || !CameraCatalog.byId(item.cameraId).isInstant) return path;
+  try {
+    return await InstantFrame.exportJpeg(
+      picturePath: path,
+      note: item.note,
+      outPath: '${Directory.systemTemp.path}/instant_export/${item.fileName}',
+    );
+  } catch (e) {
+    // Never lose the share/save over the frame: fall back to the bare picture.
+    debugPrint('Instant export failed: $e');
+    return path;
+  }
+}
 
 /// Native share sheet (SMS, WhatsApp, Instagram Stories, AirDrop...).
 ///
 /// [anchor] is the widget the sheet should point at on iPad / large screens.
 Future<void> shareMedia(BuildContext anchor, MediaItem item) async {
-  final path = item.outputPath;
-  if (path == null || !File(path).existsSync()) return;
   final box = anchor.findRenderObject() as RenderBox?;
   final origin = box != null && box.hasSize ? box.localToGlobal(Offset.zero) & box.size : null;
+  final path = await exportPathFor(item);
+  if (path == null) return;
   await SharePlus.instance.share(
     ShareParams(
       files: [XFile(path, mimeType: item.isVideo ? 'video/mp4' : 'image/jpeg')],
@@ -30,9 +51,10 @@ const digitalAlbum = 'Darkroom';
 /// Copies a file into the public photo library. Returns an error message or
 /// null on success.
 Future<String?> saveToGallery(MediaItem item, {required String album}) async {
-  final path = item.outputPath;
-  if (path == null) return 'File is still processing';
+  if (item.outputPath == null) return 'File is still processing';
   try {
+    final path = await exportPathFor(item);
+    if (path == null) return 'File is missing';
     final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
     if (!ok) return 'Photo library access was denied';
     if (item.isVideo) {

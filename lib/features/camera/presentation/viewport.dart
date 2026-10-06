@@ -19,6 +19,7 @@ import '../../cameras/domain/camera_spec.dart';
 import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
+import '../application/zoom_controller.dart';
 
 /// The viewfinder: shader-filtered live preview, aspect-ratio mask, burned-in
 /// timestamp preview, tap-to-focus and the shutter blink.
@@ -312,11 +313,11 @@ class _AspectMaskPainter extends CustomPainter {
       old.hole != hole || old.shade != shade || old.frame != frame || old.brackets != brackets;
 }
 
-/// Frames already exposed on the current 36-exposure roll.
-final _filmFrameProvider = FutureProvider<int>((ref) async {
+/// Frames already exposed on the current roll / pack of [FilmRoll].
+final _filmFrameProvider = FutureProvider.family<int, FilmRoll>((ref, roll) async {
   ref.watch(filmItemsProvider); // re-read after every capture
-  final v = await ref.read(appDatabaseProvider).getValue('counter.film');
-  return (int.tryParse(v ?? '') ?? 0) % 36;
+  final v = await ref.read(appDatabaseProvider).getValue('counter.${roll.counter}');
+  return (int.tryParse(v ?? '') ?? 0) % roll.frames;
 });
 
 /// Film-body counters: the next frame on the roll, or the footage left in a
@@ -338,8 +339,9 @@ class _FilmCounter extends ConsumerWidget {
       final feet = ((spec.videoMaxSeconds - elapsed) / 4).ceil().clamp(0, 50);
       text = '$feet FT';
     } else {
-      final shots = ref.watch(_filmFrameProvider).value ?? 0;
-      text = 'FRAME ${shots + 1}';
+      final roll = spec.roll;
+      final shots = ref.watch(_filmFrameProvider(roll)).value ?? 0;
+      text = roll.countsDown ? '${roll.frames - shots} LEFT' : 'FRAME ${shots + 1}';
     }
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 260),
@@ -404,6 +406,13 @@ class _HudOverlay extends ConsumerWidget {
                 top: 10,
                 child: _RecTimer(since: capture.recordingSince!, color: palette.danger),
               ),
+            if (digital && spec.zoom != null)
+              Positioned(
+                left: 0,
+                right: 0,
+                top: box.maxHeight * 0.12,
+                child: Center(child: _ZoomIndicator(bar: spec.recordsVideo, short: short)),
+              ),
             if (timestamp && spec.supportsTimestamp)
               Positioned(
                 right: spec.timestampStyle == TimestampStyle.phone ? 4 : box.maxWidth * 0.05,
@@ -415,6 +424,95 @@ class _HudOverlay extends ConsumerWidget {
       },
     );
   }
+}
+
+/// Shows while the zoom motor runs and briefly after: a sliding W-T bar on
+/// the camcorder's OSD, a plain "2.4X" readout on the stills cameras.
+class _ZoomIndicator extends ConsumerStatefulWidget {
+  const _ZoomIndicator({required this.bar, required this.short});
+
+  final bool bar;
+  final double short;
+
+  @override
+  ConsumerState<_ZoomIndicator> createState() => _ZoomIndicatorState();
+}
+
+class _ZoomIndicatorState extends ConsumerState<_ZoomIndicator> {
+  Timer? _hide;
+  bool _visible = false;
+
+  @override
+  void dispose() {
+    _hide?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<ZoomState>(zoomProvider, (prev, next) {
+      if (next.changedAt == prev?.changedAt) return;
+      _hide?.cancel();
+      if (!_visible) setState(() => _visible = true);
+      if (next.direction == 0) {
+        _hide = Timer(const Duration(milliseconds: 1500), () {
+          if (mounted) setState(() => _visible = false);
+        });
+      }
+    });
+    final zoom = ref.watch(zoomProvider);
+    final dot = math.max(1.2, widget.short / 170);
+    return AnimatedOpacity(
+      opacity: _visible && zoom.canZoom ? 1 : 0,
+      duration: const Duration(milliseconds: 200),
+      child: widget.bar
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PixelText('W', dot: dot, color: Colors.white, shadow: Colors.black),
+                SizedBox(width: dot * 3),
+                CustomPaint(
+                  size: Size(widget.short * 0.42, dot * 7),
+                  painter: _ZoomBarPainter(fraction: zoom.fraction, dot: dot),
+                ),
+                SizedBox(width: dot * 3),
+                PixelText('T', dot: dot, color: Colors.white, shadow: Colors.black),
+              ],
+            )
+          : PixelText('${zoom.level.toStringAsFixed(1)}X', dot: dot, color: Colors.white, shadow: Colors.black),
+    );
+  }
+}
+
+/// Camcorder OSD zoom track: tick marks and a solid slider block.
+class _ZoomBarPainter extends CustomPainter {
+  _ZoomBarPainter({required this.fraction, required this.dot});
+
+  final double fraction;
+  final double dot;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    void draw(Offset o, Color c) {
+      final p = Paint()..color = c;
+      final midY = size.height / 2;
+      canvas.drawRect(Rect.fromLTWH(o.dx, midY - dot / 2 + o.dy, size.width, dot), p);
+      const ticks = 10;
+      for (var i = 0; i <= ticks; i++) {
+        final x = (size.width - dot) * i / ticks;
+        final h = i == 0 || i == ticks ? size.height : size.height * 0.55;
+        canvas.drawRect(Rect.fromLTWH(x + o.dx, midY - h / 2 + o.dy, dot, h), p);
+      }
+      final bx = (size.width - dot * 3) * fraction.clamp(0.0, 1.0);
+      canvas.drawRect(Rect.fromLTWH(bx + o.dx, o.dy, dot * 3, size.height), p);
+    }
+
+    draw(Offset(dot * 0.7, dot * 0.7), Colors.black);
+    draw(Offset.zero, Colors.white);
+  }
+
+  @override
+  bool shouldRepaint(_ZoomBarPainter old) => old.fraction != fraction || old.dot != dot;
 }
 
 class _TimestampPreview extends ConsumerWidget {

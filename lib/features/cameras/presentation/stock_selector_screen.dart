@@ -432,8 +432,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
                               mainAxisSize: MainAxisSize.min,
                               spacing: 6,
                               children: [
-                                if (spec != null && spec.recordsVideo)
-                                  _Tag(spec.isFilm ? 'MOVIE · 18 FPS' : 'VIDEO', const Color(0xFFE57373)),
+                                if (spec?.pickerTag case final tag?) _Tag(tag, const Color(0xFFE57373)),
                                 if (grain != GrainStrength.normal)
                                   _Tag(
                                     'GRAIN: ${grain.name.toUpperCase()}',

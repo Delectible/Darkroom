@@ -45,9 +45,10 @@ C = 1.3.2 (visual pieces).
   spool. Come up with something that makes physical sense.
 - [ ] **2.4 Developing state:** a distinct, stylised look for film videos
   that are still developing.
-- [x] **2.5 Share sheet preview:** sharing a video on Android shows only the
-  file name. Pass a thumbnail to the share sheet. → 1.3.0 · 2026-10-06 · c1ca3d1 (build 11)
-  Android-side change; please confirm on the Pixel.
+- [ ] **2.5 Share sheet preview:** sharing a video on Android shows only the
+  file name. Pass a thumbnail to the share sheet.
+  Tried in 1.3.0 (build 11): a provider that serves a first-frame thumbnail.
+  Gabe confirmed the sheet still shows no thumbnail. Low priority; revisit.
 
 ### 3. Camera UI & viewfinder
 
@@ -55,13 +56,14 @@ C = 1.3.2 (visual pieces).
   slide: the whole camera slides off and the other slides in. Possibly add a
   "swap device" sound. Remove the slider switch and add another obvious
   control for swapping. *Build a demo first for approval.*
-- [ ] **3.2 Motorised zoom:** fixed-rate zoom on dedicated buttons for the 90s
+- [x] **3.2 Motorised zoom:** fixed-rate zoom on dedicated buttons for the 90s
   Camcorder (no pinch). The buttons also work in the other digital cameras.
-  Realistic zoom limits per camera. **No zoom at all in Film mode.**
-- [ ] **3.3 Zoom indicator:** retro sliding zoom bar overlaid on the camcorder
-  screen.
-- [ ] **3.4 Zoom buttons always shown:** keep the zoom buttons on every digital
-  camera so buttons don't appear or vanish when switching cameras.
+  Realistic zoom limits per camera. **No zoom at all in Film mode.** → 1.3.1 · 2026-10-06 · COMMIT
+  Floppy/CCD 3x, flip phone 4x, camcorder 10x (slow motor); capped by the phone.
+- [x] **3.3 Zoom indicator:** retro sliding zoom bar overlaid on the camcorder
+  screen. → 1.3.1 · 2026-10-06 · COMMIT
+- [x] **3.4 Zoom buttons always shown:** keep the zoom buttons on every digital
+  camera so buttons don't appear or vanish when switching cameras. → 1.3.1 · 2026-10-06 · COMMIT
 - [ ] **3.5 Front camera button:** redesign the switch-camera button; the
   current one is too plain.
 - [ ] **3.6 Landscape fixes:** the flash and aspect ratio buttons shouldn't
@@ -107,21 +109,23 @@ C = 1.3.2 (visual pieces).
 
 ### 6. New feature: Polaroid camera (Film mode)
 
-- [ ] **6.1 Aspect:** viewfinder locked to the Polaroid frame (square).
-- [ ] **6.2 Corkboard frame:** shown on the corkboard with an authentic
-  Polaroid frame.
-- [ ] **6.3 Handwritten note:** type a note at the preview stage; it's drawn in
-  a handwritten font on the bottom border.
-- [ ] **6.4 Export:** the white border and note are baked into saved and shared
-  images.
-- [ ] **6.5 Development time:** 20 seconds.
-- [ ] **6.6 Darkroom visual:** the Polaroid visibly fades in as it develops.
+- [x] **6.1 Aspect:** viewfinder locked to the Polaroid frame (square). → 1.3.1 · 2026-10-06 · COMMIT
+- [x] **6.2 Corkboard frame:** shown on the corkboard with an authentic
+  Polaroid frame. → 1.3.1 · 2026-10-06 · COMMIT
+- [x] **6.3 Handwritten note:** type a note at the preview stage; it's drawn in
+  a handwritten font on the bottom border. → 1.3.1 · 2026-10-06 · COMMIT
+  Typed in the print viewer: Write button, or tap the bottom border.
+- [x] **6.4 Export:** the white border and note are baked into saved and shared
+  images. → 1.3.1 · 2026-10-06 · COMMIT
+- [x] **6.5 Development time:** 20 seconds. → 1.3.1 · 2026-10-06 · COMMIT
+- [x] **6.6 Darkroom visual:** the Polaroid visibly fades in as it develops. → 1.3.1 · 2026-10-06 · COMMIT
 
 ### 7. New stock / camera pipeline
 
-- [ ] **7.1 Consistent pipeline:** adding a film stock or camera should touch
+- [x] **7.1 Consistent pipeline:** adding a film stock or camera should touch
   as little code as possible. Film and Digital each follow one consistent
-  pattern.
+  pattern. → 1.3.1 · 2026-10-06 · COMMIT
+  Every trait lives on the catalog entry; a contract test checks each one.
 - [x] **7.2 Intake form:** a fill-in sheet for each new stock or camera. See
   [`NEW_CAMERA_FORM.md`](NEW_CAMERA_FORM.md). Draft; fields marked *(after
   7.1)* go live once 7.1 lands. → docs only · 2026-10-06

@@ -20,7 +20,10 @@ class Sfx {
   Future<void> preload() => _ready ??= _init();
 
   Future<void> _init() async {
-    final c = VideoPlayerController.asset(_asset, videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
+    final c = VideoPlayerController.asset(
+      _asset,
+      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
+    );
     try {
       await c.initialize();
       await c.setVolume(0.5);

@@ -22,7 +22,10 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Bundled fonts (instant-print notes, Win98 pixel text) ship under the SIL OFL.
   LicenseRegistry.addLicense(() async* {
-    yield LicenseEntryWithLineBreaks(['Caveat', 'DotGothic16'], await rootBundle.loadString('assets/fonts/OFL.txt'));
+    yield LicenseEntryWithLineBreaks([
+      'Caveat',
+      'DotGothic16',
+    ], await rootBundle.loadString('assets/fonts/OFL.txt'));
   });
   // The camera UI is portrait-locked; landscape shots are still captured in
   // landscape (EXIF orientation follows the physical device).

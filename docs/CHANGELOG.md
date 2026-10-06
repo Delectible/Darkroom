@@ -82,6 +82,12 @@ darkroom, corkboard, ambience).
   Demo: the other camera peeks in from the screen edge; tap or pull it in and the bodies slide past each other with a swap sound. Tell me if you like it.
   Feedback on build 15: wants real physicality (tossing one camera aside, grabbing
   the other, seeing the rest of the body pass by). Brainstorming before rebuilding.
+  Chosen: thumb toss + real camera body. Rebuilt: drag the body sideways (it
+  follows the thumb, tips away in perspective) and flick or drag far enough
+  to toss it; the other body comes in on the same motion and settles with a
+  spring. Each body runs past the screen: rounded end, side wall with strap
+  lug, neck strap (film) / wrist cord (digital). Tap the peek still works.
+  → 1.3.6 · 2026-10-06 · (pending)
 - [x] **3.2 Motorised zoom:** fixed-rate zoom on dedicated buttons for the 90s
   Camcorder (no pinch). The buttons also work in the other digital cameras.
   Realistic zoom limits per camera. **No zoom at all in Film mode.** → 1.3.1 · 2026-10-06 · 4a676b7 (build 13)

@@ -151,12 +151,19 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   and easter eggs.
 
 UI
-- Film <-> Digital: the other camera peeks in from the screen edge (digital
-  on the right in film mode, film on the left in digital mode); tap or pull
-  it in. The current body is snapshotted and slides out while the live new
-  one slides in over a dark "desk" (`_swapMode` in camera_screen.dart), with
-  `assets/sfx/camera_swap.wav` (synthesised; played via video_player, mixes
-  with other audio) and haptics. No FILM|DIGI slider any more.
+- Film <-> Digital: two physical cameras on a desk (`body_swap.dart`,
+  driven by `_swap` in camera_screen.dart). Drag the body sideways: it
+  follows the thumb and tips away in perspective; a flick or a long drag
+  tosses it and the other body comes in on the same motion (spring settle),
+  else it springs back. Each body continues past the screen: rounded end,
+  side wall with strap lug, neck strap (film) / wrist cord (digital). Until
+  the toss commits the arriving body is a picture of it from last time
+  (`_lastLook`, or `BodyStandIn`); on commit the leaving body becomes a
+  picture and the live UI switches mode. Flutter flattens nested 3D
+  transforms, so the side wall gets its own full matrix. The other camera
+  also peeks in at the edge (digital on the right in film mode, film on the
+  left); tap it to toss. Sound `assets/sfx/camera_swap.wav` (cloth swish,
+  played via video_player) and haptics.
 - Under the viewfinder: film bodies show the box end in a memo holder
   (`CameraSpec.boxColor/boxInk`), digital bodies a segment-LCD panel with
   battery and card/tape remaining.

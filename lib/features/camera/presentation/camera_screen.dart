@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,7 @@ import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
 import '../application/zoom_controller.dart';
+import 'body_swap.dart';
 import 'viewport.dart';
 import 'widgets/camera_controls.dart';
 
@@ -34,20 +36,45 @@ class CameraScreen extends ConsumerStatefulWidget {
 }
 
 class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerProviderStateMixin {
-  // ---- Film <-> Digital: the bodies change places --------------------------
+  // ---- Film <-> Digital: toss one camera aside, grab the other -------------
+  //
+  // Drag the body sideways (or tap the other camera peeking in from the
+  // edge): it follows the thumb, and a flick or a long enough drag tosses it
+  // off while the other body comes in on the same motion (SwapStage). Until
+  // the toss commits, the live UI is the leaving body and the arriving one
+  // is a picture of it from last time; on commit the leaving body becomes a
+  // picture and the live UI switches mode in the arriving slot.
 
   final _bodyKey = GlobalKey();
-  late final AnimationController _swap = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 680),
-  );
 
-  /// Picture of the body that is leaving (it slides away as a still: the
-  /// live widgets already show the new mode).
+  /// Swap progress: 0 = current body in hand, 1 = the other one.
+  late final AnimationController _swap = AnimationController.unbounded(vsync: this);
+
+  /// Physical feel of the settle: a little overshoot, no wobble.
+  static const _spring = SpringDescription(mass: 1, stiffness: 170, damping: 21);
+
+  /// Picture of the body that is leaving, once the toss has committed.
   ui.Image? _outgoing;
 
-  /// -1: outgoing body leaves to the left (film -> digital), +1: right.
-  int _swapDir = -1;
+  /// Last picture of each body, slid in as the other camera while dragging.
+  final Map<AppMode, ui.Image> _lastLook = {};
+
+  bool _dragging = false;
+
+  /// A toss is under way (taking the picture, then flying).
+  bool _committing = false;
+
+  /// The live UI has switched to the arriving body.
+  bool _committed = false;
+  double _raw = 0;
+
+  bool get _swapBusy => _committing || _swap.isAnimating;
+
+  /// Film keeps the digital body to its right (film leaves to the left);
+  /// digital keeps the film body to its left.
+  int _dirFor(AppMode mode) => mode == AppMode.film ? -1 : 1;
+
+  double _travel() => SwapGeometry(MediaQuery.sizeOf(context).width).travel;
 
   @override
   void initState() {
@@ -59,13 +86,62 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   void dispose() {
     _swap.dispose();
     _outgoing?.dispose();
+    for (final image in _lastLook.values) {
+      image.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _swapMode() async {
-    if (_swap.isAnimating || ref.read(captureControllerProvider).isRecording) return;
-    final boundary = _bodyKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+  bool _canSwap() => !_swapBusy && !_selectorOpen && !ref.read(captureControllerProvider).isRecording;
+
+  void _onDragStart(DragStartDetails d) {
+    if (!_canSwap()) return;
+    _raw = 0;
+    _swap.value = 0;
+    setState(() => _dragging = true);
+    unawaited(HapticFeedback.selectionClick());
+  }
+
+  void _onDragUpdate(DragUpdateDetails d) {
+    if (!_dragging) return;
+    final dir = _dirFor(ref.read(appModeProvider));
+    _raw = (_raw + (d.primaryDelta ?? 0) * dir / _travel()).clamp(-0.6, 1.15);
+    // The wrong way only gives a little: the other camera isn't there.
+    _swap.value = _raw >= 0 ? _raw : _raw * 0.25;
+  }
+
+  void _onDragEnd(DragEndDetails d) {
+    if (!_dragging) return;
+    _dragging = false;
+    final dir = _dirFor(ref.read(appModeProvider));
+    final v = (d.primaryVelocity ?? 0) * dir / _travel();
+    if (v > 1.1 || (_swap.value > 0.38 && v > -0.6)) {
+      unawaited(_commitSwap(v));
+    } else {
+      unawaited(_settleBack(v));
+    }
+  }
+
+  Future<void> _settleBack(double velocity) async {
+    await _swap.animateWith(SpringSimulation(_spring, _swap.value, 0, velocity));
+    // The spring stops within a hair of 0: land exactly, back at rest.
+    if (mounted && !_committing) setState(() => _swap.value = 0);
+  }
+
+  /// Tap on the other camera: toss without a drag.
+  void _tossByTap() {
+    if (!_canSwap()) return;
+    _swap.value = 0;
+    setState(() => _dragging = false);
+    unawaited(_commitSwap(2.4));
+  }
+
+  Future<void> _commitSwap(double velocity) async {
+    if (_committing) return;
+    _committing = true;
+    _swap.stop();
     final from = ref.read(appModeProvider);
+    final boundary = _bodyKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     ui.Image? still;
     try {
       // Lower resolution is plenty for something moving this fast.
@@ -82,15 +158,24 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     setState(() {
       _outgoing?.dispose();
       _outgoing = still;
-      _swapDir = from == AppMode.film ? -1 : 1;
+      _committed = true;
+      // Flips the mode synchronously (the save happens after), so this
+      // frame already builds the new body in the arriving slot.
+      unawaited(ref.read(appModeProvider.notifier).toggle());
     });
-    unawaited(ref.read(appModeProvider.notifier).toggle());
-    await _swap.forward(from: 0);
-    unawaited(HapticFeedback.lightImpact()); // it lands
+    await _swap.animateWith(SpringSimulation(_spring, _swap.value, 1, velocity));
+    unawaited(HapticFeedback.lightImpact()); // it lands in your hands
     if (!mounted) return;
     setState(() {
-      _outgoing?.dispose();
+      final shot = _outgoing;
       _outgoing = null;
+      if (shot != null) {
+        _lastLook.remove(from)?.dispose();
+        _lastLook[from] = shot;
+      }
+      _committed = false;
+      _committing = false;
+      _swap.value = 0;
     });
   }
 
@@ -177,6 +262,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
               if (_swipeFromEdge || travelled < 60) return;
               if ((d.primaryVelocity ?? 0) < -350) unawaited(_openSelector());
             },
+            // Sideways: toss this camera aside for the other one.
+            onHorizontalDragStart: _onDragStart,
+            onHorizontalDragUpdate: _onDragUpdate,
+            onHorizontalDragEnd: _onDragEnd,
+            onHorizontalDragCancel: () {
+              if (_dragging) _onDragEnd(DragEndDetails(primaryVelocity: 0));
+            },
             child: Scaffold(
               body: Stack(
                 children: [
@@ -185,24 +277,41 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                   AnimatedBuilder(
                     animation: _swap,
                     builder: (context, child) {
-                      final w = MediaQuery.sizeOf(context).width;
-                      final t = Curves.easeInOutCubic.transform(_swap.value);
-                      final swapping = _swap.isAnimating && _swap.value < 1;
-                      // Bodies dip back a little as they pass, like being slid
-                      // across a table.
-                      final depth = 1 - 0.07 * math.sin(math.pi * t);
-                      Widget at(double dx, Widget c) => Transform.translate(
-                        offset: Offset(dx, 0),
-                        child: Transform.scale(scale: depth, child: c),
-                      );
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          if (swapping && _outgoing != null)
-                            at(_swapDir * w * 1.06 * t, RawImage(image: _outgoing, fit: BoxFit.fill)),
-                          at(swapping ? -_swapDir * w * 1.06 * (1 - t) : 0, child!),
-                        ],
-                      );
+                      final moving = _dragging || _committing || _swap.isAnimating || _swap.value != 0;
+                      final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
+                      Widget picture(ui.Image? image, AppMode m) =>
+                          image == null ? BodyStandIn(mode: m) : RawImage(image: image, fit: BoxFit.fill);
+                      if (!moving) {
+                        return SwapStage(
+                          progress: 0,
+                          dir: _dirFor(mode),
+                          leaving: child!,
+                          leavingMode: mode,
+                          arriving: null,
+                          arrivingMode: other,
+                          liveArriving: false,
+                        );
+                      }
+                      // After the commit, `mode` is already the arriving body.
+                      return _committed
+                          ? SwapStage(
+                              progress: _swap.value,
+                              dir: _dirFor(other),
+                              leaving: picture(_outgoing, other),
+                              leavingMode: other,
+                              arriving: child,
+                              arrivingMode: mode,
+                              liveArriving: true,
+                            )
+                          : SwapStage(
+                              progress: _swap.value,
+                              dir: _dirFor(mode),
+                              leaving: child!,
+                              leavingMode: mode,
+                              arriving: picture(_lastLook[other], other),
+                              arrivingMode: other,
+                              liveArriving: false,
+                            );
                     },
                     child: RepaintBoundary(
                       key: _bodyKey,
@@ -260,7 +369,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                               ],
                             ),
                           ),
-                          _ModePeek(mode: mode, onSwap: _swapMode),
+                          _ModePeek(mode: mode, onSwap: _tossByTap),
                         ],
                       ),
                     ),
@@ -458,11 +567,8 @@ class _ModePeek extends StatelessWidget {
         label: other == AppMode.film ? 'Switch to the film camera' : 'Switch to the digital camera',
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
+          // Pulling it in is the body's own sideways drag (CameraScreen).
           onTap: onSwap,
-          onHorizontalDragEnd: (d) {
-            final v = d.primaryVelocity ?? 0;
-            if (onRight ? v < -200 : v > 200) onSwap();
-          },
           child: Padding(
             // Generous, invisible touch area around the slim tab.
             padding: EdgeInsets.only(left: onRight ? 14 : 0, right: onRight ? 0 : 14),

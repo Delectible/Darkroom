@@ -1,0 +1,789 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/db/media_repository.dart';
+import '../../../../core/providers.dart';
+import '../../../viewer/presentation/media_actions.dart';
+import '../../application/sd_card_controller.dart';
+import 'explorer_dialogs.dart';
+import 'explorer_panes.dart';
+import 'pixel_icons.dart';
+import 'win98_viewer.dart';
+import 'win98_widgets.dart';
+
+/// Digital Mode's file manager, styled after the 9x Explorer.
+///
+///  * SD Card (E:) — where new shots land. Files here are *locked*: opening
+///    one offers to move it to C:.
+///  * Local Disk (C:) — files moved off the card (and into the phone's photo
+///    library). These open in the viewer.
+///  * My Computer — the drives.
+class ExplorerScreen extends ConsumerStatefulWidget {
+  const ExplorerScreen({super.key});
+
+  @override
+  ConsumerState<ExplorerScreen> createState() => _ExplorerScreenState();
+}
+
+class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
+  final _sdScroll = ScrollController();
+  final _cScroll = ScrollController();
+  final Set<String> _selected = {};
+  ExplorerPlace? _place;
+
+  @override
+  void dispose() {
+    _sdScroll.dispose();
+    _cScroll.dispose();
+    super.dispose();
+  }
+
+  ExplorerPlace get _current {
+    if (_place != null) return _place!;
+    if (ref.read(sdCardFilesProvider).isNotEmpty) return ExplorerPlace.sd;
+    if (ref.read(cDriveFilesProvider).isNotEmpty) return ExplorerPlace.c;
+    return ExplorerPlace.myComputer;
+  }
+
+  void _go(ExplorerPlace p) => setState(() {
+    _place = p;
+    _selected.clear();
+  });
+
+  Future<int?> _box(
+    String title,
+    String msg, {
+    Win98MessageIcon icon = Win98MessageIcon.info,
+    List<String> buttons = const ['OK'],
+  }) => win98Box(context, title, msg, icon: icon, buttons: buttons);
+
+  // ---- actions ---------------------------------------------------------------
+
+  Future<void> _open(MediaItem item) async {
+    if (item.status == MediaStatus.failed) {
+      final r = await _box(
+        item.fileName,
+        'The file is corrupt and cannot be opened.\n\n${item.error ?? 'Unknown error'}\n\nDelete it?',
+        icon: Win98MessageIcon.error,
+        buttons: const ['Delete', 'Keep'],
+      );
+      if (r == 0) await deleteMedia(ref.read(sdCardRepositoryProvider), item);
+      return;
+    }
+    if (!item.isReady) {
+      await _box(
+        item.fileName,
+        'This file is still being written to the card.\n\nPlease wait a moment.',
+        icon: Win98MessageIcon.warning,
+      );
+      return;
+    }
+    if (item.onSdCard) {
+      final others = ref.read(sdCardFilesProvider).where((m) => m.isReady).length;
+      final r = await _box(
+        'SD Card (E:)',
+        "'${item.fileName}' is on the SD card.\n\nMove it to Local Disk (C:) to open it? "
+            "It will also be copied to your phone's photo library.",
+        icon: Win98MessageIcon.question,
+        buttons: [if (others > 1) 'Move All', 'Move', 'Cancel'],
+      );
+      final moveAll = others > 1 && r == 0;
+      final moveOne = r == (others > 1 ? 1 : 0);
+      if (!moveAll && !moveOne) return;
+      final ok = await _transfer(ids: moveAll ? null : [item.id], quiet: true);
+      if (!ok || !mounted) return;
+      _go(ExplorerPlace.c);
+      final list = ref.read(explorerItemsProvider(MediaLocation.c));
+      final i = list.indexWhere((m) => m.id == item.id);
+      if (i >= 0) await _view(list, i);
+      return;
+    }
+    final list = ref.read(explorerItemsProvider(MediaLocation.c));
+    final i = list.indexWhere((m) => m.id == item.id);
+    await _view(list, i < 0 ? 0 : i);
+  }
+
+  Future<void> _view(List<MediaItem> items, int index) => Navigator.of(context).push(
+    PageRouteBuilder<void>(
+      transitionDuration: const Duration(milliseconds: 160),
+      pageBuilder: (_, _, _) => Win98ViewerScreen(items: items, initialIndex: index),
+      transitionsBuilder: (context, a, _, child) => Win98ZoomTransition(animation: a, child: child),
+    ),
+  );
+
+  /// Moves files from the card to C: ([ids] null = everything ready).
+  /// Returns true if at least the requested files made it.
+  Future<bool> _transfer({List<String>? ids, bool quiet = false}) async {
+    final sd = ref.read(sdCardFilesProvider);
+    if (sd.isEmpty) return false;
+    if (ids == null && sd.any((m) => m.status == MediaStatus.processing)) {
+      final r = await _box(
+        'SD Card (E:)',
+        'Some files are still being written. They will stay on the card.\n\nMove the finished files now?',
+        icon: Win98MessageIcon.question,
+        buttons: const ['Yes', 'No'],
+      );
+      if (r != 0) return false;
+    }
+    if (!mounted) return false;
+    final notifier = ref.read(sdTransferProvider.notifier);
+    final dialog = showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black12,
+      transitionDuration: const Duration(milliseconds: 120),
+      transitionBuilder: (context, a, _, child) => Win98ZoomTransition(animation: a, child: child),
+      pageBuilder: (_, _, _) => const CopyingDialog(),
+    );
+    final outcome = await notifier.moveToC(ids: ids);
+    if (mounted) Navigator.of(context).pop();
+    await dialog;
+    final t = ref.read(sdTransferProvider);
+    notifier.reset();
+    setState(_selected.clear);
+    if (!mounted) return false;
+    switch (outcome) {
+      case TransferOutcome.done:
+        if (!quiet) {
+          await _box(
+            'Transfer Complete',
+            "${t?.total ?? 0} file(s) moved to C:\\My Documents\\Darkroom and copied to your photo library "
+                "(album 'Darkroom').",
+          );
+        }
+        return true;
+      case TransferOutcome.partial:
+        await _box(
+          'Error Moving File',
+          'Cannot move ${t!.failures.join(', ')}: Access is denied.\n\nThe other files were moved.',
+          icon: Win98MessageIcon.error,
+        );
+        return false;
+      case TransferOutcome.accessDenied:
+        await _box(
+          'SD Card (E:)',
+          'Access is denied.\n\nAllow photo library access in Settings to move your files.',
+          icon: Win98MessageIcon.error,
+        );
+        return false;
+      case TransferOutcome.cancelled:
+        await _box(
+          'SD Card (E:)',
+          'The operation was cancelled. Remaining files are still on the card.',
+          icon: Win98MessageIcon.warning,
+        );
+        return false;
+      case TransferOutcome.nothingToDo:
+        return false;
+    }
+  }
+
+  List<MediaItem> _selectedItems() {
+    final all = [...ref.read(sdCardFilesProvider), ...ref.read(cDriveFilesProvider)];
+    return all.where((m) => _selected.contains(m.id)).toList();
+  }
+
+  Future<void> _deleteSelected() async {
+    final items = _selectedItems();
+    if (items.isEmpty) return;
+    final onC = items.any((m) => !m.onSdCard);
+    final what = items.length == 1 ? "'${items.first.fileName}'" : 'these ${items.length} items';
+    final r = await _box(
+      'Confirm File Delete',
+      'Are you sure you want to delete $what?'
+          '${onC ? "\n\nCopies already in your phone's photo library are not affected." : ''}',
+      icon: Win98MessageIcon.question,
+      buttons: const ['Yes', 'No'],
+    );
+    if (r != 0) return;
+    final repo = ref.read(sdCardRepositoryProvider);
+    for (final m in items) {
+      await deleteMedia(repo, m);
+    }
+    setState(_selected.clear);
+  }
+
+  Future<void> _formatCard() async {
+    final sd = ref.read(sdCardFilesProvider).where((m) => m.status != MediaStatus.processing).toList();
+    if (sd.isEmpty) {
+      await _box('Format SD Card (E:)', 'The card is already empty.');
+      return;
+    }
+    final r = await _box(
+      'Format SD Card (E:)',
+      'WARNING: Formatting will ERASE ALL ${sd.length} file(s) on the SD card that have not been moved to C:.\n\n'
+          'To format the card, click OK. To quit, click Cancel.',
+      icon: Win98MessageIcon.warning,
+      buttons: const ['OK', 'Cancel'],
+    );
+    if (r != 0) return;
+    final repo = ref.read(sdCardRepositoryProvider);
+    for (final m in sd) {
+      await deleteMedia(repo, m);
+    }
+    if (mounted) {
+      await _box(
+        'Format Results',
+        'Format complete.\n\n134,217,728 bytes total disk space\n134,217,728 bytes available on disk',
+      );
+    }
+  }
+
+  Future<void> _start() async {
+    final a = await showStartMenu(context);
+    if (!mounted || a == null) return;
+    switch (a) {
+      case StartAction.camera:
+        Navigator.of(context).pop();
+      case StartAction.documents:
+        _go(ExplorerPlace.c);
+      case StartAction.options:
+        await showExplorerOptions(context);
+      case StartAction.help:
+        await showTipOfTheDay(context);
+      case StartAction.run:
+        await _run();
+      case StartAction.shutDown:
+        final r = await _box(
+          'Shut Down Darkroom',
+          'Are you sure you want to shut down the explorer and go back to the camera?',
+          icon: Win98MessageIcon.question,
+          buttons: const ['Yes', 'No'],
+        );
+        if (r == 0 && mounted) {
+          await showSafeToTurnOff(context);
+          if (mounted) Navigator.of(context).pop();
+        }
+    }
+  }
+
+  Future<void> _run() async {
+    final cmd = (await showRunDialog(context))?.trim().toLowerCase();
+    if (!mounted || cmd == null || cmd.isEmpty) return;
+    switch (cmd) {
+      case 'defrag' || 'defrag.exe':
+        await showDefragmenter(context, files: ref.read(sdCardFilesProvider).length);
+      case 'winver' || 'about':
+        await showAboutDarkroom(context);
+      case 'c:' || 'c:\\' || 'explorer':
+        _go(ExplorerPlace.c);
+      case 'e:' || 'e:\\':
+        _go(ExplorerPlace.sd);
+      case 'camera' || 'darkroom':
+        Navigator.of(context).pop();
+      case 'format c:':
+        await _box('Format', 'Nice try.', icon: Win98MessageIcon.warning);
+      default:
+        await _box(
+          cmd,
+          "Cannot find the file '$cmd' (or one of its components). Make sure the path and filename are correct.",
+          icon: Win98MessageIcon.error,
+        );
+    }
+  }
+
+  // ---- build ----------------------------------------------------------------
+
+  @override
+  Widget build(BuildContext context) {
+    final sdFiles = ref.watch(sdCardFilesProvider);
+    final cFiles = ref.watch(cDriveFilesProvider);
+    final place = _current;
+    final location = place == ExplorerPlace.c ? MediaLocation.c : MediaLocation.sd;
+    final visible = place == ExplorerPlace.myComputer
+        ? const <MediaItem>[]
+        : ref.watch(explorerItemsProvider(location));
+    final prefs = ref.watch(explorerPrefsProvider);
+    final prefsN = ref.read(explorerPrefsProvider.notifier);
+    final sdBytes = sdFiles.fold<int>(0, (s, m) => s + (m.bytes ?? 0));
+    final cBytes = cFiles.fold<int>(0, (s, m) => s + (m.bytes ?? 0));
+    final readyOnSd = sdFiles.where((m) => m.isReady).length;
+    _selected.removeWhere((id) => !visible.any((m) => m.id == id));
+    final selectedBytes = visible
+        .where((m) => _selected.contains(m.id))
+        .fold<int>(0, (s, m) => s + (m.bytes ?? 0));
+    final selectedSdReady = visible
+        .where((m) => _selected.contains(m.id) && m.onSdCard && m.isReady)
+        .map((m) => m.id)
+        .toList();
+
+    final (title, pathIcon, path) = switch (place) {
+      ExplorerPlace.sd => ('Exploring - SD Card (E:)', PixelIcon.removableDrive, r'E:\DCIM\100RETRO'),
+      ExplorerPlace.c => ('Exploring - Local Disk (C:)', PixelIcon.hardDrive, r'C:\My Documents\Darkroom'),
+      ExplorerPlace.myComputer => ('My Computer', PixelIcon.computer, 'My Computer'),
+    };
+
+    return Scaffold(
+      backgroundColor: W98.desktop,
+      body: DefaultTextStyle(
+        style: W98.text,
+        child: SafeArea(
+          child: Column(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+                  child: Win98Window(
+                    title: title,
+                    icon: PixelIconView(pathIcon),
+                    onClose: () => Navigator.of(context).pop(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Win98MenuBar(
+                          menus: {
+                            'File': () => [
+                              Win98MenuItem(
+                                'Open',
+                                onSelected: _selected.length == 1
+                                    ? () => _open(visible.firstWhere((m) => m.id == _selected.first))
+                                    : null,
+                              ),
+                              Win98MenuItem(
+                                'Move to C:',
+                                onSelected: selectedSdReady.isEmpty
+                                    ? null
+                                    : () => _transfer(ids: selectedSdReady),
+                              ),
+                              Win98MenuItem(
+                                'Transfer All to C:',
+                                onSelected: readyOnSd == 0 ? null : () => _transfer(),
+                              ),
+                              Win98MenuItem('Delete', onSelected: _selected.isEmpty ? null : _deleteSelected),
+                              const Win98MenuItem.separator(),
+                              Win98MenuItem(
+                                'Properties',
+                                onSelected: place == ExplorerPlace.myComputer
+                                    ? null
+                                    : () => showDriveProperties(
+                                        context,
+                                        label: place == ExplorerPlace.sd ? 'SD Card (E:)' : 'Local Disk (C:)',
+                                        used: place == ExplorerPlace.sd ? sdBytes : cBytes,
+                                        capacity: place == ExplorerPlace.sd ? sdCardCapacityBytes : 0,
+                                      ),
+                              ),
+                              const Win98MenuItem.separator(),
+                              Win98MenuItem('Close', onSelected: () => Navigator.of(context).pop()),
+                            ],
+                            'Edit': () => [
+                              Win98MenuItem(
+                                'Select All',
+                                onSelected: visible.isEmpty
+                                    ? null
+                                    : () => setState(() => _selected.addAll(visible.map((m) => m.id))),
+                              ),
+                              Win98MenuItem(
+                                'Invert Selection',
+                                onSelected: visible.isEmpty
+                                    ? null
+                                    : () => setState(() {
+                                        for (final m in visible) {
+                                          if (!_selected.remove(m.id)) _selected.add(m.id);
+                                        }
+                                      }),
+                              ),
+                            ],
+                            'View': () => [
+                              for (final v in ExplorerView.values)
+                                Win98MenuItem(
+                                  _viewLabel(v),
+                                  radio: true,
+                                  checked: prefs.view == v,
+                                  onSelected: () => prefsN.setView(v),
+                                ),
+                              const Win98MenuItem.separator(),
+                              for (final s in ExplorerSort.values)
+                                Win98MenuItem(
+                                  'Arrange by ${_sortLabel(s)}',
+                                  radio: true,
+                                  checked: prefs.sort == s,
+                                  onSelected: () => prefsN.sortBy(s),
+                                ),
+                              const Win98MenuItem.separator(),
+                              for (final f in ExplorerFilter.values)
+                                Win98MenuItem(
+                                  _filterLabel(f),
+                                  radio: true,
+                                  checked: prefs.filter == f,
+                                  onSelected: () => prefsN.setFilter(f),
+                                ),
+                              const Win98MenuItem.separator(),
+                              Win98MenuItem(
+                                'Folders',
+                                checked: prefs.showTree,
+                                onSelected: prefsN.toggleTree,
+                              ),
+                              Win98MenuItem('Options...', onSelected: () => showExplorerOptions(context)),
+                            ],
+                            'Tools': () => [
+                              Win98MenuItem(
+                                'Defragment SD Card...',
+                                onSelected: () => showDefragmenter(context, files: sdFiles.length),
+                              ),
+                              Win98MenuItem('Format SD Card...', onSelected: _formatCard),
+                              const Win98MenuItem.separator(),
+                              Win98MenuItem('Run...', onSelected: _run),
+                            ],
+                            'Help': () => [
+                              Win98MenuItem('Tip of the Day...', onSelected: () => showTipOfTheDay(context)),
+                              Win98MenuItem(
+                                'How Do I...',
+                                onSelected: () => _box(
+                                  'Darkroom Help',
+                                  'New pictures are saved to the SD Card (E:).\n\n'
+                                      'Files on the card are locked: open one, or press Transfer, to move it to '
+                                      "Local Disk (C:). Moving also copies it to your phone's photo library.\n\n"
+                                      'On C:, tap a file twice to open it, hold it to send it, and use the arrows in '
+                                      'the viewer to flip through your pictures.',
+                                ),
+                              ),
+                              const Win98MenuItem.separator(),
+                              Win98MenuItem('About Darkroom', onSelected: () => showAboutDarkroom(context)),
+                            ],
+                          },
+                        ),
+                        _Toolbar(
+                          canMove: selectedSdReady.isNotEmpty,
+                          canDelete: _selected.isNotEmpty,
+                          canTransfer: readyOnSd > 0,
+                          onUp: () => _go(ExplorerPlace.myComputer),
+                          onMove: () => _transfer(ids: selectedSdReady),
+                          onTransfer: _transfer,
+                          onDelete: _deleteSelected,
+                          onFolders: prefsN.toggleTree,
+                          foldersOn: prefs.showTree,
+                        ),
+                        ExplorerAddressBar(path: path, icon: pathIcon),
+                        const SizedBox(height: 4),
+                        Win98TabStrip(
+                          tabs: [
+                            const Win98Tab('SD Card (E:)', icon: PixelIconView(PixelIcon.removableDrive)),
+                            const Win98Tab('C:', icon: PixelIconView(PixelIcon.hardDrive)),
+                            const Win98Tab('My Computer', icon: PixelIconView(PixelIcon.computer)),
+                          ],
+                          selected: place.index,
+                          onSelect: (i) => _go(ExplorerPlace.values[i]),
+                        ),
+                        Expanded(
+                          child: Win98Bevel(
+                            style: BevelStyle.window,
+                            padding: const EdgeInsets.all(4),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                if (prefs.showTree) ...[
+                                  SizedBox(
+                                    width: 132,
+                                    child: ExplorerFolderTree(place: place, onSelect: _go),
+                                  ),
+                                  const SizedBox(width: 3),
+                                ],
+                                Expanded(
+                                  child: Win98Bevel(
+                                    style: BevelStyle.sunken,
+                                    color: Colors.white,
+                                    padding: const EdgeInsets.all(2),
+                                    child: AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 120),
+                                      child: KeyedSubtree(
+                                        key: ValueKey(place),
+                                        child: place == ExplorerPlace.myComputer
+                                            ? ExplorerMyComputerPane(
+                                                sdBytes: sdBytes,
+                                                cBytes: cBytes,
+                                                sdCount: sdFiles.length,
+                                                onOpenSd: () => _go(ExplorerPlace.sd),
+                                                onOpenC: () => _go(ExplorerPlace.c),
+                                                onOpenFloppy: () => _box(
+                                                  'A:\\',
+                                                  'A:\\ is not accessible.\n\nThe device is not ready.',
+                                                  icon: Win98MessageIcon.error,
+                                                ),
+                                              )
+                                            : Win98Scrollbar(
+                                                controller: place == ExplorerPlace.sd ? _sdScroll : _cScroll,
+                                                child: ExplorerFilePane(
+                                                  items: visible,
+                                                  view: prefs.view,
+                                                  prefs: prefs,
+                                                  controller: place == ExplorerPlace.sd
+                                                      ? _sdScroll
+                                                      : _cScroll,
+                                                  selected: _selected,
+                                                  locked: place == ExplorerPlace.sd,
+                                                  onSelect: (m) => setState(() {
+                                                    _selected
+                                                      ..clear()
+                                                      ..add(m.id);
+                                                  }),
+                                                  onOpen: _open,
+                                                  onClearSelection: () => setState(_selected.clear),
+                                                  onSort: prefsN.sortBy,
+                                                ),
+                                              ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 2),
+                          child: SizedBox(
+                            height: 30,
+                            child: Win98Button(
+                              onPressed: readyOnSd == 0 ? null : _transfer,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const PixelIconView(PixelIcon.transfer),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    readyOnSd == 0
+                                        ? 'SD Card Empty'
+                                        : 'Transfer $readyOnSd File(s) to Local Disk (C:)',
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        ExplorerStatusBar(
+                          cells: [
+                            _selected.isEmpty
+                                ? '${place == ExplorerPlace.myComputer ? 3 : visible.length} object(s)'
+                                : '${_selected.length} object(s) selected',
+                            formatBytes(
+                              _selected.isEmpty
+                                  ? (place == ExplorerPlace.c ? cBytes : sdBytes)
+                                  : selectedBytes,
+                            ),
+                            switch (place) {
+                              ExplorerPlace.sd => 'SD Card',
+                              ExplorerPlace.c => 'Local Disk',
+                              ExplorerPlace.myComputer => 'My Computer',
+                            },
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              _Taskbar(
+                title: title,
+                icon: pathIcon,
+                onStart: _start,
+                onClockHold: () => showBlueScreen(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _viewLabel(ExplorerView v) => switch (v) {
+    ExplorerView.largeIcons => 'Large Icons',
+    ExplorerView.smallIcons => 'Small Icons',
+    ExplorerView.details => 'Details',
+  };
+
+  static String _sortLabel(ExplorerSort s) => switch (s) {
+    ExplorerSort.name => 'Name',
+    ExplorerSort.date => 'Date',
+    ExplorerSort.size => 'Size',
+  };
+
+  static String _filterLabel(ExplorerFilter f) => switch (f) {
+    ExplorerFilter.all => 'Show All Files',
+    ExplorerFilter.photos => 'Show Pictures Only',
+    ExplorerFilter.videos => 'Show Movies Only',
+  };
+}
+
+class _Toolbar extends ConsumerWidget {
+  const _Toolbar({
+    required this.canMove,
+    required this.canDelete,
+    required this.canTransfer,
+    required this.onUp,
+    required this.onMove,
+    required this.onTransfer,
+    required this.onDelete,
+    required this.onFolders,
+    required this.foldersOn,
+  });
+
+  final bool canMove;
+  final bool canDelete;
+  final bool canTransfer;
+  final VoidCallback onUp;
+  final VoidCallback onMove;
+  final VoidCallback onTransfer;
+  final VoidCallback onDelete;
+  final VoidCallback onFolders;
+  final bool foldersOn;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(explorerPrefsProvider);
+    final n = ref.read(explorerPrefsProvider.notifier);
+    Widget tool(PixelIcon icon, String label, VoidCallback? onTap, {bool toggled = false}) => Padding(
+      padding: const EdgeInsets.only(right: 2),
+      child: Win98Button(
+        onPressed: onTap,
+        toggled: toggled,
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PixelIconView(icon, size: 20),
+            Text(label, style: const TextStyle(fontSize: 10)),
+          ],
+        ),
+      ),
+    );
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      decoration: const BoxDecoration(
+        border: Border(
+          top: BorderSide(color: W98.white),
+          bottom: BorderSide(color: W98.shadow),
+        ),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            tool(PixelIcon.upFolder, 'Up', onUp),
+            tool(PixelIcon.folderOpen, 'Folders', onFolders, toggled: foldersOn),
+            Builder(
+              builder: (anchor) => tool(PixelIcon.views, 'Views', () {
+                unawaited(
+                  showWin98Menu(anchor, [
+                    for (final v in ExplorerView.values)
+                      Win98MenuItem(
+                        _ExplorerScreenState._viewLabel(v),
+                        radio: true,
+                        checked: prefs.view == v,
+                        onSelected: () => n.setView(v),
+                      ),
+                  ]),
+                );
+              }),
+            ),
+            Builder(
+              builder: (anchor) => tool(PixelIcon.imageFile, 'Show', () {
+                unawaited(
+                  showWin98Menu(anchor, [
+                    for (final f in ExplorerFilter.values)
+                      Win98MenuItem(
+                        _ExplorerScreenState._filterLabel(f),
+                        radio: true,
+                        checked: prefs.filter == f,
+                        onSelected: () => n.setFilter(f),
+                      ),
+                  ]),
+                );
+              }),
+            ),
+            tool(PixelIcon.hardDrive, 'Move to C:', canMove ? onMove : null),
+            tool(PixelIcon.delete, 'Delete', canDelete ? onDelete : null),
+            tool(PixelIcon.transfer, 'Transfer', canTransfer ? onTransfer : null),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Taskbar extends StatefulWidget {
+  const _Taskbar({required this.title, required this.icon, required this.onStart, required this.onClockHold});
+
+  final String title;
+  final PixelIcon icon;
+  final VoidCallback onStart;
+  final VoidCallback onClockHold;
+
+  @override
+  State<_Taskbar> createState() => _TaskbarState();
+}
+
+class _TaskbarState extends State<_Taskbar> {
+  late final Timer _clock;
+
+  @override
+  void initState() {
+    super.initState();
+    _clock = Timer.periodic(const Duration(seconds: 20), (_) => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _clock.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = TimeOfDay.now();
+    final h = now.hourOfPeriod == 0 ? 12 : now.hourOfPeriod;
+    final time = '$h:${now.minute.toString().padLeft(2, '0')} ${now.period == DayPeriod.am ? 'AM' : 'PM'}';
+    return Win98Bevel(
+      padding: const EdgeInsets.fromLTRB(2, 3, 2, 2),
+      child: SizedBox(
+        height: 26,
+        child: Row(
+          children: [
+            Win98Button(
+              onPressed: widget.onStart,
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: Row(
+                children: [
+                  const PixelIconView(PixelIcon.camera),
+                  const SizedBox(width: 3),
+                  Text('Start', style: W98.text.copyWith(fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Win98Button(
+                  toggled: true,
+                  onPressed: () {},
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      PixelIconView(widget.icon),
+                      const SizedBox(width: 4),
+                      Flexible(child: Text(widget.title, overflow: TextOverflow.ellipsis)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            GestureDetector(
+              onLongPress: widget.onClockHold,
+              child: Win98Bevel(
+                style: BevelStyle.shallow,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(time),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

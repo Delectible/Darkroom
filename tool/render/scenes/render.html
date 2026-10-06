@@ -1,0 +1,80 @@
+<!--#head-->
+<script type="module">
+import * as THREE from 'three';
+import { WebGLPathTracer } from 'three-gpu-pathtracer';
+import { studioEnv } from '/lib/studio.js';
+const q = new URLSearchParams(location.search);
+const item = q.get('item'), size = +(q.get('size') || 512), spp = +(q.get('spp') || 32);
+const pass = q.get('pass') || 'obj';         // obj | floor | bg
+const mode = q.get('mode') || 'pt';          // pt | raster
+const W = size, H = size;
+const renderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: true, alpha: true, antialias: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H);
+renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = +(q.get('exp') || 1.0);
+const EXTRA = {};
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.setClearColor(0x000000, 0);
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const mod = await import(`/items/${item.split('_')[0]}.js`);
+const built = await mod.build(THREE, item, { renderer });
+if (built.exposure && !q.get('exp')) renderer.toneMappingExposure = built.exposure;
+const env = studioEnv(built.env || {});
+scene.environment = env; scene.background = null;
+scene.environmentRotation = new THREE.Euler(0, (built.envRotation || 0) * Math.PI / 180, 0);
+if (pass !== 'bg') scene.add(built.object);
+if (pass !== 'obj') {
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000),
+    new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.9, metalness: 0 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = built.floorY ?? 0; scene.add(floor);
+}
+const c = built.camera;
+if (q.get('campos')) c.position = q.get('campos').split(',').map(Number);
+const cam = new THREE.PerspectiveCamera(c.fov, W / H, 1, 5000);
+cam.position.set(...c.position); cam.lookAt(new THREE.Vector3(...c.target));
+// auto-frame: keep the view direction, fit the object's box to `fill` of the frame
+{
+  const fill = +(q.get('fill') || built.fill || 0.84);
+  built.object.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(built.object, true);
+  const corners = [];
+  for (const x of [box.min.x, box.max.x]) for (const y of [box.min.y, box.max.y]) for (const z of [box.min.z, box.max.z]) corners.push(new THREE.Vector3(x, y, z));
+  const dir = new THREE.Vector3(...c.position).sub(new THREE.Vector3(...c.target)).normalize();
+  let target = box.getCenter(new THREE.Vector3());
+  let d = new THREE.Vector3(...c.position).distanceTo(new THREE.Vector3(...c.target));
+  for (let it = 0; it < 8; it++) {
+    cam.position.copy(target).addScaledVector(dir, d); cam.lookAt(target); cam.updateMatrixWorld(true);
+    let minx = 1e9, maxx = -1e9, miny = 1e9, maxy = -1e9;
+    for (const p of corners) { const v = p.clone().project(cam); minx = Math.min(minx, v.x); maxx = Math.max(maxx, v.x); miny = Math.min(miny, v.y); maxy = Math.max(maxy, v.y); }
+    const ext = Math.max(maxx - minx, maxy - miny) / 2;
+    // recentre: move target by the NDC offset of the box centre
+    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 1);
+    const halfH = Math.tan(THREE.MathUtils.degToRad(c.fov / 2)) * d;
+    target.addScaledVector(right, (minx + maxx) / 2 * halfH).addScaledVector(up, (miny + maxy) / 2 * halfH + (built.lift || 0) * halfH);
+    d *= ext / fill;
+  }
+  cam.position.copy(target).addScaledVector(dir, d); cam.lookAt(target);
+}
+const t0 = performance.now();
+if (mode === 'raster') {
+  if (pass === 'obj') {
+    const pm = new THREE.PMREMGenerator(renderer); scene.environment = pm.fromEquirectangular(env).texture;
+  }
+  renderer.render(scene, cam);
+  window.__done = { ms: performance.now() - t0, samples: 1, url: renderer.domElement.toDataURL('image/png') };
+} else {
+  const pt = new WebGLPathTracer(renderer);
+  pt.fadeDuration = 0; pt.minSamples = 1; pt.rasterizeScene = false; pt.renderDelay = 0;
+  pt.bounces = +(q.get('bounces') || 6); pt.filterGlossyFactor = 0.25;
+  pt.tiles.set(1, 1);
+  pt.setScene(scene, cam);
+  let last = 0;
+  const step = () => {
+    pt.renderSample();
+    if (pt.samples - last >= 16) { last = pt.samples; console.log('spp', pt.samples, ((performance.now() - t0) / 1000).toFixed(0) + 's'); }
+    if (pt.samples < spp) requestAnimationFrame(step);
+    else window.__done = { ms: performance.now() - t0, samples: pt.samples, url: renderer.domElement.toDataURL('image/png') };
+  };
+  step();
+}
+</script></body></html>

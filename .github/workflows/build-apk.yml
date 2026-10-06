@@ -16,7 +16,7 @@ concurrency:
 env:
   ORG: com.darkroom
   APP: darkroom
- 
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -37,7 +37,7 @@ jobs:
       - run: mkdir dist && cp build/app/outputs/flutter-apk/app-release.apk dist/Darkroom-${{ github.run_number }}.apk
       - uses: actions/upload-artifact@v4
         with: { name: android, path: dist/ }
- 
+
   # Mac build minutes are free on public repos but cost 10x on private ones,
   # so on a private repo the iPhone build only runs when asked for: put [ios]
   # in the commit message, or start the workflow by hand.
@@ -66,7 +66,7 @@ jobs:
           cd dist && zip -qry Darkroom-${{ github.run_number }}.ipa Payload && rm -rf Payload
       - uses: actions/upload-artifact@v4
         with: { name: ios, path: dist/ }
- 
+
   release:
     needs: [android, ios]
     if: always() && needs.android.result == 'success'

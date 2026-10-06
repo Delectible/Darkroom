@@ -1,0 +1,120 @@
+import 'package:sqflite/sqflite.dart';
+
+import '../../features/cameras/domain/camera_catalog.dart';
+import '../../features/cameras/domain/camera_spec.dart';
+import '../db/app_database.dart';
+import '../processing/crop_math.dart';
+import '../processing/film/film_profile.dart';
+
+/// App-wide toggles. Stored in SQLite (not SharedPreferences) because the
+/// WorkManager isolate needs to read them too.
+class GlobalSettings {
+  const GlobalSettings({
+    this.darkroomEnabled = true,
+    this.notificationsEnabled = true,
+    this.saveOriginalCopy = false,
+    this.highResFilm = false,
+  });
+
+  final bool darkroomEnabled;
+  final bool notificationsEnabled;
+  final bool saveOriginalCopy;
+
+  /// 2160p-class film capture (sharper prints, heavier live preview).
+  final bool highResFilm;
+
+  static const developDuration = Duration(minutes: 5);
+
+  GlobalSettings copyWith({
+    bool? darkroomEnabled,
+    bool? notificationsEnabled,
+    bool? saveOriginalCopy,
+    bool? highResFilm,
+  }) => GlobalSettings(
+    darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
+    notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
+    saveOriginalCopy: saveOriginalCopy ?? this.saveOriginalCopy,
+    highResFilm: highResFilm ?? this.highResFilm,
+  );
+}
+
+/// Per-stock / per-body preferences.
+class CameraLocalSettings {
+  const CameraLocalSettings({
+    required this.aspect,
+    required this.timestamp,
+    this.grain = GrainStrength.normal,
+  });
+
+  final AspectRatioOption aspect;
+  final bool timestamp;
+
+  /// Film stocks only.
+  final GrainStrength grain;
+
+  CameraLocalSettings copyWith({AspectRatioOption? aspect, bool? timestamp, GrainStrength? grain}) =>
+      CameraLocalSettings(
+        aspect: aspect ?? this.aspect,
+        timestamp: timestamp ?? this.timestamp,
+        grain: grain ?? this.grain,
+      );
+
+  static CameraLocalSettings defaultsFor(CameraSpec spec) =>
+      CameraLocalSettings(aspect: spec.defaultAspect, timestamp: spec.supportsTimestamp);
+}
+
+class SettingsRepository {
+  SettingsRepository(this._db);
+
+  final AppDatabase _db;
+
+  static const _kDarkroom = 'global.darkroom';
+  static const _kNotify = 'global.notifications';
+  static const _kOriginal = 'global.saveOriginal';
+  static const _kHighResFilm = 'global.highResFilm';
+
+  Future<GlobalSettings> loadGlobal() async {
+    bool read(String? v, bool fallback) => v == null ? fallback : v == '1';
+    const d = GlobalSettings();
+    return GlobalSettings(
+      darkroomEnabled: read(await _db.getValue(_kDarkroom), d.darkroomEnabled),
+      notificationsEnabled: read(await _db.getValue(_kNotify), d.notificationsEnabled),
+      saveOriginalCopy: read(await _db.getValue(_kOriginal), d.saveOriginalCopy),
+      highResFilm: read(await _db.getValue(_kHighResFilm), d.highResFilm),
+    );
+  }
+
+  Future<void> saveGlobal(GlobalSettings s) async {
+    await _db.setValue(_kDarkroom, s.darkroomEnabled ? '1' : '0');
+    await _db.setValue(_kNotify, s.notificationsEnabled ? '1' : '0');
+    await _db.setValue(_kOriginal, s.saveOriginalCopy ? '1' : '0');
+    await _db.setValue(_kHighResFilm, s.highResFilm ? '1' : '0');
+  }
+
+  Future<Map<String, CameraLocalSettings>> loadCameraSettings() async {
+    final rows = await _db.db.query('camera_settings');
+    final byId = {for (final r in rows) r['camera_id']! as String: r};
+    return {
+      for (final spec in CameraCatalog.all)
+        spec.id: () {
+          final r = byId[spec.id];
+          final d = CameraLocalSettings.defaultsFor(spec);
+          if (r == null) return d;
+          var aspect = AspectRatioOption.fromName(r['aspect'] as String?, d.aspect);
+          if (!spec.aspects.contains(aspect)) aspect = spec.defaultAspect;
+          final ts = r['timestamp'] as int?;
+          return CameraLocalSettings(
+            aspect: aspect,
+            timestamp: spec.supportsTimestamp && (ts == null ? d.timestamp : ts == 1),
+            grain: spec.film == null ? GrainStrength.normal : GrainStrength.fromName(r['grain'] as String?),
+          );
+        }(),
+    };
+  }
+
+  Future<void> saveCameraSettings(String cameraId, CameraLocalSettings s) => _db.db.insert(
+    'camera_settings',
+    {'camera_id': cameraId, 'aspect': s.aspect.name, 'timestamp': s.timestamp ? 1 : 0, 'grain': s.grain.name},
+    conflictAlgorithm: ConflictAlgorithm.replace,
+  );
+}

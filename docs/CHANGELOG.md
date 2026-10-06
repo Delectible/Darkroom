@@ -67,7 +67,7 @@ darkroom, corkboard, ambience).
 - [x] **3.1 Mode transition:** replace the Film ↔ Digital fade with a large
   slide: the whole camera slides off and the other slides in. Possibly add a
   "swap device" sound. Remove the slider switch and add another obvious
-  control for swapping. *Build a demo first for approval.* → 1.3.3 · 2026-10-06 · 3cd4a8f
+  control for swapping. *Build a demo first for approval.* → 1.3.3 · 2026-10-06 · 3cd4a8f (build 15)
   Demo: the other camera peeks in from the screen edge; tap or pull it in and the bodies slide past each other with a swap sound. Tell me if you like it.
 - [x] **3.2 Motorised zoom:** fixed-rate zoom on dedicated buttons for the 90s
   Camcorder (no pinch). The buttons also work in the other digital cameras.
@@ -106,7 +106,7 @@ darkroom, corkboard, ambience).
   Camcorder clips live on 3½ Floppy (A:). Copying to C: asks you to swap disks ("insert disk 2 of N"); after three swaps it offers to do the rest.
 - [x] **4.6 Darkroom progress visual:** replace the plain white square with a
   more immersive progress visual that follows real film development
-  (simplified). → 1.3.3 · 2026-10-06 · 3cd4a8f
+  (simplified). → 1.3.3 · 2026-10-06 · 3cd4a8f (build 15)
   Prints move through DEV → STOP → FIX → WASH trays under the safelight; the image comes up in the developer.
 
 ### 5. Performance & general
@@ -115,7 +115,7 @@ darkroom, corkboard, ambience).
   screen. → 1.3.0 · 2026-10-06 · c1ca3d1 (build 11)
   It was the hidden "prints ready" banner peeking out above the safe area.
 - [x] **5.2 Mode ambience:** add visual touches unique to Film and Digital mode
-  that pull you in and match real-world equipment. → 1.3.3 · 2026-10-06 · 3cd4a8f
+  that pull you in and match real-world equipment. → 1.3.3 · 2026-10-06 · 3cd4a8f (build 15)
   Film: the box end sits in a memo holder on the back. Digital: a segment-LCD panel with battery and card/tape left.
 - [x] **5.3 Flip phone artwork:** it looks folded backwards. Keep the style,
   fix the orientation. → 1.3.0 · 2026-10-06 · c1ca3d1 (build 11)
@@ -123,11 +123,11 @@ darkroom, corkboard, ambience).
   in slowly. Optimise photo lazy-loading. → 1.3.0 · 2026-10-06 · c1ca3d1 (build 11)
 - [x] **5.5 Corkboard wall:** the background scrolls with the photos, so you
   slide the whole wall instead of a fixed backdrop. Refine the cartoony cork
-  with imperfections that show as you scroll. Better-looking pins. → 1.3.3 · 2026-10-06 · 3cd4a8f
+  with imperfections that show as you scroll. Better-looking pins. → 1.3.3 · 2026-10-06 · 3cd4a8f (build 15)
   The cork scrolls with the prints and shows wear (old pin holes, a coffee ring, sun-faded patches); new glossy two-tier pins.
 - [x] **5.6 Corkboard easter eggs:** more hidden interactions, like Win98's.
   For example: tap a pin → "Would you like to discard this image?" → the photo
-  and pin fall off the screen (same effect as the bin button in the preview). → 1.3.3 · 2026-10-06 · 3cd4a8f
+  and pin fall off the screen (same effect as the bin button in the preview). → 1.3.3 · 2026-10-06 · 3cd4a8f (build 15)
   Tap a pin to take a print down (it falls off). Tap a print's folded corner to turn it over and read the lab stamp.
 
 ### 6. New feature: Polaroid camera (Film mode)

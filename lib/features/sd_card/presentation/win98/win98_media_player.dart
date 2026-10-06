@@ -168,8 +168,8 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
               final pos = v.position.inMilliseconds.clamp(0, total);
               final playing = v.isPlaying;
               final status = switch (_scan) {
-                1 => 'Fast Forward ▶▶',
-                -1 => 'Rewind ◀◀',
+                1 => 'Fast Forward',
+                -1 => 'Rewind',
                 _ => _stopped ? 'Stopped' : (playing ? 'Playing' : (_atEnd(v) ? 'Finished' : 'Paused')),
               };
               return Column(

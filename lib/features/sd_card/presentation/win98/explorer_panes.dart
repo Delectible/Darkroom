@@ -188,7 +188,7 @@ class _DetailsHeader extends StatelessWidget {
             children: [
               Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.clip)),
               if (sort != null && prefs.sort == sort)
-                Text(prefs.ascending ? '▲' : '▼', style: const TextStyle(fontSize: 8)),
+                Win98GlyphView(prefs.ascending ? Win98Glyph.up : Win98Glyph.down, dot: 1),
             ],
           ),
         ),

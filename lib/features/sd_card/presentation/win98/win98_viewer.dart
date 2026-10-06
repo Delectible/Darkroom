@@ -117,107 +117,113 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
     return Win98Scale(
       child: Scaffold(
         backgroundColor: W98.desktop,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(6),
-            child: Win98Window(
-              title: '${item.isVideo ? 'Media Player' : 'Imaging'} - ${item.fileName}',
-              icon: PixelIconView(item.isVideo ? PixelIcon.videoFile : PixelIcon.imageFile),
-              onClose: () => Navigator.of(context).pop(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 3),
-                    child: Row(
-                      children: [
-                        _NavButton(glyph: '◀', onPressed: _index > 0 ? () => _go(-1) : null),
-                        const SizedBox(width: 3),
-                        _NavButton(glyph: '▶', onPressed: _index < _items.length - 1 ? () => _go(1) : null),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            '${_index + 1} of ${_items.length}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: W98.text,
+        body: DefaultTextStyle(
+          style: W98.text,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Win98Window(
+                title: '${item.isVideo ? 'Media Player' : 'Imaging'} - ${item.fileName}',
+                icon: PixelIconView(item.isVideo ? PixelIcon.videoFile : PixelIcon.imageFile),
+                onClose: () => Navigator.of(context).pop(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3),
+                      child: Row(
+                        children: [
+                          _NavButton(glyph: Win98Glyph.left, onPressed: _index > 0 ? () => _go(-1) : null),
+                          const SizedBox(width: 3),
+                          _NavButton(
+                            glyph: Win98Glyph.right,
+                            onPressed: _index < _items.length - 1 ? () => _go(1) : null,
                           ),
-                        ),
-                        Builder(
-                          builder: (anchor) => Win98Button(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                            onPressed: () => unawaited(shareMedia(anchor, item)),
-                            child: const Text('Send To'),
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        Win98Button(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                          onPressed: _delete,
-                          child: const Text('Delete'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: path == null
-                        ? const Win98Bevel(
-                            style: BevelStyle.sunken,
-                            color: Colors.black,
-                            child: SizedBox.expand(),
-                          )
-                        : item.isVideo
-                        ? Win98MediaPlayer(
-                            key: ValueKey(item.id),
-                            path: path,
-                            onPrevious: _index > 0 ? () => _go(-1) : null,
-                            onNext: _index < _items.length - 1 ? () => _go(1) : null,
-                          )
-                        : Win98Bevel(
-                            style: BevelStyle.sunken,
-                            color: Colors.black,
-                            padding: const EdgeInsets.all(2),
-                            child: LayoutBuilder(
-                              builder: (context, box) {
-                                _viewport = box.biggest;
-                                return ClipRect(
-                                  child: InteractiveViewer(
-                                    key: ValueKey(item.id),
-                                    transformationController: _zoom,
-                                    maxScale: _maxZoom,
-                                    child: SizedBox.expand(
-                                      child: Image.file(
-                                        File(path),
-                                        fit: BoxFit.contain,
-                                        filterQuality: FilterQuality.medium,
-                                        gaplessPlayback: true,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '${_index + 1} of ${_items.length}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: W98.text,
                             ),
                           ),
-                  ),
-                  if (!item.isVideo) ...[
-                    const SizedBox(height: 4),
-                    // Full-width trackbar: the long throw makes fine zooming easy.
-                    Win98Slider(value: _sliderValue, onChanged: (v) => _zoomTo(_scaleFor(v))),
-                    Row(
-                      children: [
-                        Text('Zoom: ${(_scale * 100).round()}%'),
-                        const Spacer(),
-                        Win98Button(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          onPressed: _scale > 1.01 ? () => _zoom.value = Matrix4.identity() : null,
-                          child: const Text('Reset Zoom'),
-                        ),
-                      ],
+                          Builder(
+                            builder: (anchor) => Win98Button(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                              onPressed: () => unawaited(shareMedia(anchor, item)),
+                              child: const Text('Send To'),
+                            ),
+                          ),
+                          const SizedBox(width: 3),
+                          Win98Button(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            onPressed: _delete,
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
                     ),
+                    Expanded(
+                      child: path == null
+                          ? const Win98Bevel(
+                              style: BevelStyle.sunken,
+                              color: Colors.black,
+                              child: SizedBox.expand(),
+                            )
+                          : item.isVideo
+                          ? Win98MediaPlayer(
+                              key: ValueKey(item.id),
+                              path: path,
+                              onPrevious: _index > 0 ? () => _go(-1) : null,
+                              onNext: _index < _items.length - 1 ? () => _go(1) : null,
+                            )
+                          : Win98Bevel(
+                              style: BevelStyle.sunken,
+                              color: Colors.black,
+                              padding: const EdgeInsets.all(2),
+                              child: LayoutBuilder(
+                                builder: (context, box) {
+                                  _viewport = box.biggest;
+                                  return ClipRect(
+                                    child: InteractiveViewer(
+                                      key: ValueKey(item.id),
+                                      transformationController: _zoom,
+                                      maxScale: _maxZoom,
+                                      child: SizedBox.expand(
+                                        child: Image.file(
+                                          File(path),
+                                          fit: BoxFit.contain,
+                                          filterQuality: FilterQuality.medium,
+                                          gaplessPlayback: true,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                    ),
+                    if (!item.isVideo) ...[
+                      const SizedBox(height: 4),
+                      // Full-width trackbar: the long throw makes fine zooming easy.
+                      Win98Slider(value: _sliderValue, onChanged: (v) => _zoomTo(_scaleFor(v))),
+                      Row(
+                        children: [
+                          Text('Zoom: ${(_scale * 100).round()}%'),
+                          const Spacer(),
+                          Win98Button(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            onPressed: _scale > 1.01 ? () => _zoom.value = Matrix4.identity() : null,
+                            child: const Text('Reset Zoom'),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 3),
+                    _StatusBar(item: item),
                   ],
-                  const SizedBox(height: 3),
-                  _StatusBar(item: item),
-                ],
+                ),
               ),
             ),
           ),
@@ -294,7 +300,7 @@ class _StatusBar extends StatelessWidget {
 class _NavButton extends StatelessWidget {
   const _NavButton({required this.glyph, this.onPressed});
 
-  final String glyph;
+  final Win98Glyph glyph;
   final VoidCallback? onPressed;
 
   @override
@@ -305,7 +311,7 @@ class _NavButton extends StatelessWidget {
       child: Win98Button(
         onPressed: onPressed,
         padding: EdgeInsets.zero,
-        child: Text(glyph, style: W98.text.copyWith(fontSize: 16, height: 1)),
+        child: Win98GlyphView(glyph, dot: 2, color: onPressed == null ? W98.shadow : W98.dark),
       ),
     );
   }

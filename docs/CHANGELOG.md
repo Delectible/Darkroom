@@ -50,6 +50,8 @@ darkroom, corkboard, ambience).
   bar and Drive Properties rows. A test opens every tab, menu and dialog at
   phone size (real fonts) and fails on any overflow. → 1.3.4 · 2026-10-06 · dab895a
 - [x] **0.6 Swap sound:** now a soft cloth-on-cloth swish, quieter, no clack. → 1.3.4 · 2026-10-06 · dab895a
+- [~] **0.7 Win98 font:** Roboto looked too modern. Windows 98 screens now use
+  a pixel font (DotGothic16, OFL); □ ▲ ▶ ✓ etc. are painted pixel glyphs.
 
 ### 2. Photo & video previews (film & digital)
 

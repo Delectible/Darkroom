@@ -20,9 +20,9 @@ import 'features/camera/application/camera_ui_state.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Bundled handwriting font (instant-print notes) ships under the SIL OFL.
+  // Bundled fonts (instant-print notes, Win98 pixel text) ship under the SIL OFL.
   LicenseRegistry.addLicense(() async* {
-    yield LicenseEntryWithLineBreaks(['Caveat'], await rootBundle.loadString('assets/fonts/OFL.txt'));
+    yield LicenseEntryWithLineBreaks(['Caveat', 'DotGothic16'], await rootBundle.loadString('assets/fonts/OFL.txt'));
   });
   // The camera UI is portrait-locked; landscape shots are still captured in
   // landscape (EXIF orientation follows the physical device).

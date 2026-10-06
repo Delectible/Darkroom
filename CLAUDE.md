@@ -133,7 +133,9 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   battery, the clock, and the zoom bar exactly as it moved
   (`CamcorderOsd` in `video_plan.dart`; the take's zoom track rides on the
   VideoJob).
-- Win98 screens and dialogs render through `Win98Scale` (1.3x, uniform). The
+- Win98 screens and dialogs render through `Win98Scale` (1.3x, uniform), in
+  the pixel font family `W98` (DotGothic16; it lacks □ ▲ ▶ ✓, so use
+  `Win98Glyph` for those). The
   viewer has no swipe: ◀ ▶, a zoom trackbar + Reset Zoom (pinch still
   works); clips play in `Win98MediaPlayer` (|◀ ◀◀ ▶/❚❚ ■ ▶▶ ▶|, hold ◀◀/▶▶ to
   scan with VHS noise bars). The status bar shows the camera from EXIF

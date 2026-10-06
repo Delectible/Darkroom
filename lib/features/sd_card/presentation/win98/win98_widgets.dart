@@ -20,7 +20,7 @@ class W98 {
   static const inactiveTitleEnd = Color(0xFFB5B5B5);
 
   static const text = TextStyle(
-    fontFamily: 'Roboto',
+    fontFamily: 'W98',
     fontSize: 12,
     color: Colors.black,
     fontWeight: FontWeight.w400,
@@ -30,7 +30,7 @@ class W98 {
   );
 
   static const disabledText = TextStyle(
-    fontFamily: 'Roboto',
+    fontFamily: 'W98',
     fontSize: 12,
     color: shadow,
     height: 1.2,
@@ -77,7 +77,11 @@ class Win98Scale extends StatelessWidget {
                   viewInsets: mq.viewInsets / factor,
                   systemGestureInsets: mq.systemGestureInsets / factor,
                 ),
-                child: child,
+                // Anything without its own style still gets the pixel font.
+                child: DefaultTextStyle.merge(
+                  style: const TextStyle(fontFamily: 'W98'),
+                  child: child,
+                ),
               ),
             ),
           ),
@@ -220,7 +224,12 @@ class Win98CaptionButton extends StatelessWidget {
       child: Win98Button(
         onPressed: onPressed ?? () {},
         padding: EdgeInsets.zero,
-        child: Text(glyph, style: W98.text.copyWith(fontSize: 11, fontWeight: FontWeight.w900, height: 1)),
+        child: switch (glyph) {
+          '_' => const Win98GlyphView(Win98Glyph.minimize, dot: 1.2),
+          '□' => const Win98GlyphView(Win98Glyph.maximize, dot: 1.1),
+          '×' => const Win98GlyphView(Win98Glyph.close, dot: 1.2),
+          _ => Text(glyph, style: W98.text.copyWith(fontSize: 11, height: 1)),
+        },
       ),
     );
   }
@@ -396,9 +405,16 @@ class _MenuPanelState extends State<_MenuPanel> {
                           children: [
                             SizedBox(
                               width: 18,
-                              child: widget.items[i].checked
+                              child: widget.items[i].checked && !widget.items[i].radio
+                                  ? Center(
+                                      child: Win98GlyphView(
+                                        Win98Glyph.check,
+                                        color: _hot == i ? Colors.white : Colors.black,
+                                      ),
+                                    )
+                                  : widget.items[i].checked
                                   ? Text(
-                                      widget.items[i].radio ? '•' : '✓',
+                                      '•',
                                       style: W98.text.copyWith(
                                         color: _hot == i ? Colors.white : Colors.black,
                                         fontWeight: FontWeight.w900,
@@ -899,12 +915,7 @@ class Win98Checkbox extends StatelessWidget {
                 color: enabled ? Colors.white : W98.face,
                 padding: EdgeInsets.zero,
                 child: value
-                    ? const Center(
-                        child: Text(
-                          '✓',
-                          style: TextStyle(fontSize: 10, height: 1, fontWeight: FontWeight.w900),
-                        ),
-                      )
+                    ? const Center(child: Win98GlyphView(Win98Glyph.check, dot: 1.2))
                     : const SizedBox.expand(),
               ),
             ),
@@ -1195,4 +1206,70 @@ class _TrackThumbPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_TrackThumbPainter old) => false;
+}
+
+/// The little bitmap symbols 9x drew on caption buttons, menus, check boxes
+/// and sort headers (the UI font has no such glyphs, and neither did the
+/// real one: they were bitmaps).
+enum Win98Glyph {
+  minimize(['', '', '', '', '', 'XXXXXX', 'XXXXXX']),
+  maximize([
+    'XXXXXXXXX',
+    'XXXXXXXXX',
+    'X.......X',
+    'X.......X',
+    'X.......X',
+    'X.......X',
+    'X.......X',
+    'XXXXXXXXX',
+  ]),
+  close(['XX....XX', '.XX..XX.', '..XXXX..', '...XX...', '..XXXX..', '.XX..XX.', 'XX....XX']),
+  check(['......X', '.....XX', 'X...XXX', 'XX.XXX.', 'XXXXX..', '.XXX...', '..X....']),
+  left(['...X', '..XX', '.XXX', 'XXXX', '.XXX', '..XX', '...X']),
+  right(['X...', 'XX..', 'XXX.', 'XXXX', 'XXX.', 'XX..', 'X...']),
+  up(['...X...', '..XXX..', '.XXXXX.', 'XXXXXXX']),
+  down(['XXXXXXX', '.XXXXX.', '..XXX..', '...X...']);
+
+  const Win98Glyph(this.rows);
+  final List<String> rows;
+}
+
+/// Draws a [Win98Glyph] as crisp pixels, [dot] logical px per bitmap pixel.
+class Win98GlyphView extends StatelessWidget {
+  const Win98GlyphView(this.glyph, {super.key, this.dot = 1.4, this.color = W98.dark});
+
+  final Win98Glyph glyph;
+  final double dot;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final w = glyph.rows.fold<int>(0, (m, r) => math.max(m, r.length));
+    return CustomPaint(
+      size: Size(w * dot, glyph.rows.length * dot),
+      painter: _GlyphPainter(glyph, dot, color),
+    );
+  }
+}
+
+class _GlyphPainter extends CustomPainter {
+  _GlyphPainter(this.glyph, this.dot, this.color);
+
+  final Win98Glyph glyph;
+  final double dot;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = color;
+    for (var y = 0; y < glyph.rows.length; y++) {
+      final row = glyph.rows[y];
+      for (var x = 0; x < row.length; x++) {
+        if (row[x] == 'X') canvas.drawRect(Rect.fromLTWH(x * dot, y * dot, dot + 0.05, dot + 0.05), p);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GlyphPainter old) => old.glyph != glyph || old.dot != dot || old.color != color;
 }

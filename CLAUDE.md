@@ -179,5 +179,5 @@ UI
 1. Re-render the artwork at full resolution with Darkroom branding
    (also: darker film leader, tidier camcorder viewfinder).
 2. Bring the rabbit logo into the app's own design.
-3. First iOS run: get the CI .ipa building and working on Gabe's iPhone.
+3. First iOS run: the CI .ipa builds (build 19); still to try it on Gabe's iPhone.
 4. Proper signing key before publishing anywhere.

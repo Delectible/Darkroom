@@ -242,15 +242,17 @@ darkroom, corkboard, ambience).
 - [x] **10.3 Polaroid note box in dark mode:** the box is now the print's
   own paper with felt-tip ink, readable in light and dark mode.
   → 1.3.13 · 2026-10-06 · fae6ed4
-- [~] **10.4 Darkroom branding** on the artwork and elsewhere; the rabbit
-  logo used sparingly, a pixel version in Windows 98. In-app part (rabbit
-  on the camera bodies' top bar and the print-back lab stamp; pixel rabbit
-  on the Start button, Start menu and About box; DCIM folder shown as
-  100DRKRM) → 1.3.14 · 2026-10-06 · (this commit). Artwork re-render to follow.
+- [x] **10.4 Darkroom branding** on the artwork and elsewhere; the rabbit
+  logo used sparingly, a pixel version in Windows 98. In-app (rabbit on the
+  camera bodies' top bar and the print-back lab stamp; pixel rabbit on the
+  Start button, Start menu and About box; DCIM folder shown as 100DRKRM)
+  → 1.3.14 · 2026-10-06 · 40ae988. Artwork re-rendered at 1024 px with
+  DARKROOM labels, the rabbit on the film boxes / cartridge / instant
+  camera and a darker film leader → 1.3.15 · 2026-10-06 · (this commit)
 - [x] **10.5 Repository tidy-up**, README, repository image: README
   rewritten; CI runs `flutter analyze` + `flutter test` and only publishes a
   build that passes; `pubspec.lock` committed; the old zip-upload step
   removed; render tool files ignored properly; `docs/social_preview.png`
   (made by `make_icons.py`) for GitHub's social preview. → (no app change) ·
-  2026-10-06 · (this commit)
+  2026-10-06 · 15a92e3
 

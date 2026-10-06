@@ -37,11 +37,11 @@ darkroom, corkboard, ambience).
 ### 0. Feedback on 1.3.1 (build 13)
 
 - [x] **0.1 Smooth zoom:** the zoom moved in visible ~0.1x steps.
-  Zoom requests now stream every frame instead of waiting for each to land. → 1.3.2 · 2026-10-06 · COMMIT
+  Zoom requests now stream every frame instead of waiting for each to land. → 1.3.2 · 2026-10-06 · ccb81b6
 - [x] **0.2 Zoom bar in the video:** camcorder recordings carry the sliding
-  zoom bar (found-footage style), plus blinking REC, SP and battery. → 1.3.2 · 2026-10-06 · COMMIT
+  zoom bar (found-footage style), plus blinking REC, SP and battery. → 1.3.2 · 2026-10-06 · ccb81b6
 - [x] **0.3 Home gesture:** swiping up from the bottom edge to go home
-  flashed the carousel open. Swipes from the bottom ~56dp are ignored. → 1.3.2 · 2026-10-06 · COMMIT
+  flashed the carousel open. Swipes from the bottom ~56dp are ignored. → 1.3.2 · 2026-10-06 · ccb81b6
 
 ### 2. Photo & video previews (film & digital)
 
@@ -52,10 +52,10 @@ darkroom, corkboard, ambience).
   Not reproducible off-device; please confirm on the Pixel.
 - [x] **2.3 Film video thumbnails:** a stylised image of the first frame so
   each reel can be identified. Idea: a print glued to the front of the
-  spool. Come up with something that makes physical sense. → 1.3.2 · 2026-10-06 · COMMIT
+  spool. Come up with something that makes physical sense. → 1.3.2 · 2026-10-06 · ccb81b6
   A short tail of film hangs from behind each reel; its frames show how the clip opens.
 - [x] **2.4 Developing state:** a distinct, stylised look for film videos
-  that are still developing. → 1.3.2 · 2026-10-06 · COMMIT
+  that are still developing. → 1.3.2 · 2026-10-06 · ccb81b6
   Reels develop in a daylight tank: the reel turns in the chemistry, stage shows DEV → BLEACH → FIX → WASH.
 - [ ] **2.5 Share sheet preview:** sharing a video on Android shows only the
   file name. Pass a thumbnail to the share sheet.
@@ -77,31 +77,31 @@ darkroom, corkboard, ambience).
 - [x] **3.4 Zoom buttons always shown:** keep the zoom buttons on every digital
   camera so buttons don't appear or vanish when switching cameras. → 1.3.1 · 2026-10-06 · 4a676b7 (build 13)
 - [x] **3.5 Front camera button:** redesign the switch-camera button; the
-  current one is too plain. → 1.3.2 · 2026-10-06 · COMMIT
+  current one is too plain. → 1.3.2 · 2026-10-06 · ccb81b6
   A knurled dial with a lens in it; it turns half a turn when you flip cameras.
 - [x] **3.6 Landscape fixes:** the flash and aspect ratio buttons shouldn't
   stretch or rotate awkwardly. The settings menu, carousel and filters must
-  lay out properly when the phone is held sideways. → 1.3.2 · 2026-10-06 · COMMIT
+  lay out properly when the phone is held sideways. → 1.3.2 · 2026-10-06 · ccb81b6
   Flash/aspect keys have fixed sizes (icon-only sideways). Settings and the picker filter open as a sideways panel when held in landscape.
 
 ### 4. Windows 98 mode & darkroom
 
 - [x] **4.1 Win98 UI scale:** make the Win98 UI bigger, especially the photo
-  navigation buttons, for touch. Keep the proportions and the Win98 look. → 1.3.2 · 2026-10-06 · COMMIT
+  navigation buttons, for touch. Keep the proportions and the Win98 look. → 1.3.2 · 2026-10-06 · ccb81b6
   Everything Win98 is drawn 1.3x larger, same proportions; bigger ◀ ▶.
 - [x] **4.2 Win98 navigation:** no left/right swiping. Add a zoom slider and a
-  "Reset Zoom" button; pinch-to-zoom still works. → 1.3.2 · 2026-10-06 · COMMIT
+  "Reset Zoom" button; pinch-to-zoom still works. → 1.3.2 · 2026-10-06 · ccb81b6
 - [x] **4.3 Win98 video player:** Win98-style buttons instead of tap to
   play/pause: rewind, fast forward, previous, next, stop, play/pause. Glitchy
   VHS-style artefacts while rewinding and fast-forwarding. Progress slider,
-  elapsed/total time, and the other things a player would normally show. → 1.3.2 · 2026-10-06 · COMMIT
+  elapsed/total time, and the other things a player would normally show. → 1.3.2 · 2026-10-06 · ccb81b6
   |◀ ◀◀ ▶/❚❚ ■ ▶▶ ▶| with seek bar and time; hold ◀◀/▶▶ to scan with rolling snow bars and jitter.
 - [x] **4.4 Win98 metadata:** read the camera type from the photo's
-  Exif/metadata and show it at the bottom of the Win98 viewer. → 1.3.2 · 2026-10-06 · COMMIT
+  Exif/metadata and show it at the bottom of the Win98 viewer. → 1.3.2 · 2026-10-06 · ccb81b6
   Photos now carry Make/Model EXIF; the viewer reads it back ("Camera: 2003 CCD Compact"). Older files fall back to the catalog.
 - [x] **4.5 Floppy drive easter egg:** the camcorder transfers videos by a
   different route than the SD card, worked in through a floppy drive (A:) in a
-  way that still makes sense, since a camcorder has no floppy. → 1.3.2 · 2026-10-06 · COMMIT
+  way that still makes sense, since a camcorder has no floppy. → 1.3.2 · 2026-10-06 · ccb81b6
   Camcorder clips live on 3½ Floppy (A:). Copying to C: asks you to swap disks ("insert disk 2 of N"); after three swaps it offers to do the rest.
 - [ ] **4.6 Darkroom progress visual:** replace the plain white square with a
   more immersive progress visual that follows real film development

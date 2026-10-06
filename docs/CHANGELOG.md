@@ -202,7 +202,7 @@ darkroom, corkboard, ambience).
     frequent instant-film flaws (sparkles, roller streaks, a ragged
     undeveloped edge, a fogged corner); the frame everywhere in the app is
     now off-white with an embossed texture instead of flat white.
-    → 1.3.11 · 2026-10-06 · (pending)
+    → 1.3.11 · 2026-10-06 · a085f1e (build 26)
   - [ ] Super 8 and the digital bodies: waiting on reference photos.
 - [x] **8.2 Film defects:** small, tasteful flaws here and there, different on
   every frame (most have none worth noticing): dust specks, the odd hair, a

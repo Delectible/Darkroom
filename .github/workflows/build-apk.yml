@@ -1,30 +1,84 @@
-name: Build APK
+name: Build
 on:
   push:
+    paths-ignore: ['**.md', 'docs/**']
   workflow_dispatch:
+    inputs:
+      ios:
+        description: Also build the iPhone app
+        type: boolean
+        default: true
 permissions:
   contents: write
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  ORG: com.darkroom
+  APP: darkroom
+ 
 jobs:
-  build:
+  android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack darkroom.zip
+      - name: Use the uploaded zip, if the code was uploaded as one
         run: |
-          unzip -q "$(ls *.zip | head -1)" -d unpacked
-          echo "APP=$(dirname $(find unpacked -name pubspec.yaml | awk '{print length, $0}' | sort -n | head -1 | cut -d' ' -f2))" >> "$GITHUB_ENV"
+          if [ ! -f pubspec.yaml ] && ls *.zip >/dev/null 2>&1; then
+            unzip -q -o "$(ls *.zip | head -1)" -d /tmp/src
+            cp -a "$(dirname "$(find /tmp/src -name pubspec.yaml | awk '{print length, $0}' | sort -n | head -1 | cut -d' ' -f2-)")"/. .
+          fi
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
-      - name: Build
-        working-directory: ${{ env.APP }}
+      - run: flutter create --org $ORG --project-name $APP --platforms android .
+      - run: flutter build apk --release
+      - run: mkdir dist && cp build/app/outputs/flutter-apk/app-release.apk dist/Darkroom-${{ github.run_number }}.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: android, path: dist/ }
+ 
+  # Mac build minutes are free on public repos but cost 10x on private ones,
+  # so on a private repo the iPhone build only runs when asked for: put [ios]
+  # in the commit message, or start the workflow by hand.
+  ios:
+    if: (github.event_name == 'workflow_dispatch' && inputs.ios) || (github.event_name == 'push' && (!github.event.repository.private || contains(github.event.head_commit.message, '[ios]')))
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use the uploaded zip, if the code was uploaded as one
         run: |
-          flutter create --org com.darkroom --project-name darkroom --platforms android .
-          flutter pub get
-          flutter build apk --release
+          if [ ! -f pubspec.yaml ] && ls *.zip >/dev/null 2>&1; then
+            unzip -q -o "$(ls *.zip | head -1)" -d /tmp/src
+            cp -a "$(dirname "$(find /tmp/src -name pubspec.yaml | awk '{print length, $0}' | sort -n | head -1 | cut -d' ' -f2-)")"/. .
+          fi
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - name: Fill in the Xcode project
+        run: |
+          flutter create --org $ORG --project-name $APP --platforms ios .
+          sed -i '' -E 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/' ios/Runner.xcodeproj/project.pbxproj
+      - run: flutter build ios --release --no-codesign
+      - name: Package an unsigned .ipa (signed on your computer when sideloading)
+        run: |
+          mkdir -p dist/Payload
+          cp -R build/ios/iphoneos/Runner.app dist/Payload/
+          cd dist && zip -qry Darkroom-${{ github.run_number }}.ipa Payload && rm -rf Payload
+      - uses: actions/upload-artifact@v4
+        with: { name: ios, path: dist/ }
+ 
+  release:
+    needs: [android, ios]
+    if: always() && needs.android.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
-          name: RetroCam build ${{ github.run_number }}
-          files: ${{ env.APP }}/build/app/outputs/flutter-apk/app-release.apk
+          name: Darkroom build ${{ github.run_number }} (${{ github.ref_name }})
+          body: ${{ github.event.head_commit.message || 'Manual build' }}
+          prerelease: ${{ github.ref_name != 'main' }}
+          target_commitish: ${{ github.sha }}
+          files: dist/*

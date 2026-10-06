@@ -124,8 +124,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                             child: _ViewportBezel(mode: mode, child: const CameraViewport()),
                           ),
                         ),
+                        PickerCaret(onOpen: _openSelector),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 2, 20, 0),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                           child: Row(
                             children: [
                               Expanded(child: StockLabel(onOpen: _openSelector)),
@@ -257,21 +258,34 @@ class _ViewportBezel extends StatelessWidget {
   }
 }
 
-class _DarkroomBannerOverlay extends ConsumerWidget {
+/// "Prints ready" banner. Hidden, it used to sit only just above the safe
+/// area with no text, so an empty red box peeked out by the camera cutout.
+/// It now parks well off-screen and keeps its last text while sliding away.
+class _DarkroomBannerOverlay extends ConsumerStatefulWidget {
   const _DarkroomBannerOverlay();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_DarkroomBannerOverlay> createState() => _DarkroomBannerOverlayState();
+}
+
+class _DarkroomBannerOverlayState extends ConsumerState<_DarkroomBannerOverlay> {
+  String _text = '';
+
+  @override
+  Widget build(BuildContext context) {
     final banner = ref.watch(darkroomControllerProvider);
     final visible = banner != null;
+    if (visible) _text = banner.text;
     return SafeArea(
       child: Align(
         alignment: Alignment.topCenter,
         child: AnimatedSlide(
-          offset: visible ? Offset.zero : const Offset(0, -1.6),
+          offset: visible ? Offset.zero : const Offset(0, -3),
           duration: const Duration(milliseconds: 280),
           curve: Curves.easeOutCubic,
-          child: GestureDetector(
+          child: IgnorePointer(
+            ignoring: !visible,
+            child: GestureDetector(
             onTap: () {
               ref.read(darkroomControllerProvider.notifier).dismissBanner();
               ref.read(pendingRouteProvider.notifier).request('corkboard');
@@ -291,12 +305,13 @@ class _DarkroomBannerOverlay extends ConsumerWidget {
                   const Icon(Icons.light, color: Color(0xFFFF5252), size: 18),
                   const SizedBox(width: 10),
                   Text(
-                    banner?.text ?? '',
+                    _text,
                     style: const TextStyle(color: Color(0xFFFFCDD2), fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
             ),
+          ),
           ),
         ),
       ),

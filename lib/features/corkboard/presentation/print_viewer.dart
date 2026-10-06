@@ -9,6 +9,7 @@ import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
+import '../../viewer/presentation/zoomable.dart';
 
 /// Inspecting prints on a dark light-table: swipe between them, pinch to
 /// look closer, Save copies one to the phone's photo library.
@@ -135,11 +136,11 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                   ),
                 ),
                 Expanded(
-                  child: PageView.builder(
+                  child: ZoomPageView(
                     controller: _pages,
                     itemCount: items.length,
                     onPageChanged: (i) => setState(() => _index = i),
-                    itemBuilder: (context, i) => _Print(item: items[i]),
+                    itemBuilder: (context, i, onZoom) => _Print(item: items[i], onZoomChanged: onZoom),
                   ),
                 ),
                 _ActionBar(
@@ -159,16 +160,17 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
 }
 
 class _Print extends StatelessWidget {
-  const _Print({required this.item});
+  const _Print({required this.item, required this.onZoomChanged});
 
   final MediaItem item;
+  final ValueChanged<bool> onZoomChanged;
 
   @override
   Widget build(BuildContext context) {
     final path = item.outputPath;
     final aspect = (item.width ?? 3) / (item.height ?? 2);
-    return InteractiveViewer(
-      maxScale: 6,
+    return Zoomable(
+      onZoomChanged: onZoomChanged,
       child: Center(
         child: Padding(
           padding: const EdgeInsets.all(22),

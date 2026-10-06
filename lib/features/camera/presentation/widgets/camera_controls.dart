@@ -353,7 +353,7 @@ class StockButton extends ConsumerWidget {
     return Semantics(
       button: true,
       label: film ? 'Choose film' : 'Choose camera',
-      child: GestureDetector(
+      child: SwipeToCycle(
         onTap: onOpen,
         child: Container(
           width: 64,
@@ -395,40 +395,94 @@ class StockLabel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = RetroPalette.of(context);
     final spec = ref.watch(activeSpecProvider);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return SwipeToCycle(
       onTap: onOpen,
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  spec.name.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: palette.text,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                    fontSize: 13,
-                  ),
-                ),
-                Text(
-                  spec.recordsVideo ? '${spec.subtitle} · VIDEO' : spec.subtitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: palette.textMuted, fontSize: 11),
-                ),
-              ],
+          Text(
+            spec.name.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: palette.text,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.5,
+              fontSize: 13,
             ),
           ),
-          Icon(Icons.keyboard_arrow_up, color: palette.textMuted, size: 18),
+          Text(
+            spec.recordsVideo ? '${spec.subtitle} · VIDEO' : spec.subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: palette.textMuted, fontSize: 11),
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Small centred caret above the controls: tap (or swipe up anywhere) to
+/// open the film / camera picker.
+class PickerCaret extends StatelessWidget {
+  const PickerCaret({super.key, required this.onOpen});
+
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Open picker',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Icon(Icons.keyboard_arrow_up, color: RetroPalette.of(context).textMuted, size: 22),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tap opens the picker; a sideways swipe steps to the next / previous
+/// stock or body without opening it.
+class SwipeToCycle extends ConsumerStatefulWidget {
+  const SwipeToCycle({super.key, required this.onTap, required this.child});
+
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  ConsumerState<SwipeToCycle> createState() => _SwipeToCycleState();
+}
+
+class _SwipeToCycleState extends ConsumerState<SwipeToCycle> {
+  double _dx = 0;
+
+  void _end(DragEndDetails d) {
+    final v = d.primaryVelocity ?? 0;
+    final dx = _dx;
+    _dx = 0;
+    if (ref.read(captureControllerProvider).isRecording) return;
+    if (dx.abs() < 24 && v.abs() < 300) return;
+    final step = (v.abs() >= 300 ? v : dx) < 0 ? 1 : -1;
+    unawaited(HapticFeedback.selectionClick());
+    unawaited(ref.read(selectedCameraProvider.notifier).step(ref.read(appModeProvider), step));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onTap,
+      onHorizontalDragStart: (_) => _dx = 0,
+      onHorizontalDragUpdate: (d) => _dx += d.primaryDelta ?? 0,
+      onHorizontalDragEnd: _end,
+      child: widget.child,
     );
   }
 }

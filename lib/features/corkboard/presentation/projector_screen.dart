@@ -63,12 +63,17 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   MediaItem _item(Map<String, MediaItem> live) =>
       live[_ids[_index]] ?? widget.reels.firstWhere((m) => m.id == _ids[_index]);
 
-  Future<void> _load() async {
+  /// Threads the current reel. [rethread] swaps in a fresh player for the same
+  /// reel without blanking the screen (used to replay from the end).
+  Future<void> _load({bool rethread = false, bool play = true}) async {
     final old = _c;
-    _c = null;
-    _error = null;
-    if (mounted) setState(() {});
-    await old?.dispose();
+    if (!rethread) {
+      _c = null;
+      _error = null;
+      if (mounted) setState(() {});
+      old?.removeListener(_onTick);
+      await old?.dispose();
+    }
     final item = widget.reels.firstWhere((m) => m.id == _ids[_index]);
     final path = item.outputPath;
     if (path == null) return;
@@ -81,7 +86,12 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
       }
       c.addListener(_onTick);
       setState(() => _c = c);
-      await c.play();
+      if (rethread && old != null) {
+        old.removeListener(_onTick);
+        // After the frame, so no widget still listens to the old player.
+        WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(old.dispose()));
+      }
+      if (play) await c.play();
     } catch (_) {
       await c.dispose();
       if (mounted) setState(() => _error = 'This reel cannot be played.');
@@ -105,15 +115,28 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     unawaited(HapticFeedback.mediumImpact());
     if (c.value.isPlaying) {
       unawaited(c.pause());
+    } else if (_atEnd(c.value)) {
+      // Android's player can get stuck in its "ended" state, so a reel that
+      // ran out would not play again (digital clips loop, so never hit this).
+      // Re-threading the reel is the reliable way back to the start.
+      unawaited(_load(rethread: true));
     } else {
-      if (c.value.position >= c.value.duration) unawaited(c.seekTo(Duration.zero));
       unawaited(c.play());
     }
   }
 
+  static bool _atEnd(VideoPlayerValue v) =>
+      v.isCompleted || v.position >= v.duration - const Duration(milliseconds: 250);
+
   void _rewind() {
+    final c = _c;
+    if (c == null) return;
     unawaited(HapticFeedback.selectionClick());
-    unawaited(_c?.seekTo(Duration.zero));
+    if (_atEnd(c.value) && !c.value.isPlaying) {
+      unawaited(_load(rethread: true, play: false));
+    } else {
+      unawaited(c.seekTo(Duration.zero));
+    }
   }
 
   void _step(int d) {

@@ -8,6 +8,7 @@ import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../../viewer/presentation/media_view.dart';
+import '../../../viewer/presentation/zoomable.dart';
 import 'explorer_dialogs.dart';
 import 'pixel_icons.dart';
 import 'win98_widgets.dart';
@@ -110,11 +111,12 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                     style: BevelStyle.sunken,
                     color: Colors.black,
                     padding: const EdgeInsets.all(2),
-                    child: PageView.builder(
+                    child: ZoomPageView(
                       controller: _pages,
                       itemCount: _items.length,
                       onPageChanged: (i) => setState(() => _index = i),
-                      itemBuilder: (context, i) => MediaView(key: ValueKey(_items[i].id), item: _items[i]),
+                      itemBuilder: (context, i, onZoom) =>
+                          MediaView(key: ValueKey(_items[i].id), item: _items[i], onZoomChanged: onZoom),
                     ),
                   ),
                 ),

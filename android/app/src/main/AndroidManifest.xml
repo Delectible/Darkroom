@@ -45,6 +45,23 @@
             </intent-filter>
         </activity>
 
+        <!-- Share sheet: swap share_plus's FileProvider for one that also
+             serves a first-frame thumbnail for videos (ShareThumbnailProvider.kt).
+             Same authority, so share_plus keeps working unchanged. -->
+        <provider
+            android:name="dev.fluttercommunity.plus.share.ShareFileProvider"
+            android:authorities="${applicationId}.flutter.share_provider"
+            tools:node="remove" />
+        <provider
+            android:name=".ShareThumbnailProvider"
+            android:authorities="${applicationId}.flutter.share_provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/flutter_share_file_paths" />
+        </provider>
+
         <!-- Don't delete: used by the Flutter tool to generate GeneratedPluginRegistrant. -->
         <meta-data
             android:name="flutterEmbedding"

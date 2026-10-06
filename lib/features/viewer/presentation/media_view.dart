@@ -6,13 +6,17 @@ import 'package:video_player/video_player.dart';
 
 import '../../../core/db/media_repository.dart';
 import 'media_actions.dart';
+import 'zoomable.dart';
 
 /// A single photo (pinch-zoomable) or video (tap to play/pause, loops).
 class MediaView extends StatelessWidget {
-  const MediaView({super.key, required this.item, this.background = Colors.black});
+  const MediaView({super.key, required this.item, this.background = Colors.black, this.onZoomChanged});
 
   final MediaItem item;
   final Color background;
+
+  /// Photos: called when the user zooms in / back out (see ZoomPageView).
+  final ValueChanged<bool>? onZoomChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +27,8 @@ class MediaView extends StatelessWidget {
     if (item.isVideo) return _VideoPane(path: path, background: background);
     return ColoredBox(
       color: background,
-      child: InteractiveViewer(
-        maxScale: 6,
+      child: Zoomable(
+        onZoomChanged: onZoomChanged,
         child: Center(
           child: Image.file(
             File(path),

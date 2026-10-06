@@ -14,35 +14,40 @@ Running list of requested changes and when each one landed.
 
 ## Revision v0.2 (requested 2026-10-06)
 
-Ships as app version **1.3.0** (current: 1.2.0+3).
+Ships as app version **1.3.x**, one patch number per batch:
+A = 1.3.0 (quick fixes), B = 1.3.1 (pipeline, Polaroid, zoom),
+C = 1.3.2 (visual pieces).
 
 ### 1. Carousel & navigation
 
-- [ ] **1.1 Swipe hitbox:** swiping anywhere on the screen scrolls the
-  carousel, not just on the item icon.
-- [ ] **1.2 Gesture deadzone:** add a deadzone for up/down swipes so a
-  horizontal swipe doesn't close or open the carousel by accident.
-- [ ] **1.3 Swipe targets:** swiping on the film icon or on the text label at
-  the bottom both cycle through the choices.
-- [ ] **1.4 Animation polish:** smooth the jumpy transition between items
-  that have tags (grain strength, movie).
-- [ ] **1.5 Alignment:** centre the film stock element properly.
-- [ ] **1.6 Caret placement:** move the small arrow caret next to the film
-  name from the left to the centre.
+- [x] **1.1 Swipe hitbox:** swiping anywhere on the screen scrolls the
+  carousel, not just on the item icon. → 1.3.0 · 2026-10-06 · COMMIT
+- [x] **1.2 Gesture deadzone:** add a deadzone for up/down swipes so a
+  horizontal swipe doesn't close or open the carousel by accident. → 1.3.0 · 2026-10-06 · COMMIT
+- [x] **1.3 Swipe targets:** swiping on the film icon or on the text label at
+  the bottom both cycle through the choices. → 1.3.0 · 2026-10-06 · COMMIT
+  Works on the camera screen too: swipe the name or film box sideways.
+- [x] **1.4 Animation polish:** smooth the jumpy transition between items
+  that have tags (grain strength, movie). → 1.3.0 · 2026-10-06 · COMMIT
+- [x] **1.5 Alignment:** centre the film stock element properly. → 1.3.0 · 2026-10-06 · COMMIT
+- [x] **1.6 Caret placement:** move the small arrow caret next to the film
+  name from the left to the centre. → 1.3.0 · 2026-10-06 · COMMIT
 
 ### 2. Photo & video previews (film & digital)
 
-- [ ] **2.1 Pan vs. swipe:** when zoomed into a photo, panning must not
-  trigger swipe-to-next. Applies to film and digital.
-- [ ] **2.2 Film video replay:** film videos won't play again after reaching
-  the end (digital videos are fine).
+- [x] **2.1 Pan vs. swipe:** when zoomed into a photo, panning must not
+  trigger swipe-to-next. Applies to film and digital. → 1.3.0 · 2026-10-06 · COMMIT
+- [x] **2.2 Film video replay:** film videos won't play again after reaching
+  the end (digital videos are fine). → 1.3.0 · 2026-10-06 · COMMIT
+  Not reproducible off-device; please confirm on the Pixel.
 - [ ] **2.3 Film video thumbnails:** a stylised image of the first frame so
   each reel can be identified. Idea: a print glued to the front of the
   spool. Come up with something that makes physical sense.
 - [ ] **2.4 Developing state:** a distinct, stylised look for film videos
   that are still developing.
-- [ ] **2.5 Share sheet preview:** sharing a video on Android shows only the
-  file name. Pass a thumbnail to the share sheet.
+- [x] **2.5 Share sheet preview:** sharing a video on Android shows only the
+  file name. Pass a thumbnail to the share sheet. → 1.3.0 · 2026-10-06 · COMMIT
+  Android-side change; please confirm on the Pixel.
 
 ### 3. Camera UI & viewfinder
 
@@ -84,14 +89,15 @@ Ships as app version **1.3.0** (current: 1.2.0+3).
 
 ### 5. Performance & general
 
-- [ ] **5.1 Red square:** remove the unexplained red square at the top of the
-  screen.
+- [x] **5.1 Red square:** remove the unexplained red square at the top of the
+  screen. → 1.3.0 · 2026-10-06 · COMMIT
+  It was the hidden "prints ready" banner peeking out above the safe area.
 - [ ] **5.2 Mode ambience:** add visual touches unique to Film and Digital mode
   that pull you in and match real-world equipment.
-- [ ] **5.3 Flip phone artwork:** it looks folded backwards. Keep the style,
-  fix the orientation.
-- [ ] **5.4 Corkboard loading:** fast scrolling leaves blank spaces that fade
-  in slowly. Optimise photo lazy-loading.
+- [x] **5.3 Flip phone artwork:** it looks folded backwards. Keep the style,
+  fix the orientation. → 1.3.0 · 2026-10-06 · COMMIT
+- [x] **5.4 Corkboard loading:** fast scrolling leaves blank spaces that fade
+  in slowly. Optimise photo lazy-loading. → 1.3.0 · 2026-10-06 · COMMIT
 - [ ] **5.5 Corkboard wall:** the background scrolls with the photos, so you
   slide the whole wall instead of a fixed backdrop. Refine the cartoony cork
   with imperfections that show as you scroll. Better-looking pins.

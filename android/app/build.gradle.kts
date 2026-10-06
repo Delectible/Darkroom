@@ -56,6 +56,8 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // FileProvider for ShareThumbnailProvider (share_plus uses the same).
+    implementation("androidx.core:core-ktx:1.16.0")
 }
 
 flutter {

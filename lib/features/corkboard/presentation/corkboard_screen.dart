@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -30,6 +31,15 @@ class CorkboardScreen extends ConsumerStatefulWidget {
 
 class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
   bool _saving = false;
+
+  /// Pin-in animations only play as the board opens and for prints that come
+  /// out of the darkroom while it is open. Prints scrolled into view appear
+  /// at once (they used to fade in late, leaving blank gaps).
+  final DateTime _openedAt = DateTime.now();
+
+  bool _animatePin(MediaItem m, int index) =>
+      m.readyAt.isAfter(_openedAt) ||
+      (index < 12 && DateTime.now().difference(_openedAt) < const Duration(milliseconds: 900));
 
   @override
   void initState() {
@@ -100,6 +110,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
           const Positioned.fill(child: _CorkBackground()),
           SafeArea(
             child: CustomScrollView(
+              // Build (and decode) prints well before they scroll into view.
+              scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
               slivers: [
                 SliverToBoxAdapter(
                   child: _Header(
@@ -131,6 +143,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
                         final child = m.isVideo
                             ? PinnedReel(item: m, onOpen: () => _open(context, developed, m))
                             : PinnedPrint(item: m, onOpen: () => _open(context, developed, m));
+                        if (!_animatePin(m, i)) return KeyedSubtree(key: ValueKey(m.id), child: child);
                         return _PinIn(
                           key: ValueKey(m.id),
                           delay: Duration(milliseconds: 40 * math.min(i, 8)),
@@ -424,6 +437,10 @@ class PinnedPrint extends StatelessWidget {
                                 fit: BoxFit.cover,
                                 cacheWidth: 420,
                                 gaplessPlayback: true,
+                                // Developing-paper tone until decoded, not a hole.
+                                frameBuilder: (context, child, frame, sync) => frame == null && !sync
+                                    ? const ColoredBox(color: Color(0xFFE9E2D3))
+                                    : child,
                                 errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
                               ),
                             // Glossy paper sheen.

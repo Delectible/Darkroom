@@ -84,13 +84,13 @@ export async function build(THREE) {
   capL.rotation.z = Math.PI / 2; capL.position.set(-W / 2 + 3, hingeY, 0); root.add(capL);
   const capR = capL.clone(); capR.position.x = W / 2 - 3; root.add(capR);
 
-  // lid (screen half), pivoting back around the hinge
+  // lid (screen half), tilted forward around the hinge like a real open flip phone
   const lid = new THREE.Group();
   const lShell = slab(W, HL, T * 0.8, 10, 2.2, shellPaint); lShell.position.y = HL / 2 + 1; lid.add(lShell);
   const lPanel = slab(W - 3, HL - 5, 0.8, 8, 0.3, inner); lPanel.position.set(0, HL / 2 + 1, T * 0.4 + 0.1); lid.add(lPanel);
   // screen under glass, glowing
   const scr = new THREE.Mesh(new THREE.PlaneGeometry(31, 38.75), new THREE.MeshStandardMaterial({ map: tex(screenCanvas()), emissiveMap: tex(screenCanvas()), emissive: 0xffffff, emissiveIntensity: 0.9, roughness: 1 }));
-  scr.position.set(0, HL / 2 + 6, T * 0.4 + 0.55); lid.add(scr);
+  scr.position.set(0, HL / 2 + 6, T * 0.4 + 0.6); lid.add(scr);
   const glass = rbox(37, 50, 0.6, 1.5, new THREE.MeshPhysicalMaterial({ color: 0x050608, roughness: 0.02, transmission: 0.0, clearcoat: 1, transparent: false, opacity: 1 }));
   glass.position.set(0, HL / 2 + 4.5, T * 0.4 + 0.25); lid.add(glass);
   // earpiece
@@ -98,7 +98,7 @@ export async function build(THREE) {
   const brand = decal(24, 4, (c, w, h) => { c.fillStyle = '#c7ccd4'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `800 ${h * 0.7}px "Inter Display"`; c.fillText('RETROCAM', w / 2, h / 2); }, { px: 40, rough: 0.3, metal: 0.7 });
   brand.position.set(0, HL / 2 - 23.5, T * 0.4 + 0.55); lid.add(brand);
   lid.position.set(0, hingeY, -0.6);
-  lid.rotation.x = -0.26;
+  lid.rotation.x = 0.26; // opened past flat would face away: tilt the screen half toward the viewer
   root.add(lid);
 
   root.rotation.y = 0.42; root.rotation.x = -0.08;

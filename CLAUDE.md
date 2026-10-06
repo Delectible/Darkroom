@@ -102,7 +102,11 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
 
 UI
 - Swipe up on the camera opens the film/camera carousel; swipe down closes it.
-  Carousel works in landscape.
+  Carousel works in landscape. In the carousel, sideways swipes work anywhere
+  on screen; closing needs a clearly downward swipe (deadzone).
+- On the camera screen, swiping sideways on the stock name or the film box
+  steps to the next/previous stock without opening the carousel.
+- Zoomed-in photos pan; swiping to the next photo only works at normal zoom.
 
 ## Art
 

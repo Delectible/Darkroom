@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -34,6 +35,20 @@ Future<void> showStockSelector(BuildContext context, AppMode mode) {
 }
 
 enum _Filter { all, color, mono, movie, photo, video }
+
+enum _Axis { undecided, horizontal, vertical }
+
+/// The carousel is driven by the screen-wide pan handler below, so the
+/// PageView itself must not claim drags (it still clamps and snaps to pages).
+class _ExternalDragPhysics extends ClampingScrollPhysics {
+  const _ExternalDragPhysics({super.parent});
+
+  @override
+  _ExternalDragPhysics applyTo(ScrollPhysics? ancestor) => _ExternalDragPhysics(parent: buildParent(ancestor));
+
+  @override
+  bool shouldAcceptUserOffset(ScrollMetrics position) => false;
+}
 
 /// Dark, minimal picker: the selected film canister (or camera body) sits
 /// under a soft spotlight, neighbours peek in smaller and dimmer, name and a
@@ -149,17 +164,83 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
     _select(_index);
   }
 
-  void _onDragUpdate(DragUpdateDetails d) {
-    _settle.stop();
-    setState(() => _drag = math.max(0, _drag + d.primaryDelta!));
+  // ---- gestures -------------------------------------------------------------
+  // One pan handler covers the whole screen. Each drag is locked to an axis
+  // once it has moved a little: only a clearly downward drag (within ~30° of
+  // vertical) pulls the sheet closed; everything else scrolls the carousel.
+
+  _Axis _axis = _Axis.undecided;
+  Offset _travel = Offset.zero;
+  Drag? _scroll;
+
+  /// Vertical must beat horizontal by this factor (tan 60°) to count as a
+  /// close gesture: the deadzone that keeps sideways swipes from closing.
+  static const _verticalBias = 1.7;
+
+  void _onPanStart(DragStartDetails d) {
+    _axis = _Axis.undecided;
+    _travel = Offset.zero;
   }
 
-  void _onDragEnd(DragEndDetails d) {
-    final v = d.primaryVelocity ?? 0;
-    if (_drag > 140 || v > 700) {
-      Navigator.of(context).pop();
-      return;
+  void _onPanUpdate(DragUpdateDetails d) {
+    switch (_axis) {
+      case _Axis.undecided:
+        _travel += d.delta;
+        if (_travel.distance < 10) return;
+        final vertical = _travel.dy > 0 && _travel.dy.abs() > _travel.dx.abs() * _verticalBias;
+        if (vertical) {
+          _axis = _Axis.vertical;
+          _settle.stop();
+          setState(() => _drag = math.max(0, _drag + _travel.dy));
+        } else if (_pages.hasClients && _specs.length > 1) {
+          _axis = _Axis.horizontal;
+          _scroll = _pages.position.drag(
+            DragStartDetails(globalPosition: d.globalPosition, localPosition: d.localPosition),
+            () => _scroll = null,
+          );
+          _scrollBy(d, _travel.dx);
+        }
+      case _Axis.horizontal:
+        _scrollBy(d, d.delta.dx);
+      case _Axis.vertical:
+        setState(() => _drag = math.max(0, _drag + d.delta.dy));
     }
+  }
+
+  void _scrollBy(DragUpdateDetails d, double dx) => _scroll?.update(
+    DragUpdateDetails(
+      globalPosition: d.globalPosition,
+      localPosition: d.localPosition,
+      delta: Offset(dx, 0),
+      primaryDelta: dx,
+    ),
+  );
+
+  void _onPanEnd(DragEndDetails d) {
+    switch (_axis) {
+      case _Axis.horizontal:
+        final vx = d.velocity.pixelsPerSecond.dx;
+        _scroll?.end(DragEndDetails(velocity: Velocity(pixelsPerSecond: Offset(vx, 0)), primaryVelocity: vx));
+      case _Axis.vertical:
+        final vy = d.velocity.pixelsPerSecond.dy;
+        if (_drag > 140 || vy > 700) {
+          Navigator.of(context).pop();
+          return;
+        }
+        _springBack();
+      case _Axis.undecided:
+        break;
+    }
+    _axis = _Axis.undecided;
+  }
+
+  void _onPanCancel() {
+    _scroll?.cancel();
+    if (_axis == _Axis.vertical) _springBack();
+    _axis = _Axis.undecided;
+  }
+
+  void _springBack() {
     _dragFrom = _drag;
     _settle.forward(from: 0);
   }
@@ -177,8 +258,11 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
       child: SafeArea(
         child: UprightBox(
           child: GestureDetector(
-            onVerticalDragUpdate: _onDragUpdate,
-            onVerticalDragEnd: _onDragEnd,
+            behavior: HitTestBehavior.opaque,
+            onPanStart: _onPanStart,
+            onPanUpdate: _onPanUpdate,
+            onPanEnd: _onPanEnd,
+            onPanCancel: _onPanCancel,
             child: Transform.translate(
               offset: Offset(0, _drag),
               child: Column(
@@ -263,6 +347,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
                               height: itemH,
                               child: PageView.builder(
                                 controller: _pages,
+                                physics: const _ExternalDragPhysics(),
                                 itemCount: _specs.length,
                                 onPageChanged: _select,
                                 itemBuilder: (context, i) => _Item(
@@ -291,51 +376,73 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
                       ],
                     ),
                   ),
+                  // Name, description and tags. Every row has a fixed height
+                  // so items with and without tags cross-fade in place instead
+                  // of the old/new blocks jumping to re-centre.
                   Padding(
                     padding: const EdgeInsets.fromLTRB(24, 6, 24, 26),
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
+                      layoutBuilder: (current, previous) => Stack(
+                        alignment: Alignment.topCenter,
+                        children: [...previous, ?current],
+                      ),
                       transitionBuilder: (c, a) => FadeTransition(
                         opacity: a,
                         child: SlideTransition(
-                          position: Tween(begin: const Offset(0, 0.15), end: Offset.zero).animate(a),
+                          position: Tween(begin: const Offset(0, 0.08), end: Offset.zero).animate(a),
                           child: c,
                         ),
                       ),
                       child: Column(
                         key: ValueKey('${spec?.id}$grain'),
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            (spec?.name ?? '').toUpperCase(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
+                          SizedBox(
+                            height: 38,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                (spec?.name ?? '').toUpperCase(),
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            height: 20,
+                            child: Text(
+                              spec?.subtitle ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: _muted, fontSize: 15),
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Text(
-                            spec?.subtitle ?? '',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: _muted, fontSize: 15),
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            spacing: 6,
-                            alignment: WrapAlignment.center,
-                            children: [
-                              if (spec != null && spec.recordsVideo)
-                                _Tag(spec.isFilm ? 'MOVIE · 18 FPS' : 'VIDEO', const Color(0xFFE57373)),
-                              if (grain != GrainStrength.normal)
-                                _Tag(
-                                  'GRAIN: ${grain.name.toUpperCase()}',
-                                  grain == GrainStrength.strong
-                                      ? const Color(0xFFFFB74D)
-                                      : const Color(0xFF90CAF9),
-                                ),
-                            ],
+                          SizedBox(
+                            height: 22,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: 6,
+                              children: [
+                                if (spec != null && spec.recordsVideo)
+                                  _Tag(spec.isFilm ? 'MOVIE · 18 FPS' : 'VIDEO', const Color(0xFFE57373)),
+                                if (grain != GrainStrength.normal)
+                                  _Tag(
+                                    'GRAIN: ${grain.name.toUpperCase()}',
+                                    grain == GrainStrength.strong
+                                        ? const Color(0xFFFFB74D)
+                                        : const Color(0xFF90CAF9),
+                                  ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

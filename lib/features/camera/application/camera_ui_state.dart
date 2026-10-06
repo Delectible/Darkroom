@@ -78,6 +78,13 @@ class SelectedCameraNotifier extends Notifier<Map<AppMode, String>> {
         .read(sharedPrefsProvider)
         .setString(mode == AppMode.film ? PrefKeys.cameraFilm : PrefKeys.cameraDigital, id);
   }
+
+  /// Next / previous stock or body in catalog order (wraps around).
+  Future<void> step(AppMode mode, int delta) {
+    final list = CameraCatalog.forMode(mode);
+    final i = list.indexWhere((c) => c.id == state[mode]);
+    return select(mode, list[(i + delta) % list.length].id);
+  }
 }
 
 final selectedCameraProvider = NotifierProvider<SelectedCameraNotifier, Map<AppMode, String>>(

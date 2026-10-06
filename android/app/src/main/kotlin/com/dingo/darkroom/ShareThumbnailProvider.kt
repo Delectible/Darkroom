@@ -1,4 +1,4 @@
-package com.darkroom.darkroom
+package com.dingo.darkroom
 
 import android.content.res.AssetFileDescriptor
 import android.graphics.Bitmap

@@ -37,11 +37,17 @@ Read this first. It's the hand-off from the earlier development sessions
   AppDelegate.swift and the AppIcon set; CI generates the rest.
   Background developing (WorkManager) is Android-only.
 - `android/` and `ios/` only contain the files we customised. CI runs
-  `flutter create --org com.darkroom --project-name darkroom --platforms android .`
+  `flutter create --org com.dingo --project-name darkroom --platforms android .`
   to fill in the rest (it never overwrites existing files). Don't delete
   `AndroidManifest.xml` or `android/app/build.gradle.kts`.
-- `applicationId` / `namespace` = `com.darkroom.darkroom`; must match the
+- `applicationId` / `namespace` = `com.dingo.darkroom` (the id registered on
+  Google Play; was `com.darkroom.darkroom` until 1.3.16); must match the
   package of `MainActivity.kt` (ours, in the repo: gesture channel).
+- **Google Play** is the main way Gabe installs now (internal testing
+  track). The `play` job in the workflow uploads every `main` build's .aab
+  (secret `PLAY_SERVICE_ACCOUNT_JSON`, repo variable `PLAY_RELEASE_STATUS`,
+  default `completed`). Release notes = commit subject, so keep subjects
+  readable. Privacy policy for the listing: `docs/PRIVACY.md`.
 - Release builds are signed with Gabe's **private upload key** (alias
   `upload`), which CI decodes from the repo secrets `ANDROID_KEYSTORE_BASE64`
   and `ANDROID_KEYSTORE_PASSWORD`. Never commit it. Without the secrets
@@ -245,5 +251,5 @@ UI
 1. Tidier camcorder viewfinder in its artwork.
 2. Digital camera looks: tune against reference photos when Gabe sends them.
 3. First iOS run: the CI .ipa builds (build 19); still to try it on Gabe's iPhone.
-4. Play Console internal testing: Gabe makes the account and uploads the
-   first .aab by hand; then have CI upload each build (service account).
+4. Play Console: first .aab uploaded by hand, then the service account
+   secret so CI uploads each build (see docs/DEVELOPMENT.md section 9).

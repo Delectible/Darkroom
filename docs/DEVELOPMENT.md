@@ -34,7 +34,7 @@ Pixel 9 Pro (Impeller / Vulkan).
 ```bash
 # 1. Generate the missing platform boilerplate. Existing files (AndroidManifest,
 #    build.gradle.kts, Info.plist, AppDelegate.swift) are kept as-is.
-flutter create . --org com.darkroom --platforms=android,ios
+flutter create . --org com.dingo --platforms=android,ios
 
 # 2. Packages
 flutter pub get
@@ -295,6 +295,15 @@ Android build pass, everything is published as a GitHub release `build-N`
   `upload`). Without them (forks, local builds) they fall back to the public
   test key `android/app/darkroom-test.jks`, which can't update a private‑key
   install. Never commit the private key.
+* **Google Play:** app id `com.dingo.darkroom`, internal testing track, Play
+  App Signing (Google signs what users install; we sign uploads with the
+  upload key). The `play` job uploads each `main` build's `.aab` with
+  `r0adkll/upload-google-play`, using the secret `PLAY_SERVICE_ACCOUNT_JSON`
+  (a Google Cloud service account with the Play Android Developer API
+  enabled, invited in Play Console > Users and permissions with release
+  rights for the app). Release notes are the commit subject. While the app
+  is still a draft in the console, set the repository variable
+  `PLAY_RELEASE_STATUS=draft`. Privacy policy: `docs/PRIVACY.md`.
 * **iOS:** the `.ipa` is unsigned; sideload it with Sideloadly and an Apple ID.
   On a private repository the macOS job only runs for commits with `[ios]` in
   the message or a manual run.

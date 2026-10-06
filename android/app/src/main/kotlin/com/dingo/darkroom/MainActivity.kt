@@ -1,4 +1,4 @@
-package com.darkroom.darkroom
+package com.dingo.darkroom
 
 import android.graphics.Rect
 import android.os.Build

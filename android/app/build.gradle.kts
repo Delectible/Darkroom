@@ -5,9 +5,9 @@ plugins {
 }
 
 android {
-    // Must match the package `flutter create --org com.darkroom` generates
-    // for MainActivity (com.darkroom.darkroom).
-    namespace = "com.darkroom.darkroom"
+    // Must match the package of MainActivity.kt and the app registered in
+    // the Play Console (`flutter create --org com.dingo` generates the same).
+    namespace = "com.dingo.darkroom"
     // flutter_local_notifications needs compileSdk >= 35.
     compileSdk = maxOf(flutter.compileSdkVersion, 36)
     ndkVersion = flutter.ndkVersion
@@ -20,7 +20,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.darkroom.darkroom"
+        applicationId = "com.dingo.darkroom"
         // ffmpeg_kit_flutter_new_min requires API 24+.
         minSdk = maxOf(flutter.minSdkVersion, 24)
         targetSdk = flutter.targetSdkVersion

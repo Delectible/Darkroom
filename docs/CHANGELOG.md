@@ -248,7 +248,7 @@ darkroom, corkboard, ambience).
   Start button, Start menu and About box; DCIM folder shown as 100DRKRM)
   → 1.3.14 · 2026-10-06 · 40ae988. Artwork re-rendered at 1024 px with
   DARKROOM labels, the rabbit on the film boxes / cartridge / instant
-  camera and a darker film leader → 1.3.15 · 2026-10-06 · (this commit)
+  camera and a darker film leader → 1.3.15 · 2026-10-06 · 4775de3
 - [x] **10.5 Repository tidy-up**, README, repository image: README
   rewritten; CI runs `flutter analyze` + `flutter test` and only publishes a
   build that passes; `pubspec.lock` committed; the old zip-upload step
@@ -256,3 +256,11 @@ darkroom, corkboard, ambience).
   (made by `make_icons.py`) for GitHub's social preview. → (no app change) ·
   2026-10-06 · 15a92e3
 
+### 11. Requested 2026-10-06 (after build 31)
+
+- [x] **11.1 Google Play:** Gabe registered the app in the Play Console as
+  `com.dingo.darkroom`; the app id moves there (Kotlin package too, and the
+  iOS bundle id via `--org com.dingo`). CI uploads each `main` build's .aab
+  to the internal testing track once the `PLAY_SERVICE_ACCOUNT_JSON` secret
+  is set; GitHub Releases keep the APK/IPA. Privacy policy in
+  `docs/PRIVACY.md`. → 1.3.16 · 2026-10-06 · (this commit)

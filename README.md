@@ -28,7 +28,7 @@ Swap between the two modes by tossing the camera off the desk with your thumb.
 
 Every update builds a new release automatically. Open **[Releases](../../releases)** and take the latest build.
 
-**Android:** download `Darkroom-N.apk` on your phone, open it and allow your browser to install apps when asked. Builds are signed with the same key, so each one installs over the last.
+**Android:** Darkroom is in internal testing on Google Play; testers get each new build through the Play Store. The `Darkroom-N.apk` in Releases can also be installed by hand (allow your browser to install apps when asked), but it can't update a copy installed from Play, or the other way round.
 
 **iPhone (experimental):** download `Darkroom-N.ipa` and install it with [Sideloadly](https://sideloadly.io) and a free Apple ID. Free-account installs expire after 7 days; re-sideload to renew. Developing in the background is Android-only.
 
@@ -37,7 +37,7 @@ Every update builds a new release automatically. Open **[Releases](../../release
 Needs Flutter (stable, 3.47 or newer).
 
 ```bash
-flutter create --org com.darkroom --project-name darkroom --platforms android,ios .
+flutter create --org com.dingo --project-name darkroom --platforms android,ios .
 flutter pub get
 flutter run --release
 ```

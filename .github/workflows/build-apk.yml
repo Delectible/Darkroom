@@ -14,7 +14,7 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 env:
-  ORG: com.darkroom
+  ORG: com.dingo          # app id com.dingo.darkroom (as registered on Google Play)
   APP: darkroom
 
 jobs:
@@ -101,3 +101,43 @@ jobs:
           prerelease: ${{ github.ref_name != 'main' }}
           target_commitish: ${{ github.sha }}
           files: dist/*
+
+  # Google Play internal testing. Needs the repo secret PLAY_SERVICE_ACCOUNT_JSON
+  # (a service account invited in Play Console > Users and permissions);
+  # without it the job just says so. Only builds from main go to Play.
+  # Play only accepts API uploads once the first .aab was uploaded by hand.
+  play:
+    needs: [check, android]
+    if: github.ref == 'refs/heads/main' && needs.check.result == 'success' && needs.android.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look for the Play service account
+        id: sa
+        env:
+          SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$SA" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::No PLAY_SERVICE_ACCOUNT_JSON secret: not uploading to Google Play."; fi
+      - uses: actions/download-artifact@v4
+        if: steps.sa.outputs.ok == 'true'
+        with: { name: android, path: dist }
+      - name: Release notes from the commit subject
+        if: steps.sa.outputs.ok == 'true'
+        env:
+          MSG: ${{ github.event.head_commit.message || 'Manual build' }}
+        run: |
+          mkdir whatsnew
+          subject="${MSG%%$'\n'*}"
+          printf '%s\n' "${subject:0:480}" > whatsnew/whatsnew-en-US
+      - uses: r0adkll/upload-google-play@v1
+        if: steps.sa.outputs.ok == 'true'
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.dingo.darkroom
+          releaseFiles: dist/Darkroom-${{ github.run_number }}.aab
+          track: internal
+          # 'completed' rolls out to testers straight away. While the app is
+          # still a draft in the Play Console, Play only takes 'draft':
+          # set the repo variable PLAY_RELEASE_STATUS=draft until then.
+          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+          whatsNewDirectory: whatsnew

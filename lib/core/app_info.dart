@@ -3,13 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.15';
+  static const version = '1.3.16';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'Sharper box and camera art, now branded Darkroom. '
+      'Now on Google Play (internal testing). '
+          'Sharper box and camera art, now branded Darkroom. '
           'The Darkroom rabbit turns up here and there, in pixels on the Start menu. '
           'The projector has a deck: piano keys, a dial, a time-left counter and a reel label you can rename. '
           'Super 8 reels are landscape full-gate scans with the sprocket hole, faded colour, flicker and more dirt. '

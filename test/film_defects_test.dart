@@ -40,4 +40,15 @@ void main() {
     expect(leaks, lessThan(40)); // leaks are rare
     expect(kinds, containsAll(['dust', 'hair', 'scratch']));
   });
+
+  test('instant film gets chemistry flaws, not hairs or scratches', () {
+    final kinds = <String>{};
+    for (var seed = 0; seed < 200; seed++) {
+      final d = FilmDefects(amount: 1, negative: false, seed: seed)..apply(frame(), w, h);
+      kinds.addAll(d.applied.map((k) => k.split(' x').first));
+    }
+    expect(kinds, containsAll(['sparkle', 'roller streaks', 'chemistry edge', 'corner fog']));
+    expect(kinds, isNot(contains('hair')));
+    expect(kinds, isNot(contains('scratch')));
+  });
 }

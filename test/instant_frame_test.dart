@@ -36,8 +36,9 @@ void main() {
         expect(framed.height, (400 * (1 + InstantFrame.top + InstantFrame.bottom)).round());
         // Paper at the corner, picture in the middle.
         final corner = framed.getPixel(3, 3);
-        expect(corner.r, greaterThan(230));
-        expect(corner.b, greaterThan(220));
+        // Off-white textured paper, not paper-white.
+        expect(corner.r, inInclusiveRange(215, 246));
+        expect(corner.b, inInclusiveRange(210, 246));
         final mid = framed.getPixel(framed.width ~/ 2, (InstantFrame.top * 400 + 200).round());
         expect(mid.r, greaterThan(180));
         expect(mid.g, lessThan(80));

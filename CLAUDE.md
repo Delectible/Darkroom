@@ -106,8 +106,14 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   viewfinder), rolled per frame from the shot's seed: a few dust specks
   (white on negative, dark on instant), sometimes a hair, a faint scratch
   along the film's long side, rarely a warm light leak from a long edge.
-  `FilmProfile.defects` sets how often (Portra/HP5 1, Ektar 0.6, Polaroid
-  0.35, Super 8 0). Look
+  `FilmProfile.defects` sets how often (Portra/HP5/Polaroid 1, Ektar 0.6,
+  Super 8 0). Instant film (`negative: false`) gets chemistry flaws instead:
+  pinprick sparkles, a little dark dust, milky streaks up from the rollers,
+  a ragged undeveloped band along an edge, a fogged corner.
+- Polaroid 600 is tuned against Gabe's scans: cream highlights capped well
+  below white, navy-teal shadows, very muted colour. The frame is off-white
+  (`InstantFrame.paper`) with an embossed pebble texture (`PaperTexture`,
+  a seamless tile drawn by `InstantPrint` on screen and baked into exports). Look
   iteration: `dart run tool/film_preview.dart out.jpg photos...` (env STOCKS,
   GRAIN, RES, CROP=1 for 1:1 crops).
 

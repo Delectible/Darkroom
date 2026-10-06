@@ -3,13 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.10';
+  static const version = '1.3.11';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'HP5 retuned against real scans: deeper blacks, grain that builds in the highlights. '
+      'Polaroid 600 retuned against real scans, with its own chemistry flaws and a textured off-white frame. '
+          'HP5 retuned against real scans: deeper blacks, grain that builds in the highlights. '
           'Portra 400 retuned against real scans (green shadows, creamy highlights, visible grain); '
           'developed film now picks up the odd speck of dust, hair, scratch or light leak. '
           'Ektar 100 retuned against real scans; film grain now has real grain structure. '

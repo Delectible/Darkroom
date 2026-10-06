@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../core/processing/instant_frame.dart';
 
-/// An instant print: square picture on cream paper with a deep writing strip.
+/// An instant print: square picture on textured off-white paper with a deep
+/// writing strip.
 ///
 /// [develop] runs 0 -> 1 while the print develops: it starts as an even
 /// blue-grey sheet, the picture surfaces through it, and the colour comes in
@@ -47,6 +48,7 @@ class InstantPrint extends StatelessWidget {
           final strip = InstantFrame.noteRect(s);
           final p = develop.clamp(0.0, 1.0);
           final text = note?.trim() ?? '';
+          PaperTexture.ensureLoaded();
           return DecoratedBox(
             decoration: BoxDecoration(
               color: InstantFrame.paper,
@@ -56,6 +58,12 @@ class InstantPrint extends StatelessWidget {
             ),
             child: Stack(
               children: [
+                // Embossed off-white surface, like the real frame.
+                Positioned.fill(
+                  child: RepaintBoundary(
+                    child: CustomPaint(painter: _PaperPainter(dpr: MediaQuery.devicePixelRatioOf(context))),
+                  ),
+                ),
                 Positioned.fromRect(
                   rect: pic,
                   child: ClipRect(
@@ -120,4 +128,20 @@ class InstantPrint extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PaperPainter extends CustomPainter {
+  _PaperPainter({required this.dpr}) : super(repaint: PaperTexture.loaded);
+
+  final double dpr;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final tile = PaperTexture.loaded.value;
+    if (tile == null) return;
+    canvas.drawRect(Offset.zero & size, PaperTexture.paint(tile, size.width, minTexel: 1 / dpr));
+  }
+
+  @override
+  bool shouldRepaint(_PaperPainter old) => old.dpr != dpr;
 }

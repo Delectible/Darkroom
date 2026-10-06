@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -19,7 +20,12 @@ class InstantFrame {
   /// Width / height of the whole print.
   static const aspect = (1 + 2 * side) / (1 + top + bottom);
 
-  static const paper = Color(0xFFF7F5EF);
+  /// Off-white, not paper-white: real 600 frames scan at ~220-243.
+  static const paper = Color(0xFFE9E8E4);
+
+  /// Size of one pebble of the frame's embossed texture, as a fraction of the
+  /// print width (matched to scans of real prints).
+  static const pebble = 0.0014;
 
   /// Felt-tip ink for notes.
   static const ink = Color(0xFF1F2A44);
@@ -72,7 +78,11 @@ class InstantFrame {
 
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    canvas.drawRect(Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint()..color = paper);
+    final texture = await PaperTexture.image();
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
+      PaperTexture.paint(texture, w.toDouble()),
+    );
     final dst = pictureRect(s);
     final src = Rect.fromCenter(center: Offset(picture.width / 2, picture.height / 2), width: s, height: s);
     canvas.drawImageRect(picture, src, dst, Paint()..filterQuality = FilterQuality.high);
@@ -108,5 +118,112 @@ class InstantFrame {
     final (bytes, w, h) = a;
     final image = img.Image.fromBytes(width: w, height: h, bytes: bytes.buffer, numChannels: 4);
     return img.encodeJpg(image, quality: 92);
+  }
+}
+
+/// The frame's surface: a fine embossed pebble with faint mottling, as a
+/// seamless tile (pure Dart, so tests and isolates can make it too).
+class PaperTexture {
+  const PaperTexture._();
+
+  static const size = 256;
+
+  /// RGBA8 tile: [InstantFrame.paper] lit from the top left.
+  static Uint8List pixels({int seed = 600}) {
+    const n = size * size;
+    final rnd = math.Random(seed);
+    final noise = Float64List(n);
+    for (var i = 0; i < n; i++) {
+      noise[i] = rnd.nextDouble() - 0.5;
+    }
+    final pebbles = _blur(noise, 1.3);
+    final mottle = _blur(noise, 14);
+    // Normalise both.
+    double sd(Float64List a) {
+      var s2 = 0.0;
+      for (final v in a) {
+        s2 += v * v;
+      }
+      return math.sqrt(s2 / a.length);
+    }
+
+    final ps = sd(pebbles), ms = sd(mottle);
+    final out = Uint8List(n * 4);
+    final base = InstantFrame.paper;
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        double at(int dx, int dy) =>
+            pebbles[((y + dy) % size + size) % size * size + ((x + dx) % size + size) % size];
+        // Emboss: slope towards the light.
+        final relief = (at(-1, -1) - at(1, 1)) / ps;
+        final shade = relief * 2.6 + mottle[y * size + x] / ms * 1.2;
+        final i = (y * size + x) * 4;
+        out[i] = (base.r * 255 + shade).round().clamp(0, 255);
+        out[i + 1] = (base.g * 255 + shade).round().clamp(0, 255);
+        out[i + 2] = (base.b * 255 + shade * 0.9).round().clamp(0, 255);
+        out[i + 3] = 255;
+      }
+    }
+    return out;
+  }
+
+  static Float64List _blur(Float64List src, double sigma) {
+    final r = (sigma * 3).ceil();
+    final k = Float64List(2 * r + 1);
+    var ks = 0.0;
+    for (var i = -r; i <= r; i++) {
+      k[i + r] = math.exp(-0.5 * (i / sigma) * (i / sigma));
+      ks += k[i + r];
+    }
+    final tmp = Float64List(src.length), dst = Float64List(src.length);
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        var a = 0.0;
+        for (var i = -r; i <= r; i++) {
+          a += src[y * size + (x + i + size) % size] * k[i + r];
+        }
+        tmp[y * size + x] = a / ks;
+      }
+    }
+    for (var y = 0; y < size; y++) {
+      for (var x = 0; x < size; x++) {
+        var a = 0.0;
+        for (var i = -r; i <= r; i++) {
+          a += tmp[((y + i + size) % size) * size + x] * k[i + r];
+        }
+        dst[y * size + x] = a / ks;
+      }
+    }
+    return dst;
+  }
+
+  static Future<ui.Image>? _image;
+
+  /// The tile as a GPU image (made once).
+  static Future<ui.Image> image() => _image ??= () {
+    final done = Completer<ui.Image>();
+    ui.decodeImageFromPixels(pixels(), size, size, ui.PixelFormat.rgba8888, done.complete);
+    return done.future;
+  }();
+
+  /// Loaded tile for painting on screen (null until ready: plain paper).
+  static final ValueNotifier<ui.Image?> loaded = ValueNotifier(null);
+
+  static void ensureLoaded() {
+    if (loaded.value == null) unawaited(image().then((i) => loaded.value = i));
+  }
+
+  /// Paint that fills with the textured paper for a print [printWidth] wide
+  /// ([minTexel] keeps a pebble at least that many target pixels across).
+  static Paint paint(ui.Image tile, double printWidth, {double minTexel = 1}) {
+    final scale = math.max(printWidth * InstantFrame.pebble, minTexel);
+    return Paint()
+      ..shader = ImageShader(
+        tile,
+        TileMode.repeated,
+        TileMode.repeated,
+        Float64List.fromList([scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
+      )
+      ..filterQuality = FilterQuality.medium;
   }
 }

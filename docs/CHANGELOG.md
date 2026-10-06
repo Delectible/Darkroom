@@ -197,8 +197,13 @@ darkroom, corkboard, ambience).
     stronger contrast, crisp heavy grain that builds toward the highlights
     (as B&W negatives do), grey (not orange) glow round lamps.
     → 1.3.10 · 2026-10-06 · 286ae6f (build 25)
-  - [ ] Polaroid 600, Super 8 and the digital bodies: waiting on reference
-    photos.
+  - [x] Polaroid 600 against Gabe's 5 reference scans: washed-out cream
+    highlights (never white), navy-teal shadows, very compressed colour;
+    frequent instant-film flaws (sparkles, roller streaks, a ragged
+    undeveloped edge, a fogged corner); the frame everywhere in the app is
+    now off-white with an embossed texture instead of flat white.
+    → 1.3.11 · 2026-10-06 · (pending)
+  - [ ] Super 8 and the digital bodies: waiting on reference photos.
 - [x] **8.2 Film defects:** small, tasteful flaws here and there, different on
   every frame (most have none worth noticing): dust specks, the odd hair, a
   faint scratch along the film, a rare light leak. Developed photos only.

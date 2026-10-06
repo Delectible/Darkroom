@@ -634,14 +634,18 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                   children: [
                                     PixelIconView(onFloppy ? PixelIcon.floppy : PixelIcon.transfer),
                                     const SizedBox(width: 6),
-                                    Text(
-                                      onFloppy
-                                          ? (readyHere == 0
-                                                ? 'No Disk in Drive A:'
-                                                : 'Copy $readyHere Clip(s) to Local Disk (C:)')
-                                          : (readyHere == 0
-                                                ? 'SD Card Empty'
-                                                : 'Transfer $readyHere File(s) to Local Disk (C:)'),
+                                    Flexible(
+                                      child: Text(
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        onFloppy
+                                            ? (readyHere == 0
+                                                  ? 'No Disk in Drive A:'
+                                                  : 'Copy $readyHere Clip(s) to Local Disk (C:)')
+                                            : (readyHere == 0
+                                                  ? 'SD Card Empty'
+                                                  : 'Transfer $readyHere File(s) to Local Disk (C:)'),
+                                      ),
                                     ),
                                   ],
                                 ),

@@ -23,7 +23,7 @@ class Sfx {
     final c = VideoPlayerController.asset(_asset, videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true));
     try {
       await c.initialize();
-      await c.setVolume(0.7);
+      await c.setVolume(0.5);
       _c = c;
     } catch (e) {
       debugPrint('Sound $_asset unavailable: $e');

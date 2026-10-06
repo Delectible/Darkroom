@@ -211,7 +211,7 @@ Widget _legend(Color c, String label, int bytes) => Padding(
       ),
       const SizedBox(width: 6),
       SizedBox(width: 90, child: Text(label)),
-      Text('${_commas(bytes)} bytes'),
+      Flexible(child: Text('${_commas(bytes)} bytes', maxLines: 1, overflow: TextOverflow.ellipsis)),
     ],
   ),
 );

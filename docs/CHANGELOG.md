@@ -43,6 +43,14 @@ darkroom, corkboard, ambience).
 - [x] **0.3 Home gesture:** swiping up from the bottom edge to go home
   flashed the carousel open. Swipes from the bottom ~56dp are ignored. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
 
+- [x] **0.4 Flip shape:** a turned-over Polaroid changed size. The front now
+  holds the card's size while the back shows. → 1.3.4 · 2026-10-06 · COMMIT
+- [x] **0.5 Win98 bounds:** the My Computer tab ran past the window. Tabs now
+  share the strip by width; also fixed the Transfer/Copy button label, the menu
+  bar and Drive Properties rows. A test opens every tab, menu and dialog at
+  phone size (real fonts) and fails on any overflow. → 1.3.4 · 2026-10-06 · COMMIT
+- [x] **0.6 Swap sound:** now a soft cloth-on-cloth swish, quieter, no clack. → 1.3.4 · 2026-10-06 · COMMIT
+
 ### 2. Photo & video previews (film & digital)
 
 - [x] **2.1 Pan vs. swipe:** when zoomed into a photo, panning must not
@@ -64,11 +72,13 @@ darkroom, corkboard, ambience).
 
 ### 3. Camera UI & viewfinder
 
-- [x] **3.1 Mode transition:** replace the Film ↔ Digital fade with a large
+- [~] **3.1 Mode transition:** replace the Film ↔ Digital fade with a large
   slide: the whole camera slides off and the other slides in. Possibly add a
   "swap device" sound. Remove the slider switch and add another obvious
   control for swapping. *Build a demo first for approval.* → 1.3.3 · 2026-10-06 · 3cd4a8f (build 15)
   Demo: the other camera peeks in from the screen edge; tap or pull it in and the bodies slide past each other with a swap sound. Tell me if you like it.
+  Feedback on build 15: wants real physicality (tossing one camera aside, grabbing
+  the other, seeing the rest of the body pass by). Brainstorming before rebuilding.
 - [x] **3.2 Motorised zoom:** fixed-rate zoom on dedicated buttons for the 90s
   Camcorder (no pinch). The buttons also work in the other digital cameras.
   Realistic zoom limits per camera. **No zoom at all in Film mode.** → 1.3.1 · 2026-10-06 · 4a676b7 (build 13)
@@ -152,3 +162,9 @@ darkroom, corkboard, ambience).
 - [x] **7.2 Intake form:** a fill-in sheet for each new stock or camera. See
   [`NEW_CAMERA_FORM.md`](NEW_CAMERA_FORM.md). Draft; fields marked *(after
   7.1)* go live once 7.1 lands. → docs only · 2026-10-06
+
+### 8. Look quality (requested 2026-10-06)
+
+- [ ] **8.1 Film and digital looks:** the looks don't yet behave like the real
+  formats and can read as a cheap filter. Plan to iterate (see chat): reference
+  contact sheets per look, an on-phone tuning screen, then fixes per stock.

@@ -3,13 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.3';
+  static const version = '1.3.4';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'Swap cameras by pulling in the one peeking from the edge: the bodies slide past each other. '
+      'Prints keep their shape when turned over. Windows 98 fits the screen. Softer swap sound. '
+          'Swap cameras by pulling in the one peeking from the edge: the bodies slide past each other. '
           'Film backs have a memo holder, digicams an LCD. The corkboard wall scrolls with your prints '
           '(tap a pin to take one down, flip a print by its corner). Prints go through the trays. '
           'Bigger Windows 98 screens with a real Media Player, zoom slider and camera info. '

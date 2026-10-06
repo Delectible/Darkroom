@@ -20,6 +20,7 @@ class W98 {
   static const inactiveTitleEnd = Color(0xFFB5B5B5);
 
   static const text = TextStyle(
+    fontFamily: 'Roboto',
     fontSize: 12,
     color: Colors.black,
     fontWeight: FontWeight.w400,
@@ -29,6 +30,7 @@ class W98 {
   );
 
   static const disabledText = TextStyle(
+    fontFamily: 'Roboto',
     fontSize: 12,
     color: shadow,
     height: 1.2,
@@ -432,30 +434,33 @@ class Win98MenuBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       height: 22,
-      child: Row(
-        children: [
-          for (final e in menus.entries)
-            Builder(
-              builder: (anchor) => GestureDetector(
-                onTap: () => unawaited(showWin98Menu(anchor, e.value())),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  child: Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: e.key[0],
-                          style: const TextStyle(decoration: TextDecoration.underline),
-                        ),
-                        TextSpan(text: e.key.substring(1)),
-                      ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (final e in menus.entries)
+              Builder(
+                builder: (anchor) => GestureDetector(
+                  onTap: () => unawaited(showWin98Menu(anchor, e.value())),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: e.key[0],
+                            style: const TextStyle(decoration: TextDecoration.underline),
+                          ),
+                          TextSpan(text: e.key.substring(1)),
+                        ],
+                      ),
+                      style: W98.text,
                     ),
-                    style: W98.text,
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -487,27 +492,37 @@ class Win98TabStrip extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // Tabs shrink to share the strip (labels scale down rather than
+          // running past the window edge).
           for (var i = 0; i < tabs.length; i++)
-            GestureDetector(
-              onTap: tabs[i].enabled ? () => onSelect(i) : null,
-              child: Transform.translate(
-                offset: Offset(0, i == selected ? 2 : 0),
-                child: Container(
-                  height: i == selected ? 26 : 22,
-                  margin: EdgeInsets.only(left: i == 0 ? 2 : 0),
-                  child: CustomPaint(
-                    painter: _TabPainter(selected: i == selected),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 4, 10, 2),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (tabs[i].icon != null) ...[
-                            Opacity(opacity: tabs[i].enabled ? 1 : 0.4, child: tabs[i].icon),
-                            const SizedBox(width: 4),
-                          ],
-                          Text(tabs[i].label, style: tabs[i].enabled ? W98.text : W98.disabledText),
-                        ],
+            Flexible(
+              // Share by natural width: short tabs (A:, C:) don't hold space
+              // the long ones need.
+              flex: 4 + tabs[i].label.length,
+              child: GestureDetector(
+                onTap: tabs[i].enabled ? () => onSelect(i) : null,
+                child: Transform.translate(
+                  offset: Offset(0, i == selected ? 2 : 0),
+                  child: Container(
+                    height: i == selected ? 26 : 22,
+                    margin: EdgeInsets.only(left: i == 0 ? 2 : 0),
+                    child: CustomPaint(
+                      painter: _TabPainter(selected: i == selected),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(5, 4, 5, 2),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (tabs[i].icon != null) ...[
+                                Opacity(opacity: tabs[i].enabled ? 1 : 0.4, child: tabs[i].icon),
+                                const SizedBox(width: 4),
+                              ],
+                              Text(tabs[i].label, style: tabs[i].enabled ? W98.text : W98.disabledText),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),

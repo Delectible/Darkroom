@@ -3,22 +3,21 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// Screenshot runs (SHOTS=dir) render with real fonts instead of the test
-/// font's boxes: Roboto from the Flutter SDK is registered under the
-/// family names the tests fall back to. Ordinary test runs are unchanged.
+/// Tests measure and draw text with the real fonts: Roboto (Android's UI
+/// font, which the Win98 screens and Material theme use) and the Material
+/// icons, loaded from the Flutter SDK running the tests. Layout checks then
+/// catch overflows the phone would show, not ones only the wide test font
+/// produces. Without the SDK fonts, tests fall back to the test font.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
-  final sdk = Platform.environment['FLUTTER_ROOT'];
-  if (Platform.environment['SHOTS'] != null && sdk != null) {
-    final dir = Directory('$sdk/bin/cache/artifacts/material_fonts');
-    for (final family in ['Roboto', 'FlutterTest', 'Ahem']) {
-      final loader = FontLoader(family);
-      for (final f in ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf']) {
-        final file = File('${dir.path}/$f');
-        if (file.existsSync()) loader.addFont(Future.value(ByteData.sublistView(file.readAsBytesSync())));
-      }
-      await loader.load();
+  final fonts = _sdkFonts();
+  if (fonts != null) {
+    final roboto = FontLoader('Roboto');
+    for (final f in ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf', 'Roboto-Black.ttf']) {
+      final file = File('${fonts.path}/$f');
+      if (file.existsSync()) roboto.addFont(Future.value(ByteData.sublistView(file.readAsBytesSync())));
     }
-    final icons = File('${dir.path}/MaterialIcons-Regular.otf');
+    await roboto.load();
+    final icons = File('${fonts.path}/MaterialIcons-Regular.otf');
     if (icons.existsSync()) {
       await (FontLoader(
         'MaterialIcons',
@@ -26,4 +25,20 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     }
   }
   await testMain();
+}
+
+/// `sdk/bin/cache/artifacts/material_fonts`, from FLUTTER_ROOT or the path
+/// of the flutter_tester binary running us.
+Directory? _sdkFonts() {
+  final roots = [
+    Platform.environment['FLUTTER_ROOT'],
+    // .../bin/cache/artifacts/engine/<platform>/flutter_tester
+    File(Platform.resolvedExecutable).parent.parent.parent.parent.parent.parent.path,
+  ];
+  for (final r in roots) {
+    if (r == null) continue;
+    final d = Directory('$r/bin/cache/artifacts/material_fonts');
+    if (d.existsSync()) return d;
+  }
+  return null;
 }

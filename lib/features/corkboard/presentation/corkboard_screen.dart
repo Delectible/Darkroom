@@ -1284,8 +1284,16 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
           child: Stack(
             fit: StackFit.passthrough,
             children: [
+              // The front always sets the card's size (invisible while the
+              // back shows), so turning it over never changes its shape.
+              Visibility(
+                visible: !showBack,
+                maintainSize: true,
+                maintainAnimation: true,
+                maintainState: true,
+                child: widget.front,
+              ),
               if (!showBack) ...[
-                widget.front,
                 // The folded corner: the tap target for the easter egg.
                 Positioned(
                   right: 0,
@@ -1305,13 +1313,15 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                 ),
               ] else
                 // Mirror the back so its text reads correctly after the turn.
-                Transform(
-                  alignment: Alignment.center,
-                  transform: Matrix4.identity()..rotateY(math.pi),
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _toggle,
-                    child: widget.back,
+                Positioned.fill(
+                  child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()..rotateY(math.pi),
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _toggle,
+                      child: widget.back,
+                    ),
                   ),
                 ),
             ],

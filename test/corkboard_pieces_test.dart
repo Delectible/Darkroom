@@ -96,10 +96,15 @@ void main() {
                       height: 230,
                       child: Row(
                         children: [
-                          Expanded(child: PinnedPrint(item: item('portra400'), onOpen: () {})),
+                          Expanded(
+                            child: PinnedPrint(item: item('portra400'), onOpen: () {}),
+                          ),
                           const SizedBox(width: 18),
                           Expanded(
-                            child: PinnedInstant(item: item('polaroid600', note: 'the lake, 2026'), onOpen: () {}),
+                            child: PinnedInstant(
+                              item: item('polaroid600', note: 'the lake, 2026'),
+                              onOpen: () {},
+                            ),
                           ),
                         ],
                       ),
@@ -109,7 +114,12 @@ void main() {
                       height: 200,
                       child: Row(
                         children: [
-                          Expanded(child: PinnedReel(item: item('super8', kind: MediaKind.video), onOpen: () {})),
+                          Expanded(
+                            child: PinnedReel(
+                              item: item('super8', kind: MediaKind.video),
+                              onOpen: () {},
+                            ),
+                          ),
                           const SizedBox(width: 18),
                           Expanded(
                             child: Row(
@@ -141,10 +151,7 @@ void main() {
                       height: 70,
                       child: Row(
                         children: [
-                          const SizedBox(
-                            width: 70,
-                            child: CustomPaint(painter: _Tank()),
-                          ),
+                          const SizedBox(width: 70, child: CustomPaint(painter: _Tank())),
                           const SizedBox(width: 12),
                           Expanded(child: scope(AppMode.film, 'portra400', StockLabel(onOpen: () {}))),
                         ],
@@ -162,6 +169,17 @@ void main() {
     );
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
     await tester.pumpAndSettle();
+
+    // Turning a print over by its corner keeps its exact shape.
+    Finder named(String type) => find.byWidgetPredicate((w) => w.runtimeType.toString() == type);
+    final card = named('_FlipCard').at(1); // the instant print
+    final front = tester.getRect(card);
+    await tester.tapAt(front.bottomRight - const Offset(6, 6));
+    await tester.pumpAndSettle();
+    expect(named('_PrintBack'), findsOneWidget);
+    final back = tester.getRect(named('_PrintBack'));
+    expect(back.size.width, closeTo(front.size.width, 0.5));
+    expect(back.size.height, closeTo(front.size.height, 0.5));
     if (shots != null) {
       await tester.runAsync(() async {
         final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -178,8 +196,7 @@ class _Tank extends CustomPainter {
   const _Tank();
 
   @override
-  void paint(Canvas canvas, Size size) =>
-      DevelopingTankPainter(progress: 0.4, spin: 0.8).paint(canvas, size);
+  void paint(Canvas canvas, Size size) => DevelopingTankPainter(progress: 0.4, spin: 0.8).paint(canvas, size);
 
   @override
   bool shouldRepaint(_Tank old) => false;

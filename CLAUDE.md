@@ -42,10 +42,14 @@ Read this first. It's the hand-off from the earlier development sessions
   `AndroidManifest.xml` or `android/app/build.gradle.kts`.
 - `applicationId` / `namespace` = `com.darkroom.darkroom`; must match the
   MainActivity package that `flutter create` generates.
-- Release builds are signed with a **fixed test key**
-  (`android/app/darkroom-test.jks`, passwords in `build.gradle.kts`) so each
-  build installs over the last without wiping photos. Don't change it.
-  Replace with a private key before any store release.
+- Release builds are signed with Gabe's **private upload key** (alias
+  `upload`), which CI decodes from the repo secrets `ANDROID_KEYSTORE_BASE64`
+  and `ANDROID_KEYSTORE_PASSWORD`. Never commit it. Without the secrets
+  (local builds) they fall back to the public test key
+  (`android/app/darkroom-test.jks`), which won't install over a
+  private-key build. versionCode = CI run number. CI also builds
+  `Darkroom-N.aab` for the Play Console internal testing track (Play App
+  Signing; once installed from Play, the phone only takes updates from Play).
 - Manifest already has `tools:replace="android:maxSdkVersion"` on
   `WRITE_EXTERNAL_STORAGE` (merger conflict with camera_android_camerax).
 - Checks: `flutter analyze` and `flutter test`. If the session has no Flutter
@@ -180,4 +184,5 @@ UI
    (also: darker film leader, tidier camcorder viewfinder).
 2. Bring the rabbit logo into the app's own design.
 3. First iOS run: the CI .ipa builds (build 19); still to try it on Gabe's iPhone.
-4. Proper signing key before publishing anywhere.
+4. Play Console internal testing: Gabe makes the account and uploads the
+   first .aab by hand; then have CI upload each build (service account).

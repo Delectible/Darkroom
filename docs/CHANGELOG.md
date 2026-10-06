@@ -171,3 +171,14 @@ darkroom, corkboard, ambience).
 - [ ] **8.1 Film and digital looks:** the looks don't yet behave like the real
   formats and can read as a cheap filter. Plan to iterate (see chat): reference
   contact sheets per look, an on-phone tuning screen, then fixes per stock.
+
+### 9. Distribution (requested 2026-10-06)
+
+- [x] **9.1 iPhone build:** the CI .ipa failed ("sandbox is not in sync with
+  the Podfile.lock"). Dropped the Podfile; plugins come in as Swift Packages.
+  → build 19 · 2026-10-06 · 1ced0ae
+- [~] **9.2 Proper signing + Play Store:** a private upload key (GitHub
+  secrets) replaces the public test key; CI also builds an .aab for the Play
+  Console internal testing track, so installs come from Play with no
+  warning. Next: Gabe adds the secrets and makes the Play Console account;
+  later, CI uploads each build to Play by itself.

@@ -32,3 +32,8 @@ ios/Runner/GeneratedPluginRegistrant.*
 
 # Artwork renderer
 tool/render/node_modules/
+
+# Signing keys stay out of the repo (only the public test key is committed).
+*.jks
+*.keystore
+!android/app/darkroom-test.jks

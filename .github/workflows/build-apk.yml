@@ -33,8 +33,28 @@ jobs:
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
       - run: flutter create --org $ORG --project-name $APP --platforms android .
-      - run: flutter build apk --release
-      - run: mkdir dist && cp build/app/outputs/flutter-apk/app-release.apk dist/Darkroom-${{ github.run_number }}.apk
+      - name: Unpack the private upload key (repo secrets)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            echo "DARKROOM_KEYSTORE=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret: signing with the public test key."
+          fi
+      # versionCode = run number, so every build is newer than the last (Play
+      # refuses to take the same versionCode twice).
+      - name: Build the APK (sideloading) and app bundle (Play Store)
+        env:
+          DARKROOM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          flutter build apk --release --build-number=${{ github.run_number }}
+          flutter build appbundle --release --build-number=${{ github.run_number }}
+      - run: |
+          mkdir dist
+          cp build/app/outputs/flutter-apk/app-release.apk dist/Darkroom-${{ github.run_number }}.apk
+          cp build/app/outputs/bundle/release/app-release.aab dist/Darkroom-${{ github.run_number }}.aab
       - uses: actions/upload-artifact@v4
         with: { name: android, path: dist/ }
 

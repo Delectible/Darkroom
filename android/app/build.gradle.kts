@@ -29,9 +29,12 @@ android {
         multiDexEnabled = true
     }
 
-    // Fixed test key so every build (Mac, Windows or the GitHub build) is
-    // signed the same way and installs over the previous one without
-    // wiping photos. Test-only: use a private key before publishing.
+    // Release builds are signed with the private upload key when CI hands it
+    // over (GitHub secrets ANDROID_KEYSTORE_BASE64 / ANDROID_KEYSTORE_PASSWORD,
+    // decoded to DARKROOM_KEYSTORE by the workflow). Without it (local builds,
+    // forks) they fall back to the public test key, which only installs over
+    // other test-key builds.
+    val uploadKeystore = System.getenv("DARKROOM_KEYSTORE")?.takeIf { it.isNotBlank() }
     signingConfigs {
         create("test") {
             storeFile = file("darkroom-test.jks")
@@ -39,11 +42,19 @@ android {
             keyAlias = "darkroom"
             keyPassword = "darkroom"
         }
+        if (uploadKeystore != null) {
+            create("upload") {
+                storeFile = file(uploadKeystore)
+                storePassword = System.getenv("DARKROOM_KEYSTORE_PASSWORD")
+                keyAlias = "upload"
+                keyPassword = System.getenv("DARKROOM_KEYSTORE_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("test")
+            signingConfig = signingConfigs.getByName(if (uploadKeystore != null) "upload" else "test")
         }
     }
 }

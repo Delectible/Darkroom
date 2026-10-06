@@ -189,8 +189,16 @@ darkroom, corkboard, ambience).
     mostly luminance) instead of soft blurred noise; strength sets amount and
     size (weak barely there, strong obviously film). Ektar Normal matches the
     scans. → 1.3.8 · 2026-10-06 · c9b7554 (build 23)
-  - [ ] Portra 400, HP5, Polaroid 600, Super 8 and the digital bodies: waiting
-    on reference photos.
+  - [x] Portra 400 against Gabe's 5 reference scans, as the stock that reads
+    most obviously as film: green-teal shadows, warm cream highlights, soft
+    contrast, peachy skin, visible grain matched to the scans.
+    → 1.3.9 · 2026-10-06 · (pending)
+  - [ ] HP5, Polaroid 600, Super 8 and the digital bodies: waiting on
+    reference photos.
+- [x] **8.2 Film defects:** small, tasteful flaws here and there, different on
+  every frame (most have none worth noticing): dust specks, the odd hair, a
+  faint scratch along the film, a rare light leak. Developed photos only.
+  → 1.3.9 · 2026-10-06 · (pending)
 
 ### 9. Distribution (requested 2026-10-06)
 

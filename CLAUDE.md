@@ -95,8 +95,16 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   strong 2.4x / 0.55x (coarser). Set **per film stock, only in the settings
   menu**. When not "normal", the carousel shows a small tag. Digital cameras
   have no grain setting.
-- Ektar 100 is tuned against Gabe's reference scans; `grain_calibration_test`
-  pins its Normal grain to theirs (sky patch at scan size ~0.0076). Look
+- Ektar 100 (clean, punchy) and Portra 400 (the obviously-film stock: soft,
+  green-teal shadows, cream highlights, visible grain) are tuned against
+  Gabe's reference scans; `grain_calibration_test` pins their Normal grain
+  to the scans (Ektar ~0.0076, Portra ~0.034).
+- Defects (`film_defects.dart`): developed stills only (never the
+  viewfinder), rolled per frame from the shot's seed: a few dust specks
+  (white on negative, dark on instant), sometimes a hair, a faint scratch
+  along the film's long side, rarely a warm light leak from a long edge.
+  `FilmProfile.defects` sets how often (Portra/HP5 1, Ektar 0.6, Polaroid
+  0.35, Super 8 0). Look
   iteration: `dart run tool/film_preview.dart out.jpg photos...` (env STOCKS,
   GRAIN, RES, CROP=1 for 1:1 crops).
 

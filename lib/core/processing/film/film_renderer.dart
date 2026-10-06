@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'color_math.dart';
+import 'film_defects.dart';
 import 'film_lut.dart';
 import 'film_profile.dart';
 import 'grain_field.dart';
@@ -147,6 +148,12 @@ class FilmRenderer {
         data[p + 2] = b <= 0 ? 0 : (b >= 1 ? 255 : (b * 255 + 0.5).toInt());
       }
     }
+    FilmDefects(
+      amount: profile.defects,
+      negative: profile.negative,
+      colour: !profile.mono,
+      seed: seed,
+    ).apply(data, w, h);
   }
 
   /// Blurred highlight energy at 1/8 resolution, values ~0..1.

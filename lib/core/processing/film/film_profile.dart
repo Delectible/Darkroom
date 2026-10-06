@@ -54,6 +54,8 @@ class FilmProfile {
     this.flicker = 0,
     this.dust = 0,
     this.gate = 0,
+    this.defects = 0,
+    this.negative = true,
   });
 
   final String id;
@@ -119,6 +121,13 @@ class FilmProfile {
   /// Rounded, soft-edged projector gate (0 = none).
   final double gate;
 
+  /// How often developed frames pick up dust, a hair, a scratch or a light
+  /// leak (0 = never, 1 = a well-handled consumer roll). See FilmDefects.
+  final double defects;
+
+  /// Negative film (dust scans white); false for positive / instant.
+  final bool negative;
+
   bool get isCine => weave > 0 || flicker > 0 || gate > 0;
 
   static FilmProfile? forStock(String id) => _profiles[id];
@@ -149,30 +158,35 @@ class FilmProfile {
       grainResolution: 2400,
       halation: 0.08,
       vignette: 0.14,
+      defects: 0.6,
     ),
+    // Tuned against Gabe's Portra 400 scans: the stock that should read as
+    // film. Soft contrast, green-teal shadows (red drops out first), warm
+    // creamy highlights that never quite reach white, peachy skin, gentle
+    // greens, clearly visible grain with a little colour in it.
     'portra400': FilmProfile(
       id: 'portra400',
-      exposureEv: 0.2,
-      balance: [1.025, 1.0, 0.965],
-      contrast: [1.10, 1.04, 0.96],
+      exposureEv: 0.15,
+      balance: [1.02, 1.0, 0.97],
+      contrast: [1.12, 1.05, 1.0],
       white: 1.0,
-      saturation: 0.92,
+      saturation: 0.95,
       hues: [
-        HueTweak(25, 24, shift: 5, chroma: 0.92),
-        HueTweak(55, 32, shift: 3, chroma: 1.06, light: 0.018),
-        HueTweak(140, 44, shift: -20, chroma: 0.72, light: -0.01),
-        HueTweak(235, 44, shift: -14, chroma: 0.80),
-        HueTweak(265, 24, shift: -8, chroma: 0.86),
+        HueTweak(27, 24, shift: 5, chroma: 0.95),
+        HueTweak(50, 30, shift: -2, chroma: 1.08, light: 0.015),
+        HueTweak(140, 44, shift: -10, chroma: 0.85, light: -0.01),
+        HueTweak(240, 40, shift: -3, chroma: 0.95),
       ],
-      shadowLift: 0.035,
-      highlightCap: 0.985,
-      shadowTint: [-0.006, 0.003, 0.012],
-      highlightTint: [0.014, 0.005, -0.014],
-      grainAmount: 0.058,
-      grainChroma: 0.38,
-      grainResolution: 1350,
+      shadowLift: 0.015,
+      highlightCap: 0.965,
+      shadowTint: [-0.032, 0.015, -0.004],
+      highlightTint: [0.012, 0.0, -0.022],
+      grainAmount: 0.05,
+      grainChroma: 0.4,
+      grainResolution: 1500,
       halation: 0.20,
       vignette: 0.18,
+      defects: 1.0,
     ),
     'hp5plus400': FilmProfile(
       id: 'hp5plus400',
@@ -187,6 +201,7 @@ class FilmProfile {
       grainResolution: 980,
       halation: 0.04,
       vignette: 0.20,
+      defects: 1.0,
     ),
     // Instant integral film: soft, low-contrast, milky blacks, cool shadows
     // and warm creamy highlights, muted colour with greens leaning teal, a
@@ -216,6 +231,8 @@ class FilmProfile {
       vignette: 0.42,
       flashStrength: 0.9,
       exposureDrift: 0.16,
+      defects: 0.35,
+      negative: false,
     ),
     'super8': FilmProfile(
       id: 'super8',

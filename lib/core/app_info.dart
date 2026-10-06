@@ -3,13 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.8';
+  static const version = '1.3.9';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'Ektar 100 retuned against real scans; film grain now has real grain structure. '
+      'Portra 400 retuned against real scans (green shadows, creamy highlights, visible grain); '
+          'developed film now picks up the odd speck of dust, hair, scratch or light leak. '
+          'Ektar 100 retuned against real scans; film grain now has real grain structure. '
           'Toss the camera aside with your thumb to grab the other one; swipes from the screen edges stay the phone\'s. '
           'Windows 98 uses a pixel font. '
           'Prints keep their shape when turned over. Windows 98 fits the screen. Softer swap sound. '

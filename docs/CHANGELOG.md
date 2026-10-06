@@ -44,12 +44,12 @@ darkroom, corkboard, ambience).
   flashed the carousel open. Swipes from the bottom ~56dp are ignored. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
 
 - [x] **0.4 Flip shape:** a turned-over Polaroid changed size. The front now
-  holds the card's size while the back shows. → 1.3.4 · 2026-10-06 · COMMIT
+  holds the card's size while the back shows. → 1.3.4 · 2026-10-06 · dab895a
 - [x] **0.5 Win98 bounds:** the My Computer tab ran past the window. Tabs now
   share the strip by width; also fixed the Transfer/Copy button label, the menu
   bar and Drive Properties rows. A test opens every tab, menu and dialog at
-  phone size (real fonts) and fails on any overflow. → 1.3.4 · 2026-10-06 · COMMIT
-- [x] **0.6 Swap sound:** now a soft cloth-on-cloth swish, quieter, no clack. → 1.3.4 · 2026-10-06 · COMMIT
+  phone size (real fonts) and fails on any overflow. → 1.3.4 · 2026-10-06 · dab895a
+- [x] **0.6 Swap sound:** now a soft cloth-on-cloth swish, quieter, no clack. → 1.3.4 · 2026-10-06 · dab895a
 
 ### 2. Photo & video previews (film & digital)
 

@@ -196,7 +196,7 @@ darkroom, corkboard, ambience).
   - [x] HP5 400 against Gabe's 4 reference scans: neutral, deep blacks,
     stronger contrast, crisp heavy grain that builds toward the highlights
     (as B&W negatives do), grey (not orange) glow round lamps.
-    → 1.3.10 · 2026-10-06 · (pending)
+    → 1.3.10 · 2026-10-06 · 286ae6f (build 25)
   - [ ] Polaroid 600, Super 8 and the digital bodies: waiting on reference
     photos.
 - [x] **8.2 Film defects:** small, tasteful flaws here and there, different on

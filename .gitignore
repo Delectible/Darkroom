@@ -1,4 +1,4 @@
-# Flutter / Dart
+# Flutter / Dart (pubspec.lock is committed: builds use the same packages)
 .dart_tool/
 .packages
 .pub-cache/
@@ -7,12 +7,12 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 .metadata
-# Resolved fresh by CI; not pinned yet.
-pubspec.lock
 *.iml
 .idea/
 .vscode/
 .DS_Store
+coverage/
+__pycache__/
 
 # Android (CI regenerates missing boilerplate with `flutter create`)
 android/.gradle/
@@ -30,8 +30,13 @@ ios/Flutter/flutter_export_environment.sh
 ios/Flutter/ephemeral/
 ios/Runner/GeneratedPluginRegistrant.*
 
-# Artwork renderer
+# Artwork renderer (three.js checkouts and render output stay local)
 tool/render/node_modules/
+tool/render/three/
+tool/render/three-mesh-bvh/
+tool/render/three-gpu-pathtracer/
+tool/render/out*/
+tool/render/scenes/_*.html
 
 # Signing keys stay out of the repo (only the public test key is committed).
 *.jks

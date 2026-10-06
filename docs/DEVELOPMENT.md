@@ -244,7 +244,7 @@ visible; tap one to see the actual error, then keep or discard it.
 
 ## 6. Shader contract
 
-The film shader has its own layout (`FilmUniformLayout`, 23 floats + camera,
+The film shader has its own layout (`FilmUniformLayout`, 29 floats + camera,
 LUT and grain samplers). The three digital shaders share a 29‑float uniform header (`uSize`, time, a 3×3
 matrix as three `vec3` rows, offset, tone curve, vignette, grain, flash,
 visible crop), followed by look‑specific floats. `LookSpec.commonUniforms` /
@@ -261,7 +261,7 @@ flutter test                              # unit tests
 dart run tool/pipeline_smoke.dart          # renders every stock from a synthetic 12MP frame
 dart run tool/film_preview.dart sheet.jpg a.jpg b.png  # film looks contact sheet
 dart run tool/video_plan_smoke.dart clip.mp4 640 480   # Super 8 + camcorder; needs desktop ffmpeg
-python3 tool/icon/make_icons.py            # regenerates every Android/iOS icon (needs Pillow + numpy)
+python3 tool/icon/make_icons.py            # every Android/iOS icon + GitHub social preview (Pillow + numpy)
 ```
 
 **App icon.** A rabbit with X'd‑out eyes, split into red/green/blue copies like
@@ -269,14 +269,34 @@ a mis‑converged CRT, on near‑black. The generator writes the Android adaptiv
 icon (background colour, foreground, and a monochrome layer for Android 13+
 themed icons), a round legacy icon for Android 7.x, the white notification glyph
 `ic_stat_darkroom`, and a single‑size iOS `AppIcon.appiconset` with Default, Dark
-and Tinted appearances (iOS 18+, Xcode 16+). Tweak the constants at the top of
-the script and re‑run.
+and Tinted appearances (iOS 18+, Xcode 16+), plus `docs/social_preview.png`
+for the repository. Tweak the constants at the top of the script and re‑run.
+In the app the same drawing is `DarkroomMark` (`core/theme/darkroom_mark.dart`:
+camera bodies, the back of prints) and `PixelIcon.rabbit` (Win98 Start button,
+Start menu, About box); `tool/render/lib/logo.js` puts it on the box art.
 
 ## 8. Before you ship
 
 * Stock names reference the emulsions the looks are modelled on. Those names are
   trademarks of their owners; the box and camera art is original and logo‑free.
   Consider generic names for a store release.
-* Rename the app (label in `AndroidManifest.xml`, `CFBundleDisplayName` in
-  `Info.plist`) once you settle on a final name.
 * The FFmpeg *min* build is LGPL; keep it dynamically linked (the default).
+
+## 9. Builds and releases
+
+`.github/workflows/build-apk.yml` runs on every push (Markdown and `docs/`
+changes excepted): `flutter analyze` + `flutter test`, the Android APK and app
+bundle, and an unsigned iOS `.ipa` on a macOS runner. When the checks and the
+Android build pass, everything is published as a GitHub release `build-N`
+(`N` = run number = Android versionCode; non‑`main` branches are pre‑releases).
+
+* **Signing:** release builds use the private upload key from the repository
+  secrets `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD` (alias
+  `upload`). Without them (forks, local builds) they fall back to the public
+  test key `android/app/darkroom-test.jks`, which can't update a private‑key
+  install. Never commit the private key.
+* **iOS:** the `.ipa` is unsigned; sideload it with Sideloadly and an Apple ID.
+  On a private repository the macOS job only runs for commits with `[ios]` in
+  the message or a manual run.
+* **Packages:** `pubspec.lock` is committed, so CI builds what was tested.
+  Update deliberately with `flutter pub upgrade` and commit the lock file.

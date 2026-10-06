@@ -10,7 +10,7 @@ import 'package:darkroom/core/processing/photo_pipeline.dart';
 import 'package:darkroom/features/cameras/domain/camera_catalog.dart';
 
 void main() {
-  final dir = Directory.systemTemp.createTempSync('retro_smoke');
+  final dir = Directory.systemTemp.createTempSync('darkroom_smoke');
   // Synthetic 4000x3000 "sensor" frame stored landscape with EXIF orientation 6
   // (phone held portrait), like Android/iOS write it.
   const w = 4000, h = 3000;

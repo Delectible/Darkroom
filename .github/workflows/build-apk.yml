@@ -18,16 +18,21 @@ env:
   APP: darkroom
 
 jobs:
+  # flutter analyze + flutter test. A build is only published when these pass.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
   android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use the uploaded zip, if the code was uploaded as one
-        run: |
-          if [ ! -f pubspec.yaml ] && ls *.zip >/dev/null 2>&1; then
-            unzip -q -o "$(ls *.zip | head -1)" -d /tmp/src
-            cp -a "$(dirname "$(find /tmp/src -name pubspec.yaml | awk '{print length, $0}' | sort -n | head -1 | cut -d' ' -f2-)")"/. .
-          fi
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: subosito/flutter-action@v2
@@ -66,12 +71,6 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use the uploaded zip, if the code was uploaded as one
-        run: |
-          if [ ! -f pubspec.yaml ] && ls *.zip >/dev/null 2>&1; then
-            unzip -q -o "$(ls *.zip | head -1)" -d /tmp/src
-            cp -a "$(dirname "$(find /tmp/src -name pubspec.yaml | awk '{print length, $0}' | sort -n | head -1 | cut -d' ' -f2-)")"/. .
-          fi
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
       - name: Fill in the Xcode project
@@ -88,8 +87,8 @@ jobs:
         with: { name: ios, path: dist/ }
 
   release:
-    needs: [android, ios]
-    if: always() && needs.android.result == 'success'
+    needs: [check, android, ios]
+    if: always() && needs.check.result == 'success' && needs.android.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4

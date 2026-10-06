@@ -743,7 +743,7 @@ class PinnedReel extends StatelessWidget {
                       child: CustomPaint(
                         painter: ReelPainter(
                           rotation: angle,
-                          label: item.fileName.replaceAll('.MP4', ''),
+                          label: reelLabel(item),
                           duration: formatDuration(item.durationMs),
                           saved: item.isSaved,
                         ),

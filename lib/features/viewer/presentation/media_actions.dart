@@ -92,6 +92,41 @@ Future<void> deleteMedia(MediaRepository repo, MediaItem item) async {
   await repo.delete(item.id);
 }
 
+/// Longest reel label (fits the label tape on the spool).
+const maxReelLabel = 22;
+
+/// The label written on a reel's tape: its file name without the extension.
+String reelLabel(MediaItem item) {
+  final dot = item.fileName.lastIndexOf('.');
+  return dot > 0 ? item.fileName.substring(0, dot) : item.fileName;
+}
+
+/// Relabels a reel: the name on its tape and its file on disk (so shares and
+/// saves carry the new name). Characters a file name can't hold are dropped;
+/// a name already taken gets " 2", " 3"... Returns the label used, or null
+/// when [label] had nothing usable in it.
+Future<String?> renameReel(MediaRepository repo, MediaItem item, String label) async {
+  var name = label.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+  if (name.length > maxReelLabel) name = name.substring(0, maxReelLabel).trim();
+  if (name.isEmpty) return null;
+  if (name == reelLabel(item)) return name;
+  final dot = item.fileName.lastIndexOf('.');
+  final ext = dot > 0 ? item.fileName.substring(dot) : '.MP4';
+  final old = item.outputPath;
+  String? newPath;
+  if (old != null && await File(old).exists()) {
+    final dir = File(old).parent.path;
+    var candidate = name;
+    for (var n = 2; await File('$dir/$candidate$ext').exists(); n++) {
+      candidate = '$name $n';
+    }
+    name = candidate;
+    newPath = (await File(old).rename('$dir/$name$ext')).path;
+  }
+  await repo.rename(item.id, fileName: '$name$ext', outputPath: newPath);
+  return name;
+}
+
 String formatBytes(int? bytes) {
   if (bytes == null) return '';
   if (bytes < 1024) return '$bytes bytes';

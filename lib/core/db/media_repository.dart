@@ -211,6 +211,18 @@ class MediaRepository {
     notifyChanged();
   }
 
+  /// Renames an item: its label ([fileName]) and, when the file on disk
+  /// moved too, its [outputPath].
+  Future<void> rename(String id, {required String fileName, String? outputPath}) async {
+    await _sql.update(
+      table,
+      {'file_name': fileName, if (outputPath != null) 'output_path': _paths.toStored(outputPath)},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    notifyChanged();
+  }
+
   Future<void> bumpAttempts(String id) =>
       _sql.rawUpdate('UPDATE $table SET attempts = attempts + 1 WHERE id = ?', [id]);
 

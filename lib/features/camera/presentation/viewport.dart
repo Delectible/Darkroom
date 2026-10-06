@@ -416,7 +416,8 @@ class _HudOverlay extends ConsumerWidget {
                 bottom: 10,
                 child: _FilmCounter(spec: spec, color: palette.screenInk.withValues(alpha: 0.85)),
               ),
-            if (capture.isRecording)
+            // Film (Super 8) just runs its footage counter down: no REC badge.
+            if (capture.isRecording && digital)
               Positioned(
                 right: 12,
                 top: 10,

@@ -64,23 +64,50 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
   /// Instant prints: write (or change) the note on the bottom border.
   Future<void> _writeNote(MediaItem item) async {
     final text = TextEditingController(text: item.note ?? '');
+    // The box is the print's own off-white paper with felt-tip ink, so the
+    // writing reads the same in light and dark mode.
+    const paper = InstantFrame.paper, ink = InstantFrame.ink;
     final note = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Write on the print'),
-        content: TextField(
-          controller: text,
-          autofocus: true,
-          maxLength: InstantFrame.maxNoteLength,
-          textCapitalization: TextCapitalization.sentences,
-          style: InstantFrame.noteStyle(260).copyWith(fontSize: 26),
-          decoration: const InputDecoration(hintText: 'summer \'26, the lake…'),
-          onSubmitted: (v) => Navigator.pop(context, v),
+      builder: (context) => Theme(
+        data: ThemeData.light(useMaterial3: true).copyWith(
+          colorScheme: const ColorScheme.light(
+            primary: ink,
+            onPrimary: paper,
+            surface: paper,
+            onSurface: ink,
+          ),
+          textSelectionTheme: TextSelectionThemeData(
+            cursorColor: ink,
+            selectionColor: ink.withValues(alpha: 0.2),
+            selectionHandleColor: ink,
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, text.text), child: const Text('Done')),
-        ],
+        child: AlertDialog(
+          backgroundColor: paper,
+          title: const Text('Write on the print', style: TextStyle(color: ink)),
+          content: TextField(
+            controller: text,
+            autofocus: true,
+            maxLength: InstantFrame.maxNoteLength,
+            textCapitalization: TextCapitalization.sentences,
+            style: InstantFrame.noteStyle(260).copyWith(fontSize: 26),
+            decoration: InputDecoration(
+              hintText: 'summer \'26, the lake…',
+              hintStyle: InstantFrame.noteStyle(
+                260,
+              ).copyWith(fontSize: 26, color: ink.withValues(alpha: 0.3)),
+              counterStyle: TextStyle(color: ink.withValues(alpha: 0.6)),
+              enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: ink.withValues(alpha: 0.4))),
+              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: ink, width: 1.6)),
+            ),
+            onSubmitted: (v) => Navigator.pop(context, v),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context, text.text), child: const Text('Done')),
+          ],
+        ),
       ),
     );
     text.dispose();

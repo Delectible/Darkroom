@@ -134,7 +134,13 @@ Film Mode
 - Photos are deliberately "physical": **nothing reaches the phone gallery until
   he taps Save on a print, or Save all.** Album: "Darkroom Film".
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;
-  playback is a film-styled projector screen. Always landscape
+  playback is a projector (`projector_screen.dart`): beam + screen, and a
+  `ProjectorDeck` with the reel and a masking-tape label (tap: rename reel
+  and file, `renameReel`), an amber dial + needle to seek, a drum counter
+  for time left (no feet counter), and piano keys (start, prev, rew,
+  play/pause, ffwd, next). FF/REW shuttle by stepped seeks that spin up
+  (smear, rolling frame line, sound off) and stop at the ends. No swiping
+  between reels; only the keys. No REC badge in the Super 8 viewfinder. Always landscape
   (`CameraSpec.landscapeOnly`: held upright it records a landscape slice,
   `CropMath` `acrossShortSide`). Reels are full-gate scans (`CineStrip`,
   `core/processing/cine_strip.dart`): black film edge with the sprocket hole

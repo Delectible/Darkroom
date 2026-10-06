@@ -227,3 +227,22 @@ darkroom, corkboard, ambience).
   warning. Signing → 2026-10-06 · cc84d67 (secrets added; first private-key
   build is the next push). Play Console waits on Gabe's ID check; later, CI
   uploads each build to Play by itself.
+
+### 10. Requested 2026-10-06 (after build 27)
+
+- [x] **10.1 Super 8 REC badge:** the film counter is enough; no REC badge in
+  the Super 8 viewfinder. → 1.3.13 · 2026-10-06 · (pending)
+- [x] **10.2 Projector player:** a deck under the screen: the reel with a
+  masking-tape label (tap to rename the reel and its file), an amber dial
+  with a needle to wind to a point, a drum counter for the time left, and
+  piano keys (start, prev, rewind, play/pause, fast forward, next). Fast
+  forward / rewind spin up like the machine (smeared picture, rolling frame
+  line, harder flicker, sound off) and stop at the ends. No feet counter;
+  no swiping between reels. → 1.3.13 · 2026-10-06 · (pending)
+- [x] **10.3 Polaroid note box in dark mode:** the box is now the print's
+  own paper with felt-tip ink, readable in light and dark mode.
+  → 1.3.13 · 2026-10-06 · (pending)
+- [~] **10.4 Darkroom branding** on the artwork and elsewhere; the rabbit
+  logo used sparingly, a pixel version in Windows 98.
+- [~] **10.5 Repository tidy-up**, README, repository image.
+

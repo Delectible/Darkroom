@@ -87,7 +87,7 @@ darkroom, corkboard, ambience).
   to toss it; the other body comes in on the same motion and settles with a
   spring. Each body runs past the screen: rounded end, side wall with strap
   lug, neck strap (film) / wrist cord (digital). Tap the peek still works.
-  → 1.3.6 · 2026-10-06 · (pending)
+  → 1.3.6 · 2026-10-06 · 41bebd1 (build 21, first private-key build)
 - [x] **3.2 Motorised zoom:** fixed-rate zoom on dedicated buttons for the 90s
   Camcorder (no pinch). The buttons also work in the other digital cameras.
   Realistic zoom limits per camera. **No zoom at all in Film mode.** → 1.3.1 · 2026-10-06 · 4a676b7 (build 13)

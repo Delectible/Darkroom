@@ -56,6 +56,7 @@ class FilmProfile {
     this.gate = 0,
     this.defects = 0,
     this.negative = true,
+    this.grainHighlights = 0,
   });
 
   final String id;
@@ -103,6 +104,11 @@ class FilmProfile {
   /// Grain texels across the frame height. Lower = coarser grain. Relative
   /// to the frame, so preview and a 12MP export look alike.
   final double grainResolution;
+
+  /// Extra grain toward the highlights (0 = colour-negative behaviour,
+  /// strongest in the mid-tones). B&W negative scans grain up most in bright
+  /// skies and skin: the dense parts of the negative.
+  final double grainHighlights;
 
   /// Red-orange glow around bright highlights (0..1).
   final double halation;
@@ -188,18 +194,24 @@ class FilmProfile {
       vignette: 0.18,
       defects: 1.0,
     ),
+    // Tuned against Gabe's HP5 scans: strictly neutral, deep blacks, strong
+    // contrast, bright highlights, and heavy grain that is strongest in the
+    // highlights (skies, skin) and cleaner in the shadows; a grey glow round
+    // bright lamps.
     'hp5plus400': FilmProfile(
       id: 'hp5plus400',
       mono: true,
       monoWeights: [0.24, 0.56, 0.20],
-      contrast: [1.24, 1.24, 1.24],
-      white: 1.02,
-      shadowLift: 0.028,
-      highlightCap: 0.99,
-      grainAmount: 0.072,
+      contrast: [1.34, 1.34, 1.34],
+      white: 1.03,
+      shadowLift: 0.008,
+      highlightCap: 1.0,
+      grainAmount: 0.026,
       grainChroma: 0,
-      grainResolution: 980,
-      halation: 0.04,
+      grainResolution: 1600,
+      grainHighlights: 3.0,
+      halation: 0.12,
+      halationColor: [1.0, 1.0, 1.0],
       vignette: 0.20,
       defects: 1.0,
     ),

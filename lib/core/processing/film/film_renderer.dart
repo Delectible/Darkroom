@@ -19,8 +19,10 @@ class FilmSpatial {
     return v * (1 + flash * (1.1 * hot - 0.35 * (1 - hot)));
   }
 
-  /// Grain is most visible in the mid-tones; deep blacks stay clean.
-  static double grainWeight(double l) => 0.22 + 3.1 * l * (1 - l);
+  /// Grain is most visible in the mid-tones (plus [highlights] more toward
+  /// white, for B&W negatives); deep blacks stay clean.
+  static double grainWeight(double l, [double highlights = 0]) =>
+      0.22 + 3.1 * l * (1 - l) + highlights * l * l;
 
   /// Grain finer than a pixel can't be drawn: it averages out. Returns the
   /// drawn texel size (>= 1 px) and the matching amplitude scale, so a
@@ -129,7 +131,7 @@ class FilmRenderer {
 
         if (amount > 0) {
           final l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-          final a = amount * FilmSpatial.grainWeight(l);
+          final a = amount * FilmSpatial.grainWeight(l, profile.grainHighlights);
           final gx = x * inv + ox;
           final n0 = field.sample(gx, gy, 0);
           if (chroma > 0) {

@@ -95,10 +95,13 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   strong 2.4x / 0.55x (coarser). Set **per film stock, only in the settings
   menu**. When not "normal", the carousel shows a small tag. Digital cameras
   have no grain setting.
-- Ektar 100 (clean, punchy) and Portra 400 (the obviously-film stock: soft,
-  green-teal shadows, cream highlights, visible grain) are tuned against
+- Ektar 100 (clean, punchy), Portra 400 (the obviously-film stock: soft,
+  green-teal shadows, cream highlights, visible grain) and HP5 (neutral,
+  deep blacks, heavy grain strongest in the highlights via
+  `FilmProfile.grainHighlights`, uniform `uGrainHi`) are tuned against
   Gabe's reference scans; `grain_calibration_test` pins their Normal grain
-  to the scans (Ektar ~0.0076, Portra ~0.034).
+  to the scans (Ektar ~0.0076, Portra ~0.034, HP5 ~0.025 mid / ~0.055
+  bright).
 - Defects (`film_defects.dart`): developed stills only (never the
   viewfinder), rolled per frame from the shot's seed: a few dust specks
   (white on negative, dark on instant), sometimes a hair, a faint scratch

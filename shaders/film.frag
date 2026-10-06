@@ -31,6 +31,7 @@ uniform float uFlicker;      // 19    Super 8: exposure flicker
 uniform float uDust;         // 20    Super 8: dust specks
 uniform float uGate;         // 21    Super 8: rounded projector gate
 uniform float uFps;          // 22    cadence of grain / weave / dust
+uniform float uGrainHi;      // 23    extra grain toward white (B&W negatives)
 
 uniform sampler2D uTexture;  // camera (bound by the engine)
 uniform sampler2D uLut;      // (size*size) x size strip, blue slices side by side
@@ -149,7 +150,7 @@ void main() {
     vec3 g = (texture(uGrain, guv).rgb - 0.502) * kGrainDecode;
     vec3 n = mix(vec3(g.r), g, uGrainChroma);
     float l = dot(c, kLuma);
-    c += n * uGrainAmount * gain * (0.22 + 3.1 * l * (1.0 - l));
+    c += n * uGrainAmount * gain * (0.22 + 3.1 * l * (1.0 - l) + uGrainHi * l * l);
   }
 
   // Super 8: dust specks (dark on reversal film), a few per frame.

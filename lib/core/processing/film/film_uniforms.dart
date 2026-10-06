@@ -2,12 +2,12 @@ import '../crop_math.dart';
 import 'film_lut.dart';
 import 'film_profile.dart';
 
-/// Float uniforms of shaders/film.frag after `uSize` (indices 2..22), in
+/// Float uniforms of shaders/film.frag after `uSize` (indices 2..23), in
 /// declaration order. Pure Dart so tests can check it against the .frag.
 class FilmUniformLayout {
   const FilmUniformLayout._();
 
-  static const int floatCount = 23; // including uSize
+  static const int floatCount = 24; // including uSize
 
   static List<double> floats(
     FilmProfile p, {
@@ -33,5 +33,6 @@ class FilmUniformLayout {
     p.dust,
     p.gate,
     fps,
+    p.grainHighlights,
   ];
 }

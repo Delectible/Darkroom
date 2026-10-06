@@ -193,8 +193,12 @@ darkroom, corkboard, ambience).
     most obviously as film: green-teal shadows, warm cream highlights, soft
     contrast, peachy skin, visible grain matched to the scans.
     → 1.3.9 · 2026-10-06 · 1c9e691 (build 24)
-  - [ ] HP5, Polaroid 600, Super 8 and the digital bodies: waiting on
-    reference photos.
+  - [x] HP5 400 against Gabe's 4 reference scans: neutral, deep blacks,
+    stronger contrast, crisp heavy grain that builds toward the highlights
+    (as B&W negatives do), grey (not orange) glow round lamps.
+    → 1.3.10 · 2026-10-06 · (pending)
+  - [ ] Polaroid 600, Super 8 and the digital bodies: waiting on reference
+    photos.
 - [x] **8.2 Film defects:** small, tasteful flaws here and there, different on
   every frame (most have none worth noticing): dust specks, the odd hair, a
   faint scratch along the film, a rare light leak. Developed photos only.

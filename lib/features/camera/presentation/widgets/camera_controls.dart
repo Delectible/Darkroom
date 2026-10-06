@@ -13,6 +13,7 @@ import '../../../../core/device/upright.dart';
 import '../../../../core/processing/photo_pipeline.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/theme/retro_theme.dart';
+import '../../../../core/theme/surfaces.dart';
 import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
 import '../../../cameras/presentation/artwork/camera_artwork.dart';
@@ -153,95 +154,6 @@ class _ShutterPainter extends CustomPainter {
       old.recording != recording ||
       old.pressed != pressed ||
       old.ring != ring;
-}
-
-/// The FILM | DIGITAL slide switch that re-skins the whole app.
-class ModeSwitch extends ConsumerWidget {
-  const ModeSwitch({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final palette = RetroPalette.of(context);
-    final mode = ref.watch(appModeProvider);
-    final recording = ref.watch(captureControllerProvider).isRecording;
-    final digital = mode == AppMode.digital;
-    return Semantics(
-      toggled: digital,
-      label: 'Film or digital mode',
-      child: GestureDetector(
-        onTap: recording
-            ? null
-            : () {
-                unawaited(HapticFeedback.mediumImpact());
-                unawaited(ref.read(appModeProvider.notifier).toggle());
-              },
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 30,
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(6),
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [palette.bodyShadow, palette.bodyHighlight],
-                ),
-                border: Border.all(color: Colors.black.withValues(alpha: 0.4)),
-              ),
-              child: AnimatedAlign(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutBack,
-                alignment: digital ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  width: 30,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(4),
-                    gradient: LinearGradient(colors: [palette.metal, palette.metalDark]),
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 3, offset: Offset(0, 1))],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(
-                      4,
-                      (_) => Container(width: 1.5, height: 14, color: Colors.black.withValues(alpha: 0.25)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 5),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'FILM',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1,
-                    color: digital ? palette.textMuted : palette.accent,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'DIGI',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1,
-                    color: digital ? palette.accent : palette.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// Round body button (flash, aspect, lens, settings).
@@ -416,35 +328,204 @@ class StockLabel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final palette = RetroPalette.of(context);
     final spec = ref.watch(activeSpecProvider);
     return SwipeToCycle(
       onTap: onOpen,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            spec.name.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: palette.text,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.5,
-              fontSize: 13,
-            ),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        layoutBuilder: (current, previous) =>
+            Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
+        transitionBuilder: (c, a) => FadeTransition(
+          opacity: a,
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a),
+            child: c,
           ),
-          Text(
-            spec.recordsVideo ? '${spec.subtitle} · VIDEO' : spec.subtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: palette.textMuted, fontSize: 11),
-          ),
-        ],
+        ),
+        child: KeyedSubtree(
+          key: ValueKey(spec.id),
+          child: spec.isFilm ? _MemoHolder(spec: spec) : _LcdPanel(spec: spec),
+        ),
       ),
     );
   }
+}
+
+/// Film bodies: the memo holder on the back door, with the end flap torn off
+/// the film box slipped in so you remember what's loaded.
+class _MemoHolder extends StatelessWidget {
+  const _MemoHolder({required this.spec});
+
+  final CameraSpec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = RetroPalette.of(context);
+    final paper = Color(spec.boxColor), ink = Color(spec.boxInk);
+    final detail = spec.recordsVideo
+        ? '${spec.badge} · 50 FT'
+        : spec.isInstant
+        ? '${spec.badge} · ${spec.roll.frames} SHOTS'
+        : '${spec.badge} · ${spec.roll.frames} EXP';
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(5),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [p.metal, p.metalDark],
+        ),
+        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 3, offset: Offset(0, 1))],
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+        decoration: BoxDecoration(
+          color: paper,
+          borderRadius: BorderRadius.circular(2),
+          // The holder's lips overlap the card a little.
+          border: Border.symmetric(
+            horizontal: BorderSide(color: Colors.black.withValues(alpha: 0.25), width: 1.5),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              spec.name.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: ink,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+                fontSize: 13,
+                height: 1.1,
+              ),
+            ),
+            Text(
+              detail,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: ink.withValues(alpha: 0.75),
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
+                height: 1.2,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Digital bodies: a little segment-LCD status panel, like the top plate of
+/// a 2000s digicam: the model, battery, and how much card (or tape) is left.
+class _LcdPanel extends ConsumerWidget {
+  const _LcdPanel({required this.spec});
+
+  final CameraSpec spec;
+
+  static const _lcd = Color(0xFF9FAA8C);
+  static const _ink = Color(0xFF1E2619);
+
+  /// A typical file from this body, for the "shots left" estimate.
+  static int _photoBytes(CameraSpec spec) {
+    final e = spec.output.maxLongEdge;
+    return math.max(20000, (e * e * 0.75 * 0.25).round());
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = RetroPalette.of(context);
+    final items = ref.watch(sdCardItemsProvider).value ?? const <MediaItem>[];
+    final String status;
+    if (spec.storage == DigitalStorage.floppy) {
+      // A 60-minute tape, minus what's been shot and not yet copied off.
+      final usedS =
+          items
+              .where((m) => m.onSdCard && m.cameraId == spec.id)
+              .fold<int>(0, (s, m) => s + (m.durationMs ?? 0)) ~/
+          1000;
+      final left = math.max(0, 60 * 60 - usedS);
+      status = 'SP  TAPE ${left ~/ 60}MIN';
+    } else {
+      const capacity = 128 * 1024 * 1024;
+      final used = items.where((m) => m.onSdCard).fold<int>(0, (s, m) => s + (m.bytes ?? 0));
+      final left = math.max(0, capacity - used) ~/ _photoBytes(spec);
+      status = 'SD 128MB  ${math.min(left, 9999)} LEFT';
+    }
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(5),
+        color: const Color(0xFF2A2D31),
+        border: Border.all(color: p.metalDark),
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(2),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFB0BA9C), _lcd, Color(0xFF8E997C)],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: PixelText(spec.name.toUpperCase(), dot: 1.6, color: _ink),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                const CustomPaint(size: Size(16, 8), painter: _LcdBattery()),
+              ],
+            ),
+            const SizedBox(height: 3),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: PixelText(status, dot: 1.2, color: _ink.withValues(alpha: 0.8)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LcdBattery extends CustomPainter {
+  const _LcdBattery();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ink = Paint()..color = _LcdPanel._ink;
+    final w = size.width - 2, h = size.height;
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, 1), ink);
+    canvas.drawRect(Rect.fromLTWH(0, h - 1, w, 1), ink);
+    canvas.drawRect(Rect.fromLTWH(0, 0, 1, h), ink);
+    canvas.drawRect(Rect.fromLTWH(w - 1, 0, 1, h), ink);
+    canvas.drawRect(Rect.fromLTWH(w, h * 0.3, 2, h * 0.4), ink);
+    for (var i = 0; i < 3; i++) {
+      canvas.drawRect(Rect.fromLTWH(2 + i * (w - 3) / 3, 2, (w - 3) / 3 - 1, h - 4), ink);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LcdBattery old) => false;
 }
 
 /// Small centred caret above the controls: tap (or swipe up anywhere) to

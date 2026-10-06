@@ -275,11 +275,7 @@ class DevelopingTankPainter extends CustomPainter {
       Paint()
         ..shader = SweepGradient(
           transform: GradientRotation(spin * 0.6),
-          colors: [
-            _liquids[stage],
-            Color.lerp(_liquids[stage], Colors.white, 0.18)!,
-            _liquids[stage],
-          ],
+          colors: [_liquids[stage], Color.lerp(_liquids[stage], Colors.white, 0.18)!, _liquids[stage]],
         ).createShader(liquid),
     );
     // The spiral reel inside, turning with the agitation.

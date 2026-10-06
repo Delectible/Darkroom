@@ -144,17 +144,18 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
             padding: const EdgeInsets.all(2),
             child: _error != null
                 ? Center(
-                    child: Text(_error!, textAlign: TextAlign.center, style: W98.text.copyWith(color: Colors.white)),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: W98.text.copyWith(color: Colors.white),
+                    ),
                   )
                 : c == null
                 ? const SizedBox.expand()
                 : Center(
                     child: AspectRatio(
                       aspectRatio: c.value.aspectRatio,
-                      child: _TapeScan(
-                        scanning: _scan != 0,
-                        child: VideoPlayer(c),
-                      ),
+                      child: _TapeScan(scanning: _scan != 0, child: VideoPlayer(c)),
                     ),
                   ),
           ),
@@ -169,10 +170,7 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
               final status = switch (_scan) {
                 1 => 'Fast Forward ▶▶',
                 -1 => 'Rewind ◀◀',
-                _ =>
-                  _stopped
-                      ? 'Stopped'
-                      : (playing ? 'Playing' : (_atEnd(v) ? 'Finished' : 'Paused')),
+                _ => _stopped ? 'Stopped' : (playing ? 'Playing' : (_atEnd(v) ? 'Finished' : 'Paused')),
               };
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -227,14 +225,7 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
 
 /// One transport key. Tap keys fire on release; scan keys work while held.
 class _Key extends StatelessWidget {
-  const _Key({
-    required this.glyph,
-    this.onTap,
-    this.onHold,
-    this.onRelease,
-    this.dir = 0,
-    this.wide = false,
-  });
+  const _Key({required this.glyph, this.onTap, this.onHold, this.onRelease, this.dir = 0, this.wide = false});
 
   final _Transport glyph;
   final ValueChanged<_Transport>? onTap;

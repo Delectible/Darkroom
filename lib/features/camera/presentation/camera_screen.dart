@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/audio/sfx.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/retro_theme.dart';
@@ -29,7 +33,67 @@ class CameraScreen extends ConsumerStatefulWidget {
   ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends ConsumerState<CameraScreen> {
+class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerProviderStateMixin {
+  // ---- Film <-> Digital: the bodies change places --------------------------
+
+  final _bodyKey = GlobalKey();
+  late final AnimationController _swap = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 680),
+  );
+
+  /// Picture of the body that is leaving (it slides away as a still: the
+  /// live widgets already show the new mode).
+  ui.Image? _outgoing;
+
+  /// -1: outgoing body leaves to the left (film -> digital), +1: right.
+  int _swapDir = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(Sfx.cameraSwap.preload());
+  }
+
+  @override
+  void dispose() {
+    _swap.dispose();
+    _outgoing?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _swapMode() async {
+    if (_swap.isAnimating || ref.read(captureControllerProvider).isRecording) return;
+    final boundary = _bodyKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    final from = ref.read(appModeProvider);
+    ui.Image? still;
+    try {
+      // Lower resolution is plenty for something moving this fast.
+      still = await boundary?.toImage(pixelRatio: MediaQuery.devicePixelRatioOf(context) * 0.6);
+    } catch (_) {
+      still = null;
+    }
+    if (!mounted) {
+      still?.dispose();
+      return;
+    }
+    Sfx.cameraSwap.play();
+    unawaited(HapticFeedback.mediumImpact());
+    setState(() {
+      _outgoing?.dispose();
+      _outgoing = still;
+      _swapDir = from == AppMode.film ? -1 : 1;
+    });
+    unawaited(ref.read(appModeProvider.notifier).toggle());
+    await _swap.forward(from: 0);
+    unawaited(HapticFeedback.lightImpact()); // it lands
+    if (!mounted) return;
+    setState(() {
+      _outgoing?.dispose();
+      _outgoing = null;
+    });
+  }
+
   /// Pushes a full-screen route with the camera released for its duration
   /// (saves battery and lets the gallery's video player own the media
   /// pipeline), then re-acquires on return.
@@ -92,9 +156,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     final mode = ref.watch(appModeProvider);
     final palette = RetroPalette.forMode(mode);
 
-    return AnimatedTheme(
+    // Instant theme: the new body slides in already in its own colours.
+    return Theme(
       data: palette.toTheme(),
-      duration: const Duration(milliseconds: 350),
       child: Builder(
         builder: (context) {
           // Swipe up anywhere on the camera body to open the picker, except
@@ -116,58 +180,89 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
             child: Scaffold(
               body: Stack(
                 children: [
-                  // Target palette, not the animating one: the texture tile is
-                  // rendered once per palette, never per animation frame.
-                  // Cross-fades leatherette <-> brushed metal with the theme.
-                  Positioned.fill(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 350),
-                      child: SurfaceTexture(
-                        key: ValueKey(mode),
-                        leather: mode == AppMode.film,
-                        base: mode == AppMode.film ? palette.body : palette.bodyHighlight,
-                        light: palette.bodyHighlight,
-                        dark: palette.bodyShadow,
+                  // The desk the cameras rest on (seen between them mid-swap).
+                  const Positioned.fill(child: ColoredBox(color: Color(0xFF0C0B0A))),
+                  AnimatedBuilder(
+                    animation: _swap,
+                    builder: (context, child) {
+                      final w = MediaQuery.sizeOf(context).width;
+                      final t = Curves.easeInOutCubic.transform(_swap.value);
+                      final swapping = _swap.isAnimating && _swap.value < 1;
+                      // Bodies dip back a little as they pass, like being slid
+                      // across a table.
+                      final depth = 1 - 0.07 * math.sin(math.pi * t);
+                      Widget at(double dx, Widget c) => Transform.translate(
+                        offset: Offset(dx, 0),
+                        child: Transform.scale(scale: depth, child: c),
+                      );
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (swapping && _outgoing != null)
+                            at(_swapDir * w * 1.06 * t, RawImage(image: _outgoing, fit: BoxFit.fill)),
+                          at(swapping ? -_swapDir * w * 1.06 * (1 - t) : 0, child!),
+                        ],
+                      );
+                    },
+                    child: RepaintBoundary(
+                      key: _bodyKey,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // Leatherette or brushed metal; the texture tile is rendered
+                          // once per body. No cross-fade: the new body slides in whole.
+                          Positioned.fill(
+                            child: SurfaceTexture(
+                              key: ValueKey(mode),
+                              leather: mode == AppMode.film,
+                              base: mode == AppMode.film ? palette.body : palette.bodyHighlight,
+                              light: palette.bodyHighlight,
+                              dark: palette.bodyShadow,
+                            ),
+                          ),
+                          SafeArea(
+                            child: Column(
+                              children: [
+                                _TopBar(onSettings: () => showSettingsSheet(context)),
+                                Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+                                    child: _ViewportBezel(mode: mode, child: const CameraViewport()),
+                                  ),
+                                ),
+                                PickerCaret(onOpen: _openSelector),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                                  child: Row(
+                                    children: [
+                                      Expanded(child: StockLabel(onOpen: _openSelector)),
+                                      // Every digital body has the same W|T rocker, so
+                                      // nothing pops in or out when switching bodies.
+                                      // Film bodies have no zoom at all.
+                                      if (mode == AppMode.digital) ...[
+                                        const SizedBox(width: 12),
+                                        const ZoomRocker(),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      GalleryButton(onOpen: _openGallery),
+                                      const ShutterButton(),
+                                      StockButton(onOpen: _openSelector),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _ModePeek(mode: mode, onSwap: _swapMode),
+                        ],
                       ),
-                    ),
-                  ),
-                  SafeArea(
-                    child: Column(
-                      children: [
-                        _TopBar(onSettings: () => showSettingsSheet(context)),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-                            child: _ViewportBezel(mode: mode, child: const CameraViewport()),
-                          ),
-                        ),
-                        PickerCaret(onOpen: _openSelector),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                          child: Row(
-                            children: [
-                              Expanded(child: StockLabel(onOpen: _openSelector)),
-                              // Every digital body has the same W|T rocker, so
-                              // nothing pops in or out when switching bodies.
-                              // Film bodies have no zoom at all.
-                              if (mode == AppMode.digital) ...[const SizedBox(width: 12), const ZoomRocker()],
-                              const SizedBox(width: 12),
-                              const ModeSwitch(),
-                            ],
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              GalleryButton(onOpen: _openGallery),
-                              const ShutterButton(),
-                              StockButton(onOpen: _openSelector),
-                            ],
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                   const _DarkroomBannerOverlay(),
@@ -326,6 +421,93 @@ class _DarkroomBannerOverlayState extends ConsumerState<_DarkroomBannerOverlay> 
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The other camera, peeking in from the edge of the screen: a slice of its
+/// body (leatherette or brushed metal) with its name. Tap it, or pull it in,
+/// to swap cameras. Film keeps the digital one to its right; digital keeps
+/// the film one to its left (the way the bodies slide).
+class _ModePeek extends StatelessWidget {
+  const _ModePeek({required this.mode, required this.onSwap});
+
+  final AppMode mode;
+  final VoidCallback onSwap;
+
+  @override
+  Widget build(BuildContext context) {
+    final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
+    final p = RetroPalette.forMode(other);
+    final onRight = mode == AppMode.film;
+    const w = 30.0, h = 150.0;
+    final radius = onRight
+        ? const BorderRadius.horizontal(left: Radius.circular(12))
+        : const BorderRadius.horizontal(right: Radius.circular(12));
+    return Positioned(
+      right: onRight ? 0 : null,
+      left: onRight ? null : 0,
+      top: MediaQuery.sizeOf(context).height * 0.36,
+      child: Semantics(
+        button: true,
+        label: other == AppMode.film ? 'Switch to the film camera' : 'Switch to the digital camera',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onSwap,
+          onHorizontalDragEnd: (d) {
+            final v = d.primaryVelocity ?? 0;
+            if (onRight ? v < -200 : v > 200) onSwap();
+          },
+          child: Padding(
+            // Generous, invisible touch area around the slim tab.
+            padding: EdgeInsets.only(left: onRight ? 14 : 0, right: onRight ? 0 : 14),
+            child: Container(
+              width: w,
+              height: h,
+              clipBehavior: Clip.antiAlias,
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
+              ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  SurfaceTexture(
+                    leather: other == AppMode.film,
+                    base: other == AppMode.film ? p.body : p.bodyHighlight,
+                    light: p.bodyHighlight,
+                    dark: p.bodyShadow,
+                  ),
+                  // Edge of the body catching the light.
+                  Align(
+                    alignment: onRight ? Alignment.centerLeft : Alignment.centerRight,
+                    child: Container(width: 2, color: p.bodyHighlight.withValues(alpha: 0.7)),
+                  ),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(onRight ? Icons.chevron_left : Icons.chevron_right, size: 16, color: p.accent),
+                      const SizedBox(height: 4),
+                      RotatedBox(
+                        quarterTurns: onRight ? 3 : 1,
+                        child: Text(
+                          other == AppMode.film ? 'FILM' : 'DIGITAL',
+                          style: TextStyle(
+                            color: p.text,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),

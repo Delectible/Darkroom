@@ -5,8 +5,7 @@ send it over. Send as many as you like at once. Plain words are fine: I turn
 descriptions into the numbers. Anything left blank gets a sensible default,
 and I'll tell you what I picked.
 
-Fields marked *(after 4.5)* need that [`CHANGELOG.md`](CHANGELOG.md) item
-to land first; everything else is supported by the pipeline today.
+Every field below is supported by the pipeline.
 
 ---
 
@@ -41,6 +40,7 @@ Reference photos:               (2-5 real example shots — links or uploads.
                                  The single most useful thing you can send.)
 
 -- Film only --
+Box colours:                    (for the memo-holder card, e.g. "yellow box, red text")
 Grain:                          fine / medium / coarse / heavy
 Highlight glow (halation):      none / subtle / strong
 Vignette:                       none / subtle / strong
@@ -56,7 +56,7 @@ Artefacts:                      soft lens / CCD smear on lights / JPEG blocks /
                                 pixelated / scanlines / colour bleed / noise
 Flash:                          harsh / weak / none
 Zoom range & speed:             (e.g. "3x, quick" or "10x, slow motor")
-Saves to:                       SD card / floppy / other             *(after 4.5)*
+Saves to:                       SD card / floppy (A:, multi-disk copy)
 
 -- Video only --
 Frame rate feel:                (e.g. 18 fps home movie, 30 fps tape)

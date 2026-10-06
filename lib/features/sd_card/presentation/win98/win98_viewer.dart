@@ -161,7 +161,11 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                   ),
                   Expanded(
                     child: path == null
-                        ? const Win98Bevel(style: BevelStyle.sunken, color: Colors.black, child: SizedBox.expand())
+                        ? const Win98Bevel(
+                            style: BevelStyle.sunken,
+                            color: Colors.black,
+                            child: SizedBox.expand(),
+                          )
                         : item.isVideo
                         ? Win98MediaPlayer(
                             key: ValueKey(item.id),

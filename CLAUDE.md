@@ -103,6 +103,14 @@ Film Mode
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;
   playback is a film-styled projector screen.
 - Corkboard pins must sit **on** the photo, not in the cork above it.
+- The cork wall scrolls with the prints (shader tiles keyed to the scroll
+  offset, with wear: pin holes, stains, faded patches). Easter eggs: tap a
+  pin -> "Would you like to discard this image?" -> pin pops, print falls
+  (same as Throw away); tap a print's folded corner to see the back (lab
+  stamp; instant prints show their black backing).
+- Darkroom strip: prints go DEV -> STOP -> FIX -> WASH trays under the
+  safelight (image comes up in DEV); reels turn in a developing tank; instant
+  prints develop in the open.
 - **Polaroid 600** (`printStyle: instant`): square only, 8-shot packs,
   develops in 20 s (watch it fade in on the corkboard's darkroom strip).
   Notes are typed in the print viewer (Write / tap the border), drawn in the
@@ -135,6 +143,15 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   and easter eggs.
 
 UI
+- Film <-> Digital: the other camera peeks in from the screen edge (digital
+  on the right in film mode, film on the left in digital mode); tap or pull
+  it in. The current body is snapshotted and slides out while the live new
+  one slides in over a dark "desk" (`_swapMode` in camera_screen.dart), with
+  `assets/sfx/camera_swap.wav` (synthesised; played via video_player, mixes
+  with other audio) and haptics. No FILM|DIGI slider any more.
+- Under the viewfinder: film bodies show the box end in a memo holder
+  (`CameraSpec.boxColor/boxInk`), digital bodies a segment-LCD panel with
+  battery and card/tape remaining.
 - Swipe up on the camera opens the film/camera carousel (not from the bottom
   ~56dp: that's the system home gesture); swipe down closes it.
   Carousel works in landscape. In the carousel, sideways swipes work anywhere

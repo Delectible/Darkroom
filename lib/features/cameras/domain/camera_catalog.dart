@@ -33,6 +33,8 @@ class CameraCatalog {
     aspects: _filmAspects,
     defaultAspect: AspectRatioOption.r3x2,
     artwork: 'assets/artwork/ektar100.webp',
+    boxColor: 0xFFE8B323,
+    boxInk: 0xFFB0201B,
   );
 
   static const portra400 = CameraSpec(
@@ -46,6 +48,8 @@ class CameraCatalog {
     aspects: _filmAspects,
     defaultAspect: AspectRatioOption.r3x2,
     artwork: 'assets/artwork/portra400.webp',
+    boxColor: 0xFFF1EBDD,
+    boxInk: 0xFF8C5A2B,
   );
 
   static const hp5 = CameraSpec(
@@ -59,6 +63,8 @@ class CameraCatalog {
     aspects: _filmAspects,
     defaultAspect: AspectRatioOption.r3x2,
     artwork: 'assets/artwork/hp5plus400.webp',
+    boxColor: 0xFF1C1C1C,
+    boxInk: 0xFFF2F2F2,
   );
 
   static const super8 = CameraSpec(
@@ -77,6 +83,8 @@ class CameraCatalog {
     // One 50 ft cartridge runs 3 min 20 s at 18 fps.
     videoMaxSeconds: 200,
     pickerTag: 'MOVIE · 18 FPS',
+    boxColor: 0xFF22447A,
+    boxInk: 0xFFF4C542,
   );
 
   static const polaroid600 = CameraSpec(
@@ -94,6 +102,8 @@ class CameraCatalog {
     printStyle: PrintStyle.instant,
     roll: FilmRoll(prefix: 'PACK', frames: 8, counter: 'instant', countsDown: true),
     pickerTag: 'INSTANT · 20 S',
+    boxColor: 0xFFF7F5EF,
+    boxInk: 0xFF1A1A1A,
   );
 
   // --------------------------------------------------------------------------

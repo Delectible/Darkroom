@@ -37,11 +37,11 @@ darkroom, corkboard, ambience).
 ### 0. Feedback on 1.3.1 (build 13)
 
 - [x] **0.1 Smooth zoom:** the zoom moved in visible ~0.1x steps.
-  Zoom requests now stream every frame instead of waiting for each to land. → 1.3.2 · 2026-10-06 · ccb81b6
+  Zoom requests now stream every frame instead of waiting for each to land. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
 - [x] **0.2 Zoom bar in the video:** camcorder recordings carry the sliding
-  zoom bar (found-footage style), plus blinking REC, SP and battery. → 1.3.2 · 2026-10-06 · ccb81b6
+  zoom bar (found-footage style), plus blinking REC, SP and battery. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
 - [x] **0.3 Home gesture:** swiping up from the bottom edge to go home
-  flashed the carousel open. Swipes from the bottom ~56dp are ignored. → 1.3.2 · 2026-10-06 · ccb81b6
+  flashed the carousel open. Swipes from the bottom ~56dp are ignored. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
 
 ### 2. Photo & video previews (film & digital)
 
@@ -52,10 +52,10 @@ darkroom, corkboard, ambience).
   Not reproducible off-device; please confirm on the Pixel.
 - [x] **2.3 Film video thumbnails:** a stylised image of the first frame so
   each reel can be identified. Idea: a print glued to the front of the
-  spool. Come up with something that makes physical sense. → 1.3.2 · 2026-10-06 · ccb81b6
+  spool. Come up with something that makes physical sense. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
   A short tail of film hangs from behind each reel; its frames show how the clip opens.
 - [x] **2.4 Developing state:** a distinct, stylised look for film videos
-  that are still developing. → 1.3.2 · 2026-10-06 · ccb81b6
+  that are still developing. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
   Reels develop in a daylight tank: the reel turns in the chemistry, stage shows DEV → BLEACH → FIX → WASH.
 - [ ] **2.5 Share sheet preview:** sharing a video on Android shows only the
   file name. Pass a thumbnail to the share sheet.
@@ -64,10 +64,11 @@ darkroom, corkboard, ambience).
 
 ### 3. Camera UI & viewfinder
 
-- [ ] **3.1 Mode transition:** replace the Film ↔ Digital fade with a large
+- [x] **3.1 Mode transition:** replace the Film ↔ Digital fade with a large
   slide: the whole camera slides off and the other slides in. Possibly add a
   "swap device" sound. Remove the slider switch and add another obvious
-  control for swapping. *Build a demo first for approval.*
+  control for swapping. *Build a demo first for approval.* → 1.3.3 · 2026-10-06 · COMMIT
+  Demo: the other camera peeks in from the screen edge; tap or pull it in and the bodies slide past each other with a swap sound. Tell me if you like it.
 - [x] **3.2 Motorised zoom:** fixed-rate zoom on dedicated buttons for the 90s
   Camcorder (no pinch). The buttons also work in the other digital cameras.
   Realistic zoom limits per camera. **No zoom at all in Film mode.** → 1.3.1 · 2026-10-06 · 4a676b7 (build 13)
@@ -77,53 +78,57 @@ darkroom, corkboard, ambience).
 - [x] **3.4 Zoom buttons always shown:** keep the zoom buttons on every digital
   camera so buttons don't appear or vanish when switching cameras. → 1.3.1 · 2026-10-06 · 4a676b7 (build 13)
 - [x] **3.5 Front camera button:** redesign the switch-camera button; the
-  current one is too plain. → 1.3.2 · 2026-10-06 · ccb81b6
+  current one is too plain. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
   A knurled dial with a lens in it; it turns half a turn when you flip cameras.
 - [x] **3.6 Landscape fixes:** the flash and aspect ratio buttons shouldn't
   stretch or rotate awkwardly. The settings menu, carousel and filters must
-  lay out properly when the phone is held sideways. → 1.3.2 · 2026-10-06 · ccb81b6
+  lay out properly when the phone is held sideways. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
   Flash/aspect keys have fixed sizes (icon-only sideways). Settings and the picker filter open as a sideways panel when held in landscape.
 
 ### 4. Windows 98 mode & darkroom
 
 - [x] **4.1 Win98 UI scale:** make the Win98 UI bigger, especially the photo
-  navigation buttons, for touch. Keep the proportions and the Win98 look. → 1.3.2 · 2026-10-06 · ccb81b6
+  navigation buttons, for touch. Keep the proportions and the Win98 look. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
   Everything Win98 is drawn 1.3x larger, same proportions; bigger ◀ ▶.
 - [x] **4.2 Win98 navigation:** no left/right swiping. Add a zoom slider and a
-  "Reset Zoom" button; pinch-to-zoom still works. → 1.3.2 · 2026-10-06 · ccb81b6
+  "Reset Zoom" button; pinch-to-zoom still works. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
 - [x] **4.3 Win98 video player:** Win98-style buttons instead of tap to
   play/pause: rewind, fast forward, previous, next, stop, play/pause. Glitchy
   VHS-style artefacts while rewinding and fast-forwarding. Progress slider,
-  elapsed/total time, and the other things a player would normally show. → 1.3.2 · 2026-10-06 · ccb81b6
+  elapsed/total time, and the other things a player would normally show. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
   |◀ ◀◀ ▶/❚❚ ■ ▶▶ ▶| with seek bar and time; hold ◀◀/▶▶ to scan with rolling snow bars and jitter.
 - [x] **4.4 Win98 metadata:** read the camera type from the photo's
-  Exif/metadata and show it at the bottom of the Win98 viewer. → 1.3.2 · 2026-10-06 · ccb81b6
+  Exif/metadata and show it at the bottom of the Win98 viewer. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
   Photos now carry Make/Model EXIF; the viewer reads it back ("Camera: 2003 CCD Compact"). Older files fall back to the catalog.
 - [x] **4.5 Floppy drive easter egg:** the camcorder transfers videos by a
   different route than the SD card, worked in through a floppy drive (A:) in a
-  way that still makes sense, since a camcorder has no floppy. → 1.3.2 · 2026-10-06 · ccb81b6
+  way that still makes sense, since a camcorder has no floppy. → 1.3.2 · 2026-10-06 · ccb81b6 (build 14)
   Camcorder clips live on 3½ Floppy (A:). Copying to C: asks you to swap disks ("insert disk 2 of N"); after three swaps it offers to do the rest.
-- [ ] **4.6 Darkroom progress visual:** replace the plain white square with a
+- [x] **4.6 Darkroom progress visual:** replace the plain white square with a
   more immersive progress visual that follows real film development
-  (simplified).
+  (simplified). → 1.3.3 · 2026-10-06 · COMMIT
+  Prints move through DEV → STOP → FIX → WASH trays under the safelight; the image comes up in the developer.
 
 ### 5. Performance & general
 
 - [x] **5.1 Red square:** remove the unexplained red square at the top of the
   screen. → 1.3.0 · 2026-10-06 · c1ca3d1 (build 11)
   It was the hidden "prints ready" banner peeking out above the safe area.
-- [ ] **5.2 Mode ambience:** add visual touches unique to Film and Digital mode
-  that pull you in and match real-world equipment.
+- [x] **5.2 Mode ambience:** add visual touches unique to Film and Digital mode
+  that pull you in and match real-world equipment. → 1.3.3 · 2026-10-06 · COMMIT
+  Film: the box end sits in a memo holder on the back. Digital: a segment-LCD panel with battery and card/tape left.
 - [x] **5.3 Flip phone artwork:** it looks folded backwards. Keep the style,
   fix the orientation. → 1.3.0 · 2026-10-06 · c1ca3d1 (build 11)
 - [x] **5.4 Corkboard loading:** fast scrolling leaves blank spaces that fade
   in slowly. Optimise photo lazy-loading. → 1.3.0 · 2026-10-06 · c1ca3d1 (build 11)
-- [ ] **5.5 Corkboard wall:** the background scrolls with the photos, so you
+- [x] **5.5 Corkboard wall:** the background scrolls with the photos, so you
   slide the whole wall instead of a fixed backdrop. Refine the cartoony cork
-  with imperfections that show as you scroll. Better-looking pins.
-- [ ] **5.6 Corkboard easter eggs:** more hidden interactions, like Win98's.
+  with imperfections that show as you scroll. Better-looking pins. → 1.3.3 · 2026-10-06 · COMMIT
+  The cork scrolls with the prints and shows wear (old pin holes, a coffee ring, sun-faded patches); new glossy two-tier pins.
+- [x] **5.6 Corkboard easter eggs:** more hidden interactions, like Win98's.
   For example: tap a pin → "Would you like to discard this image?" → the photo
-  and pin fall off the screen (same effect as the bin button in the preview).
+  and pin fall off the screen (same effect as the bin button in the preview). → 1.3.3 · 2026-10-06 · COMMIT
+  Tap a pin to take a print down (it falls off). Tap a print's folded corner to turn it over and read the lab stamp.
 
 ### 6. New feature: Polaroid camera (Film mode)
 

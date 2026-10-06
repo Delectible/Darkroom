@@ -117,6 +117,8 @@ class CameraSpec {
     this.zoom,
     this.pickerTag,
     this.storage = DigitalStorage.sdCard,
+    this.boxColor = 0xFFE3D8C3,
+    this.boxInk = 0xFF2A2420,
   });
 
   /// Darkroom time for film shots unless a stock says otherwise.
@@ -167,6 +169,11 @@ class CameraSpec {
 
   /// Digital: which drive the files land on in the explorer.
   final DigitalStorage storage;
+
+  /// Film: colours of the box end slipped into the camera's memo holder
+  /// (ARGB; kept as ints so this file stays pure Dart).
+  final int boxColor;
+  final int boxInk;
 
   /// Film stocks: the emulsion model shared by shader, stills and video.
   FilmProfile? get film => FilmProfile.forStock(id);

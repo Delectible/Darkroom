@@ -1,5 +1,6 @@
 // 35mm film cartridge (135). Original label designs; no real brand marks.
 import { canvas, tex, noiseCanvas, normalFromHeight, roundRect, barcode, rng } from '/lib/tex.js';
+import { drawRabbit } from '/lib/logo.js';
 
 const R = 12.4;              // shell radius (mm)
 const CAP = 1.6;             // cap thickness
@@ -11,17 +12,17 @@ const VARIANTS = {
   ektar: {
     iso: '100', word: 'VIVID', kind: 'COLOR NEGATIVE FILM', process: 'PROCESS C-41', din: '21°',
     base: '#c3161f', band: '#f2711c', stripe: '#ffd23f', ink: '#ffffff', ink2: '#ffe9d6', numBg: '#111111', numInk: '#ffffff',
-    cap: 0x1a1a1a, capMetal: 0.35, capRough: 0.38, film: 0x3a2116, filmSheen: 0x8a5a3c, seed: 11,
+    cap: 0x1a1a1a, capMetal: 0.35, capRough: 0.38, film: 0x1e110b, filmSheen: 0x5a3826, seed: 11,
   },
   portra: {
     iso: '400', word: 'PORTRAIT', kind: 'COLOR NEGATIVE FILM', process: 'PROCESS C-41', din: '27°',
     base: '#f1e9da', band: '#d99a3e', stripe: '#b8583a', ink: '#3b2a20', ink2: '#6b5040', numBg: '#b8583a', numInk: '#fff7ea',
-    cap: 0xc9c9c9, capMetal: 1.0, capRough: 0.28, film: 0x3d2318, filmSheen: 0x94603f, seed: 23,
+    cap: 0xc9c9c9, capMetal: 1.0, capRough: 0.28, film: 0x20120c, filmSheen: 0x5e3a28, seed: 23,
   },
   hp5: {
     iso: '400', word: 'CLASSIC', kind: 'BLACK & WHITE FILM', process: 'B&W NEGATIVE', din: '27°',
     base: '#151515', band: '#e9e9e6', stripe: '#9a9a9a', ink: '#f2f2f0', ink2: '#bdbdbd', numBg: '#f2f2f0', numInk: '#121212',
-    cap: 0x1b1b1b, capMetal: 0.35, capRough: 0.42, film: 0x3e3b48, filmSheen: 0x8e8aa0, seed: 37,
+    cap: 0x1b1b1b, capMetal: 0.35, capRough: 0.42, film: 0x1d1b22, filmSheen: 0x55525f, seed: 37,
   },
 };
 
@@ -67,8 +68,9 @@ function labelCanvas(v) {
   g.fillText(v.process, F(0.045), Vy(0.835));
   // the app's own wordmark, small, top front
   g.fillStyle = v.ink2; g.textAlign = 'center';
-  fitFont(g, 'R E T R O C A M', 700, 'Inter Display', U(0.16), Vy(0.05));
-  g.fillText('R E T R O C A M', F(0), Vy(0.11));
+  fitFont(g, 'D A R K R O O M', 700, 'Inter Display', U(0.16), Vy(0.05));
+  g.fillText('D A R K R O O M', F(0.016), Vy(0.11));
+  drawRabbit(g, F(-0.094), Vy(0.095), Vy(0.075), v.ink2);
   // left side: exposure guide
   g.textAlign = 'left'; g.fillStyle = v.ink2;
   const rows = v.iso === '100'
@@ -226,7 +228,7 @@ export async function build(THREE, item) {
   geo.computeVertexNormals();
   const filmMat = new THREE.MeshPhysicalMaterial({
     color: v.film, roughness: 0.45, metalness: 0, alphaMap: alpha, alphaTest: 0.5, side: THREE.DoubleSide,
-    sheen: 0.1, sheenColor: new THREE.Color(v.filmSheen), sheenRoughness: 0.6, clearcoat: 0.25, clearcoatRoughness: 0.3,
+    sheen: 0.08, sheenColor: new THREE.Color(v.filmSheen), sheenRoughness: 0.6, clearcoat: 0.12, clearcoatRoughness: 0.35,
   });
   group.add(new THREE.Mesh(geo, filmMat));
 

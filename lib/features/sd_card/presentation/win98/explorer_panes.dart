@@ -396,7 +396,7 @@ class ExplorerFolderTree extends StatelessWidget {
           node(
             3,
             PixelIcon.folderOpen,
-            '100RETRO',
+            '100DRKRM',
             selected: place == ExplorerPlace.sd,
             onTap: () => onSelect(ExplorerPlace.sd),
           ),

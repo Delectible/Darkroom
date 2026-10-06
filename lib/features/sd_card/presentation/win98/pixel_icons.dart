@@ -22,6 +22,9 @@ enum PixelIcon {
   lock,
   floppy,
   transfer,
+
+  /// The Darkroom rabbit, RGB-split like the app icon.
+  rabbit,
 }
 
 class PixelIconView extends StatelessWidget {
@@ -383,6 +386,24 @@ const Map<PixelIcon, List<String>> _sprites = {
     '.kggggggggggggk.',
     '.kkkkkkkkkkkkkk.',
     '................',
+    '................',
+  ],
+  PixelIcon.rabbit: [
+    '................',
+    '..rwwb..........',
+    '..rwwb..rwwb....',
+    '..rwwb..rwwwwb..',
+    '..rwwb..rwwwwwb.',
+    '...rwwbrwwb.....',
+    '...rwwbrwwb.....',
+    '...rwwwwwwb.....',
+    '..rwwwwwwwwb....',
+    '.rwwwwwwwwwwb...',
+    '.rwkwkwwkwkwb...',
+    '.rwwkwwwwkwwb...',
+    '.rwkwkwwkwkwb...',
+    '..rwwwwwwwwb....',
+    '...rwwwwwwb.....',
     '................',
   ],
   PixelIcon.lock: [

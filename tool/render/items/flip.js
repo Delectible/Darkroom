@@ -95,7 +95,7 @@ export async function build(THREE) {
   glass.position.set(0, HL / 2 + 4.5, T * 0.4 + 0.25); lid.add(glass);
   // earpiece
   const ear = rbox(10, 1.8, 0.6, 0.8, new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.8 })); ear.position.set(0, HL - 4, T * 0.4 + 0.5); lid.add(ear);
-  const brand = decal(24, 4, (c, w, h) => { c.fillStyle = '#c7ccd4'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `800 ${h * 0.7}px "Inter Display"`; c.fillText('RETROCAM', w / 2, h / 2); }, { px: 40, rough: 0.3, metal: 0.7 });
+  const brand = decal(24, 4, (c, w, h) => { c.fillStyle = '#c7ccd4'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `800 ${h * 0.7}px "Inter Display"`; c.fillText('DARKROOM', w / 2, h / 2); }, { px: 40, rough: 0.3, metal: 0.7 });
   brand.position.set(0, HL / 2 - 23.5, T * 0.4 + 0.55); lid.add(brand);
   lid.position.set(0, hingeY, -0.6);
   lid.rotation.x = 0.26; // opened past flat would face away: tilt the screen half toward the viewer

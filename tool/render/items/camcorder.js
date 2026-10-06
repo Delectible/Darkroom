@@ -22,7 +22,7 @@ export async function build(THREE) {
   lcdTxt.rotation.y = -Math.PI / 2; lcdTxt.position.set(-Wd / 2 - 6.75, 26, -36); root.add(lcdTxt);
   const logo = decal(56, 14, (c, w, h) => {
     c.fillStyle = '#26292d'; c.textBaseline = 'middle';
-    c.font = `800 ${h * 0.5}px "Inter Display"`; c.fillText('RETROCAM', 0, h * 0.33);
+    c.font = `800 ${h * 0.5}px "Inter Display"`; c.fillText('DARKROOM', 0, h * 0.33);
     c.font = `700 ${h * 0.24}px "DejaVu Sans Condensed"`; c.fillStyle = '#2e3136'; c.fillText('VIDEO  ·  22x ZOOM', 2, h * 0.78);
   }, { px: 24, rough: 0.4 });
   logo.rotation.y = -Math.PI / 2; logo.position.set(-Wd / 2 - 1.4, -13, 40); root.add(logo);
@@ -61,7 +61,7 @@ export async function build(THREE) {
   const strapMat = new THREE.MeshPhysicalMaterial({ color: 0x1a1b1d, roughness: 0.9, sheen: 0.6, sheenColor: new THREE.Color(0x444444), sheenRoughness: 0.7 });
   const strap = rbox(10, 34, L - 34, 5, strapMat); strap.position.set(Wd / 2 + 7, 2, -2); root.add(strap);
   for (const zz of [L / 2 - 18, -L / 2 + 14]) { const tab = rbox(9, 22, 10, 3, dark); tab.position.set(Wd / 2 + 4, 2, zz); root.add(tab); }
-  const strapTxt = decal(40, 8, (c, w, h) => { c.fillStyle = '#8b8f95'; c.font = `800 ${h * 0.55}px "Inter Display"`; c.textBaseline = 'middle'; c.fillText('RETROCAM', 0, h / 2); }, { px: 24, rough: 0.8 });
+  const strapTxt = decal(40, 8, (c, w, h) => { c.fillStyle = '#8b8f95'; c.font = `800 ${h * 0.55}px "Inter Display"`; c.textBaseline = 'middle'; c.fillText('DARKROOM', 0, h / 2); }, { px: 24, rough: 0.8 });
   strapTxt.rotation.y = Math.PI / 2; strapTxt.position.set(Wd / 2 + 12.1, 2, 4); root.add(strapTxt);
 
   // rear: battery pack and red REC button

@@ -393,7 +393,7 @@ Future<void> showAboutDarkroom(BuildContext context) => showWin98Window<void>(
   context,
   title: 'About ${AppInfo.name}',
   width: 340,
-  icon: const PixelIconView(PixelIcon.camera),
+  icon: const PixelIconView(PixelIcon.rabbit),
   builder: (context) => Padding(
     padding: const EdgeInsets.all(12),
     child: Column(
@@ -402,7 +402,7 @@ Future<void> showAboutDarkroom(BuildContext context) => showWin98Window<void>(
       children: [
         Row(
           children: [
-            const PixelIconView(PixelIcon.camera, size: 48),
+            const PixelIconView(PixelIcon.rabbit, size: 48),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -702,28 +702,33 @@ Future<StartAction?> showStartMenu(BuildContext context) {
                             colors: [W98.navy, W98.titleEnd],
                           ),
                         ),
-                        alignment: Alignment.bottomCenter,
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: RotatedBox(
-                          quarterTurns: 3,
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
+                        padding: const EdgeInsets.only(top: 6, bottom: 8),
+                        child: Column(
+                          children: [
+                            const PixelIconView(PixelIcon.rabbit),
+                            const Spacer(),
+                            RotatedBox(
+                              quarterTurns: 3,
+                              child: Text.rich(
                                 TextSpan(
-                                  text: 'Darkroom',
-                                  style: W98.text.copyWith(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 16,
-                                  ),
+                                  children: [
+                                    TextSpan(
+                                      text: 'Darkroom',
+                                      style: W98.text.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: '98',
+                                      style: W98.text.copyWith(color: Colors.white70, fontSize: 16),
+                                    ),
+                                  ],
                                 ),
-                                TextSpan(
-                                  text: '98',
-                                  style: W98.text.copyWith(color: Colors.white70, fontSize: 16),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                       SizedBox(

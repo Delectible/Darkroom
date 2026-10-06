@@ -243,7 +243,10 @@ darkroom, corkboard, ambience).
   own paper with felt-tip ink, readable in light and dark mode.
   → 1.3.13 · 2026-10-06 · fae6ed4
 - [~] **10.4 Darkroom branding** on the artwork and elsewhere; the rabbit
-  logo used sparingly, a pixel version in Windows 98.
+  logo used sparingly, a pixel version in Windows 98. In-app part (rabbit
+  on the camera bodies' top bar and the print-back lab stamp; pixel rabbit
+  on the Start button, Start menu and About box; DCIM folder shown as
+  100DRKRM) → 1.3.14 · 2026-10-06 · (this commit). Artwork re-render to follow.
 - [x] **10.5 Repository tidy-up**, README, repository image: README
   rewritten; CI runs `flutter analyze` + `flutter test` and only publishes a
   build that passes; `pubspec.lock` committed; the old zip-upload step

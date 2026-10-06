@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/darkroom_mark.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../../core/shaders/shader_library.dart';
@@ -1445,17 +1446,25 @@ class _PrintBack extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                   decoration: BoxDecoration(border: Border.all(color: const Color(0xAA2B4C8C), width: 1.2)),
-                  child: Text(
-                    '$frame\n${spec.name.toUpperCase()}\nDEV $date',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xCC2B4C8C),
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 1.2,
-                      height: 1.3,
-                      fontFamily: 'monospace',
-                    ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // The lab's rabbit, inked with the stamp.
+                      const DarkroomMark(size: 14, color: Color(0xCC2B4C8C)),
+                      const SizedBox(height: 2),
+                      Text(
+                        '$frame\n${spec.name.toUpperCase()}\nDEV $date',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xCC2B4C8C),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                          height: 1.3,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

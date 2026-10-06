@@ -66,7 +66,7 @@ export async function build(THREE) {
   // print
   const logo = decal(54, 16, (c, w, h) => {
     c.fillStyle = '#26282c'; c.textBaseline = 'middle';
-    c.font = `800 ${h * 0.42}px "Inter Display"`; c.fillText('RETROCAM', 0, h * 0.3);
+    c.font = `800 ${h * 0.42}px "Inter Display"`; c.fillText('DARKROOM', 0, h * 0.3);
     c.font = `600 ${h * 0.2}px "DejaVu Sans Condensed"`; c.fillStyle = '#3a3d42'; c.fillText('DIGITAL STILL CAMERA', 2, h * 0.68);
   }, { px: 24 });
   logo.position.set(6, -40, D / 2 + 1.05); root.add(logo);

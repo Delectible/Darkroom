@@ -1,6 +1,7 @@
 // Late-80s instant camera: boxy cream shell, black lens plate, flash hump,
 // and a fresh print half out of the slot (still blue-grey, developing).
 import { rbox, slab, plastic, lens, decal, cyl } from '/lib/parts.js';
+import { drawRabbit } from '/lib/logo.js';
 
 export async function build(THREE) {
   const g = new THREE.Group();
@@ -50,7 +51,8 @@ export async function build(THREE) {
   stripe.position.set(-25, -6, D / 2 + 2.6); g.add(stripe);
   const name = decal(56, 9, (c, w, h) => {
     c.fillStyle = '#ece6da'; c.textBaseline = 'middle'; c.textAlign = 'center';
-    c.font = `800 ${h * 0.5}px "Inter Display"`; c.fillText('DARKROOM', w / 2, h * 0.36);
+    c.font = `800 ${h * 0.5}px "Inter Display"`; c.fillText('DARKROOM', w / 2 + h * 0.3, h * 0.36);
+    drawRabbit(c, w / 2 - c.measureText('DARKROOM').width / 2 - h * 0.12, h * 0.33, h * 0.46, '#ece6da');
     c.font = `600 ${h * 0.26}px "DejaVu Sans Condensed"`; c.fillText('INSTANT  600', w / 2, h * 0.82);
   }, { px: 30, rough: 0.45 });
   name.position.set(0, 13.5, D / 2 + 2.6); g.add(name);

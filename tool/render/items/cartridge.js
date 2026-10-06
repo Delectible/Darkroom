@@ -1,5 +1,6 @@
 // Super 8 film cartridge. Original body and label design.
 import { canvas, tex, noiseCanvas, normalFromHeight, roundRect, barcode } from '/lib/tex.js';
+import { drawRabbit } from '/lib/logo.js';
 
 const W = 70, H = 66, D = 21;           // body (mm)
 const NOTCH = { x0: 0, x1: 10, y0: 11, y1: 36 };
@@ -60,7 +61,8 @@ function labelCanvas() {
   g.fillText('15 m · 50 ft · 18/24 fps', X(14.3), Y(12.6));
   g.fillText('PROCESS E-6', X(14.3), Y(9.6));
   g.font = `800 ${2.5 * PX}px "Inter Display"`; g.textAlign = 'right';
-  g.fillText('RETROCAM', X(66), Y(16.5));
+  g.fillText('DARKROOM', X(66), Y(16.5));
+  { const tw = g.measureText('DARKROOM').width; drawRabbit(g, X(66) - tw - 2.2 * PX, Y(17.3), 2.6 * PX, g.fillStyle); }
   barcode(g, X(50), Y(13.4), 15 * PX, 5 * PX, 5, '#2a2420');
   g.font = `500 ${1.5 * PX}px "DejaVu Sans Mono"`; g.fillText('0 41771 2208 9', X(66), Y(6.4));
   // thin keyline

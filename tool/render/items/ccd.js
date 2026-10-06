@@ -55,7 +55,7 @@ export async function build(THREE) {
   // printing on the front plate
   const logo = decal(40, 12, (c, w, h) => {
     c.fillStyle = '#2b2d31'; c.textBaseline = 'middle';
-    c.font = `800 ${h * 0.42}px "Inter Display"`; c.fillText('RETROCAM', 0, h * 0.32);
+    c.font = `800 ${h * 0.42}px "Inter Display"`; c.fillText('DARKROOM', 0, h * 0.32);
     c.font = `600 ${h * 0.2}px "DejaVu Sans Condensed"`; c.fillStyle = '#3d4045';
     c.fillText('DIGITAL  4.0 MEGA PIXELS', 2, h * 0.78);
   }, { px: 30, rough: 0.5 });

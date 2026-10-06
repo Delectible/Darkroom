@@ -11,6 +11,7 @@ import '../../../core/audio/sfx.dart';
 import '../../../core/device/system_gestures.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/providers.dart';
+import '../../../core/theme/darkroom_mark.dart';
 import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../cameras/domain/camera_spec.dart';
@@ -445,7 +446,8 @@ class _TopBar extends ConsumerWidget {
           AspectButton(
             onCycle: () => unawaited(ref.read(cameraSettingsProvider.notifier).cycleAspect(spec.id)),
           ),
-          const Spacer(),
+          // The maker's badge: the rabbit pressed into the body.
+          const Expanded(child: Center(child: _BodyBadge())),
           ValueListenableBuilder<int>(
             valueListenable: processing,
             // Only build the spinner while something is processing: an
@@ -663,6 +665,29 @@ class _ModePeek extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The Darkroom rabbit on the camera body: debossed into the leatherette on
+/// film bodies, printed on the brushed metal of digital ones.
+class _BodyBadge extends ConsumerWidget {
+  const _BodyBadge();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = RetroPalette.of(context);
+    final film = ref.watch(appModeProvider) == AppMode.film;
+    if (!film) return DarkroomMark(size: 15, color: p.bodyShadow.withValues(alpha: 0.55));
+    return Stack(
+      children: [
+        // Light catching the lower edge of the pressing, then the pressing.
+        Transform.translate(
+          offset: const Offset(0, 0.8),
+          child: DarkroomMark(size: 16, color: p.bodyHighlight.withValues(alpha: 0.35)),
+        ),
+        DarkroomMark(size: 16, color: Colors.black.withValues(alpha: 0.45)),
+      ],
     );
   }
 }

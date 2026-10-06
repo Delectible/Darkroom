@@ -373,7 +373,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         : _transfer(ids: selectedSdReady);
 
     final (title, pathIcon, path) = switch (place) {
-      ExplorerPlace.sd => ('Exploring - SD Card (E:)', PixelIcon.removableDrive, r'E:\DCIM\100RETRO'),
+      ExplorerPlace.sd => ('Exploring - SD Card (E:)', PixelIcon.removableDrive, r'E:\DCIM\100DRKRM'),
       ExplorerPlace.floppy => ('Exploring - 3½ Floppy (A:)', PixelIcon.floppy, r'A:\TAPE01'),
       ExplorerPlace.c => ('Exploring - Local Disk (C:)', PixelIcon.hardDrive, r'C:\My Documents\Darkroom'),
       ExplorerPlace.myComputer => ('My Computer', PixelIcon.computer, 'My Computer'),
@@ -853,7 +853,7 @@ class _TaskbarState extends State<_Taskbar> {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               child: Row(
                 children: [
-                  const PixelIconView(PixelIcon.camera),
+                  const PixelIconView(PixelIcon.rabbit),
                   const SizedBox(width: 3),
                   Text('Start', style: W98.text.copyWith(fontWeight: FontWeight.w700)),
                 ],

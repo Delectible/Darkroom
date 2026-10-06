@@ -39,10 +39,9 @@ flutter create . --org com.darkroom --platforms=android,ios
 # 2. Packages
 flutter pub get
 
-# 3. iOS: FFmpegKit needs iOS 14+. Set the Runner deployment target to 14.0
-#    (Xcode > Runner > General > Minimum Deployments), and if you use
-#    CocoaPods also `platform :ios, '14.0'` in ios/Podfile, then:
-cd ios && pod install && cd ..
+# 3. iOS: set the Runner deployment target to 15.0
+#    (Xcode > Runner > General > Minimum Deployments). Plugins come in as
+#    Swift Packages; there is no Podfile and no `pod install`.
 
 # 4. Run (release/profile shows the real shader performance)
 flutter run --release

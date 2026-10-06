@@ -30,9 +30,11 @@ Read this first. It's the hand-off from the earlier development sessions
   commit message contains `[ios]` or the workflow is started by hand (Mac
   minutes cost 10x). The .ipa is unsigned; Gabe signs and installs it with
   Sideloadly + a free Apple ID (expires every 7 days).
-- iOS: deployment target 15.0 (set in `ios/Podfile` and patched into the
-  generated Xcode project by CI). `ios/` holds only Info.plist,
-  AppDelegate.swift, Podfile and the AppIcon set; CI generates the rest.
+- iOS: deployment target 15.0 (patched into the generated Xcode project by
+  CI). Every plugin is a Swift Package, so there is **no Podfile**: adding
+  one makes Flutter run CocoaPods and the build dies with "sandbox is not in
+  sync with the Podfile.lock". `ios/` holds only Info.plist,
+  AppDelegate.swift and the AppIcon set; CI generates the rest.
   Background developing (WorkManager) is Android-only.
 - `android/` and `ios/` only contain the files we customised. CI runs
   `flutter create --org com.darkroom --project-name darkroom --platforms android .`

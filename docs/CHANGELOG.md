@@ -184,11 +184,11 @@ darkroom, corkboard, ambience).
   contact sheets per look, an on-phone tuning screen, then fixes per stock.
   - [x] Ektar 100 against Gabe's 5 reference scans: azure skies (not navy),
     warm true reds, golden yellows, deep greens, deep slightly warm blacks,
-    clean highlights, less halation. → 1.3.8 · 2026-10-06 · (pending)
+    clean highlights, less halation. → 1.3.8 · 2026-10-06 · c9b7554 (build 23)
   - [x] Grain rebuilt for every stock: real grain structure (crisp, clumpy,
     mostly luminance) instead of soft blurred noise; strength sets amount and
     size (weak barely there, strong obviously film). Ektar Normal matches the
-    scans. → 1.3.8 · 2026-10-06 · (pending)
+    scans. → 1.3.8 · 2026-10-06 · c9b7554 (build 23)
   - [ ] Portra 400, HP5, Polaroid 600, Super 8 and the digital bodies: waiting
     on reference photos.
 

@@ -7,6 +7,8 @@ build/
 .flutter-plugins
 .flutter-plugins-dependencies
 .metadata
+# Resolved fresh by CI; not pinned yet.
+pubspec.lock
 *.iml
 .idea/
 .vscode/
@@ -25,6 +27,7 @@ ios/Pods/
 ios/.symlinks/
 ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
+ios/Flutter/ephemeral/
 ios/Runner/GeneratedPluginRegistrant.*
 
 # Artwork renderer

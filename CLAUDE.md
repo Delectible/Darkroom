@@ -14,6 +14,10 @@ Read this first. It's the hand-off from the earlier development sessions
 - Every user-visible change: bump `version` in `pubspec.yaml` (raise the
   `+build` number too) and add a line to `AppInfo.revisions` in
   `lib/core/app_info.dart` (shown in the Win98 Help > About).
+- **Change log:** `docs/CHANGELOG.md` tracks every requested change by item
+  number. Mark items `[~]` when starting and `[x] → version · date · commit`
+  when they land; add new requests there. New stocks/cameras arrive on the
+  form in `docs/NEW_CAMERA_FORM.md`.
 
 ## Build & release pipeline
 

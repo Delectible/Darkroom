@@ -136,6 +136,7 @@ class VideoFilters {
     required int osdW,
     required int osdH,
     int rotateTurns = 0,
+    List<String> extraOverlays = const [],
   }) {
     final chain = _geometry(crop, rotateTurns, outW, outH, profile);
 
@@ -190,6 +191,11 @@ class VideoFilters {
       final y = outH - osdH - (outH * 0.06).round();
       g.write(';[$last][$osdInputIndex:v]overlay=$x:$y:eof_action=repeat[osd]');
       last = 'osd';
+    }
+    // Further decals: each entry is "[N:v]overlay=..." (see OsdLayer).
+    for (var i = 0; i < extraOverlays.length; i++) {
+      g.write(';[$last]${extraOverlays[i]}[dec$i]');
+      last = 'dec$i';
     }
     g.write(';[$last]format=yuv420p[vout]');
     return g.toString();

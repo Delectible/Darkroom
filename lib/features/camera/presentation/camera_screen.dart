@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,6 +45,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   }
 
   bool _selectorOpen = false;
+  bool _swipeFromEdge = false;
+  double _swipeStartY = 0;
 
   /// Film stock / camera picker. The camera is released while it is open and
   /// re-opened afterwards (with a new sensor mode if the body needs one).
@@ -94,10 +97,20 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       duration: const Duration(milliseconds: 350),
       child: Builder(
         builder: (context) {
-          // Swipe up anywhere on the camera body to open the picker.
+          // Swipe up anywhere on the camera body to open the picker, except
+          // from the bottom edge: that's the system "go home" gesture, and
+          // the picker used to flash open as the app closed.
           return GestureDetector(
             behavior: HitTestBehavior.translucent,
+            onVerticalDragStart: (d) {
+              final media = MediaQuery.of(context);
+              final edge = math.max(56.0, media.systemGestureInsets.bottom + 32);
+              _swipeFromEdge = d.globalPosition.dy > media.size.height - edge;
+              _swipeStartY = d.globalPosition.dy;
+            },
             onVerticalDragEnd: (d) {
+              final travelled = _swipeStartY - (d.globalPosition.dy);
+              if (_swipeFromEdge || travelled < 60) return;
               if ((d.primaryVelocity ?? 0) < -350) unawaited(_openSelector());
             },
             child: Scaffold(
@@ -214,12 +227,7 @@ class _TopBar extends ConsumerWidget {
                   ),
           ),
           if (session.hasFrontCamera) ...[
-            BodyButton(
-              tooltip: 'Switch camera',
-              enabled: !ref.watch(captureControllerProvider).isRecording,
-              onTap: () => ref.read(lensProvider.notifier).toggle(),
-              child: const Upright(child: Icon(Icons.cameraswitch_outlined)),
-            ),
+            LensFlipButton(enabled: !ref.watch(captureControllerProvider).isRecording),
             const SizedBox(width: 8),
           ],
           BodyButton(
@@ -294,32 +302,32 @@ class _DarkroomBannerOverlayState extends ConsumerState<_DarkroomBannerOverlay> 
           child: IgnorePointer(
             ignoring: !visible,
             child: GestureDetector(
-            onTap: () {
-              ref.read(darkroomControllerProvider.notifier).dismissBanner();
-              ref.read(pendingRouteProvider.notifier).request('corkboard');
-            },
-            child: Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3A0B0B),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFB71C1C)),
-                boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12)],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.light, color: Color(0xFFFF5252), size: 18),
-                  const SizedBox(width: 10),
-                  Text(
-                    _text,
-                    style: const TextStyle(color: Color(0xFFFFCDD2), fontWeight: FontWeight.w600),
-                  ),
-                ],
+              onTap: () {
+                ref.read(darkroomControllerProvider.notifier).dismissBanner();
+                ref.read(pendingRouteProvider.notifier).request('corkboard');
+              },
+              child: Container(
+                margin: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3A0B0B),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFB71C1C)),
+                  boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 12)],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.light, color: Color(0xFFFF5252), size: 18),
+                    const SizedBox(width: 10),
+                    Text(
+                      _text,
+                      style: const TextStyle(color: Color(0xFFFFCDD2), fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
           ),
         ),
       ),

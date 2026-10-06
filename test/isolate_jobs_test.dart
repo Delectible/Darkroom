@@ -58,6 +58,9 @@ void main() {
     expect(result.width > 0 && result.height > 0, isTrue);
     expect(File(job.outputPath).existsSync(), isTrue);
     expect(File(job.thumbPath).existsSync(), isTrue);
+    // The camera is recorded in EXIF (the Win98 viewer's status bar reads it).
+    final exif = img.decodeJpgExif(File(job.outputPath).readAsBytesSync());
+    expect(exif?.imageIfd.model, 'Portra 400');
     dir.deleteSync(recursive: true);
   });
 }

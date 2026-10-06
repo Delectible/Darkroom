@@ -45,6 +45,7 @@ void main() {
           expect(c.look, isNull);
         });
         test('film: never zooms', () => expect(c.zoom, isNull));
+        test('film: no explorer drive', () => expect(c.storage, DigitalStorage.sdCard));
         test('film: sensible darkroom time and roll', () {
           expect(c.developTime, greaterThan(Duration.zero));
           expect(c.developTime, lessThanOrEqualTo(const Duration(hours: 1)));

@@ -169,11 +169,8 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                     controller: _pages,
                     itemCount: items.length,
                     onPageChanged: (i) => setState(() => _index = i),
-                    itemBuilder: (context, i, onZoom) => _Print(
-                      item: items[i],
-                      onZoomChanged: onZoom,
-                      onWrite: () => _writeNote(items[i]),
-                    ),
+                    itemBuilder: (context, i, onZoom) =>
+                        _Print(item: items[i], onZoomChanged: onZoom, onWrite: () => _writeNote(items[i])),
                   ),
                 ),
                 _ActionBar(
@@ -214,7 +211,12 @@ class _Print extends StatelessWidget {
               onNoteTap: onWrite,
               picture: path == null
                   ? const ColoredBox(color: Colors.black12)
-                  : Image.file(File(path), fit: BoxFit.cover, filterQuality: FilterQuality.medium, gaplessPlayback: true),
+                  : Image.file(
+                      File(path),
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.medium,
+                      gaplessPlayback: true,
+                    ),
             ),
           ),
         ),

@@ -72,6 +72,15 @@ class FilmRoll {
   final bool countsDown;
 }
 
+/// Where a digital body's files turn up in the Win98 explorer.
+enum DigitalStorage {
+  /// SD Card (E:).
+  sdCard,
+
+  /// 3½ Floppy (A:): tape captured onto floppies, copied off disk by disk.
+  floppy,
+}
+
 /// Motorised zoom on digital bodies: held W/T buttons drive it at a fixed rate.
 class ZoomSpec {
   const ZoomSpec({required this.max, this.endToEnd = const Duration(milliseconds: 2400)});
@@ -107,6 +116,7 @@ class CameraSpec {
     this.roll = const FilmRoll(),
     this.zoom,
     this.pickerTag,
+    this.storage = DigitalStorage.sdCard,
   });
 
   /// Darkroom time for film shots unless a stock says otherwise.
@@ -154,6 +164,9 @@ class CameraSpec {
 
   /// Optional tag under the name in the picker (e.g. "MOVIE · 18 FPS").
   final String? pickerTag;
+
+  /// Digital: which drive the files land on in the explorer.
+  final DigitalStorage storage;
 
   /// Film stocks: the emulsion model shared by shader, stills and video.
   FilmProfile? get film => FilmProfile.forStock(id);

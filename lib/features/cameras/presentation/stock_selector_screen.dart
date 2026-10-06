@@ -44,7 +44,8 @@ class _ExternalDragPhysics extends ClampingScrollPhysics {
   const _ExternalDragPhysics({super.parent});
 
   @override
-  _ExternalDragPhysics applyTo(ScrollPhysics? ancestor) => _ExternalDragPhysics(parent: buildParent(ancestor));
+  _ExternalDragPhysics applyTo(ScrollPhysics? ancestor) =>
+      _ExternalDragPhysics(parent: buildParent(ancestor));
 
   @override
   bool shouldAcceptUserOffset(ScrollMetrics position) => false;
@@ -129,11 +130,11 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
     final options = _film
         ? const [_Filter.all, _Filter.color, _Filter.mono, _Filter.movie]
         : const [_Filter.all, _Filter.photo, _Filter.video];
-    final picked = await showModalBottomSheet<_Filter>(
-      context: context,
+    final picked = await showUprightSheet<_Filter>(
+      context,
       backgroundColor: const Color(0xFF1C1C1C),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
-      builder: (context) => SafeArea(
+      maxWidth: 380,
+      builder: (context, {required landscape}) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -220,7 +221,12 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
     switch (_axis) {
       case _Axis.horizontal:
         final vx = d.velocity.pixelsPerSecond.dx;
-        _scroll?.end(DragEndDetails(velocity: Velocity(pixelsPerSecond: Offset(vx, 0)), primaryVelocity: vx));
+        _scroll?.end(
+          DragEndDetails(
+            velocity: Velocity(pixelsPerSecond: Offset(vx, 0)),
+            primaryVelocity: vx,
+          ),
+        );
       case _Axis.vertical:
         final vy = d.velocity.pixelsPerSecond.dy;
         if (_drag > 140 || vy > 700) {
@@ -383,10 +389,8 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
                     padding: const EdgeInsets.fromLTRB(24, 6, 24, 26),
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
-                      layoutBuilder: (current, previous) => Stack(
-                        alignment: Alignment.topCenter,
-                        children: [...previous, ?current],
-                      ),
+                      layoutBuilder: (current, previous) =>
+                          Stack(alignment: Alignment.topCenter, children: [...previous, ?current]),
                       transitionBuilder: (c, a) => FadeTransition(
                         opacity: a,
                         child: SlideTransition(

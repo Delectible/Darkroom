@@ -135,9 +135,7 @@ class CaptureProcessor {
   }
 
   DateTime _readyAt(CaptureContext ctx, DateTime now) =>
-      ctx.spec.mode == AppMode.film && ctx.global.darkroomEnabled
-      ? now.add(ctx.spec.developTime)
-      : now;
+      ctx.spec.mode == AppMode.film && ctx.global.darkroomEnabled ? now.add(ctx.spec.developTime) : now;
 
   /// Queues a still. Returns as soon as the capture is safely persisted.
   Future<String> enqueuePhoto(String capturedPath, CaptureContext ctx) async {
@@ -187,6 +185,7 @@ class CaptureProcessor {
     CaptureContext ctx, {
     required DateTime startedAt,
     required Duration duration,
+    List<double> zoomTrack = const [],
   }) async {
     final id = _newId();
     final now = DateTime.now();
@@ -210,6 +209,7 @@ class CaptureProcessor {
       durationMs: duration.inMilliseconds,
       rotationTurns: ctx.rotationTurns,
       grain: ctx.grain,
+      zoomTrack: zoomTrack,
     );
     final repo = _repoFor(spec);
     await repo.insertProcessing(

@@ -155,3 +155,164 @@ class ReelPainter extends CustomPainter {
       old.spin != spin ||
       old.duration != duration;
 }
+
+/// The tail end of a developed reel, left hanging so you can hold it to the
+/// light: a short Super 8 strip (one perforation per frame on the edge) with
+/// the clip's opening frames on it.
+class FilmTail extends StatelessWidget {
+  const FilmTail({super.key, required this.frame, this.frames = 3});
+
+  /// The picture on each frame (consecutive frames barely differ).
+  final Widget frame;
+  final int frames;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final w = box.maxWidth;
+        // Super 8: 4.0 x 5.8 mm frame (landscape, portrait strip), wide edge
+        // with the perforations.
+        final edge = w * 0.2, picW = w - edge - w * 0.06, picH = picW * 4.0 / 5.8;
+        final pitch = picH * 1.08;
+        return SizedBox(
+          width: w,
+          height: pitch * frames + pitch * 0.4,
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              // Developed reversal film: dense, slightly warm black between frames.
+              color: Color(0xFF16100C),
+              boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 3, offset: Offset(2, 3))],
+            ),
+            child: Stack(
+              children: [
+                for (var i = 0; i < frames; i++) ...[
+                  Positioned(
+                    left: edge,
+                    top: pitch * 0.2 + i * pitch,
+                    width: picW,
+                    height: picH,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(picW * 0.06),
+                      child: ColorFiltered(
+                        // Seen against the cork, not a lightbox: a touch dim and warm.
+                        colorFilter: const ColorFilter.matrix([
+                          0.92, 0, 0, 0, 6, //
+                          0, 0.86, 0, 0, 2, //
+                          0, 0, 0.78, 0, 0, //
+                          0, 0, 0, 1, 0,
+                        ]),
+                        child: frame,
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: edge * 0.32,
+                    top: pitch * 0.2 + i * pitch + picH * 0.38,
+                    width: edge * 0.38,
+                    height: picH * 0.24,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFB9A88F),
+                        borderRadius: BorderRadius.circular(edge * 0.08),
+                      ),
+                    ),
+                  ),
+                ],
+                // Cut end: slightly ragged.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: pitch * 0.12,
+                  child: const ColoredBox(color: Color(0x33FFFFFF)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A Super 8 reel developing in a daylight tank: the reel turns slowly in
+/// the chemistry, and the stage changes as the clock runs down.
+class DevelopingTankPainter extends CustomPainter {
+  DevelopingTankPainter({required this.progress, required this.spin});
+
+  /// 0..1 through development.
+  final double progress;
+
+  /// Agitation rotation (radians).
+  final double spin;
+
+  static const stages = ['DEV', 'BLEACH', 'FIX', 'WASH'];
+  static const _liquids = [Color(0xFF2B3A1E), Color(0xFF5A2E14), Color(0xFF3B3B44), Color(0xFF1C3A4A)];
+
+  static String stageFor(double p) => stages[(p * stages.length).floor().clamp(0, stages.length - 1)];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = math.min(size.width, size.height) / 2;
+    final stage = (progress * stages.length).floor().clamp(0, stages.length - 1);
+    // Tank body (black plastic) and its rim.
+    canvas.drawCircle(c, r, Paint()..color = const Color(0xFF0E0E0E));
+    canvas.drawCircle(
+      c,
+      r * 0.97,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.05
+        ..color = const Color(0xFF3A3A3A),
+    );
+    // Chemistry for the current stage, with a slow swirl.
+    final liquid = Rect.fromCircle(center: c, radius: r * 0.86);
+    canvas.drawCircle(
+      c,
+      r * 0.86,
+      Paint()
+        ..shader = SweepGradient(
+          transform: GradientRotation(spin * 0.6),
+          colors: [
+            _liquids[stage],
+            Color.lerp(_liquids[stage], Colors.white, 0.18)!,
+            _liquids[stage],
+          ],
+        ).createShader(liquid),
+    );
+    // The spiral reel inside, turning with the agitation.
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.rotate(spin);
+    final spiral = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1, r * 0.035)
+      ..color = const Color(0x99D8D8D8);
+    final path = Path()..moveTo(r * 0.18, 0);
+    for (var a = 0.0; a < math.pi * 8; a += 0.15) {
+      final rr = r * (0.18 + 0.6 * a / (math.pi * 8));
+      path.lineTo(math.cos(a) * rr, math.sin(a) * rr);
+    }
+    canvas.drawPath(path, spiral);
+    canvas.drawCircle(Offset.zero, r * 0.15, Paint()..color = const Color(0xFF9EA3A8));
+    canvas.drawCircle(Offset.zero, r * 0.06, Paint()..color = const Color(0xFF111111));
+    canvas.restore();
+    // Progress around the rim.
+    canvas.drawArc(
+      Rect.fromCircle(center: c, radius: r * 0.97),
+      -math.pi / 2,
+      progress.clamp(0.0, 1.0) * math.pi * 2,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.06
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xFFFF6E40),
+    );
+  }
+
+  @override
+  bool shouldRepaint(DevelopingTankPainter old) => old.progress != progress || old.spin != spin;
+}

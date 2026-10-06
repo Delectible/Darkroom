@@ -11,6 +11,8 @@ import 'package:darkroom/core/processing/look_spec.dart';
 import 'package:darkroom/core/processing/video_filters.dart';
 import 'package:darkroom/features/cameras/domain/camera_catalog.dart';
 
+import 'lgpl_filters.dart';
+
 /// Counts float slots of the non-sampler uniforms declared in a .frag file.
 int _floatSlots(String source) {
   const sizes = {'float': 1, 'vec2': 2, 'vec3': 3, 'vec4': 4, 'mat2': 4, 'mat3': 9, 'mat4': 16};
@@ -24,18 +26,6 @@ int _floatSlots(String source) {
 
 int _samplers(String source) =>
     RegExp(r'^\s*uniform\s+sampler2D\s', multiLine: true).allMatches(source).length;
-
-/// Filters that need --enable-gpl or an external library, i.e. that are NOT
-/// in FFmpegKit's LGPL "min" build. Using any of them makes the whole
-/// filtergraph fail with "Error initializing complex filters".
-/// (From FFmpeg's configure: *_filter_deps="gpl" plus external-lib filters.)
-const _notInMinBuild = {
-  'blackframe', 'boxblur', 'colormatrix', 'cover_rect', 'cropdetect', 'delogo', 'eq', 'find_rect', //
-  'fspp', 'histeq', 'hqdn3d', 'interlace', 'kerndeint', 'mcdeint', 'mpdecimate', 'mptestsrc', 'nnedi',
-  'owdenoise', 'perspective', 'phase', 'pp', 'pp7', 'pullup', 'repeatfields', 'sab', 'signature',
-  'smartblur', 'spp', 'stereo3d', 'super2xsai', 'tinterlace', 'uspp', 'vaguedenoiser', 'vidstabdetect',
-  'vidstabtransform', 'drawtext', 'subtitles', 'ass', 'zscale', 'frei0r', 'ocr', 'libplacebo', 'zmq',
-};
 
 void main() {
   group('Dart <-> GLSL uniform layout', () {
@@ -182,7 +172,7 @@ void main() {
       }
       for (final g in graphs) {
         final used = VideoFilters.filterNames(g);
-        expect(used.intersection(_notInMinBuild), isEmpty, reason: g);
+        expect(used.intersection(notInMinBuild), isEmpty, reason: g);
         expect(used, isNotEmpty);
       }
       expect(VideoFilters.filterNames(graphs.first).contains('crop'), isTrue);

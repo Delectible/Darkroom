@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,8 @@ import '../../viewer/presentation/media_actions.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../camera/application/camera_ui_state.dart';
+import '../../cameras/domain/camera_catalog.dart';
+import '../../cameras/domain/camera_spec.dart';
 
 enum ExplorerView { largeIcons, smallIcons, details }
 
@@ -102,19 +105,33 @@ final explorerPrefsProvider = NotifierProvider<ExplorerPrefsNotifier, ExplorerPr
 
 List<MediaItem> _all(Ref ref) => ref.watch(sdCardItemsProvider).value ?? const <MediaItem>[];
 
+/// The explorer's drives that hold files.
+enum Drive { sd, floppy, c }
+
+bool _onFloppy(MediaItem m) => CameraCatalog.byId(m.cameraId).storage == DigitalStorage.floppy;
+
 /// Files still on the virtual card. Failed renders stay visible as
 /// "corrupt" files (with the error on open) instead of silently vanishing.
-final sdCardFilesProvider = Provider<List<MediaItem>>((ref) => _all(ref).where((m) => m.onSdCard).toList());
+final sdCardFilesProvider = Provider<List<MediaItem>>(
+  (ref) => _all(ref).where((m) => m.onSdCard && !_onFloppy(m)).toList(),
+);
+
+/// Camcorder clips waiting on the floppies in A: (not yet copied to C:).
+final floppyFilesProvider = Provider<List<MediaItem>>(
+  (ref) => _all(ref).where((m) => m.onSdCard && _onFloppy(m)).toList(),
+);
 
 /// Files moved to "Local Disk (C:)" (also in the phone's photo library).
 final cDriveFilesProvider = Provider<List<MediaItem>>((ref) => _all(ref).where((m) => !m.onSdCard).toList());
 
 /// What a content pane shows: filtered + sorted.
-final explorerItemsProvider = Provider.family<List<MediaItem>, MediaLocation>((ref, location) {
+final explorerItemsProvider = Provider.family<List<MediaItem>, Drive>((ref, drive) {
   final prefs = ref.watch(explorerPrefsProvider);
-  final source = location == MediaLocation.sd
-      ? ref.watch(sdCardFilesProvider)
-      : ref.watch(cDriveFilesProvider);
+  final source = switch (drive) {
+    Drive.sd => ref.watch(sdCardFilesProvider),
+    Drive.floppy => ref.watch(floppyFilesProvider),
+    Drive.c => ref.watch(cDriveFilesProvider),
+  };
   final items = source.where(
     (m) => switch (prefs.filter) {
       ExplorerFilter.all => true,
@@ -132,6 +149,12 @@ final explorerItemsProvider = Provider.family<List<MediaItem>, MediaLocation>((r
 
 /// Virtual card capacity (a period-correct 128MB card).
 const sdCardCapacityBytes = 128 * 1024 * 1024;
+
+/// A formatted 3½" high-density disk.
+const floppyCapacityBytes = 1457664;
+
+/// How many floppies a file spans.
+int floppiesFor(int? bytes) => math.max(1, ((bytes ?? 0) / floppyCapacityBytes).ceil());
 
 @immutable
 class TransferState {

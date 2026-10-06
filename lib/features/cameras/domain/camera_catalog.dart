@@ -278,6 +278,8 @@ class CameraCatalog {
     // Slow, steady motor zoom of a 90s camcorder.
     zoom: ZoomSpec(max: 10, endToEnd: Duration(milliseconds: 4200)),
     pickerTag: 'VIDEO',
+    // Tapes are captured onto floppies; copying them off takes disk swaps.
+    storage: DigitalStorage.floppy,
   );
 
   static const List<CameraSpec> film = [ektar100, portra400, hp5, polaroid600, super8];

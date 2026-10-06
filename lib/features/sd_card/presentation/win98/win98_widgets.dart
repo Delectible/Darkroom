@@ -40,6 +40,51 @@ class W98 {
 enum BevelStyle { raised, pressed, window, sunken, shallow }
 
 /// Two-ring 3D border exactly like the 9x control frames.
+/// Draws a Win98 screen, dialog or menu uniformly larger, so the 9x look
+/// keeps its exact proportions but is comfortable to touch: the subtree lays
+/// out on a smaller virtual screen and is scaled up to fill the real one
+/// (text and pixel art stay sharp; hit testing follows the scale).
+class Win98Scale extends StatelessWidget {
+  const Win98Scale({super.key, required this.child});
+
+  static const factor = 1.3;
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final w = box.maxWidth.isFinite ? box.maxWidth : mq.size.width;
+        final h = box.maxHeight.isFinite ? box.maxHeight : mq.size.height;
+        return SizedBox(
+          width: w,
+          height: h,
+          child: FittedBox(
+            fit: BoxFit.fill,
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: w / factor,
+              height: h / factor,
+              child: MediaQuery(
+                data: mq.copyWith(
+                  size: mq.size / factor,
+                  padding: mq.padding / factor,
+                  viewPadding: mq.viewPadding / factor,
+                  viewInsets: mq.viewInsets / factor,
+                  systemGestureInsets: mq.systemGestureInsets / factor,
+                ),
+                child: child,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
 class _BevelPainter extends CustomPainter {
   const _BevelPainter(this.style);
 
@@ -276,18 +321,24 @@ Future<void> showWin98Menu(BuildContext anchor, List<Win98MenuItem> items) async
     barrierLabel: 'menu',
     barrierColor: Colors.transparent,
     transitionDuration: Duration.zero,
-    pageBuilder: (context, _, _) {
-      final screen = MediaQuery.sizeOf(context);
-      return Stack(
-        children: [
-          Positioned(
-            left: math.min(topLeft.dx, screen.width - 200),
-            top: topLeft.dy,
-            child: _MenuPanel(items: items),
-          ),
-        ],
-      );
-    },
+    pageBuilder: (context, _, _) => Win98Scale(
+      child: Builder(
+        builder: (context) {
+          // Anchor is in real screen pixels; the menu lays out scaled.
+          final screen = MediaQuery.sizeOf(context);
+          const f = Win98Scale.factor;
+          return Stack(
+            children: [
+              Positioned(
+                left: math.min(topLeft.dx / f, screen.width - 200),
+                top: topLeft.dy / f,
+                child: _MenuPanel(items: items),
+              ),
+            ],
+          );
+        },
+      ),
+    ),
   );
   selected?.onSelected?.call();
 }
@@ -750,49 +801,51 @@ Future<int?> showWin98MessageBox(
     barrierDismissible: false,
     barrierColor: Colors.transparent,
     transitionDuration: Duration.zero,
-    pageBuilder: (context, _, _) => Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: SizedBox(
-          width: math.min(320, MediaQuery.sizeOf(context).width - 32),
-          child: Win98Bevel(
-            style: BevelStyle.window,
-            padding: const EdgeInsets.all(3),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Win98TitleBar(title: title, onClose: () => Navigator.of(context).pop()),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (iconBuilder != null) ...[
-                        SizedBox(width: 32, height: 32, child: iconBuilder(icon)),
-                        const SizedBox(width: 12),
+    pageBuilder: (context, _, _) => Win98Scale(
+      child: Center(
+        child: Material(
+          type: MaterialType.transparency,
+          child: SizedBox(
+            width: math.min(320, MediaQuery.sizeOf(context).width - 32),
+            child: Win98Bevel(
+              style: BevelStyle.window,
+              padding: const EdgeInsets.all(3),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Win98TitleBar(title: title, onClose: () => Navigator.of(context).pop()),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (iconBuilder != null) ...[
+                          SizedBox(width: 32, height: 32, child: iconBuilder(icon)),
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(child: Text(message, style: W98.text)),
                       ],
-                      Expanded(child: Text(message, style: W98.text)),
-                    ],
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      for (var i = 0; i < buttons.length; i++) ...[
-                        if (i > 0) const SizedBox(width: 8),
-                        Win98Button(
-                          minWidth: 76,
-                          onPressed: () => Navigator.of(context).pop(i),
-                          child: Text(buttons[i]),
-                        ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var i = 0; i < buttons.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 8),
+                          Win98Button(
+                            minWidth: 76,
+                            onPressed: () => Navigator.of(context).pop(i),
+                            child: Text(buttons[i]),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -959,21 +1012,23 @@ Future<T?> showWin98Window<T>(
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 140),
     transitionBuilder: (context, a, _, child) => Win98ZoomTransition(animation: a, child: child),
-    pageBuilder: (context, _, _) => Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: SizedBox(
-          width: math.min(width, MediaQuery.sizeOf(context).width - 24),
-          child: Win98Bevel(
-            style: BevelStyle.window,
-            padding: const EdgeInsets.all(3),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Win98TitleBar(title: title, icon: icon, onClose: () => Navigator.of(context).pop()),
-                DefaultTextStyle(style: W98.text, child: builder(context)),
-              ],
+    pageBuilder: (context, _, _) => Win98Scale(
+      child: Center(
+        child: Material(
+          type: MaterialType.transparency,
+          child: SizedBox(
+            width: math.min(width, MediaQuery.sizeOf(context).width - 24),
+            child: Win98Bevel(
+              style: BevelStyle.window,
+              padding: const EdgeInsets.all(3),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Win98TitleBar(title: title, icon: icon, onClose: () => Navigator.of(context).pop()),
+                  DefaultTextStyle(style: W98.text, child: builder(context)),
+                ],
+              ),
             ),
           ),
         ),
@@ -1016,4 +1071,113 @@ class Win98ZoomTransition extends StatelessWidget {
       },
     );
   }
+}
+
+/// 9x trackbar: sunken groove, raised pointer thumb, tick marks underneath.
+class Win98Slider extends StatelessWidget {
+  const Win98Slider({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.onChangeEnd,
+    this.ticks = 10,
+    this.enabled = true,
+  });
+
+  /// 0..1
+  final double value;
+  final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChangeEnd;
+  final int ticks;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    const thumbW = 11.0, thumbH = 20.0;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final w = box.maxWidth;
+        final track = w - thumbW;
+        double at(Offset p) => ((p.dx - thumbW / 2) / track).clamp(0.0, 1.0);
+        final x = track * value.clamp(0.0, 1.0);
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTapDown: enabled ? (d) => onChanged(at(d.localPosition)) : null,
+          onTapUp: enabled ? (d) => onChangeEnd?.call(at(d.localPosition)) : null,
+          onHorizontalDragUpdate: enabled ? (d) => onChanged(at(d.localPosition)) : null,
+          onHorizontalDragEnd: enabled ? (_) => onChangeEnd?.call(value) : null,
+          child: SizedBox(
+            height: 30,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Groove.
+                const Positioned(
+                  left: thumbW / 2,
+                  right: thumbW / 2,
+                  top: 8,
+                  child: SizedBox(
+                    height: 4,
+                    child: Win98Bevel(style: BevelStyle.sunken, color: W98.light, child: SizedBox.expand()),
+                  ),
+                ),
+                // Ticks.
+                for (var i = 0; i <= ticks; i++)
+                  Positioned(
+                    left: thumbW / 2 + track * i / ticks,
+                    top: 24,
+                    child: Container(width: 1, height: 4, color: W98.dark),
+                  ),
+                // Pointer thumb.
+                Positioned(
+                  left: x,
+                  top: 0,
+                  child: Opacity(
+                    opacity: enabled ? 1 : 0.5,
+                    child: const CustomPaint(size: Size(thumbW, thumbH), painter: _TrackThumbPainter()),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The pointed trackbar thumb with its 3D edges.
+class _TrackThumbPainter extends CustomPainter {
+  const _TrackThumbPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height, tip = h - w / 2;
+    final body = Path()
+      ..moveTo(0, 0)
+      ..lineTo(w, 0)
+      ..lineTo(w, tip)
+      ..lineTo(w / 2, h)
+      ..lineTo(0, tip)
+      ..close();
+    canvas.drawPath(body, Paint()..color = W98.face);
+    final hi = Paint()
+      ..color = W98.white
+      ..strokeWidth = 1;
+    final lo = Paint()
+      ..color = W98.dark
+      ..strokeWidth = 1;
+    final mid = Paint()
+      ..color = W98.shadow
+      ..strokeWidth = 1;
+    canvas.drawLine(const Offset(0.5, 0.5), Offset(w - 0.5, 0.5), hi);
+    canvas.drawLine(const Offset(0.5, 0.5), Offset(0.5, tip), hi);
+    canvas.drawLine(Offset(0.5, tip), Offset(w / 2, h - 0.5), hi);
+    canvas.drawLine(Offset(w - 0.5, 0.5), Offset(w - 0.5, tip), lo);
+    canvas.drawLine(Offset(w - 0.5, tip), Offset(w / 2, h - 0.5), lo);
+    canvas.drawLine(Offset(w - 1.5, 1.5), Offset(w - 1.5, tip - 0.5), mid);
+  }
+
+  @override
+  bool shouldRepaint(_TrackThumbPainter old) => false;
 }

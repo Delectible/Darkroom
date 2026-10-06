@@ -29,6 +29,7 @@ class VideoJob {
     required this.durationMs,
     this.rotationTurns = 0,
     this.grain = GrainStrength.normal,
+    this.zoomTrack = const [],
   });
 
   final String id;
@@ -51,6 +52,11 @@ class VideoJob {
   /// Film (Super 8) grain strength.
   final GrainStrength grain;
 
+  /// Zoom motor during the take, flattened [ms, position, ms, position, ...]
+  /// with position 0 (wide) .. 1 (tele). Empty: never zoomed. Drives the
+  /// burned-in camcorder zoom bar.
+  final List<double> zoomTrack;
+
   Map<String, Object?> toJson() => {
     'id': id,
     'cameraId': cameraId,
@@ -65,6 +71,7 @@ class VideoJob {
     'durationMs': durationMs,
     'rotationTurns': rotationTurns,
     'grain': grain.name,
+    'zoomTrack': zoomTrack,
   };
 
   factory VideoJob.fromJson(Map<String, Object?> j) => VideoJob(
@@ -81,6 +88,7 @@ class VideoJob {
     durationMs: j['durationMs']! as int,
     rotationTurns: j['rotationTurns'] as int? ?? 0,
     grain: GrainStrength.fromName(j['grain'] as String?),
+    zoomTrack: [for (final v in (j['zoomTrack'] as List<Object?>? ?? const [])) (v! as num).toDouble()],
   );
 }
 
@@ -197,6 +205,16 @@ class VideoPlanner {
         );
         inputs.addAll(['-framerate', '1', '-start_number', '0', '-i', p.join(job.workDir, 'osd_%05d.png')]);
       }
+      // Camcorder tape OSD: blinking REC, SP + battery, and the zoom bar
+      // exactly as it moved during the take.
+      final extras = <String>[];
+      if (hasOsd && spec.timestampStyle == TimestampStyle.camcorderOsd) {
+        var idx = nextInput + 1;
+        for (final o in CamcorderOsd.render(job.workDir, outW, outH, job.zoomTrack)) {
+          inputs.addAll(['-loop', '1', '-framerate', profile.fps, '-i', o.path]);
+          extras.add(o.overlay(idx++));
+        }
+      }
       graph = VideoFilters.graph(
         look: look,
         crop: crop,
@@ -208,6 +226,7 @@ class VideoPlanner {
         osdW: osdW,
         osdH: osdH,
         rotateTurns: turns,
+        extraOverlays: extras,
       );
     }
 
@@ -373,4 +392,227 @@ class VideoPlanner {
     }
     return (w, h);
   }
+}
+
+/// One burned-in decal: a PNG and how it is overlaid.
+class OsdLayer {
+  const OsdLayer(this.path, {required this.x, required this.y, this.enable});
+
+  final String path;
+
+  /// FFmpeg expressions (may use t).
+  final String x;
+  final String y;
+
+  /// When the decal shows (FFmpeg expression of t); null = always.
+  final String? enable;
+
+  String overlay(int input) =>
+      '[$input:v]overlay=x=\'$x\':y=\'$y\':eval=frame:shortest=1:format=auto'
+      '${enable == null ? '' : ':enable=\'$enable\''}';
+}
+
+/// The 90s camcorder's on-screen display, burned into the tape like the
+/// found footage it imitates.
+class CamcorderOsd {
+  const CamcorderOsd._();
+
+  /// How long the zoom bar lingers after the motor stops (matches the
+  /// viewfinder).
+  static const zoomLinger = 1.5;
+
+  static const _white = [240, 240, 240];
+  static const _shadow = [10, 10, 10];
+
+  static List<OsdLayer> render(String dir, int w, int h, List<double> zoomTrack) {
+    final dot = math.max(1, (h / 150).round());
+    final margin = (h * 0.06).round();
+    final layers = <OsdLayer>[];
+
+    // "● REC" top left, blinking once a second.
+    final rec = _canvas(PixelFont.measureDots('REC') * dot + 12 * dot, (PixelFont.glyphHeight + 2) * dot);
+    final r = (PixelFont.glyphHeight * dot / 2).round();
+    img.fillCircle(rec, x: r + dot, y: r + dot, radius: r, color: img.ColorRgba8(10, 10, 10, 255));
+    img.fillCircle(rec, x: r, y: r, radius: r, color: img.ColorRgba8(235, 30, 30, 255));
+    _text(rec, 'REC', left: 2 * r + 4 * dot, dot: dot);
+    layers.add(
+      OsdLayer(_save(dir, 'osd_rec.png', rec), x: '$margin', y: '$margin', enable: 'lt(mod(t,1),0.6)'),
+    );
+
+    // "SP" and a battery gauge, top right.
+    final spW = PixelFont.measureDots('SP') * dot;
+    final batW = 14 * dot, batH = PixelFont.glyphHeight * dot;
+    final sp = _canvas(spW + 4 * dot + batW + 3 * dot, batH + 2 * dot);
+    _text(sp, 'SP', left: 0, dot: dot);
+    final bx = spW + 4 * dot;
+    for (final (ox, c) in [(dot, _shadow), (0, _white)]) {
+      void box(int x, int y, int bw, int bh) => img.fillRect(
+        sp,
+        x1: x + ox,
+        y1: y + ox,
+        x2: x + ox + bw - 1,
+        y2: y + ox + bh - 1,
+        color: img.ColorRgba8(c[0], c[1], c[2], 255),
+      );
+      box(bx, 0, batW, dot); // outline
+      box(bx, batH - dot, batW, dot);
+      box(bx, 0, dot, batH);
+      box(bx + batW - dot, 0, dot, batH);
+      box(bx + batW, batH ~/ 3, dot * 2, batH ~/ 3); // terminal
+      for (var k = 0; k < 3; k++) {
+        box(bx + 2 * dot + k * 4 * dot, 2 * dot, 3 * dot, batH - 4 * dot); // three bars: full
+      }
+    }
+    layers.add(OsdLayer(_save(dir, 'osd_sp.png', sp), x: '${w - sp.width - margin}', y: '$margin'));
+
+    // Zoom bar: shown while the motor runs (and briefly after).
+    final keys = _simplify(zoomTrack);
+    final visible = _zoomIntervals(zoomTrack);
+    if (keys.length >= 2 && visible.isNotEmpty) {
+      final trackW = (w * 0.42).round(), barH = 7 * dot;
+      final wDots = PixelFont.measureDots('W') * dot, gap = 3 * dot;
+      final bar = _canvas(wDots * 2 + gap * 2 + trackW + dot, barH + dot);
+      _text(bar, 'W', left: 0, top: dot, dot: dot);
+      _text(bar, 'T', left: wDots + gap * 2 + trackW, top: dot, dot: dot);
+      final tx = wDots + gap, mid = barH ~/ 2;
+      for (final (o, c) in [(dot, _shadow), (0, _white)]) {
+        final col = img.ColorRgba8(c[0], c[1], c[2], 255);
+        img.fillRect(
+          bar,
+          x1: tx + o,
+          y1: mid - dot ~/ 2 + o,
+          x2: tx + trackW - 1 + o,
+          y2: mid + (dot - 1) ~/ 2 + o,
+          color: col,
+        );
+        for (var i = 0; i <= 10; i++) {
+          final x = tx + ((trackW - dot) * i / 10).round();
+          final th = i == 0 || i == 10 ? barH : (barH * 0.55).round();
+          img.fillRect(
+            bar,
+            x1: x + o,
+            y1: mid - th ~/ 2 + o,
+            x2: x + dot - 1 + o,
+            y2: mid + th ~/ 2 + o,
+            color: col,
+          );
+        }
+      }
+      final barX = (w - bar.width) ~/ 2, barY = (h * 0.12).round();
+      final show = visible.map((v) => 'between(t,${_f(v.$1)},${_f(v.$2)})').join('+');
+      layers.add(OsdLayer(_save(dir, 'osd_zbar.png', bar), x: '$barX', y: '$barY', enable: show));
+
+      final mark = _canvas(4 * dot, barH + dot);
+      img.fillRect(mark, x1: dot, y1: dot, x2: 4 * dot - 1, y2: barH, color: img.ColorRgba8(10, 10, 10, 255));
+      img.fillRect(
+        mark,
+        x1: 0,
+        y1: 0,
+        x2: 3 * dot - 1,
+        y2: barH - 1,
+        color: img.ColorRgba8(240, 240, 240, 255),
+      );
+      final x0 = barX + tx, span = trackW - 3 * dot;
+      layers.add(
+        OsdLayer(
+          _save(dir, 'osd_zmark.png', mark),
+          x: '$x0+$span*(${positionExpr(keys)})',
+          y: '$barY',
+          enable: show,
+        ),
+      );
+    }
+    return layers;
+  }
+
+  /// Piecewise-linear position over time as a flat sum (no deep nesting).
+  static String positionExpr(List<(double, double)> keys) {
+    final terms = <String>[];
+    for (var i = 0; i + 1 < keys.length; i++) {
+      final (t0, f0) = keys[i];
+      final (t1, f1) = keys[i + 1];
+      if (t1 <= t0) continue;
+      final slope = (f1 - f0) / (t1 - t0);
+      terms.add('gte(t,${_f(t0)})*lt(t,${_f(t1)})*(${_f(f0)}+${_f(slope)}*(t-${_f(t0)}))');
+    }
+    terms.add('gte(t,${_f(keys.last.$1)})*${_f(keys.last.$2)}');
+    return terms.join('+');
+  }
+
+  /// [ms, f, ...] -> (seconds, f) keyframes, collinear runs merged, at most
+  /// ~120 points (Ramer-Douglas-Peucker with a growing tolerance).
+  static List<(double, double)> _simplify(List<double> track) {
+    final pts = <(double, double)>[
+      for (var i = 0; i + 1 < track.length; i += 2) (track[i] / 1000, track[i + 1]),
+    ];
+    if (pts.length <= 2) return pts;
+    var eps = 0.002;
+    var out = _rdp(pts, eps);
+    while (out.length > 120) {
+      eps *= 2;
+      out = _rdp(pts, eps);
+    }
+    return out;
+  }
+
+  static List<(double, double)> _rdp(List<(double, double)> pts, double eps) {
+    if (pts.length < 3) return pts;
+    final (ax, ay) = pts.first;
+    final (bx, by) = pts.last;
+    var worst = 0.0, at = 0;
+    for (var i = 1; i < pts.length - 1; i++) {
+      final (x, y) = pts[i];
+      // Vertical distance from the chord (time is the x axis).
+      final yi = bx == ax ? ay : ay + (by - ay) * (x - ax) / (bx - ax);
+      final d = (y - yi).abs();
+      if (d > worst) {
+        worst = d;
+        at = i;
+      }
+    }
+    if (worst <= eps) return [pts.first, pts.last];
+    final left = _rdp(pts.sublist(0, at + 1), eps);
+    final right = _rdp(pts.sublist(at), eps);
+    return [...left.sublist(0, left.length - 1), ...right];
+  }
+
+  /// Seconds ranges in which the bar is visible: each burst of zoom samples
+  /// (gaps under [zoomLinger] merge) plus the linger after it.
+  static List<(double, double)> _zoomIntervals(List<double> track) {
+    final times = [for (var i = 2; i + 1 < track.length; i += 2) track[i] / 1000];
+    final out = <(double, double)>[];
+    for (final t in times) {
+      if (out.isNotEmpty && t <= out.last.$2) {
+        out[out.length - 1] = (out.last.$1, t + zoomLinger);
+      } else {
+        out.add((t, t + zoomLinger));
+      }
+    }
+    return out;
+  }
+
+  static img.Image _canvas(int w, int h) => img.Image(width: w + 1, height: h + 1, numChannels: 4);
+
+  static void _text(img.Image im, String text, {required int left, int top = 0, required int dot}) {
+    PixelFont.drawToBuffer(
+      im.toUint8List(),
+      width: im.width,
+      height: im.height,
+      channels: 4,
+      text: text,
+      left: left,
+      top: top,
+      dot: dot,
+      rgb: _white,
+      shadow: _shadow,
+    );
+  }
+
+  static String _save(String dir, String name, img.Image im) {
+    final path = p.join(dir, name);
+    File(path).writeAsBytesSync(img.encodePng(im));
+    return path;
+  }
+
+  static String _f(double v) => v.toStringAsFixed(4);
 }

@@ -48,6 +48,10 @@ Read this first. It's the hand-off from the earlier development sessions
   `WRITE_EXTERNAL_STORAGE` (merger conflict with camera_android_camerax).
 - Checks: `flutter analyze` and `flutter test`. If the session has no Flutter
   SDK, just push and read the GitHub Actions result.
+- UI checks without a phone: `test/*_screens_test.dart` pump screens at
+  Pixel 9 Pro size (fail on overflow); `SHOTS=dir FLUTTER_ROOT=<sdk>` also
+  saves PNGs with real fonts. `camcorder_osd_ffmpeg_test` runs the camcorder
+  filtergraph through a desktop ffmpeg when one is installed.
 
 ## Stack
 
@@ -114,12 +118,25 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   motor zoom up to the body's `ZoomSpec.max` (floppy/CCD 3x, flip phone 4x,
   camcorder 10x, capped by the phone). No pinch. Camcorder shows a sliding
   W-T bar on its OSD, stills cameras a "2.4X" readout.
+- Camcorder (`storage: DigitalStorage.floppy`) clips appear on **3½ Floppy
+  (A:)**, not the SD card; copying them to C: is a multi-disk copy ("insert
+  disk 2 of N", N = size / 1.44MB; after 3 swaps it offers to do the rest).
+  With the OSD on, the tape OSD is burned into the video: blinking REC, SP +
+  battery, the clock, and the zoom bar exactly as it moved
+  (`CamcorderOsd` in `video_plan.dart`; the take's zoom track rides on the
+  VideoJob).
+- Win98 screens and dialogs render through `Win98Scale` (1.3x, uniform). The
+  viewer has no swipe: ◀ ▶, a zoom trackbar + Reset Zoom (pinch still
+  works); clips play in `Win98MediaPlayer` (|◀ ◀◀ ▶/❚❚ ■ ▶▶ ▶|, hold ◀◀/▶▶ to
+  scan with VHS noise bars). The status bar shows the camera from EXIF
+  (photos get Make/Model on export).
 - Toolbar button says **Transfer** (not Eject). Drive is named **SD Card**.
   Viewer has ◀ ▶ arrows. File/Edit/View/Help menus have settings, app info
   and easter eggs.
 
 UI
-- Swipe up on the camera opens the film/camera carousel; swipe down closes it.
+- Swipe up on the camera opens the film/camera carousel (not from the bottom
+  ~56dp: that's the system home gesture); swipe down closes it.
   Carousel works in landscape. In the carousel, sideways swipes work anywhere
   on screen; closing needs a clearly downward swipe (deadzone).
 - On the camera screen, swiping sideways on the stock name or the film box

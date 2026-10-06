@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/media_repository.dart';
+import '../../../../core/device/physical_orientation.dart';
 import '../../../../core/device/upright.dart';
 import '../../../../core/processing/photo_pipeline.dart';
 import '../../../../core/providers.dart';
@@ -291,25 +294,33 @@ class FlashButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mode = ref.watch(appModeProvider);
     final flash = ref.watch(activeFlashProvider);
-    return BodyButton(
-      tooltip: 'Flash',
-      onTap: () => unawaited(ref.read(flashProvider.notifier).cycle(mode)),
-      child: Upright(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 160),
-              transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
-              child: Icon(key: ValueKey(flash), switch (flash) {
-                FlashSetting.auto => Icons.flash_auto,
-                FlashSetting.on => Icons.flash_on,
-                FlashSetting.off => Icons.flash_off,
-              }),
-            ),
-            const SizedBox(width: 2),
-            Text(flash.name.toUpperCase()),
-          ],
+    // Held sideways the content rotates in place: only the icon (it says
+    // auto / on / off by itself) fits upright inside the fixed-size key.
+    final sideways = uprightQuarterTurns(ref.watch(physicalOrientationProvider)).isOdd;
+    final icon = AnimatedSwitcher(
+      duration: const Duration(milliseconds: 160),
+      transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
+      child: Icon(key: ValueKey(flash), switch (flash) {
+        FlashSetting.auto => Icons.flash_auto,
+        FlashSetting.on => Icons.flash_on,
+        FlashSetting.off => Icons.flash_off,
+      }),
+    );
+    return SizedBox(
+      width: 76,
+      child: BodyButton(
+        tooltip: 'Flash',
+        onTap: () => unawaited(ref.read(flashProvider.notifier).cycle(mode)),
+        child: Upright(
+          child: sideways
+              ? icon
+              : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [icon, const SizedBox(width: 2), Text(flash.name.toUpperCase())],
+                  ),
+                ),
         ),
       ),
     );
@@ -326,14 +337,25 @@ class AspectButton extends ConsumerWidget {
     final spec = ref.watch(activeSpecProvider);
     final local = ref.watch(activeCameraSettingsProvider);
     final aspect = spec.aspectLocked ? spec.defaultAspect : local.aspect;
-    return BodyButton(
-      tooltip: 'Aspect ratio',
-      enabled: !spec.aspectLocked,
-      onTap: onCycle,
-      child: Upright(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [if (spec.aspectLocked) const Icon(Icons.lock, size: 13), Text(aspect.label)],
+    final sideways = uprightQuarterTurns(ref.watch(physicalOrientationProvider)).isOdd;
+    return SizedBox(
+      width: 64,
+      child: BodyButton(
+        tooltip: 'Aspect ratio',
+        enabled: !spec.aspectLocked,
+        onTap: onCycle,
+        child: Upright(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // The lock would make the rotated label too long for the key.
+                if (spec.aspectLocked && !sideways) const Icon(Icons.lock, size: 13),
+                Text(aspect.label),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -602,9 +624,7 @@ class ZoomRocker extends ConsumerWidget {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: pressed
-                    ? [palette.bodyShadow, palette.body]
-                    : [palette.bodyHighlight, palette.body],
+                colors: pressed ? [palette.bodyShadow, palette.body] : [palette.bodyHighlight, palette.body],
               ),
             ),
             alignment: Alignment.center,
@@ -647,10 +667,157 @@ class ZoomRocker extends ConsumerWidget {
           const SizedBox(height: 5),
           Text(
             'ZOOM',
-            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1, color: palette.textMuted),
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1,
+              color: palette.textMuted,
+            ),
           ),
         ],
       ),
     );
   }
+}
+
+/// Front / back camera: a small knurled dial with a lens in it. Tapping it
+/// turns the dial half a turn, like flipping the lens around.
+class LensFlipButton extends ConsumerStatefulWidget {
+  const LensFlipButton({super.key, required this.enabled});
+
+  final bool enabled;
+
+  @override
+  ConsumerState<LensFlipButton> createState() => _LensFlipButtonState();
+}
+
+class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
+  double _turns = 0;
+  bool _down = false;
+
+  void _flip() {
+    unawaited(HapticFeedback.mediumImpact());
+    setState(() => _turns += 0.5);
+    ref.read(lensProvider.notifier).toggle();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = RetroPalette.of(context);
+    final front = ref.watch(lensProvider) == CameraLensDirection.front;
+    return Semantics(
+      button: true,
+      label: front ? 'Use back camera' : 'Use front camera',
+      child: GestureDetector(
+        onTapDown: widget.enabled ? (_) => setState(() => _down = true) : null,
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: widget.enabled
+            ? (_) {
+                setState(() => _down = false);
+                _flip();
+              }
+            : null,
+        child: Opacity(
+          opacity: widget.enabled ? 1 : 0.45,
+          child: AnimatedScale(
+            scale: _down ? 0.92 : 1,
+            duration: const Duration(milliseconds: 70),
+            child: AnimatedRotation(
+              turns: _turns,
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutBack,
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: CustomPaint(
+                  painter: _LensFlipPainter(
+                    ring: palette.metal,
+                    ringDark: palette.metalDark,
+                    front: front,
+                    accent: palette.accent,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LensFlipPainter extends CustomPainter {
+  _LensFlipPainter({required this.ring, required this.ringDark, required this.front, required this.accent});
+
+  final Color ring;
+  final Color ringDark;
+  final bool front;
+  final Color accent;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = size.shortestSide / 2;
+    canvas.drawCircle(
+      c.translate(0, 2),
+      r,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.4)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    // Knurled dial.
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = SweepGradient(
+          colors: [ring, ringDark, ring, ringDark, ring],
+        ).createShader(Rect.fromCircle(center: c, radius: r)),
+    );
+    final knurl = Paint()
+      ..color = Colors.black.withValues(alpha: 0.22)
+      ..strokeWidth = 1;
+    for (var i = 0; i < 40; i++) {
+      final d = Offset.fromDirection(i * math.pi * 2 / 40);
+      canvas.drawLine(c + d * (r - 3.5), c + d * r, knurl);
+    }
+    // Two curved arrows chasing each other round the lens.
+    final arrow = Paint()
+      ..color = Colors.black.withValues(alpha: 0.55)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeCap = StrokeCap.round;
+    final ar = r * 0.66;
+    for (final start in [-math.pi * 0.9, math.pi * 0.1]) {
+      const sweep = math.pi * 0.62;
+      canvas.drawArc(Rect.fromCircle(center: c, radius: ar), start, sweep, false, arrow);
+      final tip = c + Offset.fromDirection(start + sweep) * ar;
+      final dir = start + sweep + math.pi / 2;
+      final head = Path()
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(tip.dx - math.cos(dir - 0.5) * 4, tip.dy - math.sin(dir - 0.5) * 4)
+        ..moveTo(tip.dx, tip.dy)
+        ..lineTo(tip.dx - math.cos(dir + 0.5) * 4, tip.dy - math.sin(dir + 0.5) * 4);
+      canvas.drawPath(head, arrow);
+    }
+    // The lens: dark coated glass with a highlight; a tiny lamp shows which
+    // way it faces.
+    final lr = r * 0.36;
+    canvas.drawCircle(c, lr + 1.5, Paint()..color = const Color(0xFF1A1A1A));
+    canvas.drawCircle(
+      c,
+      lr,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.3, -0.4),
+          colors: [Color(0xFF3B4A6B), Color(0xFF0B0F18)],
+        ).createShader(Rect.fromCircle(center: c, radius: lr)),
+    );
+    canvas.drawCircle(c + Offset(-lr * 0.35, -lr * 0.35), lr * 0.22, Paint()..color = Colors.white70);
+    if (front) canvas.drawCircle(c + Offset(r * 0.62, -r * 0.62), 2.6, Paint()..color = accent);
+  }
+
+  @override
+  bool shouldRepaint(_LensFlipPainter old) =>
+      old.front != front || old.ring != ring || old.ringDark != ringDark || old.accent != accent;
 }

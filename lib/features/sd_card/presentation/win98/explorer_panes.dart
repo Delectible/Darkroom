@@ -11,7 +11,8 @@ import 'pixel_icons.dart';
 import 'win98_widgets.dart';
 
 /// The three places the explorer can show.
-enum ExplorerPlace { sd, c, myComputer }
+/// Tab order in the explorer.
+enum ExplorerPlace { sd, floppy, c, myComputer }
 
 /// Files on the card are listed but locked; files on C: open normally.
 class ExplorerFilePane extends StatelessWidget {
@@ -373,7 +374,14 @@ class ExplorerFolderTree extends StatelessWidget {
             selected: place == ExplorerPlace.myComputer,
             onTap: () => onSelect(ExplorerPlace.myComputer),
           ),
-          node(1, PixelIcon.floppy, '3½ Floppy (A:)', dim: true),
+          node(1, PixelIcon.floppy, '3½ Floppy (A:)', onTap: () => onSelect(ExplorerPlace.floppy)),
+          node(
+            2,
+            PixelIcon.folderOpen,
+            'TAPE01',
+            selected: place == ExplorerPlace.floppy,
+            onTap: () => onSelect(ExplorerPlace.floppy),
+          ),
           node(1, PixelIcon.hardDrive, 'Local Disk (C:)', onTap: () => onSelect(ExplorerPlace.c)),
           node(2, PixelIcon.folder, 'My Documents', onTap: () => onSelect(ExplorerPlace.c)),
           node(
@@ -404,6 +412,7 @@ class ExplorerMyComputerPane extends StatelessWidget {
     required this.sdBytes,
     required this.cBytes,
     required this.sdCount,
+    required this.floppyCount,
     required this.onOpenSd,
     required this.onOpenC,
     required this.onOpenFloppy,
@@ -412,6 +421,7 @@ class ExplorerMyComputerPane extends StatelessWidget {
   final int sdBytes;
   final int cBytes;
   final int sdCount;
+  final int floppyCount;
   final VoidCallback onOpenSd;
   final VoidCallback onOpenC;
   final VoidCallback onOpenFloppy;
@@ -441,7 +451,15 @@ class ExplorerMyComputerPane extends StatelessWidget {
         spacing: 12,
         runSpacing: 16,
         children: [
-          drive(PixelIcon.floppy, '3½ Floppy (A:)', dim: true, onOpen: onOpenFloppy),
+          drive(
+            PixelIcon.floppy,
+            floppyCount == 0 ? '3½ Floppy (A:)\n(no disk)' : '3½ Floppy (A:)',
+            dim: floppyCount == 0,
+            onOpen: onOpenFloppy,
+            extra: floppyCount == 0
+                ? null
+                : Text('$floppyCount tape clip(s)', style: const TextStyle(fontSize: 10)),
+          ),
           drive(
             PixelIcon.hardDrive,
             'Local Disk (C:)',

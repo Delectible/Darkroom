@@ -581,9 +581,32 @@ class PinnedReel extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, box) {
                 final size = box.biggest;
+                final thumb = item.thumbPath;
                 return Stack(
                   clipBehavior: Clip.none,
                   children: [
+                    // The tail of film left hanging from behind the reel,
+                    // its frames showing how the clip opens.
+                    if (thumb != null)
+                      Positioned(
+                        left: size.width * 0.56,
+                        top: size.height * 0.5,
+                        width: size.width * 0.3,
+                        child: Transform.rotate(
+                          angle: -0.32 + angle * 0.2,
+                          alignment: Alignment.topCenter,
+                          child: FilmTail(
+                            frames: 2,
+                            frame: Image.file(
+                              File(thumb),
+                              fit: BoxFit.cover,
+                              cacheWidth: 160,
+                              gaplessPlayback: true,
+                              errorBuilder: (_, _, _) => const ColoredBox(color: Color(0xFF3A2A20)),
+                            ),
+                          ),
+                        ),
+                      ),
                     Positioned.fill(
                       child: CustomPaint(
                         painter: ReelPainter(
@@ -732,6 +755,28 @@ class _Tray extends ConsumerWidget {
     final ss = (left.inSeconds % 60).clamp(0, 59).toString().padLeft(2, '0');
     final thumb = item.thumbPath;
 
+    if (item.isVideo && !failed) {
+      return SizedBox(
+        width: 84,
+        child: Column(
+          children: [
+            Expanded(
+              child: Center(
+                child: AspectRatio(aspectRatio: 1, child: _TankTray(progress: processing ? 0 : progress)),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              processing && left.isNegative ? 'fixing…' : '${DevelopingTankPainter.stageFor(progress)} $mm:$ss',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (spec.isInstant && !failed) {
       // Instant film develops in the light: the picture surfaces through the
       // blue-grey sheet in front of you (eased between the 1 s ticks).
@@ -828,6 +873,45 @@ class _Tray extends ConsumerWidget {
               style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A reel turning in its developing tank (agitation), eased between ticks.
+class _TankTray extends StatefulWidget {
+  const _TankTray({required this.progress});
+
+  final double progress;
+
+  @override
+  State<_TankTray> createState() => _TankTrayState();
+}
+
+class _TankTrayState extends State<_TankTray> with SingleTickerProviderStateMixin {
+  late final AnimationController _spin = AnimationController(vsync: this, duration: const Duration(seconds: 6))
+    ..repeat();
+
+  @override
+  void dispose() {
+    _spin.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: widget.progress),
+      duration: const Duration(seconds: 1),
+      builder: (context, p, _) => AnimatedBuilder(
+        animation: _spin,
+        builder: (context, _) => CustomPaint(
+          painter: DevelopingTankPainter(
+            progress: p,
+            // Inversion-style agitation: a few turns one way, then back.
+            spin: math.sin(_spin.value * math.pi * 2) * 2.4,
+          ),
         ),
       ),
     );

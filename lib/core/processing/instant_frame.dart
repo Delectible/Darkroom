@@ -59,7 +59,11 @@ class InstantFrame {
   /// Renders the framed print (picture + border + note) to a JPEG at
   /// [outPath]. Runs the drawing on the UI isolate (needs the font engine)
   /// and the JPEG encode on a background isolate.
-  static Future<String> exportJpeg({required String picturePath, required String? note, required String outPath}) async {
+  static Future<String> exportJpeg({
+    required String picturePath,
+    required String? note,
+    required String outPath,
+  }) async {
     final codec = await ui.instantiateImageCodec(await File(picturePath).readAsBytes());
     final picture = (await codec.getNextFrame()).image;
     codec.dispose();
@@ -70,11 +74,7 @@ class InstantFrame {
     final canvas = Canvas(recorder);
     canvas.drawRect(Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint()..color = paper);
     final dst = pictureRect(s);
-    final src = Rect.fromCenter(
-      center: Offset(picture.width / 2, picture.height / 2),
-      width: s,
-      height: s,
-    );
+    final src = Rect.fromCenter(center: Offset(picture.width / 2, picture.height / 2), width: s, height: s);
     canvas.drawImageRect(picture, src, dst, Paint()..filterQuality = FilterQuality.high);
     // The picture sits a hair below the paper surface.
     canvas.drawRect(

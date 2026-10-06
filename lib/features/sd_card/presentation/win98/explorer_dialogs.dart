@@ -41,7 +41,10 @@ Future<int?> win98Box(
 
 /// "Copying..." with the flying-paper animation.
 class CopyingDialog extends ConsumerStatefulWidget {
-  const CopyingDialog({super.key});
+  const CopyingDialog({super.key, this.fromFloppy = false});
+
+  /// Camcorder clips come off the floppies in A: instead of the card.
+  final bool fromFloppy;
 
   @override
   ConsumerState<CopyingDialog> createState() => _CopyingDialogState();
@@ -90,10 +93,13 @@ class _CopyingDialogState extends ConsumerState<CopyingDialog> with SingleTicker
                               final y = 14 - math.sin(_fly.value * math.pi) * 14;
                               return Stack(
                                 children: [
-                                  const Positioned(
+                                  Positioned(
                                     left: 0,
                                     top: 8,
-                                    child: PixelIconView(PixelIcon.removableDrive, size: 32),
+                                    child: PixelIconView(
+                                      widget.fromFloppy ? PixelIcon.floppy : PixelIcon.removableDrive,
+                                      size: 32,
+                                    ),
                                   ),
                                   const Positioned(
                                     right: 0,
@@ -113,7 +119,10 @@ class _CopyingDialogState extends ConsumerState<CopyingDialog> with SingleTicker
                       ),
                       const SizedBox(height: 8),
                       Text(t?.current ?? 'Preparing…', style: W98.text),
-                      const Text("From 'SD Card (E:)' to 'C:\\My Documents\\Darkroom'", style: W98.text),
+                      Text(
+                        "From '${widget.fromFloppy ? '3½ Floppy (A:)' : 'SD Card (E:)'}' to 'C:\\My Documents\\Darkroom'",
+                        style: W98.text,
+                      ),
                       const SizedBox(height: 8),
                       Win98ProgressBar(value: t?.progress ?? 0),
                       const SizedBox(height: 4),
@@ -669,75 +678,77 @@ Future<StartAction?> showStartMenu(BuildContext context) {
       position: Tween(begin: const Offset(0, 0.08), end: Offset.zero).animate(a),
       child: child,
     ),
-    pageBuilder: (context, _, _) => Stack(
-      children: [
-        Positioned(
-          left: 6,
-          bottom: bottom,
-          child: Material(
-            type: MaterialType.transparency,
-            child: Win98Bevel(
-              style: BevelStyle.window,
-              padding: const EdgeInsets.all(2),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      width: 24,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [W98.navy, W98.titleEnd],
+    pageBuilder: (context, _, _) => Win98Scale(
+      child: Stack(
+        children: [
+          Positioned(
+            left: 6,
+            bottom: bottom,
+            child: Material(
+              type: MaterialType.transparency,
+              child: Win98Bevel(
+                style: BevelStyle.window,
+                padding: const EdgeInsets.all(2),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        width: 24,
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [W98.navy, W98.titleEnd],
+                          ),
                         ),
-                      ),
-                      alignment: Alignment.bottomCenter,
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: RotatedBox(
-                        quarterTurns: 3,
-                        child: Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Darkroom',
-                                style: W98.text.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 16,
+                        alignment: Alignment.bottomCenter,
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: RotatedBox(
+                          quarterTurns: 3,
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Darkroom',
+                                  style: W98.text.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                              TextSpan(
-                                text: '98',
-                                style: W98.text.copyWith(color: Colors.white70, fontSize: 16),
-                              ),
-                            ],
+                                TextSpan(
+                                  text: '98',
+                                  style: W98.text.copyWith(color: Colors.white70, fontSize: 16),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(
-                      width: 190,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _startItem(context, PixelIcon.camera, 'Camera', StartAction.camera),
-                          _startItem(context, PixelIcon.folder, 'Documents', StartAction.documents),
-                          _startItem(context, PixelIcon.views, 'Settings', StartAction.options),
-                          _startItem(context, PixelIcon.question, 'Help', StartAction.help),
-                          _startItem(context, PixelIcon.upFolder, 'Run...', StartAction.run),
-                          const Divider(height: 6, color: W98.shadow),
-                          _startItem(context, PixelIcon.computer, 'Shut Down...', StartAction.shutDown),
-                        ],
+                      SizedBox(
+                        width: 190,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _startItem(context, PixelIcon.camera, 'Camera', StartAction.camera),
+                            _startItem(context, PixelIcon.folder, 'Documents', StartAction.documents),
+                            _startItem(context, PixelIcon.views, 'Settings', StartAction.options),
+                            _startItem(context, PixelIcon.question, 'Help', StartAction.help),
+                            _startItem(context, PixelIcon.upFolder, 'Run...', StartAction.run),
+                            const Divider(height: 6, color: W98.shadow),
+                            _startItem(context, PixelIcon.computer, 'Shut Down...', StartAction.shutDown),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -906,4 +917,162 @@ Future<void> showBlueScreen(BuildContext context) {
       ),
     ),
   );
+}
+
+// -----------------------------------------------------------------------------
+// Floppy spanning (camcorder tapes live on 3½" disks in A:)
+// -----------------------------------------------------------------------------
+
+/// Copies a tape capture off a stack of floppies: reads a disk, then asks
+/// for the next one ("Please insert disk 2 of 5 into drive A:"). After a few
+/// swaps the program takes pity and swaps the rest itself. Returns false if
+/// the user cancels.
+Future<bool> showFloppySpan(BuildContext context, {required int disks, required String label}) async {
+  final r = await showWin98Window<bool>(
+    context,
+    title: 'Copying from 3½ Floppy (A:)',
+    icon: const PixelIconView(PixelIcon.floppy),
+    builder: (context) => _FloppySpan(disks: disks, label: label),
+  );
+  return r ?? false;
+}
+
+class _FloppySpan extends StatefulWidget {
+  const _FloppySpan({required this.disks, required this.label});
+
+  final int disks;
+  final String label;
+
+  @override
+  State<_FloppySpan> createState() => _FloppySpanState();
+}
+
+enum _SpanPhase { reading, insert, autoSwap }
+
+class _FloppySpanState extends State<_FloppySpan> with SingleTickerProviderStateMixin {
+  /// Prompts before "Windows" swaps the remaining disks itself.
+  static const _manualSwaps = 3;
+
+  late final AnimationController _read = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1100),
+  )..addStatusListener(_onRead);
+  int _disk = 1;
+  int _swaps = 0;
+  _SpanPhase _phase = _SpanPhase.reading;
+  bool _auto = false;
+  Timer? _grind;
+
+  @override
+  void initState() {
+    super.initState();
+    _startReading();
+  }
+
+  @override
+  void dispose() {
+    _grind?.cancel();
+    _read.dispose();
+    super.dispose();
+  }
+
+  void _startReading() {
+    setState(() => _phase = _SpanPhase.reading);
+    _read.duration = Duration(milliseconds: _auto ? 350 : 1100);
+    _read.forward(from: 0);
+    // The drive's head chatter, felt rather than heard.
+    _grind?.cancel();
+    _grind = Timer.periodic(
+      const Duration(milliseconds: 140),
+      (_) => unawaited(HapticFeedback.selectionClick()),
+    );
+  }
+
+  void _onRead(AnimationStatus s) {
+    if (s != AnimationStatus.completed || !mounted) return;
+    _grind?.cancel();
+    if (_disk >= widget.disks) {
+      Navigator.of(context).pop(true);
+      return;
+    }
+    _disk++;
+    if (_auto) return _startReading();
+    if (_swaps >= _manualSwaps && widget.disks - _disk >= 1) {
+      setState(() => _phase = _SpanPhase.autoSwap);
+      return;
+    }
+    unawaited(HapticFeedback.mediumImpact()); // disk ejects
+    setState(() => _phase = _SpanPhase.insert);
+  }
+
+  void _inserted() {
+    _swaps++;
+    unawaited(HapticFeedback.heavyImpact()); // clunk
+    _startReading();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final n = widget.disks;
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: AnimatedBuilder(
+        animation: _read,
+        builder: (context, _) {
+          final progress = ((_disk - 1) + (_phase == _SpanPhase.reading ? _read.value : 0)) / n;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const PixelIconView(PixelIcon.floppy, size: 32),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(switch (_phase) {
+                      _SpanPhase.reading => 'Reading ${widget.label}\nDisk $_disk of $n…',
+                      _SpanPhase.insert =>
+                        'Please insert disk $_disk of $n into drive A:\n\n'
+                            'Label: TAPE01 · DISK $_disk',
+                      _SpanPhase.autoSwap =>
+                        "You've got the hang of this.\n\n"
+                            'Darkroom will swap the remaining ${n - _disk + 1} disk(s) for you.',
+                    }),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Win98ProgressBar(value: progress),
+              const SizedBox(height: 4),
+              Text(
+                '${(progress * 100).round()}% · ${formatBytes((progress * n * floppyCapacityBytes).round())} read',
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (_phase == _SpanPhase.insert)
+                    Win98Button(minWidth: 72, onPressed: _inserted, child: const Text('OK')),
+                  if (_phase == _SpanPhase.autoSwap)
+                    Win98Button(
+                      minWidth: 72,
+                      onPressed: () {
+                        _auto = true;
+                        _startReading();
+                      },
+                      child: const Text('Thanks!'),
+                    ),
+                  const SizedBox(width: 6),
+                  Win98Button(
+                    minWidth: 72,
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }

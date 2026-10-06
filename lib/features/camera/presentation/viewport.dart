@@ -411,7 +411,9 @@ class _HudOverlay extends ConsumerWidget {
                 left: 0,
                 right: 0,
                 top: box.maxHeight * 0.12,
-                child: Center(child: _ZoomIndicator(bar: spec.recordsVideo, short: short)),
+                child: Center(
+                  child: _ZoomIndicator(bar: spec.recordsVideo, short: short),
+                ),
               ),
             if (timestamp && spec.supportsTimestamp)
               Positioned(
@@ -479,7 +481,12 @@ class _ZoomIndicatorState extends ConsumerState<_ZoomIndicator> {
                 PixelText('T', dot: dot, color: Colors.white, shadow: Colors.black),
               ],
             )
-          : PixelText('${zoom.level.toStringAsFixed(1)}X', dot: dot, color: Colors.white, shadow: Colors.black),
+          : PixelText(
+              '${zoom.level.toStringAsFixed(1)}X',
+              dot: dot,
+              color: Colors.white,
+              shadow: Colors.black,
+            ),
     );
   }
 }

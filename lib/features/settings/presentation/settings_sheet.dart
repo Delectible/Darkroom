@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/upright.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../../core/settings/settings_repository.dart';
@@ -14,17 +15,21 @@ import '../application/settings_controllers.dart';
 
 Future<void> showSettingsSheet(BuildContext context) {
   final palette = RetroPalette.of(context);
-  return showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
+  return showUprightSheet<void>(
+    context,
     backgroundColor: palette.body,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-    builder: (_) => Theme(data: palette.toTheme(), child: const _SettingsSheet()),
+    builder: (_, {required landscape}) => Theme(
+      data: palette.toTheme(),
+      child: _SettingsSheet(landscape: landscape),
+    ),
   );
 }
 
 class _SettingsSheet extends ConsumerWidget {
-  const _SettingsSheet();
+  const _SettingsSheet({required this.landscape});
+
+  /// Held sideways: a fixed panel instead of a draggable sheet.
+  final bool landscape;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,64 +39,70 @@ class _SettingsSheet extends ConsumerWidget {
     final mode = ref.watch(appModeProvider);
     final cams = ref.watch(cameraSettingsProvider);
 
+    Widget list(ScrollController? scroll) => ListView(
+      controller: scroll,
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
+      children: [
+        Center(
+          child: Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(color: p.textMuted, borderRadius: BorderRadius.circular(2)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _Heading('GLOBAL', p),
+        _Toggle(
+          title: 'Darkroom development',
+          subtitle: global.darkroomEnabled
+              ? 'Film shots take ${CameraSpec.defaultDevelopTime.inMinutes} minutes to develop '
+                    '(instant prints: under a minute).'
+              : 'Film shots develop instantly.',
+          value: global.darkroomEnabled,
+          onChanged: (v) => unawaited(g.setDarkroomEnabled(v)),
+        ),
+        _Toggle(
+          title: 'Notifications',
+          subtitle: 'Tell me when prints finish developing.',
+          value: global.notificationsEnabled,
+          onChanged: (v) async {
+            final ok = await g.setNotificationsEnabled(v);
+            if (!ok && context.mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Notifications are blocked in system settings.')));
+            }
+          },
+        ),
+        _Toggle(
+          title: 'Save original unfiltered copy',
+          subtitle: "Also save the cropped, un-graded photo to 'Darkroom Originals'.",
+          value: global.saveOriginalCopy,
+          onChanged: (v) => unawaited(g.setSaveOriginalCopy(v)),
+        ),
+        _Toggle(
+          title: 'High-resolution film',
+          subtitle:
+              'Sharper film prints (4K sensor mode). Smoother preview when off — best for older phones.',
+          value: global.highResFilm,
+          onChanged: (v) => unawaited(g.setHighResFilm(v)),
+        ),
+        const SizedBox(height: 18),
+        _Heading(mode == AppMode.film ? 'FILM STOCKS' : 'CAMERAS', p),
+        for (final spec in CameraCatalog.forMode(mode))
+          _CameraSettingsTile(spec: spec, settings: cams[spec.id] ?? CameraLocalSettings.defaultsFor(spec)),
+      ],
+    );
+    if (landscape) {
+      return LayoutBuilder(
+        builder: (context, box) => SizedBox(height: box.maxHeight * 0.92, child: list(null)),
+      );
+    }
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.7,
       maxChildSize: 0.92,
-      builder: (context, scroll) => ListView(
-        controller: scroll,
-        padding: const EdgeInsets.fromLTRB(20, 10, 20, 32),
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: p.textMuted, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _Heading('GLOBAL', p),
-          _Toggle(
-            title: 'Darkroom development',
-            subtitle: global.darkroomEnabled
-                ? 'Film shots take ${CameraSpec.defaultDevelopTime.inMinutes} minutes to develop '
-                      '(instant prints: under a minute).'
-                : 'Film shots develop instantly.',
-            value: global.darkroomEnabled,
-            onChanged: (v) => unawaited(g.setDarkroomEnabled(v)),
-          ),
-          _Toggle(
-            title: 'Notifications',
-            subtitle: 'Tell me when prints finish developing.',
-            value: global.notificationsEnabled,
-            onChanged: (v) async {
-              final ok = await g.setNotificationsEnabled(v);
-              if (!ok && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notifications are blocked in system settings.')),
-                );
-              }
-            },
-          ),
-          _Toggle(
-            title: 'Save original unfiltered copy',
-            subtitle: "Also save the cropped, un-graded photo to 'Darkroom Originals'.",
-            value: global.saveOriginalCopy,
-            onChanged: (v) => unawaited(g.setSaveOriginalCopy(v)),
-          ),
-          _Toggle(
-            title: 'High-resolution film',
-            subtitle:
-                'Sharper film prints (4K sensor mode). Smoother preview when off — best for older phones.',
-            value: global.highResFilm,
-            onChanged: (v) => unawaited(g.setHighResFilm(v)),
-          ),
-          const SizedBox(height: 18),
-          _Heading(mode == AppMode.film ? 'FILM STOCKS' : 'CAMERAS', p),
-          for (final spec in CameraCatalog.forMode(mode))
-            _CameraSettingsTile(spec: spec, settings: cams[spec.id] ?? CameraLocalSettings.defaultsFor(spec)),
-        ],
-      ),
+      builder: (context, scroll) => list(scroll),
     );
   }
 }
@@ -204,7 +215,7 @@ class _CameraSettingsTile extends ConsumerWidget {
   static String _tsDescription(TimestampStyle s) => switch (s) {
     TimestampStyle.ledDate => "Orange LED date imprint ('26 10 05)",
     TimestampStyle.phone => 'Date & time in the corner',
-    TimestampStyle.camcorderOsd => 'Running OSD clock burned into the tape',
+    TimestampStyle.camcorderOsd => 'Tape OSD burned in: clock, REC, battery and zoom bar',
     TimestampStyle.none => '',
   };
 }

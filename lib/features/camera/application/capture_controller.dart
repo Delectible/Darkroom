@@ -13,6 +13,7 @@ import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
 import 'camera_session_controller.dart';
 import 'camera_ui_state.dart';
+import 'zoom_controller.dart';
 
 @immutable
 class CaptureState {
@@ -56,10 +57,27 @@ class CaptureController extends Notifier<CaptureState> {
   Timer? _maxLengthTimer;
   CaptureContext? _recordingContext;
 
+  /// Zoom motor positions during the current take (see VideoJob.zoomTrack).
+  List<double>? _zoomTrack;
+
+  void _recordZoom(ZoomState z) {
+    final track = _zoomTrack;
+    final since = state.recordingSince;
+    if (track == null || since == null) return;
+    final ms = DateTime.now().difference(since).inMilliseconds.toDouble();
+    // ~20 samples a second is plenty: the motor moves linearly between them.
+    final lastMs = track.length >= 2 ? track[track.length - 2] : -1e9;
+    if (z.direction != 0 && ms - lastMs < 50) return;
+    track
+      ..add(ms)
+      ..add(double.parse(z.fraction.toStringAsFixed(4)));
+  }
+
   @override
   CaptureState build() {
     final session = ref.read(cameraSessionProvider.notifier);
     session.beforeRelease = _finaliseRecordingOn;
+    ref.listen<ZoomState>(zoomProvider, (_, z) => _recordZoom(z));
     ref.onDispose(() {
       _maxLengthTimer?.cancel();
       session.beforeRelease = null;
@@ -156,6 +174,7 @@ class CaptureController extends Notifier<CaptureState> {
       await c.startVideoRecording();
       _recordingContext = ctx;
       state = state.copyWith(recordingSince: DateTime.now());
+      _zoomTrack = spec.zoom == null ? null : [0, ref.read(zoomProvider).fraction];
       _maxLengthTimer?.cancel();
       _maxLengthTimer = Timer(Duration(seconds: spec.videoMaxSeconds), stopRecording);
     } on CameraException catch (e) {
@@ -181,6 +200,8 @@ class CaptureController extends Notifier<CaptureState> {
     final since = state.recordingSince ?? DateTime.now();
     final ctx = _recordingContext ?? _context(c);
     _recordingContext = null;
+    final zoomTrack = _zoomTrack ?? const <double>[];
+    _zoomTrack = null;
     state = state.copyWith(clearRecording: true);
     try {
       final file = await c.stopVideoRecording();
@@ -197,7 +218,14 @@ class CaptureController extends Notifier<CaptureState> {
       }
       await ref
           .read(captureProcessorProvider)
-          .enqueueVideo(file.path, ctx, startedAt: since, duration: DateTime.now().difference(since));
+          .enqueueVideo(
+            file.path,
+            ctx,
+            startedAt: since,
+            duration: DateTime.now().difference(since),
+            // Only worth burning in if the zoom actually moved.
+            zoomTrack: zoomTrack.length > 2 ? zoomTrack : const [],
+          );
       unawaited(_maybeAskNotificationPermission(ctx));
     } on CameraException catch (e) {
       state = state.copyWith(message: 'Recording failed: ${e.description ?? e.code}');

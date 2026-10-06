@@ -62,10 +62,15 @@ class InstantPrint extends StatelessWidget {
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        if (p >= 1) picture else ColorFiltered(colorFilter: _saturation(p * p), child: picture),
+                        if (p >= 1)
+                          picture
+                        else
+                          ColorFiltered(colorFilter: _saturation(p * p), child: picture),
                         if (p < 1)
                           ColoredBox(
-                            color: _undeveloped.withValues(alpha: (1 - Curves.easeOut.transform(p)).clamp(0, 1)),
+                            color: _undeveloped.withValues(
+                              alpha: (1 - Curves.easeOut.transform(p)).clamp(0, 1),
+                            ),
                           ),
                         const DecoratedBox(
                           decoration: BoxDecoration(
@@ -89,9 +94,9 @@ class InstantPrint extends StatelessWidget {
                                   ? const SizedBox.shrink()
                                   : Text(
                                       'tap to write…',
-                                      style: InstantFrame.noteStyle(s).copyWith(
-                                        color: InstantFrame.ink.withValues(alpha: 0.25),
-                                      ),
+                                      style: InstantFrame.noteStyle(
+                                        s,
+                                      ).copyWith(color: InstantFrame.ink.withValues(alpha: 0.25)),
                                     ))
                             : SizedBox(
                                 // Same line width as the exported file.

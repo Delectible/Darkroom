@@ -27,13 +27,14 @@ class ZoomState {
   /// 0 at the wide end, 1 at the tele end (log scale, as the motor feels).
   double get fraction => canZoom ? math.log(level / min) / math.log(max / min) : 0;
 
-  ZoomState copyWith({double? level, double? min, double? max, int? direction, DateTime? changedAt}) => ZoomState(
-    level: level ?? this.level,
-    min: min ?? this.min,
-    max: max ?? this.max,
-    direction: direction ?? this.direction,
-    changedAt: changedAt ?? this.changedAt,
-  );
+  ZoomState copyWith({double? level, double? min, double? max, int? direction, DateTime? changedAt}) =>
+      ZoomState(
+        level: level ?? this.level,
+        min: min ?? this.min,
+        max: max ?? this.max,
+        direction: direction ?? this.direction,
+        changedAt: changedAt ?? this.changedAt,
+      );
 }
 
 /// Motorised zoom: while W or T is held the lens moves at the body's fixed
@@ -43,8 +44,7 @@ class ZoomState {
 class ZoomController extends Notifier<ZoomState> {
   Timer? _tick;
   DateTime? _lastTick;
-  double? _pending;
-  bool _sending = false;
+  DateTime? _lastSent;
 
   @override
   ZoomState build() {
@@ -93,7 +93,11 @@ class ZoomController extends Notifier<ZoomState> {
   /// Button released.
   void stop() {
     _stopTimer();
-    if (state.direction != 0) state = state.copyWith(direction: 0, changedAt: DateTime.now());
+    if (state.direction == 0) return;
+    state = state.copyWith(direction: 0, changedAt: DateTime.now());
+    // The last step may have been throttled: land exactly where the UI is.
+    _lastSent = null;
+    _send(state.level);
   }
 
   void _stopTimer() {
@@ -110,32 +114,26 @@ class ZoomController extends Notifier<ZoomState> {
     // Constant speed in log space: every second covers the same "feel" of
     // magnification, like a geared zoom motor.
     final perSecond = math.log(state.max / state.min) / (zoom.endToEnd.inMicroseconds / 1e6);
-    final next = math.exp(math.log(state.level) + state.direction * perSecond * dt).clamp(state.min, state.max);
+    final next = math
+        .exp(math.log(state.level) + state.direction * perSecond * dt)
+        .clamp(state.min, state.max);
     state = state.copyWith(level: next, changedAt: now);
     _send(next);
     if (next <= state.min || next >= state.max) stop();
   }
 
-  /// Latest-wins: never queue up more than one zoom call to the camera.
-  Future<void> _send(double level) async {
-    _pending = level;
-    if (_sending) return;
-    _sending = true;
-    try {
-      while (_pending != null) {
-        final v = _pending!;
-        _pending = null;
-        final c = _controller;
-        if (c == null || !c.value.isInitialized) break;
-        try {
-          await c.setZoomLevel(v);
-        } catch (_) {
-          break; // session closing; the next controller starts wide anyway
-        }
-      }
-    } finally {
-      _sending = false;
-    }
+  /// Fire-and-forget at ~30 Hz. CameraX supersedes an in-flight zoom request
+  /// with the next one, so there is no queue to drain; awaiting each call
+  /// (it completes only once the sensor has applied it, ~3 frames later)
+  /// made the motor move in visible ~10 Hz steps.
+  void _send(double level) {
+    final now = DateTime.now();
+    final atEnd = level <= state.min || level >= state.max;
+    if (!atEnd && _lastSent != null && now.difference(_lastSent!) < const Duration(milliseconds: 30)) return;
+    _lastSent = now;
+    final c = _controller;
+    if (c == null || !c.value.isInitialized) return;
+    c.setZoomLevel(level).catchError((Object _) {}); // session closing: next one starts wide
   }
 }
 

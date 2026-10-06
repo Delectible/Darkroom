@@ -236,6 +236,13 @@ class PhotoPipeline {
       );
     }
 
+    // Camera tags, like a real body writes them (the Win98 viewer reads the
+    // model back for its status bar).
+    image.exif = img.ExifData();
+    image.exif.imageIfd
+      ..make = 'Darkroom'
+      ..model = spec.name
+      ..software = 'Darkroom';
     final out = img.encodeJpg(image, quality: profile.jpegQuality);
     _writeAtomic(job.outputPath, out);
 

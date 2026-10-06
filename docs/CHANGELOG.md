@@ -180,5 +180,6 @@ darkroom, corkboard, ambience).
 - [~] **9.2 Proper signing + Play Store:** a private upload key (GitHub
   secrets) replaces the public test key; CI also builds an .aab for the Play
   Console internal testing track, so installs come from Play with no
-  warning. Next: Gabe adds the secrets and makes the Play Console account;
-  later, CI uploads each build to Play by itself.
+  warning. Signing → 2026-10-06 · cc84d67 (secrets added; first private-key
+  build is the next push). Play Console waits on Gabe's ID check; later, CI
+  uploads each build to Play by itself.

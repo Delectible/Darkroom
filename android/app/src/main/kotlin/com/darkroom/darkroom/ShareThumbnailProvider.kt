@@ -14,7 +14,7 @@ import java.io.File
  * Replaces share_plus's FileProvider (same authority, see AndroidManifest.xml)
  * so the Android share sheet can show a picture for videos.
  *
- * The sheet asks the provider for an "image/*" version of each shared file.
+ * The sheet asks the provider for an image version of each shared file.
  * A plain FileProvider can only answer that for images, so videos showed up
  * as a bare file name. Here a video answers with a JPEG of its first frame.
  */
@@ -25,7 +25,7 @@ class ShareThumbnailProvider : FileProvider() {
         if (type != null && type.startsWith("video/") && mimeTypeFilter.startsWith("image/")) {
             try {
                 videoThumbnail(uri, opts)?.let { return it }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
                 // Fall through: no preview is better than a failed share.
             }
         }

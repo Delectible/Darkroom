@@ -306,7 +306,7 @@ Android build pass, everything is published as a GitHub release `build-N`
   rights for the app). Release notes ("What's new") are the version plus
   the newest line of `AppInfo.revisions` (`tool/play/whats_new.py`). The
   store listing text, icon and feature graphic are in
-  `fastlane/metadata/android/en-US/` and `play-listing.yml` publishes them
+  `fastlane/metadata/android/en-AU/` and `play-listing.yml` publishes them
   when they change (fastlane supply). While the app
   is still a draft in the console, set the repository variable
   `PLAY_RELEASE_STATUS=draft`. Privacy policy: `docs/PRIVACY.md`.

@@ -279,4 +279,7 @@ darkroom, corkboard, ambience).
   description, icon and feature graphic in `fastlane/metadata/android/en-US/`,
   published by `play-listing.yml`; Play's "What's new" is now the version
   plus the newest About line (was the commit subject). → (no app change) ·
-  2026-10-07 · (this commit)
+  2026-10-07 · 9e1513b
+- [x] **11.5 Store listing language:** the app's default language is
+  English (Australia), so the listing and "What's new" move to `en-AU`.
+  → (no app change) · 2026-10-07 · (this commit)

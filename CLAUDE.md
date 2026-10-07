@@ -54,7 +54,7 @@ Read this first. It's the hand-off from the earlier development sessions
   of the newest `AppInfo.revisions` entry** (`tool/play/whats_new.py`), so
   put each version's change, in plain words, at the top of that entry.
   The store listing (title, descriptions, icon, feature graphic) lives in
-  `fastlane/metadata/android/en-US/`; `play-listing.yml` publishes it when
+  `fastlane/metadata/android/en-AU/`; `play-listing.yml` publishes it when
   it changes (fastlane supply, same service account). Screenshots aren't in
   the repo yet. Privacy policy for the listing: `docs/PRIVACY.md`.
 - Release builds are signed with Gabe's **private upload key** (alias

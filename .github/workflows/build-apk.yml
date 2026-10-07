@@ -131,8 +131,8 @@ jobs:
         if: steps.sa.outputs.ok == 'true'
         run: |
           mkdir whatsnew
-          python3 -I src/tool/play/whats_new.py > whatsnew/whatsnew-en-US
-          cat whatsnew/whatsnew-en-US
+          python3 -I src/tool/play/whats_new.py > whatsnew/whatsnew-en-AU
+          cat whatsnew/whatsnew-en-AU
       - uses: r0adkll/upload-google-play@v1
         if: steps.sa.outputs.ok == 'true'
         with:

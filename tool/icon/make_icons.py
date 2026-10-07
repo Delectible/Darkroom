@@ -14,7 +14,7 @@ Writes:
   GitHub   docs/social_preview.png (1280x640), the repository's social
            preview: Settings > General > Social preview.
   Play     512 icon + 1024x500 feature graphic for the store listing
-           (fastlane/metadata/android/en-US/images).
+           (fastlane/metadata/android/en-AU/images).
 """
 import json, os, shutil
 import numpy as np
@@ -255,7 +255,7 @@ def main():
 
     save(social_preview(), 'docs', 'social_preview.png')
     # Play Store listing images (published by .github/workflows/play-listing.yml).
-    play = ['fastlane', 'metadata', 'android', 'en-US', 'images']
+    play = ['fastlane', 'metadata', 'android', 'en-AU', 'images']
     save(full_icon(512), *play, 'icon.png')
     save(social_preview(1024, 500), *play, 'featureGraphic.png')
     print('icons written')

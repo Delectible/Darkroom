@@ -208,6 +208,9 @@ Thanks for using Darkroom 98!
 
 Things you can run from Start > Run...
 
+  SOL.EXE       Solitaire
+  BRICKS.EXE    knock down the wall
+  PINBALL.EXE   Space Rabbit Pinball
   RABBIT.EXE    say hello to the mascot
   DEVELOP.BAT   how your film is made
   PING          how long until your prints?

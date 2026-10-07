@@ -81,6 +81,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   void initState() {
     super.initState();
     unawaited(Sfx.cameraSwap.preload());
+    unawaited(Sfx.zoomMotor.preload());
     HardwareKeyboard.instance.addHandler(_onKey);
   }
 
@@ -292,7 +293,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     ref.watch(darkroomControllerProvider);
     // Keep the zoom motor alive (and resetting with each body) without
     // rebuilding the whole screen on every zoom step.
-    ref.listen(zoomProvider, (_, _) {});
+    // ...and its whir while it runs.
+    ref.listen(zoomProvider.select((z) => z.direction), (_, dir) {
+      if (dir != 0) {
+        Sfx.zoomMotor.play();
+      } else {
+        Sfx.zoomMotor.stop();
+      }
+    });
 
     ref.listen<String?>(pendingRouteProvider, (_, route) {
       if (route == 'corkboard') {

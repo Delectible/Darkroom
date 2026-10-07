@@ -12,6 +12,8 @@ no samples, no Microsoft sounds, just numpy).
   w98_exit                      short descending chime when leaving Win98
   w98_shutdown                  a few seconds of warm pad for Shut Down
   crt_off                       CRT switching off: pop, whine, crackle
+  zoom_motor                    a small geared lens motor, looped while
+                                the zoom moves (seamless 1 s loop)
 """
 import os
 import wave
@@ -183,6 +185,23 @@ def crt_off():
     return out
 
 
+def zoom_motor():
+    """Whine + gear ripple + a little brush noise. Every partial is a whole
+    number of cycles per second and the noise is cross-faded, so the 1 s
+    file loops without a click."""
+    x = t(1.0)
+    whine = (np.sin(2 * np.pi * 620 * x) + 0.5 * np.sin(2 * np.pi * 1240 * x + 0.7)
+             + 0.25 * np.sin(2 * np.pi * 1860 * x + 1.9) + 0.15 * np.sin(2 * np.pi * 3100 * x))
+    ripple = 1 + 0.35 * np.sin(2 * np.pi * 42 * x)  # gear teeth
+    hiss = bandpass(noise(1.2), 900, 5000)
+    n = len(x)
+    fade = int(SR * 0.2)
+    loop = hiss[:n].copy()
+    w = np.linspace(0, 1, fade)
+    loop[:fade] = loop[:fade] * w + hiss[n:n + fade] * (1 - w)
+    return 0.6 * whine * ripple + 0.5 * loop
+
+
 if __name__ == '__main__':
     save('deck_key_down', deck_key_down())
     save('deck_key_up', deck_key_up())
@@ -192,3 +211,4 @@ if __name__ == '__main__':
     save('w98_exit', w98_exit(), peak=0.7)
     save('w98_shutdown', w98_shutdown(), peak=0.75)
     save('crt_off', crt_off(), peak=0.8)
+    save('zoom_motor', zoom_motor(), peak=0.5)

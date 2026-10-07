@@ -198,7 +198,8 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   across to switch W/T (`_ClaimingPan` wins the touch on contact, so it
   never tosses the body). Held = fixed-rate
   motor zoom up to the body's `ZoomSpec.max` (floppy/CCD 3x, flip phone 4x,
-  camcorder 10x, capped by the phone). No pinch. Camcorder shows a sliding
+  camcorder 10x, capped by the phone). No pinch. A quiet motor whir (`Sfx.zoomMotor`,
+  looped) runs while the zoom moves. Camcorder shows a sliding
   W-T bar on its OSD, stills cameras a "2.4X" readout.
 - Camcorder (`storage: DigitalStorage.floppy`) clips appear on **3½ Floppy
   (A:)**, not the SD card; copying them to C: is a multi-disk copy ("insert
@@ -219,8 +220,12 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   / warning ding from `showWin98MessageBox`, exit chime when the explorer
   closes. Start > Shut Down runs `showShutDownSequence` (sky + rabbit +
   tune, "safe to turn off", CRT collapse). Start > Run knows RABBIT,
-  DEVELOP, PING, README, MINESWEEPER (`win98_programs.dart`), plus DEFRAG,
-  WINVER, drive letters; Tip of the Day hints at them.
+  DEVELOP, PING, README, MINESWEEPER (`win98_programs.dart`), the games
+  SOL / BRICKS / PINBALL (`win98/games/`, tested in `win98_games_test`),
+  plus DEFRAG, WINVER, drive letters; Tip of the Day hints at them.
+- Win98 touch targets: menu titles open on touch-down and touching another
+  title while a menu is open switches to it (`showWin98Menu` siblings);
+  caption buttons and toolbar buttons have padded hit areas.
 - Toolbar button says **Transfer** (not Eject). Drive is named **SD Card**.
   Viewer has ◀ ▶ arrows. File/Edit/View/Help menus have settings, app info
   and easter eggs.

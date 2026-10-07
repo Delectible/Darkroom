@@ -13,6 +13,9 @@ import 'explorer_dialogs.dart';
 import 'explorer_panes.dart';
 import 'pixel_icons.dart';
 import 'win98_viewer.dart';
+import 'games/bricks.dart';
+import 'games/pinball.dart';
+import 'games/solitaire.dart';
 import 'win98_programs.dart';
 import 'win98_shutdown.dart';
 import 'win98_widgets.dart';
@@ -338,6 +341,12 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         return showDosPrompt(context, command: 'PING CORKBOARD', lines: pingLines);
       case 'readme' || 'notepad':
         return showNotepad(context, file: 'README.TXT', text: readmeText);
+      case 'sol' || 'solitaire':
+        return showSolitaire(context);
+      case 'bricks' || 'breakout' || 'brickbreaker':
+        return showBricks(context);
+      case 'pinball' || 'spacecadet' || 'space cadet' || 'spacerabbit':
+        return showPinball(context);
       case 'minesweeper' || 'winmine':
         await _box('Minesweeper', 'There is no Minesweeper. We checked.', icon: Win98MessageIcon.error);
         return;
@@ -781,11 +790,12 @@ class _Toolbar extends ConsumerWidget {
       child: Win98Button(
         onPressed: onTap,
         toggled: toggled,
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+        minWidth: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            PixelIconView(icon, size: 20),
+            PixelIconView(icon, size: 22),
             Text(label, style: const TextStyle(fontSize: 10)),
           ],
         ),

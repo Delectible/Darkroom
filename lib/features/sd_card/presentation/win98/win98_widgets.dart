@@ -221,18 +221,30 @@ class Win98CaptionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 18,
-      height: 16,
-      child: Win98Button(
-        onPressed: onPressed ?? () {},
-        padding: EdgeInsets.zero,
-        child: switch (glyph) {
-          '_' => const Win98GlyphView(Win98Glyph.minimize, dot: 1.2),
-          '□' => const Win98GlyphView(Win98Glyph.maximize, dot: 1.1),
-          '×' => const Win98GlyphView(Win98Glyph.close, dot: 1.2),
-          _ => Text(glyph, style: W98.text.copyWith(fontSize: 11, height: 1)),
-        },
+    // The button looks 18x16 like the real one, but the touch target is the
+    // whole slot around it.
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        Sfx.w98Click.play();
+        (onPressed ?? () {})();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+        child: SizedBox(
+          width: 18,
+          height: 16,
+          child: Win98Button(
+            onPressed: onPressed ?? () {},
+            padding: EdgeInsets.zero,
+            child: switch (glyph) {
+              '_' => const Win98GlyphView(Win98Glyph.minimize, dot: 1.2),
+              '□' => const Win98GlyphView(Win98Glyph.maximize, dot: 1.1),
+              '×' => const Win98GlyphView(Win98Glyph.close, dot: 1.2),
+              _ => Text(glyph, style: W98.text.copyWith(fontSize: 11, height: 1)),
+            },
+          ),
+        ),
       ),
     );
   }
@@ -326,36 +338,73 @@ class Win98MenuItem {
   final bool separator;
 }
 
-Future<void> showWin98Menu(BuildContext anchor, List<Win98MenuItem> items) async {
+/// Opens a drop-down menu under [anchor]. [siblings] are the other titles
+/// of the same menu bar: touching one while this menu is open switches
+/// straight to it ([onSwitch] gets its index), like the real thing, instead
+/// of needing one tap to close and another to open.
+Future<void> showWin98Menu(
+  BuildContext anchor,
+  List<Win98MenuItem> items, {
+  List<GlobalKey> siblings = const [],
+  ValueChanged<int>? onSwitch,
+}) async {
   final box = anchor.findRenderObject()! as RenderBox;
   final topLeft = box.localToGlobal(Offset(0, box.size.height));
-  final selected = await showGeneralDialog<Win98MenuItem>(
+  final picked = await showGeneralDialog<Object>(
     context: anchor,
-    barrierDismissible: true,
-    barrierLabel: 'menu',
+    barrierDismissible: false,
     barrierColor: Colors.transparent,
     transitionDuration: Duration.zero,
-    pageBuilder: (context, _, _) => Win98Scale(
-      child: Builder(
-        builder: (context) {
-          // Anchor is in real screen pixels; the menu lays out scaled.
-          final screen = MediaQuery.sizeOf(context);
-          const f = Win98Scale.factor;
-          return Stack(
-            children: [
-              Positioned(
-                left: math.min(topLeft.dx / f, screen.width - 200),
-                top: topLeft.dy / f,
-                child: _MenuPanel(items: items),
-              ),
-            ],
-          );
-        },
-      ),
+    pageBuilder: (context, _, _) => Stack(
+      children: [
+        // Our own barrier: closes the menu, or hands over to another title.
+        Positioned.fill(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (d) {
+              for (var i = 0; i < siblings.length; i++) {
+                final r = siblings[i].currentContext?.findRenderObject();
+                if (r is RenderBox && r.attached) {
+                  final rect = r.localToGlobal(Offset.zero) & r.size;
+                  if (rect.contains(d.globalPosition)) {
+                    Navigator.of(context).pop(i);
+                    return;
+                  }
+                }
+              }
+              Navigator.of(context).pop();
+            },
+          ),
+        ),
+        Win98Scale(
+          child: Builder(
+            builder: (context) {
+              // Anchor is in real screen pixels; the menu lays out scaled.
+              final screen = MediaQuery.sizeOf(context);
+              const f = Win98Scale.factor;
+              return Stack(
+                children: [
+                  Positioned(
+                    left: math.min(topLeft.dx / f, screen.width - 200),
+                    top: topLeft.dy / f,
+                    child: _MenuPanel(items: items),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ],
     ),
   );
-  if (selected?.onSelected != null) Sfx.w98Click.play();
-  selected?.onSelected?.call();
+  if (picked is int) {
+    onSwitch?.call(picked);
+    return;
+  }
+  if (picked is Win98MenuItem) {
+    if (picked.onSelected != null) Sfx.w98Click.play();
+    picked.onSelected?.call();
+  }
 }
 
 class _MenuPanel extends StatefulWidget {
@@ -404,7 +453,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                           : () => Navigator.of(context).pop(widget.items[i]),
                       child: Container(
                         color: _hot == i ? W98.navy : Colors.transparent,
-                        padding: const EdgeInsets.fromLTRB(4, 5, 16, 5),
+                        padding: const EdgeInsets.fromLTRB(4, 8, 18, 8),
                         child: Row(
                           children: [
                             SizedBox(
@@ -445,33 +494,64 @@ class _MenuPanelState extends State<_MenuPanel> {
   }
 }
 
-class Win98MenuBar extends StatelessWidget {
+class Win98MenuBar extends StatefulWidget {
   const Win98MenuBar({super.key, required this.menus});
 
   final Map<String, List<Win98MenuItem> Function()> menus;
 
   @override
+  State<Win98MenuBar> createState() => _Win98MenuBarState();
+}
+
+class _Win98MenuBarState extends State<Win98MenuBar> {
+  final List<GlobalKey> _keys = [];
+  int? _open;
+
+  Future<void> _show(int i) async {
+    final entries = widget.menus.entries.toList();
+    final ctx = _keys[i].currentContext;
+    if (ctx == null) return;
+    Sfx.w98Click.play();
+    setState(() => _open = i);
+    int? next;
+    await showWin98Menu(ctx, entries[i].value(), siblings: _keys, onSwitch: (j) => next = j == i ? null : j);
+    if (!mounted) return;
+    setState(() => _open = null);
+    if (next != null) await _show(next!);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final entries = widget.menus.entries.toList();
+    while (_keys.length < entries.length) {
+      _keys.add(GlobalKey());
+    }
     return SizedBox(
-      height: 22,
+      height: 30,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            for (final e in menus.entries)
-              Builder(
-                builder: (anchor) => GestureDetector(
-                  onTap: () => unawaited(showWin98Menu(anchor, e.value())),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            for (var i = 0; i < entries.length; i++)
+              GestureDetector(
+                key: _keys[i],
+                behavior: HitTestBehavior.opaque,
+                // Opens on touch-down: no waiting for the finger to lift.
+                onTapDown: (_) => unawaited(_show(i)),
+                child: Container(
+                  height: 30,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: _MenuTitle(
+                    open: _open == i,
                     child: Text.rich(
                       TextSpan(
                         children: [
                           TextSpan(
-                            text: e.key[0],
+                            text: entries[i].key[0],
                             style: const TextStyle(decoration: TextDecoration.underline),
                           ),
-                          TextSpan(text: e.key.substring(1)),
+                          TextSpan(text: entries[i].key.substring(1)),
                         ],
                       ),
                       style: W98.text,
@@ -483,6 +563,21 @@ class Win98MenuBar extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// A menu-bar title: sunk in while its menu is open.
+class _MenuTitle extends StatelessWidget {
+  const _MenuTitle({required this.open, required this.child});
+
+  final bool open;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    const pad = EdgeInsets.symmetric(horizontal: 3, vertical: 2);
+    if (!open) return Padding(padding: pad + const EdgeInsets.all(1), child: child);
+    return Win98Bevel(style: BevelStyle.shallow, padding: pad, child: child);
   }
 }
 

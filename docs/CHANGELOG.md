@@ -333,3 +333,17 @@ darkroom, corkboard, ambience).
   computer", then the CRT switching off (picture collapses to a white line,
   then a dot). Tap to skip ahead.
   → 1.3.20 · 2026-10-07 · 381b2fe
+
+### 14. Requested 2026-10-07 (after build 40)
+
+- [x] **14.1 Win98 controls:** menu titles are bigger targets and open on
+  touch-down; with a menu open, touching another title switches straight
+  to it (one tap, not two). Toolbar buttons and window caption buttons
+  have bigger touch areas; menu rows are taller.
+- [x] **14.2 Zoom motor sound:** a quiet geared whir loops while a digital
+  body's zoom moves (`zoom_motor.wav`, `Sfx.zoomMotor`).
+- [x] **14.3 Games in Start > Run:** SOL (Klondike, tap a card to move it),
+  BRICKS (brick breaker), PINBALL (Space Rabbit Pinball: hold either half
+  for that flipper, hold to pull the plunger, light R-A-B-B-I-T). Listed in
+  README.TXT and hinted in Tip of the Day.
+  → 1.3.21 · 2026-10-07 · (this commit)

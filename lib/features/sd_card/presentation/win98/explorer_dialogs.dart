@@ -532,6 +532,8 @@ const _tips = [
   'Wondering what happens to your film? Run DEVELOP.BAT.',
   'PING the corkboard from Start > Run... to see how long your prints take.',
   'Every program on this computer is listed in README.TXT. Try Start > Run....',
+  'All work and no play? Start > Run... SOL, BRICKS or PINBALL.',
+  'Space Rabbit Pinball: light up R-A-B-B-I-T for a bonus.',
 ];
 
 Future<void> showTipOfTheDay(BuildContext context) {

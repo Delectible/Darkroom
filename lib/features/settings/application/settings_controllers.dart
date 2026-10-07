@@ -37,6 +37,11 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     return granted;
   }
 
+  Future<void> setVolumeZoom(bool enabled) async {
+    state = state.copyWith(volumeZoom: enabled);
+    await _repo.saveGlobal(state);
+  }
+
   Future<void> setHighResFilm(bool enabled) async {
     state = state.copyWith(highResFilm: enabled);
     await _repo.saveGlobal(state);

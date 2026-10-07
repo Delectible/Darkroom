@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/audio/sfx.dart';
+
 /// Classic 9x-era system palette.
 class W98 {
   const W98._();
@@ -186,6 +188,7 @@ class _Win98ButtonState extends State<Win98Button> {
         onTapUp: enabled
             ? (_) {
                 setState(() => _down = false);
+                Sfx.w98Click.play();
                 widget.onPressed!();
               }
             : null,
@@ -351,6 +354,7 @@ Future<void> showWin98Menu(BuildContext anchor, List<Win98MenuItem> items) async
       ),
     ),
   );
+  if (selected?.onSelected != null) Sfx.w98Click.play();
   selected?.onSelected?.call();
 }
 
@@ -827,6 +831,16 @@ Future<int?> showWin98MessageBox(
   List<String> buttons = const ['OK'],
   Widget Function(Win98MessageIcon)? iconBuilder,
 }) {
+  // Errors bong, warnings ding; questions and notes stay quiet so the
+  // everyday prompts never get tiresome.
+  switch (icon) {
+    case Win98MessageIcon.error:
+      Sfx.w98Error.play();
+    case Win98MessageIcon.warning:
+      Sfx.w98Ding.play();
+    case Win98MessageIcon.info || Win98MessageIcon.question:
+      break;
+  }
   return showGeneralDialog<int>(
     context: context,
     barrierDismissible: false,

@@ -5,7 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/audio/sfx.dart';
+
 import '../../../../core/app_info.dart';
+import '../../../camera/application/camera_log.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../viewer/presentation/media_actions.dart';
@@ -471,6 +474,51 @@ Future<void> showAboutDarkroom(BuildContext context) => showWin98Window<void>(
   ),
 );
 
+/// The camera session's recent events, for diagnosing a viewfinder that
+/// drops out (screenshot this and send it).
+Future<void> showCameraLog(BuildContext context) {
+  final lines = CameraLog.lines;
+  return showWin98Window<void>(
+    context,
+    title: 'Camera Log - Notepad',
+    width: 340,
+    icon: const PixelIconView(PixelIcon.info),
+    builder: (context) => Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 300),
+            child: Win98Bevel(
+              style: BevelStyle.sunken,
+              color: Colors.white,
+              padding: const EdgeInsets.all(6),
+              child: SingleChildScrollView(
+                reverse: true,
+                child: Text(
+                  lines.isEmpty ? '(nothing yet)' : lines.join('\n'),
+                  style: W98.text.copyWith(fontSize: 11),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Win98Button(
+              minWidth: 76,
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 const _tips = [
   'Pictures on the SD card are locked. Move them to Local Disk (C:) to open them — they also land in your phone\'s Photos app.',
   'Tap a selected file again to open it. Hold a file on C: to send it to a friend.',
@@ -480,6 +528,10 @@ const _tips = [
   'Arrange by Size to find your longest home videos.',
   'Feeling nostalgic? Try Tools > Defragment.',
   'There is no Minesweeper. We checked.',
+  'Start > Run..., type RABBIT, press OK. Nothing bad will happen.',
+  'Wondering what happens to your film? Run DEVELOP.BAT.',
+  'PING the corkboard from Start > Run... to see how long your prints take.',
+  'Every program on this computer is listed in README.TXT. Try Start > Run....',
 ];
 
 Future<void> showTipOfTheDay(BuildContext context) {
@@ -759,7 +811,10 @@ Future<StartAction?> showStartMenu(BuildContext context) {
 }
 
 Widget _startItem(BuildContext context, PixelIcon icon, String label, StartAction action) => InkWell(
-  onTap: () => Navigator.of(context).pop(action),
+  onTap: () {
+    Sfx.w98Click.play();
+    Navigator.of(context).pop(action);
+  },
   hoverColor: W98.navy,
   child: Padding(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
@@ -840,35 +895,6 @@ Future<String?> showRunDialog(BuildContext context) {
     ),
   );
 }
-
-/// "It's now safe to turn off your computer."
-Future<void> showSafeToTurnOff(BuildContext context) => Navigator.of(context).push(
-  PageRouteBuilder<void>(
-    transitionDuration: const Duration(milliseconds: 600),
-    pageBuilder: (context, _, _) => GestureDetector(
-      onTap: () => Navigator.of(context).pop(),
-      child: const ColoredBox(
-        color: Colors.black,
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Text(
-              "It's now safe to turn off\nyour computer.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFFFF8C1A),
-                fontSize: 26,
-                fontWeight: FontWeight.w700,
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-    transitionsBuilder: (context, a, _, child) => FadeTransition(opacity: a, child: child),
-  ),
-);
 
 /// The famous blue screen (hold the taskbar clock).
 Future<void> showBlueScreen(BuildContext context) {

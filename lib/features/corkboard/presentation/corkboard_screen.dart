@@ -1302,9 +1302,11 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _toggle,
+                    // Generous target round a small corner: easy to hit
+                    // without the fold itself getting bigger.
                     child: const SizedBox(
-                      width: 30,
-                      height: 30,
+                      width: 46,
+                      height: 46,
                       child: Align(
                         alignment: Alignment.bottomRight,
                         child: CustomPaint(size: Size(12, 12), painter: _DogEar()),

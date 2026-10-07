@@ -87,6 +87,13 @@ class _SettingsSheet extends ConsumerWidget {
           value: global.highResFilm,
           onChanged: (v) => unawaited(g.setHighResFilm(v)),
         ),
+        _Toggle(
+          title: 'Volume buttons zoom',
+          subtitle:
+              'The volume buttons take the picture. Turn this on to zoom with them on digital cameras instead.',
+          value: global.volumeZoom,
+          onChanged: (v) => unawaited(g.setVolumeZoom(v)),
+        ),
         const SizedBox(height: 18),
         _Heading(mode == AppMode.film ? 'FILM STOCKS' : 'CAMERAS', p),
         for (final spec in CameraCatalog.forMode(mode))

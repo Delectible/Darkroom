@@ -57,15 +57,21 @@ export async function build(THREE) {
   }, { px: 30, rough: 0.45 });
   name.position.set(0, 13.5, D / 2 + 2.6); g.add(name);
 
-  // print slot below the plate, with a fresh print half ejected
-  const slot = rbox(80, 3, 2, 1, new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.8 }));
-  slot.position.set(0, -H / 2 + 4, D / 2 + 0.6); g.add(slot);
+  // print slot across the front below the lens plate, with a fresh print
+  // coming straight out of it (forward, tipping down a little, image up),
+  // the way the real thing ejects.
+  const slotY = -H / 2 + 4.5;
+  const slot = rbox(82, 3.2, 3, 1, new THREE.MeshStandardMaterial({ color: 0x030303, roughness: 0.9 }));
+  slot.position.set(0, slotY, D / 2 + 0.2); g.add(slot);
+  const lip = rbox(86, 1.2, 3.4, 0.5, cream);
+  lip.position.set(0, slotY - 2.3, D / 2 + 0.6); g.add(lip);
   const print = new THREE.Group();
-  const paper = rbox(76, 38, 0.9, 0.4, plastic(0xf6f4ee, { rough: 0.55, texture: 0.05, clearcoat: 0 }));
-  paper.position.set(0, -19, 0); print.add(paper);
-  const latent = new THREE.Mesh(new THREE.PlaneGeometry(66, 30), new THREE.MeshPhysicalMaterial({ color: 0x2c3a44, roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.05 }));
-  latent.position.set(0, -20, 0.5); print.add(latent);
-  print.position.set(0, -H / 2 + 4, D / 2 + 0.6); print.rotation.x = 0.5; g.add(print);
+  const paper = rbox(76, 40, 0.9, 0.4, plastic(0xf6f4ee, { rough: 0.55, texture: 0.05, clearcoat: 0 }));
+  paper.position.set(0, -20, 0); print.add(paper);
+  const latent = new THREE.Mesh(new THREE.PlaneGeometry(66, 30), new THREE.MeshPhysicalMaterial({ color: 0x1c2730, roughness: 0.35, clearcoat: 0.5, clearcoatRoughness: 0.2 }));
+  latent.position.set(0, -23, 0.5); print.add(latent);
+  // Rx(-(90° - tilt)): the print's length runs forward out of the slot.
+  print.position.set(0, slotY, D / 2 + 0.6); print.rotation.x = -(Math.PI / 2 - 0.16); g.add(print);
 
   g.rotation.y = -0.48; g.rotation.x = 0.04;
   const holder = new THREE.Group(); holder.add(g); holder.position.y = H / 2 + 22;

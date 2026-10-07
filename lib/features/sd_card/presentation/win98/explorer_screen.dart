@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/audio/sfx.dart';
+
 import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
 import '../../../viewer/presentation/media_actions.dart';
@@ -11,6 +13,8 @@ import 'explorer_dialogs.dart';
 import 'explorer_panes.dart';
 import 'pixel_icons.dart';
 import 'win98_viewer.dart';
+import 'win98_programs.dart';
+import 'win98_shutdown.dart';
 import 'win98_widgets.dart';
 
 /// Digital Mode's file manager, styled after the 9x Explorer.
@@ -34,8 +38,20 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   final Set<String> _selected = {};
   ExplorerPlace? _place;
 
+  /// Shut Down plays its own tune and switch-off, not the exit chime.
+  bool _shutDown = false;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final s in Sfx.windows98) {
+      unawaited(s.preload());
+    }
+  }
+
   @override
   void dispose() {
+    if (!_shutDown) Sfx.w98Exit.play();
     _sdScroll.dispose();
     _cScroll.dispose();
     _aScroll.dispose();
@@ -300,15 +316,33 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
           buttons: const ['Yes', 'No'],
         );
         if (r == 0 && mounted) {
-          await showSafeToTurnOff(context);
+          _shutDown = true;
+          await showShutDownSequence(context);
           if (mounted) Navigator.of(context).pop();
         }
     }
   }
 
   Future<void> _run() async {
-    final cmd = (await showRunDialog(context))?.trim().toLowerCase();
-    if (!mounted || cmd == null || cmd.isEmpty) return;
+    final typed = (await showRunDialog(context))?.trim();
+    if (!mounted || typed == null || typed.isEmpty) return;
+    final cmd = typed.toLowerCase();
+    // RABBIT, rabbit.exe and c:\rabbit.exe all run the same program.
+    final name = cmd.split(RegExp(r'[\\/]')).last.replaceFirst(RegExp(r'\.(exe|bat|com|txt)$'), '');
+    switch (name) {
+      case 'rabbit' || 'bunny':
+        return showRabbitExe(context);
+      case 'develop':
+        return showDosPrompt(context, command: 'DEVELOP', lines: developLines);
+      case 'ping':
+        return showDosPrompt(context, command: 'PING CORKBOARD', lines: pingLines);
+      case 'readme' || 'notepad':
+        return showNotepad(context, file: 'README.TXT', text: readmeText);
+      case 'minesweeper' || 'winmine':
+        await _box('Minesweeper', 'There is no Minesweeper. We checked.', icon: Win98MessageIcon.error);
+        return;
+    }
+    if (!mounted) return;
     switch (cmd) {
       case 'defrag' || 'defrag.exe':
         await showDefragmenter(context, files: ref.read(sdCardFilesProvider).length);
@@ -327,7 +361,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       default:
         await _box(
           cmd,
-          "Cannot find the file '$cmd' (or one of its components). Make sure the path and filename are correct.",
+          "Cannot find the file '$typed' (or one of its components). Make sure the path and filename are "
+          'correct. (Stuck? Try README.)',
           icon: Win98MessageIcon.error,
         );
     }
@@ -526,6 +561,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                         'the viewer to flip through your pictures.',
                                   ),
                                 ),
+                                Win98MenuItem('Camera Log...', onSelected: () => showCameraLog(context)),
                                 const Win98MenuItem.separator(),
                                 Win98MenuItem('About Darkroom', onSelected: () => showAboutDarkroom(context)),
                               ],

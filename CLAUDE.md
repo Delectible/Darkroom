@@ -159,7 +159,7 @@ Film Mode
   `ProjectorDeck` with the reel and a masking-tape label (tap: rename reel
   and file, `renameReel`), an amber dial + needle to seek, a drum counter
   for time left (no feet counter), and piano keys (start, prev, rew,
-  play/pause, ffwd, next). FF/REW run **while held** (stepped seeks that
+  play/pause, ffwd, next; each clicks: `Sfx.keyDown` / `keyUp`). FF/REW run **while held** (stepped seeks that
   spin up: smear, rolling frame line, sound off; resume playing on release
   if it was playing) and stop at the ends; START is one press. Seeks are
   coalesced (`_seek`). A reel that has ended re-threads a fresh player on
@@ -194,7 +194,9 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
 - Files on the SD card are **locked** until moved to C: (prompt with
   Move / Move All). Moving removes them from the SD card and copies them to
   the gallery (album "Darkroom"); they stay viewable under C:.
-- Zoom: W|T rocker on every digital body (none in film). Held = fixed-rate
+- Zoom: W|T rocker on every digital body (none in film), 100x40; slide
+  across to switch W/T (`_ClaimingPan` wins the touch on contact, so it
+  never tosses the body). Held = fixed-rate
   motor zoom up to the body's `ZoomSpec.max` (floppy/CCD 3x, flip phone 4x,
   camcorder 10x, capped by the phone). No pinch. Camcorder shows a sliding
   W-T bar on its OSD, stills cameras a "2.4X" readout.
@@ -212,6 +214,13 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   works); clips play in `Win98MediaPlayer` (|◀ ◀◀ ▶/❚❚ ■ ▶▶ ▶|, hold ◀◀/▶▶ to
   scan with VHS noise bars). The status bar shows the camera from EXIF
   (photos get Make/Model on export).
+- Win98 sounds (`Sfx.w98*`, made by `tool/sfx/make_sfx.py`, all original,
+  never Microsoft's): click on Win98Button / menu / Start items, error bong
+  / warning ding from `showWin98MessageBox`, exit chime when the explorer
+  closes. Start > Shut Down runs `showShutDownSequence` (sky + rabbit +
+  tune, "safe to turn off", CRT collapse). Start > Run knows RABBIT,
+  DEVELOP, PING, README, MINESWEEPER (`win98_programs.dart`), plus DEFRAG,
+  WINVER, drive letters; Tip of the Day hints at them.
 - Toolbar button says **Transfer** (not Eject). Drive is named **SD Card**.
   Viewer has ◀ ▶ arrows. File/Edit/View/Help menus have settings, app info
   and easter eggs.
@@ -229,13 +238,21 @@ UI
   transforms, so the side wall gets its own full matrix. The other camera
   also peeks in at the edge (digital on the right in film mode, film on the
   left); tap it to toss. Sound `assets/sfx/camera_swap.wav` (cloth swish,
-  played via video_player) and haptics.
+  played via video_player at volume 0.15) and haptics.
+- Gallery button: film = the latest print as a little photo on another
+  print (`_PrintThumb`), digital = a review LCD (`_LcdThumb`).
 - Under the viewfinder: film bodies show the box end in a memo holder
   (`CameraSpec.boxColor/boxInk`), digital bodies a segment-LCD panel with
   battery and card/tape remaining.
+- Volume buttons (Android; `_onKey` in camera_screen.dart) are the shutter
+  while the camera itself is on screen; setting "Volume buttons zoom" makes
+  them the zoom on digital bodies. Elsewhere they change the volume.
+- Camera session: "inactive" does NOT close the camera (Android sends it on
+  any focus blip; closing made the Pixel's viewfinder flap). Only hidden /
+  paused do. `CameraLog` keeps recent session events: Win98 Help > Camera Log.
 - Swipe up on the camera opens the film/camera carousel; swipe down closes it.
 - Phone gestures win at the edges (`core/device/system_gestures.dart`): our
-  drags ignore touches that start in the home strip (bottom ~56dp), the
+  drags (the camera toss too) ignore touches that start in the home strip (bottom ~56dp), the
   notification strip (top) and the back strips (sides), except level with
   the peeking camera, where `MainActivity.kt` (kept in the repo; channel
   `darkroom/gestures`) asks Android 10+ to keep its back gesture off both

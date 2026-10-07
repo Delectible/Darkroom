@@ -3,13 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.19';
+  static const version = '1.3.20';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'Projector: hold rewind or fast forward to spool, the dial seeks smoothly, and reels always start again after running out. '
+      'Volume buttons take the picture, a bigger zoom rocker, a steadier viewfinder, clicky projector keys, Windows 98 sounds and a proper Shut Down. '
+          'Projector: hold rewind or fast forward to spool, the dial seeks smoothly, and reels always start again after running out. '
           'Viewfinder no longer upside down on some phones (e.g. Galaxy S10+). '
           'Now on Google Play (internal testing). On iPhone, a shot finishes even if you leave right away. '
           'Sharper box and camera art, now branded Darkroom. '

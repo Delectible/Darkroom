@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
 import '../../settings/application/settings_controllers.dart';
+import 'camera_log.dart';
 import 'camera_ui_state.dart';
 
 enum SessionStatus { idle, initializing, ready, permissionDenied, noCamera, error }
@@ -94,6 +95,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
 
   bool _looping = false;
   bool _dirty = false;
+  bool _errorPending = false;
 
   /// Called with the outgoing controller right before it is disposed, so an
   /// in-progress recording can be stopped and kept (see CaptureController).
@@ -125,6 +127,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
 
   /// The camera screen is (not) the top-most route.
   void setScreenVisible(bool visible) {
+    if (visible != _screenVisible) CameraLog.add(visible ? 'screen shown' : 'screen covered');
     _screenVisible = visible;
     _kick();
   }
@@ -136,6 +139,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
   }
 
   void _onLifecycle(AppLifecycleState s) {
+    CameraLog.add('app ${s.name}');
     switch (s) {
       case AppLifecycleState.resumed:
         _appVisible = true;
@@ -145,7 +149,12 @@ class CameraSessionController extends Notifier<CameraSessionState> {
         if (_wasBackgrounded) _permissionBlocked = false;
         _wasBackgrounded = false;
       case AppLifecycleState.inactive:
-        _appVisible = false;
+        // Not a reason to close the camera: Android reports "inactive" for
+        // any focus blip (notification shade, system dialogs, the camera
+        // privacy chip...), and closing/reopening on each one made the
+        // viewfinder drop out over and over on a Pixel 9 Pro. Only a real
+        // background (hidden / paused) releases it.
+        break;
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
       case AppLifecycleState.detached:
@@ -217,6 +226,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       return;
     }
     final desc = cams.firstWhere((c) => c.lensDirection == cfg.lens, orElse: () => cams.first);
+    CameraLog.add('open ${cfg.lens.name} ${cfg.preset.name}');
     final hasFront = cams.any((c) => c.lensDirection == CameraLensDirection.front);
 
     const maxAttempts = 4;
@@ -226,6 +236,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       try {
         await c.initialize();
       } on CameraException catch (e) {
+        CameraLog.add('open failed: ${e.code} ${e.description ?? ''}');
         await _safeDispose(c);
         if (_isCameraPermissionError(e.code)) {
           _permissionBlocked = true;
@@ -251,6 +262,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
 
       // The world may have changed while we were awaiting initialize().
       if (!ref.mounted || !_wantActive || _wantConfig != cfg) {
+        CameraLog.add('opened, but no longer wanted');
         await _safeDispose(c);
         _dirty = true;
         return;
@@ -266,6 +278,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       }
       _controller = c;
       _controllerConfig = cfg;
+      CameraLog.add('ready');
       c.addListener(_onControllerValue);
       await _applyFlash(c, ref.read(activeFlashProvider));
       state = CameraSessionState(
@@ -289,6 +302,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     _controller = null;
     _controllerConfig = null;
     c.removeListener(_onControllerValue);
+    CameraLog.add('close');
 
     // 1. Unmount the preview so nothing builds a disposed controller. When
     //    the app is backgrounded no frame may come, so don't wait forever.
@@ -312,9 +326,16 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     final c = _controller;
     if (c == null) return;
     // Device evicted us (another app grabbed the camera, HAL error...).
-    if (c.value.hasError && !c.value.isRecordingVideo) {
+    if (c.value.hasError && !c.value.isRecordingVideo && !_errorPending) {
       debugPrint('Camera error: ${c.value.errorDescription}');
-      _kick();
+      CameraLog.add('camera error: ${c.value.errorDescription}');
+      // Give the device a moment before reopening, so an error storm can't
+      // turn into an open/close loop.
+      _errorPending = true;
+      Future<void>.delayed(const Duration(milliseconds: 600), () {
+        _errorPending = false;
+        if (ref.mounted) _kick();
+      });
     }
   }
 

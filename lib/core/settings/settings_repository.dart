@@ -14,6 +14,7 @@ class GlobalSettings {
     this.notificationsEnabled = true,
     this.saveOriginalCopy = false,
     this.highResFilm = false,
+    this.volumeZoom = false,
   });
 
   final bool darkroomEnabled;
@@ -23,16 +24,22 @@ class GlobalSettings {
   /// 2160p-class film capture (sharper prints, heavier live preview).
   final bool highResFilm;
 
+  /// The volume buttons are the shutter; with this on they zoom instead on
+  /// digital bodies (film keeps them as the shutter).
+  final bool volumeZoom;
+
   GlobalSettings copyWith({
     bool? darkroomEnabled,
     bool? notificationsEnabled,
     bool? saveOriginalCopy,
     bool? highResFilm,
+    bool? volumeZoom,
   }) => GlobalSettings(
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     saveOriginalCopy: saveOriginalCopy ?? this.saveOriginalCopy,
     highResFilm: highResFilm ?? this.highResFilm,
+    volumeZoom: volumeZoom ?? this.volumeZoom,
   );
 }
 
@@ -70,6 +77,7 @@ class SettingsRepository {
   static const _kNotify = 'global.notifications';
   static const _kOriginal = 'global.saveOriginal';
   static const _kHighResFilm = 'global.highResFilm';
+  static const _kVolumeZoom = 'global.volumeZoom';
 
   Future<GlobalSettings> loadGlobal() async {
     bool read(String? v, bool fallback) => v == null ? fallback : v == '1';
@@ -79,6 +87,7 @@ class SettingsRepository {
       notificationsEnabled: read(await _db.getValue(_kNotify), d.notificationsEnabled),
       saveOriginalCopy: read(await _db.getValue(_kOriginal), d.saveOriginalCopy),
       highResFilm: read(await _db.getValue(_kHighResFilm), d.highResFilm),
+      volumeZoom: read(await _db.getValue(_kVolumeZoom), d.volumeZoom),
     );
   }
 
@@ -87,6 +96,7 @@ class SettingsRepository {
     await _db.setValue(_kNotify, s.notificationsEnabled ? '1' : '0');
     await _db.setValue(_kOriginal, s.saveOriginalCopy ? '1' : '0');
     await _db.setValue(_kHighResFilm, s.highResFilm ? '1' : '0');
+    await _db.setValue(_kVolumeZoom, s.volumeZoom ? '1' : '0');
   }
 
   Future<Map<String, CameraLocalSettings>> loadCameraSettings() async {

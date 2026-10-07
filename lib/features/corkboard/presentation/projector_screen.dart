@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../core/audio/sfx.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../cameras/domain/camera_catalog.dart';
@@ -96,6 +97,8 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   @override
   void initState() {
     super.initState();
+    unawaited(Sfx.keyDown.preload());
+    unawaited(Sfx.keyUp.preload());
     unawaited(_load());
   }
 
@@ -217,6 +220,10 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
           final t = _seekTarget!;
           _seekTarget = null;
           await c.seekTo(t);
+          // The platform call returns at once, but Android's player restarts
+          // its decoder on every seek: give it time to put the frame up
+          // before asking for the next one, or it never draws any.
+          if (_seekTarget != null) await Future<void>.delayed(const Duration(milliseconds: 110));
         }
       } finally {
         if (_seekingOn == c) _seekingOn = null;
@@ -240,6 +247,23 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     _stopShuttle();
     setState(() => _scrubPos = to);
     _seek(to);
+  }
+
+  /// A drag on the dial started (true) or ended (false). The reel stops
+  /// while the needle is dragged, so each frame gets drawn, and runs on
+  /// from the new spot afterwards if it was running.
+  bool _resumeAfterScrub = false;
+  void _scrubbing(bool active) {
+    final c = _c;
+    if (c == null) return;
+    if (active) {
+      _resumeAfterScrub = c.value.isPlaying;
+      _watch?.cancel();
+      if (_resumeAfterScrub) unawaited(c.pause());
+    } else if (_resumeAfterScrub) {
+      _resumeAfterScrub = false;
+      _play();
+    }
   }
 
   void _togglePlay() {
@@ -551,6 +575,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
                 cuePos: _shuttle == ReelShuttle.none ? _scrubPos : _shuttlePos,
                 onRename: () => _rename(item),
                 onSeek: _scrub,
+                onScrub: _scrubbing,
                 onStart: _toStart,
                 onRewind: (down) => _hold(ReelShuttle.rewind, down),
                 onPlay: _togglePlay,
@@ -806,6 +831,7 @@ class ProjectorDeck extends StatelessWidget {
     required this.cuePos,
     required this.onRename,
     required this.onSeek,
+    this.onScrub,
     required this.onStart,
     required this.onRewind,
     required this.onPlay,
@@ -824,6 +850,9 @@ class ProjectorDeck extends StatelessWidget {
   final Duration? cuePos;
   final VoidCallback onRename;
   final ValueChanged<Duration> onSeek;
+
+  /// A drag on the dial started (true) / ended (false).
+  final ValueChanged<bool>? onScrub;
   final VoidCallback onStart, onPlay;
 
   /// Rewind / fast forward key went down (true) or came up (false).
@@ -891,6 +920,7 @@ class ProjectorDeck extends StatelessWidget {
                           fraction: frac,
                           total: total,
                           onSeek: (f) => onSeek(Duration(milliseconds: (f * total.inMilliseconds).round())),
+                          onScrub: onScrub,
                         ),
                         const SizedBox(height: 8),
                         Row(
@@ -1021,11 +1051,12 @@ class _LabelTape extends StatelessWidget {
 /// Backlit amber dial with a minute scale and a red needle; drag or tap it
 /// to wind the film to a point.
 class _Dial extends StatelessWidget {
-  const _Dial({required this.fraction, required this.total, required this.onSeek});
+  const _Dial({required this.fraction, required this.total, required this.onSeek, this.onScrub});
 
   final double fraction;
   final Duration total;
   final ValueChanged<double> onSeek;
+  final ValueChanged<bool>? onScrub;
 
   @override
   Widget build(BuildContext context) {
@@ -1035,7 +1066,13 @@ class _Dial extends StatelessWidget {
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTapDown: (d) => seekAt(d.localPosition.dx),
+          onHorizontalDragStart: (d) {
+            onScrub?.call(true);
+            seekAt(d.localPosition.dx);
+          },
           onHorizontalDragUpdate: (d) => seekAt(d.localPosition.dx),
+          onHorizontalDragEnd: (_) => onScrub?.call(false),
+          onHorizontalDragCancel: () => onScrub?.call(false),
           child: SizedBox(
             height: 40,
             child: CustomPaint(
@@ -1222,6 +1259,7 @@ class _PianoKeyState extends State<_PianoKey> {
 
   void _release() {
     if (!_down) return;
+    Sfx.keyUp.play();
     setState(() => _down = false);
     widget.onHold?.call(false);
   }
@@ -1241,6 +1279,7 @@ class _PianoKeyState extends State<_PianoKey> {
       return Listener(
         onPointerDown: (_) {
           if (_down) return;
+          Sfx.keyDown.play();
           setState(() => _down = true);
           hold(true);
         },
@@ -1250,9 +1289,16 @@ class _PianoKeyState extends State<_PianoKey> {
       );
     }
     return GestureDetector(
-      onTapDown: (_) => setState(() => _down = true),
-      onTapCancel: () => setState(() => _down = false),
+      onTapDown: (_) {
+        Sfx.keyDown.play();
+        setState(() => _down = true);
+      },
+      onTapCancel: () {
+        Sfx.keyUp.play();
+        setState(() => _down = false);
+      },
       onTapUp: (_) {
+        Sfx.keyUp.play();
         setState(() => _down = false);
         widget.onTap!();
       },

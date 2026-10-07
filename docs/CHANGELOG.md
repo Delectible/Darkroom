@@ -296,3 +296,40 @@ darkroom, corkboard, ambience).
 - [x] **12.3 Dial lag:** seeks are coalesced (one in flight, newest target
   waits) and the needle follows the finger, so the frame catches up fast.
   → 1.3.19 · 2026-10-07 · 7b5dd65
+
+### 13. Requested 2026-10-07 (after build 39)
+
+- [x] **13.1 Print corner flip:** bigger tap target round the dog-ear
+  (46 px, the fold itself unchanged).
+- [x] **13.2 Projector dial:** the frame didn't follow the needle and froze
+  for a second after letting go. The reel now pauses while the needle is
+  dragged and seeks are spaced out so each frame gets drawn; it runs on
+  afterwards if it was running.
+- [x] **13.3 Swap swoosh** 70% quieter.
+- [x] **13.6 Polaroid artwork:** the print now comes straight out of a slot
+  under the lens (forward, image up) instead of hanging off the bottom.
+- [x] **13.7 Zoom rocker:** bigger (100x40), and sliding across switches
+  W/T; the rocker claims the touch so a slide never tosses the camera.
+- [x] **13.8 Volume buttons:** the shutter on every camera (Android). New
+  setting "Volume buttons zoom": digital bodies zoom with them instead.
+- [x] **13.9 Swap dead zone:** no camera toss from the bottom gesture strip.
+- [x] **13.12 Viewfinder dropping out (Pixel 9 Pro):** the camera was closed
+  on every "inactive" blip (Android sends it for focus changes), so it kept
+  closing and reopening. Now only a real background closes it; errors wait
+  a moment before reopening. Win98 Help > Camera Log shows the camera's
+  recent events if it happens again.
+- [x] **13.4 Projector key clicks:** a heavier clunk on press, a lighter
+  tick on release (synthesised, `tool/sfx/make_sfx.py`).
+- [x] **13.5 Windows 98 sounds:** a soft click on buttons, menus and the
+  Start menu; a bong for error boxes, a ding for warnings (questions stay
+  quiet); a short chime when leaving the explorer. All original sounds.
+- [x] **13.10 Run...:** RABBIT, DEVELOP, PING, README and MINESWEEPER open
+  little programs (any case, with or without .exe/.bat/.txt); Tip of the
+  Day hints at them; unknown names get the classic "Cannot find the file".
+- [x] **13.11 Gallery buttons:** film shows the latest print as a little
+  photograph on a second one; digital shows it on a camera review LCD.
+- [x] **13.13 Shut Down:** sky-and-clouds shutdown screen with the rabbit
+  and an original shutdown tune, "It's now safe to turn off your
+  computer", then the CRT switching off (picture collapses to a white line,
+  then a dot). Tap to skip ahead.
+  → 1.3.20 · 2026-10-07 · (this commit)

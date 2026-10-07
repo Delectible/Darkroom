@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -626,30 +627,7 @@ class GalleryButton extends ConsumerWidget {
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: film ? const Color(0xFFB98A5A) : const Color(0xFF1F3C88),
-                    borderRadius: BorderRadius.circular(film ? 4 : 2),
-                    border: Border.all(color: Colors.black54),
-                    boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 4, offset: Offset(0, 2))],
-                  ),
-                  padding: const EdgeInsets.all(6),
-                  child: Upright(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: thumb != null
-                          ? Image.file(
-                              File(thumb),
-                              key: ValueKey(thumb),
-                              fit: BoxFit.cover,
-                              cacheWidth: 160,
-                              gaplessPlayback: true,
-                              errorBuilder: (_, _, _) => const SizedBox.shrink(),
-                            )
-                          : Icon(film ? Icons.push_pin : Icons.sd_card, color: Colors.white70),
-                    ),
-                  ),
-                ),
+                child: film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb),
               ),
               if (badge > 0 || newPrints > 0)
                 Positioned(
@@ -676,47 +654,206 @@ class GalleryButton extends ConsumerWidget {
   }
 }
 
-/// W | T zoom rocker on every digital body: hold to drive the zoom motor.
+Widget _thumbImage(String? thumb, Widget empty) => AnimatedSwitcher(
+  duration: const Duration(milliseconds: 300),
+  child: thumb != null
+      ? Image.file(
+          File(thumb),
+          key: ValueKey(thumb),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          cacheWidth: 160,
+          gaplessPlayback: true,
+          errorBuilder: (_, _, _) => empty,
+        )
+      : empty,
+);
+
+/// Film: the latest print as a little photograph lying on the body, tipped
+/// slightly, with another print peeking out underneath.
+class _PrintThumb extends StatelessWidget {
+  const _PrintThumb({required this.thumb});
+
+  final String? thumb;
+
+  static const _paper = Color(0xFFF3EFE6);
+
+  @override
+  Widget build(BuildContext context) {
+    Widget print(Widget picture) => Container(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+      decoration: BoxDecoration(
+        color: _paper,
+        borderRadius: BorderRadius.circular(1.5),
+        border: Border.all(color: const Color(0x22000000), width: 0.6),
+        boxShadow: const [BoxShadow(color: Color(0x88000000), blurRadius: 4, offset: Offset(1, 2))],
+      ),
+      child: ClipRect(child: picture),
+    );
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // The one underneath.
+        Transform.rotate(
+          angle: 0.10,
+          child: Padding(
+            padding: const EdgeInsets.all(5),
+            child: print(const ColoredBox(color: Color(0xFF6E6658))),
+          ),
+        ),
+        Transform.rotate(
+          angle: -0.06,
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: print(
+              Upright(
+                child: _thumbImage(
+                  thumb,
+                  const ColoredBox(
+                    color: Color(0xFFD9D2C3),
+                    child: Center(child: Icon(Icons.push_pin, size: 18, color: Color(0xFF9B8F7A))),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Digital: the camera's own little review screen: a bezel, an LCD with a
+/// faint pixel grid and glass sheen, and a play mark in the corner.
+class _LcdThumb extends StatelessWidget {
+  const _LcdThumb({required this.thumb});
+
+  final String? thumb;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(6),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3A3D42), Color(0xFF16171A)],
+        ),
+        border: Border.all(color: Colors.black87),
+        boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 3, offset: Offset(0, 1.5))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(2),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Upright(
+              child: _thumbImage(
+                thumb,
+                const ColoredBox(
+                  color: Color(0xFF14306E),
+                  child: Center(
+                    child: Text(
+                      'NO\nIMAGE',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFFBFD3FF),
+                        fontSize: 8,
+                        height: 1.1,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const CustomPaint(painter: _LcdGrid()),
+            // Glass sheen across the top.
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment(0.2, 0.3),
+                  colors: [Color(0x40FFFFFF), Color(0x00FFFFFF)],
+                ),
+              ),
+            ),
+            const Positioned(
+              left: 3,
+              top: 2,
+              child: Text('▶', style: TextStyle(color: Color(0xE6FFFFFF), fontSize: 7)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LcdGrid extends CustomPainter {
+  const _LcdGrid();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = const Color(0x22000000);
+    for (var y = 0.0; y < size.height; y += 2) {
+      canvas.drawRect(Rect.fromLTWH(0, y, size.width, 0.7), p);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LcdGrid old) => false;
+}
+
+/// W | T zoom rocker on every digital body: hold to drive the zoom motor,
+/// and slide across to the other half to reverse it. The rocker claims the
+/// touch the moment it lands, so a slide never tosses the camera body.
 class ZoomRocker extends ConsumerWidget {
   const ZoomRocker({super.key});
+
+  static const _width = 100.0, _height = 40.0;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = RetroPalette.of(context);
     final zoom = ref.watch(zoomProvider);
     final enabled = zoom.canZoom;
+    final notifier = ref.read(zoomProvider.notifier);
+
+    void drive(Offset local) {
+      if (!enabled) return;
+      final dir = local.dx < _width / 2 ? -1 : 1;
+      if (ref.read(zoomProvider).direction == dir) return;
+      unawaited(HapticFeedback.selectionClick());
+      notifier.start(dir);
+    }
+
     Widget half(String label, int dir, BorderRadius radius) {
       final pressed = zoom.direction == dir;
       final atLimit = dir < 0 ? zoom.level <= zoom.min : zoom.level >= zoom.max;
       return Expanded(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (_) {
-            if (!enabled) return;
-            unawaited(HapticFeedback.selectionClick());
-            ref.read(zoomProvider.notifier).start(dir);
-          },
-          onTapUp: (_) => ref.read(zoomProvider.notifier).stop(),
-          onTapCancel: () => ref.read(zoomProvider.notifier).stop(),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 90),
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: pressed ? [palette.bodyShadow, palette.body] : [palette.bodyHighlight, palette.body],
-              ),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 90),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: pressed ? [palette.bodyShadow, palette.body] : [palette.bodyHighlight, palette.body],
             ),
-            alignment: Alignment.center,
-            child: Upright(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                  color: palette.text.withValues(alpha: enabled && !atLimit ? 1 : 0.35),
-                ),
+          ),
+          alignment: Alignment.center,
+          child: Upright(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: palette.text.withValues(alpha: enabled && !atLimit ? 1 : 0.35),
               ),
             ),
           ),
@@ -724,27 +861,40 @@ class ZoomRocker extends ConsumerWidget {
       );
     }
 
+    final rocker = RawGestureDetector(
+      behavior: HitTestBehavior.opaque,
+      gestures: {
+        _ClaimingPan: GestureRecognizerFactoryWithHandlers<_ClaimingPan>(_ClaimingPan.new, (r) {
+          r.onDown = (d) => drive(d.localPosition);
+          r.onUpdate = (d) => drive(d.localPosition);
+          r.onEnd = (_) => notifier.stop();
+          r.onCancel = notifier.stop;
+        }),
+      },
+      child: Container(
+        width: _width,
+        height: _height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(_height / 2),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.4)),
+          boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 2, offset: Offset(0, 1))],
+        ),
+        child: Row(
+          children: [
+            half('W', -1, const BorderRadius.horizontal(left: Radius.circular(_height / 2))),
+            Container(width: 1, color: Colors.black.withValues(alpha: 0.35)),
+            half('T', 1, const BorderRadius.horizontal(right: Radius.circular(_height / 2))),
+          ],
+        ),
+      ),
+    );
+
     return Semantics(
       label: 'Zoom',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            width: 72,
-            height: 30,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              border: Border.all(color: Colors.black.withValues(alpha: 0.4)),
-              boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 2, offset: Offset(0, 1))],
-            ),
-            child: Row(
-              children: [
-                half('W', -1, const BorderRadius.horizontal(left: Radius.circular(15))),
-                Container(width: 1, color: Colors.black.withValues(alpha: 0.35)),
-                half('T', 1, const BorderRadius.horizontal(right: Radius.circular(15))),
-              ],
-            ),
-          ),
+          rocker,
           const SizedBox(height: 5),
           Text(
             'ZOOM',
@@ -901,4 +1051,14 @@ class _LensFlipPainter extends CustomPainter {
   @override
   bool shouldRepaint(_LensFlipPainter old) =>
       old.front != front || old.ring != ring || old.ringDark != ringDark || old.accent != accent;
+}
+
+/// A pan recognizer that wins the gesture arena as soon as the finger lands,
+/// so the camera body's sideways toss never sees a rocker slide.
+class _ClaimingPan extends PanGestureRecognizer {
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolve(GestureDisposition.accepted);
+  }
 }

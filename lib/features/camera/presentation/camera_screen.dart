@@ -81,10 +81,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   void initState() {
     super.initState();
     unawaited(Sfx.cameraSwap.preload());
+    HardwareKeyboard.instance.addHandler(_onKey);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
     unawaited(GestureExclusion.clear());
     _swap.dispose();
     _outgoing?.dispose();
@@ -119,13 +121,48 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     unawaited(GestureExclusion.clear());
   }
 
+  /// Volume buttons: the shutter, or (setting on, digital bodies) the zoom
+  /// rocker, held to drive. Only while the camera itself is on screen;
+  /// anywhere else they change the volume as usual.
+  int _volumeZoomDir = 0;
+  bool _onKey(KeyEvent e) {
+    final key = e.logicalKey;
+    final up = key == LogicalKeyboardKey.audioVolumeUp;
+    if (!up && key != LogicalKeyboardKey.audioVolumeDown) return false;
+    if (e is KeyUpEvent) {
+      if (_volumeZoomDir != 0) {
+        _volumeZoomDir = 0;
+        ref.read(zoomProvider.notifier).stop();
+      }
+      return mounted && ModalRoute.of(context)?.isCurrent == true;
+    }
+    if (!mounted || _selectorOpen || _swapBusy || ModalRoute.of(context)?.isCurrent != true) return false;
+    if (e is KeyRepeatEvent) return true;
+    final digital = ref.read(appModeProvider) == AppMode.digital;
+    if (digital && ref.read(globalSettingsProvider).volumeZoom) {
+      if (ref.read(zoomProvider).canZoom) {
+        _volumeZoomDir = up ? 1 : -1;
+        unawaited(HapticFeedback.selectionClick());
+        ref.read(zoomProvider.notifier).start(_volumeZoomDir);
+      }
+      return true;
+    }
+    unawaited(HapticFeedback.mediumImpact());
+    unawaited(ref.read(captureControllerProvider.notifier).shutter());
+    return true;
+  }
+
   bool _canSwap() => !_swapBusy && !_selectorOpen && !ref.read(captureControllerProvider).isRecording;
 
   void _onDragStart(DragStartDetails d) {
     if (!_canSwap()) return;
     // Back gesture from the sides, notification shade from the top.
-    final allowed = _peekBands(MediaQuery.sizeOf(context));
+    final media = MediaQuery.of(context);
+    final allowed = _peekBands(media.size);
     if (SystemGestureZones.startsInEdge(context, d.globalPosition, allowed: allowed)) return;
+    // Nor from the home-gesture strip at the bottom (sliding along it
+    // switches apps).
+    if (d.globalPosition.dy > media.size.height - SystemGestureZones.bottom(media)) return;
     _raw = 0;
     _swap.value = 0;
     setState(() => _dragging = true);

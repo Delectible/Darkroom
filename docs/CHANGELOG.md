@@ -283,3 +283,16 @@ darkroom, corkboard, ambience).
 - [x] **11.5 Store listing language:** the app's default language is
   English (Australia), so the listing and "What's new" move to `en-AU`.
   → (no app change) · 2026-10-07 · 6f31c8c
+
+### 12. Requested 2026-10-07 (after build 38)
+
+- [x] **12.1 Projector keys:** REW / F.FWD run only while held (the reel
+  carries on playing on release if it was playing); START still spools
+  back with one press. No tap-to-play on the screen any more.
+- [x] **12.2 Projector stuck after the end:** after a reel ran out and was
+  rewound (or the needle moved), PLAY spun the reel but the picture didn't
+  move. A reel that has ended now re-threads a fresh player on PLAY, and a
+  watchdog re-threads once if the picture doesn't move after PLAY.
+- [x] **12.3 Dial lag:** seeks are coalesced (one in flight, newest target
+  waits) and the needle follows the finger, so the frame catches up fast.
+  → 1.3.19 · 2026-10-07 · (this commit)

@@ -65,7 +65,30 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   Timer? _shuttleTimer;
   final Stopwatch _shuttleClock = Stopwatch();
   Duration _shuttlePos = Duration.zero;
-  bool _seeking = false;
+
+  /// Fast forward / rewind are held: was the reel running when the key went
+  /// down? It carries on from the new spot when the key comes up.
+  bool _resumeAfterShuttle = false;
+
+  // ---- Seeking --------------------------------------------------------------
+  // One seek in flight at a time; while it runs only the newest target is
+  // kept. Dragging the needle used to queue dozens of seeks, so the picture
+  // lagged a second behind the finger.
+  Duration? _seekTarget;
+
+  /// The player a seek is in flight on (a re-threaded reel gets a new one).
+  VideoPlayerController? _seekingOn;
+  bool get _seekBusy => _seekingOn != null && _seekingOn == _c;
+
+  /// Where the needle sits while a dial seek is catching up.
+  Duration? _scrubPos;
+
+  /// Android's player can get stuck after the reel has run out: play() is
+  /// accepted but no frames come. Once a reel has ended, playing threads a
+  /// fresh player instead. [_watch] catches any other stall the same way.
+  bool _ended = false;
+  Timer? _watch;
+  int _stallRetries = 0;
 
   /// Current shuttle speed (x real time), for the artefacts.
   double _speed = 0;
@@ -79,6 +102,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   @override
   void dispose() {
     _shuttleTimer?.cancel();
+    _watch?.cancel();
     _run.dispose();
     unawaited(_c?.dispose());
     super.dispose();
@@ -112,12 +136,18 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
       }
       if (startAt > Duration.zero) await c.seekTo(startAt);
       c.addListener(_onTick);
+      _ended = false;
+      _seekTarget = null;
+      _scrubPos = null;
       setState(() => _c = c);
       if (rethread && old != null) {
         old.removeListener(_onTick);
         WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(old.dispose()));
       }
-      if (play) await c.play();
+      if (play) {
+        await c.play();
+        _watchPlayback(c, startAt);
+      }
     } catch (_) {
       await c.dispose();
       if (mounted) setState(() => _error = 'This reel cannot be played.');
@@ -127,6 +157,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   void _onTick() {
     final c = _c;
     if (c == null) return;
+    if (c.value.isCompleted) _ended = true;
     final moving = c.value.isPlaying || _shuttle != ReelShuttle.none;
     if (moving && !_run.isAnimating) {
       _run.repeat();
@@ -139,18 +170,76 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     final c = _c;
     if (c == null) return;
     final shuttling = _shuttle != ReelShuttle.none;
-    final from = shuttling ? _shuttlePos : c.value.position;
+    final from = shuttling ? _shuttlePos : (_seekTarget ?? _scrubPos ?? c.value.position);
     _stopShuttle();
+    _stallRetries = 0;
     if (from >= c.value.duration - const Duration(milliseconds: 250)) {
       // Ran out: thread it again from the top.
       unawaited(_load(rethread: true));
-    } else if (c.value.isCompleted) {
+    } else if (_ended || c.value.isCompleted) {
       unawaited(_load(rethread: true, startAt: from));
-    } else if (shuttling) {
-      unawaited(c.seekTo(from).then((_) => c.play()));
     } else {
-      unawaited(c.play());
+      unawaited(() async {
+        if (shuttling || _seekBusy || _seekTarget != null) {
+          _seek(from);
+          await _seekSettled();
+        }
+        if (_c != c) return;
+        await c.play();
+        _watchPlayback(c, from);
+      }());
     }
+  }
+
+  /// If the picture hasn't moved a second after play, thread a fresh player
+  /// at that spot (see [_ended]).
+  void _watchPlayback(VideoPlayerController c, Duration from) {
+    _watch?.cancel();
+    _watch = Timer(const Duration(milliseconds: 1300), () {
+      if (!mounted || _c != c || !c.value.isPlaying || _shuttle != ReelShuttle.none) return;
+      if (c.value.position <= from + const Duration(milliseconds: 150) && _stallRetries++ < 1) {
+        unawaited(_load(rethread: true, startAt: from));
+      }
+    });
+  }
+
+  /// Seeks to [to], coalescing: only the newest target waits behind the one
+  /// in flight.
+  void _seek(Duration to) {
+    final c = _c;
+    if (c == null) return;
+    _seekTarget = to;
+    if (_seekingOn == c) return;
+    _seekingOn = c;
+    unawaited(() async {
+      try {
+        while (_seekTarget != null && _c == c) {
+          final t = _seekTarget!;
+          _seekTarget = null;
+          await c.seekTo(t);
+        }
+      } finally {
+        if (_seekingOn == c) _seekingOn = null;
+        if (_c == c && _seekTarget == null && _scrubPos != null) {
+          _scrubPos = null;
+          if (mounted) setState(() {});
+        }
+      }
+    }());
+  }
+
+  Future<void> _seekSettled() async {
+    final give = DateTime.now().add(const Duration(seconds: 3));
+    while ((_seekBusy || _seekTarget != null) && DateTime.now().isBefore(give)) {
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+    }
+  }
+
+  /// The needle was moved on the dial.
+  void _scrub(Duration to) {
+    _stopShuttle();
+    setState(() => _scrubPos = to);
+    _seek(to);
   }
 
   void _togglePlay() {
@@ -158,23 +247,47 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     if (c == null) return;
     unawaited(HapticFeedback.mediumImpact());
     if (c.value.isPlaying && _shuttle == ReelShuttle.none) {
+      _watch?.cancel();
       unawaited(c.pause());
     } else {
       _play();
     }
   }
 
-  /// Engages fast forward / rewind (press again to release), or the
-  /// rewind-to-start run.
-  void _engage(ReelShuttle mode) {
+  /// Fast forward / rewind run while their key is held; on release the reel
+  /// carries on playing if it was playing before.
+  void _hold(ReelShuttle mode, bool down) {
     final c = _c;
     if (c == null) return;
-    unawaited(HapticFeedback.mediumImpact());
-    if (_shuttle == mode) {
-      _stopShuttle();
+    if (down) {
+      if (_shuttle == ReelShuttle.none) _resumeAfterShuttle = c.value.isPlaying;
+      _engage(mode);
+    } else if (_shuttle == mode) {
+      final at = _shuttlePos;
+      final resume = _resumeAfterShuttle;
+      _stopShuttle(seekTo: at);
+      if (resume && at < c.value.duration - const Duration(milliseconds: 250)) _play();
+    }
+  }
+
+  /// START: one press spools back to the beginning (press again to stop).
+  void _toStart() {
+    if (_shuttle == ReelShuttle.toStart) {
+      unawaited(HapticFeedback.mediumImpact());
+      _stopShuttle(seekTo: _shuttlePos);
       return;
     }
-    _shuttlePos = _shuttle != ReelShuttle.none ? _shuttlePos : c.value.position;
+    _resumeAfterShuttle = false;
+    _engage(ReelShuttle.toStart);
+  }
+
+  void _engage(ReelShuttle mode) {
+    final c = _c;
+    if (c == null || _shuttle == mode) return;
+    unawaited(HapticFeedback.mediumImpact());
+    _watch?.cancel();
+    _scrubPos = null;
+    _shuttlePos = _shuttle != ReelShuttle.none ? _shuttlePos : (_seekTarget ?? c.value.position);
     _shuttleTimer?.cancel();
     unawaited(c.pause());
     unawaited(c.setVolume(0));
@@ -208,10 +321,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
       done = true;
     }
     _shuttlePos = next;
-    if (!_seeking) {
-      _seeking = true;
-      unawaited(c.seekTo(next).whenComplete(() => _seeking = false));
-    }
+    _seek(next);
     if (done) {
       unawaited(HapticFeedback.heavyImpact()); // the reel runs out / bottoms
       _stopShuttle(seekTo: next);
@@ -229,7 +339,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     final c = _c;
     if (c != null) {
       unawaited(c.setVolume(1));
-      if (seekTo != null) unawaited(c.seekTo(seekTo));
+      if (seekTo != null) _seek(seekTo);
     }
     _onTick();
     if (mounted) setState(() {});
@@ -387,11 +497,9 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
                 ],
               ),
             ),
-            // The screen. Tap to start / stop; reels change only on the keys.
+            // The screen. Everything is on the deck's keys: no taps or swipes.
             Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _togglePlay,
+              child: IgnorePointer(
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
@@ -440,16 +548,13 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
                 item: item,
                 run: _run,
                 shuttle: _shuttle,
-                shuttlePos: _shuttle == ReelShuttle.none ? null : _shuttlePos,
+                cuePos: _shuttle == ReelShuttle.none ? _scrubPos : _shuttlePos,
                 onRename: () => _rename(item),
-                onSeek: (d) {
-                  _stopShuttle();
-                  unawaited(c.seekTo(d));
-                },
-                onStart: () => _engage(ReelShuttle.toStart),
-                onRewind: () => _engage(ReelShuttle.rewind),
+                onSeek: _scrub,
+                onStart: _toStart,
+                onRewind: (down) => _hold(ReelShuttle.rewind, down),
                 onPlay: _togglePlay,
-                onForward: () => _engage(ReelShuttle.forward),
+                onForward: (down) => _hold(ReelShuttle.forward, down),
                 onPrev: _index > 0 ? () => _step(-1) : null,
                 onNext: _index < _ids.length - 1 ? () => _step(1) : null,
               ),
@@ -698,7 +803,7 @@ class ProjectorDeck extends StatelessWidget {
     required this.item,
     required this.run,
     required this.shuttle,
-    required this.shuttlePos,
+    required this.cuePos,
     required this.onRename,
     required this.onSeek,
     required this.onStart,
@@ -713,10 +818,16 @@ class ProjectorDeck extends StatelessWidget {
   final MediaItem item;
   final Animation<double> run;
   final ReelShuttle shuttle;
-  final Duration? shuttlePos;
+
+  /// Where the needle and counter should read instead of the player's own
+  /// position: the shuttle's spot, or a dial seek still catching up.
+  final Duration? cuePos;
   final VoidCallback onRename;
   final ValueChanged<Duration> onSeek;
-  final VoidCallback onStart, onRewind, onPlay, onForward;
+  final VoidCallback onStart, onPlay;
+
+  /// Rewind / fast forward key went down (true) or came up (false).
+  final ValueChanged<bool> onRewind, onForward;
   final VoidCallback? onPrev, onNext;
 
   @override
@@ -725,7 +836,7 @@ class ProjectorDeck extends StatelessWidget {
       valueListenable: playback,
       builder: (context, v, _) {
         final total = v.duration;
-        final pos = shuttlePos ?? v.position;
+        final pos = cuePos ?? v.position;
         final frac = total.inMilliseconds <= 0
             ? 0.0
             : (pos.inMilliseconds / total.inMilliseconds).clamp(0.0, 1.0);
@@ -826,7 +937,7 @@ class ProjectorDeck extends StatelessWidget {
                   _PianoKey(
                     symbol: _Sym.rewind,
                     label: 'REW',
-                    onTap: onRewind,
+                    onHold: onRewind,
                     latched: shuttle == ReelShuttle.rewind,
                   ),
                   _PianoKey(
@@ -839,7 +950,7 @@ class ProjectorDeck extends StatelessWidget {
                   _PianoKey(
                     symbol: _Sym.forward,
                     label: 'F.FWD',
-                    onTap: onForward,
+                    onHold: onForward,
                     latched: shuttle == ReelShuttle.forward,
                   ),
                   _PianoKey(symbol: _Sym.next, label: 'NEXT', onTap: onNext),
@@ -1088,6 +1199,7 @@ class _PianoKey extends StatefulWidget {
     required this.symbol,
     required this.label,
     this.onTap,
+    this.onHold,
     this.latched = false,
     this.flex = 2,
   });
@@ -1095,6 +1207,9 @@ class _PianoKey extends StatefulWidget {
   final _Sym symbol;
   final String label;
   final VoidCallback? onTap;
+
+  /// Held keys (rewind / fast forward): true on press, false on release.
+  final ValueChanged<bool>? onHold;
   final bool latched;
   final int flex;
 
@@ -1105,9 +1220,49 @@ class _PianoKey extends StatefulWidget {
 class _PianoKeyState extends State<_PianoKey> {
   bool _down = false;
 
+  void _release() {
+    if (!_down) return;
+    setState(() => _down = false);
+    widget.onHold?.call(false);
+  }
+
+  @override
+  void dispose() {
+    if (_down) widget.onHold?.call(false);
+    super.dispose();
+  }
+
+  /// Tap keys fire on release; held keys run from press to release (a raw
+  /// Listener, so sliding a finger off doesn't cut a hold short).
+  Widget _press({required bool enabled, required Widget child}) {
+    if (!enabled) return child;
+    final hold = widget.onHold;
+    if (hold != null) {
+      return Listener(
+        onPointerDown: (_) {
+          if (_down) return;
+          setState(() => _down = true);
+          hold(true);
+        },
+        onPointerUp: (_) => _release(),
+        onPointerCancel: (_) => _release(),
+        child: child,
+      );
+    }
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _down = true),
+      onTapCancel: () => setState(() => _down = false),
+      onTapUp: (_) {
+        setState(() => _down = false);
+        widget.onTap!();
+      },
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final enabled = widget.onTap != null;
+    final enabled = widget.onTap != null || widget.onHold != null;
     final pressed = _down || widget.latched;
     final travel = _down ? 5.0 : (widget.latched ? 3.5 : 0.0);
     return Expanded(
@@ -1116,15 +1271,8 @@ class _PianoKeyState extends State<_PianoKey> {
         button: true,
         enabled: enabled,
         label: widget.label,
-        child: GestureDetector(
-          onTapDown: enabled ? (_) => setState(() => _down = true) : null,
-          onTapCancel: () => setState(() => _down = false),
-          onTapUp: enabled
-              ? (_) {
-                  setState(() => _down = false);
-                  widget.onTap!();
-                }
-              : null,
+        child: _press(
+          enabled: enabled,
           child: Opacity(
             opacity: enabled ? 1 : 0.4,
             child: Padding(

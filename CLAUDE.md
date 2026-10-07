@@ -159,9 +159,12 @@ Film Mode
   `ProjectorDeck` with the reel and a masking-tape label (tap: rename reel
   and file, `renameReel`), an amber dial + needle to seek, a drum counter
   for time left (no feet counter), and piano keys (start, prev, rew,
-  play/pause, ffwd, next). FF/REW shuttle by stepped seeks that spin up
-  (smear, rolling frame line, sound off) and stop at the ends. No swiping
-  between reels; only the keys. No REC badge in the Super 8 viewfinder. Always landscape
+  play/pause, ffwd, next). FF/REW run **while held** (stepped seeks that
+  spin up: smear, rolling frame line, sound off; resume playing on release
+  if it was playing) and stop at the ends; START is one press. Seeks are
+  coalesced (`_seek`). A reel that has ended re-threads a fresh player on
+  PLAY (`_ended`; Android's player sticks), plus a one-shot stall watchdog.
+  No swiping or tapping on the screen; only the keys. No REC badge in the Super 8 viewfinder. Always landscape
   (`CameraSpec.landscapeOnly`: held upright it records a landscape slice,
   `CropMath` `acrossShortSide`). Reels are full-gate scans (`CineStrip`,
   `core/processing/cine_strip.dart`): black film edge with the sprocket hole

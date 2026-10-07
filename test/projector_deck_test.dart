@@ -46,7 +46,7 @@ void main() {
           isInitialized: true,
         ).copyWith(isPlaying: playing),
       );
-      var taps = 0;
+      var taps = 0, holds = 0, releases = 0;
       await tester.pumpWidget(
         MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -63,13 +63,13 @@ void main() {
                     item: item,
                     run: const AlwaysStoppedAnimation(0),
                     shuttle: shuttle,
-                    shuttlePos: shuttle == ReelShuttle.none ? null : const Duration(seconds: 80),
+                    cuePos: shuttle == ReelShuttle.none ? null : const Duration(seconds: 80),
                     onRename: () => taps++,
                     onSeek: (_) => taps++,
                     onStart: () => taps++,
-                    onRewind: () => taps++,
+                    onRewind: (down) => down ? holds++ : releases++,
                     onPlay: () => taps++,
-                    onForward: () => taps++,
+                    onForward: (down) => down ? holds++ : releases++,
                     onPrev: () => taps++,
                     onNext: () => taps++,
                   ),
@@ -81,11 +81,20 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull);
-      for (final key in ['START', 'PREV', 'REW', 'F.FWD', 'NEXT']) {
+      for (final key in ['START', 'PREV', 'NEXT']) {
         await tester.tap(find.text(key));
       }
       await tester.tap(find.text(playing ? 'PAUSE' : 'PLAY'));
-      expect(taps, 6);
+      expect(taps, 4);
+      // Rewind / fast forward run only while held.
+      for (final key in ['REW', 'F.FWD']) {
+        final g = await tester.startGesture(tester.getCenter(find.text(key)));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(releases, holds - 1);
+        await g.up();
+        await tester.pump();
+      }
+      expect((holds, releases), (2, 2));
       if (shots != null) {
         await tester.runAsync(() async {
           final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;

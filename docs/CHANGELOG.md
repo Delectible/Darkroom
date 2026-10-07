@@ -282,4 +282,4 @@ darkroom, corkboard, ambience).
   2026-10-07 · 9e1513b
 - [x] **11.5 Store listing language:** the app's default language is
   English (Australia), so the listing and "What's new" move to `en-AU`.
-  → (no app change) · 2026-10-07 · (this commit)
+  → (no app change) · 2026-10-07 · 6f31c8c

@@ -366,10 +366,21 @@ darkroom, corkboard, ambience).
   of the lens-flip button.
 - [x] **15.7 Win98 login chime** when the explorer opens.
   → 1.3.22 · 2026-10-07 · aea0f03
-- [ ] 15.8 Mode tag floats off the body and tucks away (bouncy) during a swap.
-- [ ] 15.9 New shutters: digital square photoreal + deep click; film chrome
-  release with advance lever + mechanical click; Super 8 red run button.
-- [ ] 15.10 Strap and lug on the body's side wall, refined.
+- [x] **15.8 Mode tag:** no longer part of the body: it floats over the
+  desk, tucks away (with a wind-up) as a swap starts and springs back out
+  (elastic) when the new body has settled.
+- [x] **15.9 Shutters:** digital = a squared compact shutter key in a
+  brushed bezel (camcorder adds a red record dot), quiet deep click;
+  film = a chrome release in the hub of a film-advance lever that swings
+  out and springs home every frame, mechanical clack + ratchet; Super 8 =
+  a red RUN button in a ribbed lock collar that stays in (lamp lit) while
+  filming. They swap with a pop when changing body; the volume-key shutter
+  plays the same stroke and sound (`shutterPulseProvider`).
+- [x] **15.10 Strap and lug:** a machined lug with a slot on the side
+  wall; the leather strap has a split ring, a folded end tab through a
+  keeper, edge stitching, a rounded highlight and a buckle; the digital
+  wrist cord is braided with a cord lock and a connector loop.
+  → 1.3.23 · 2026-10-07 · (this commit)
 - [ ] 15.11 Corkboard slides in from the left in a wooden frame, woody swoosh.
 - [ ] 15.12 Real Minesweeper.
 - [ ] 15.13 Pinball redesigned closer to Space Cadet; game sound effects;

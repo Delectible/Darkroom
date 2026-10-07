@@ -250,6 +250,13 @@ UI
   also peeks in at the edge (digital on the right in film mode, film on the
   left); tap it to toss. Sound `assets/sfx/camera_swap.wav` (cloth swish,
   played via video_player at volume 0.15) and haptics.
+- Shutter (`widgets/shutters.dart`): digital = compact shutter key
+  (camcorder: red dot), film = chrome release in an advance-lever hub (lever
+  swings each frame), Super 8 = red RUN button that latches while filming.
+  Quiet sounds `Sfx.shutter*`. Fire via `pressShutter(ref)` so the button
+  animates for volume keys too.
+- The other camera's FILM/DIGITAL tag floats over the desk (outside the
+  body's RepaintBoundary), tucks away during a swap and springs back.
 - Gallery button: film = the latest print as a little photo on another
   print (`_PrintThumb`), digital = a review LCD (`_LcdThumb`).
 - Under the viewfinder: film bodies show the box end in a memo holder

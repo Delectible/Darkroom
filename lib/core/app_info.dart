@@ -3,13 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.22';
+  static const version = '1.3.23';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'Volume buttons really do take the picture now, quieter sounds, steadier zoom at the ends, and a pixel-art shutdown screen. '
+      'New shutters: a compact shutter key, a chrome release with a film-advance lever, and a red RUN button for Super 8. Leather strap and braided cord, and the mode tag springs out of the way during a swap. '
+          'Volume buttons really do take the picture now, quieter sounds, steadier zoom at the ends, and a pixel-art shutdown screen. '
           'Three games in Start > Run (SOL, BRICKS, PINBALL), bigger Windows 98 menus and buttons, and a whirring zoom motor. '
           'Volume buttons take the picture, a bigger zoom rocker, a steadier viewfinder, clicky projector keys, Windows 98 sounds and a proper Shut Down. '
           'Projector: hold rewind or fast forward to spool, the dial seeks smoothly, and reels always start again after running out. '

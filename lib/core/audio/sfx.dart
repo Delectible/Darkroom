@@ -16,6 +16,11 @@ class Sfx {
   static final keyDown = Sfx._('assets/sfx/deck_key_down.wav', volume: 0.275);
   static final keyUp = Sfx._('assets/sfx/deck_key_up.wav', volume: 0.225);
 
+  // Shutters: quiet, so they never take over.
+  static final shutterDigital = Sfx._('assets/sfx/shutter_digital.wav', volume: 0.12);
+  static final shutterFilm = Sfx._('assets/sfx/shutter_film.wav', volume: 0.12);
+  static final shutterRun = Sfx._('assets/sfx/shutter_run.wav', volume: 0.12);
+
   // Windows 98 (made by tool/sfx/make_sfx.py; all original sounds).
   static final w98Click = Sfx._('assets/sfx/w98_click.wav', volume: 0.15);
   static final w98Ding = Sfx._('assets/sfx/w98_ding.wav', volume: 0.15);

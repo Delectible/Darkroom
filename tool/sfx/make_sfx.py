@@ -13,6 +13,10 @@ no samples, no Microsoft sounds, just numpy).
   w98_shutdown                  a few seconds of warm pad for Shut Down
   crt_off                       CRT switching off: pop, whine, crackle
   w98_login                     a gentle rising chime when Win98 opens
+  shutter_digital               a compact's shutter key: quiet, deep click
+  shutter_film                  a mechanical shutter (two-part clack) and
+                                the advance lever ratcheting back
+  shutter_run                   Super 8 run button: a soft latch clunk
   zoom_motor                    a small geared lens motor, looped while
                                 the zoom moves (seamless 1 s loop)
 """
@@ -196,6 +200,37 @@ def w98_login():
     return reverb(out, mix=0.32, room=0.7)
 
 
+def shutter_digital():
+    out = np.zeros(int(SR * 0.14))
+    thud = np.sin(2 * np.pi * 75 * t(0.06)) * env(int(SR * 0.06), 0.001, 0.014)
+    click = lowpass(bandpass(noise(0.006), 600, 3500), 2500) * env(int(SR * 0.006), 0.0004, 0.0016)
+    place(out, thud, 0.0)
+    place(out, 0.6 * click, 0.0)
+    place(out, 0.35 * click, 0.045)  # the key coming back up
+    return out
+
+
+def shutter_film():
+    out = np.zeros(int(SR * 0.42))
+    def clack(level, lo, hi):
+        return level * bandpass(noise(0.012), lo, hi) * env(int(SR * 0.012), 0.0003, 0.0025)
+    place(out, clack(1.0, 1200, 7000), 0.0)             # first curtain
+    place(out, 0.5 * np.sin(2 * np.pi * 140 * t(0.03)) * env(int(SR * 0.03), 0.001, 0.008), 0.0)
+    place(out, clack(0.8, 1500, 8000), 0.028)           # second curtain
+    for i in range(7):                                  # advance lever ratchet
+        place(out, clack(0.32 - 0.02 * i, 2500, 9000), 0.12 + i * 0.026)
+    place(out, clack(0.5, 900, 5000), 0.31)             # lever home
+    return reverb(out, mix=0.08, room=0.3)
+
+
+def shutter_run():
+    out = np.zeros(int(SR * 0.2))
+    place(out, np.sin(2 * np.pi * 110 * t(0.08)) * env(int(SR * 0.08), 0.001, 0.02), 0.0)
+    place(out, 0.7 * bandpass(noise(0.01), 700, 4000) * env(int(SR * 0.01), 0.0005, 0.002), 0.0)
+    place(out, 0.4 * bandpass(noise(0.008), 1500, 6000) * env(int(SR * 0.008), 0.0005, 0.0015), 0.05)
+    return out
+
+
 def zoom_motor():
     """Whine + gear ripple + a little brush noise. Every partial is a whole
     number of cycles per second and the noise is cross-faded, so the 1 s
@@ -224,3 +259,6 @@ if __name__ == '__main__':
     save('crt_off', crt_off(), peak=0.8)
     save('zoom_motor', zoom_motor(), peak=0.5)
     save('w98_login', w98_login(), peak=0.7)
+    save('shutter_digital', shutter_digital(), peak=0.8)
+    save('shutter_film', shutter_film(), peak=0.8)
+    save('shutter_run', shutter_run(), peak=0.8)

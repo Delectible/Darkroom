@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 
@@ -410,22 +411,47 @@ class _SideWallPainter extends CustomPainter {
       ..strokeWidth = 1.5;
     canvas.drawLine(const Offset(1, 12), Offset(1, size.height - 12), line);
     canvas.drawLine(Offset(size.width - 1, 12), Offset(size.width - 1, size.height - 12), line);
-    // Strap lug: a metal eyelet.
+    // Strap lug: a machined boss standing off the wall, with a slot the
+    // ring runs through and a highlight along its upper edge.
     final c = Offset(size.width / 2, lugY);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(center: c, width: size.width * 0.55, height: 26),
-        const Radius.circular(8),
-      ),
-      Paint()..color = Color.lerp(lug, Colors.black, 0.25)!,
+    final boss = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: c, width: size.width * 0.5, height: 30),
+      const Radius.circular(9),
     );
-    canvas.drawCircle(
-      c,
-      7,
+    canvas.drawRRect(
+      boss.shift(const Offset(0, 3)),
       Paint()
-        ..color = lug
+        ..color = Colors.black.withValues(alpha: 0.45)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    canvas.drawRRect(
+      boss,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color.lerp(lug, Colors.white, 0.45)!, lug, Color.lerp(lug, Colors.black, 0.45)!],
+          stops: const [0, 0.4, 1],
+        ).createShader(boss.outerRect),
+    );
+    canvas.drawRRect(
+      boss.deflate(0.5),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.35)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
+        ..strokeWidth = 1,
+    );
+    final slot = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: c.translate(0, 2), width: 9, height: 12),
+      const Radius.circular(4),
+    );
+    canvas.drawRRect(slot, Paint()..color = const Color(0xFF0B0A09));
+    canvas.drawLine(
+      Offset(slot.left + 1, slot.bottom + 1),
+      Offset(slot.right - 1, slot.bottom + 1),
+      Paint()
+        ..color = Colors.white.withValues(alpha: 0.35)
+        ..strokeWidth = 1,
     );
   }
 
@@ -457,72 +483,230 @@ class _StrapPainter extends CustomPainter {
     // Hangs outwards a little, and lags behind the body's motion.
     final lag = swing * 60;
     if (film) {
-      final mid = Offset(top.dx + side * 26 + lag, size.height * 0.35);
-      final bottom = Offset(top.dx + side * 10 + lag * 1.6, size.height * 0.9);
-      final path = Path()
-        ..moveTo(top.dx, top.dy)
-        ..quadraticBezierTo(mid.dx, mid.dy, bottom.dx, bottom.dy);
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = Colors.black.withValues(alpha: 0.35)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 24
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-      );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..color = color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 18,
-      );
-      // Stitching down both edges.
-      for (final off in [-6.5, 6.5]) {
-        final edge = Path()
-          ..moveTo(top.dx + off, top.dy + 10)
-          ..quadraticBezierTo(mid.dx + off, mid.dy, bottom.dx + off, bottom.dy);
-        _dashed(
-          canvas,
-          edge,
-          Paint()
-            ..color = stitch.withValues(alpha: 0.5)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1,
-        );
-      }
-      // Metal ring at the lug.
-      canvas.drawCircle(
-        top,
-        8,
-        Paint()
-          ..color = const Color(0xFFB9B4A8)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3,
-      );
+      _leatherStrap(canvas, size, top, lag);
     } else {
-      // Wrist cord: a thin loop with a sliding bead.
-      final bead = Offset(top.dx + side * 14 + lag * 0.8, size.height * 0.16);
-      final loopEnd = Offset(top.dx + side * 18 + lag * 1.5, size.height * 0.4);
-      final cord = Paint()
+      _wristCord(canvas, size, top, lag);
+    }
+  }
+
+  /// A leather neck strap: split ring, a folded end tab through a keeper,
+  /// the strap itself (rounded, stitched both edges) and a buckle further
+  /// down.
+  void _leatherStrap(Canvas canvas, Size size, Offset top, double lag) {
+    final ringC = top.translate(0, 8);
+    final start = ringC.translate(0, 9);
+    final mid = Offset(top.dx + side * 26 + lag, size.height * 0.35);
+    final bottom = Offset(top.dx + side * 10 + lag * 1.6, size.height * 0.9);
+    final path = Path()
+      ..moveTo(start.dx, start.dy)
+      ..quadraticBezierTo(mid.dx, mid.dy, bottom.dx, bottom.dy);
+    final metric = path.computeMetrics().first;
+    canvas.drawPath(
+      path.shift(Offset(-side * 4.0, 10)),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 24
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
+    );
+    final dark = Color.lerp(color, Colors.black, 0.35)!;
+    final light = Color.lerp(color, const Color(0xFFE0B48A), 0.28)!;
+    // The end tab: narrower, doubled back from the ring to the keeper.
+    final tab = metric.extractPath(0, 52);
+    canvas.drawPath(
+      tab,
+      Paint()
+        ..color = dark
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 14
+        ..strokeCap = StrokeCap.round,
+    );
+    // The strap, with a soft highlight down one side so it reads round.
+    final strap = metric.extractPath(36, metric.length);
+    canvas.drawPath(
+      strap,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 20,
+    );
+    canvas.drawPath(
+      _parallel(metric, -4.5, 36, metric.length),
+      Paint()
+        ..color = light.withValues(alpha: 0.55)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5,
+    );
+    canvas.drawPath(
+      _parallel(metric, 7.5, 36, metric.length),
+      Paint()
+        ..color = dark.withValues(alpha: 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    for (final off in [-7.0, 7.0]) {
+      _dashed(
+        canvas,
+        _parallel(metric, off, 44, metric.length),
+        Paint()
+          ..color = stitch.withValues(alpha: 0.55)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1,
+      );
+    }
+    // Keeper loop across the strap where the tab tucks in.
+    _across(canvas, metric, 48, 26, 9, (rect, paint) {
+      canvas.drawRRect(RRect.fromRectAndRadius(rect, const Radius.circular(2)), paint..color = dark);
+      canvas.drawLine(
+        rect.topLeft.translate(2, 2),
+        rect.topRight.translate(-2, 2),
+        Paint()
+          ..color = light.withValues(alpha: 0.5)
+          ..strokeWidth = 1,
+      );
+    });
+    // Buckle: a metal frame with its bar, the strap running under it.
+    _across(canvas, metric, metric.length * 0.48, 28, 15, (rect, paint) {
+      final frame = RRect.fromRectAndRadius(rect, const Radius.circular(3));
+      canvas.drawRRect(
+        frame.shift(const Offset(0, 1.5)),
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.4)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+      );
+      final metal = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..shader = const LinearGradient(
+          colors: [Color(0xFFEDE9E0), Color(0xFF9C978C), Color(0xFFD9D4CA)],
+        ).createShader(rect);
+      canvas.drawRRect(frame, metal);
+      canvas.drawLine(rect.topCenter, rect.bottomCenter, metal);
+    });
+    // Triangular split ring through the lug.
+    final ring = Path()
+      ..moveTo(ringC.dx, ringC.dy - 7)
+      ..lineTo(ringC.dx + 8, ringC.dy + 6)
+      ..lineTo(ringC.dx - 8, ringC.dy + 6)
+      ..close();
+    canvas.drawPath(
+      ring,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4
+        ..strokeJoin = StrokeJoin.round,
+    );
+    canvas.drawPath(
+      ring,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF2EFE8), Color(0xFF8F8A80)],
+        ).createShader(Rect.fromCircle(center: ringC, radius: 9))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.4
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  /// A braided wrist cord: a thin connector loop through the lug, the cord
+  /// (with a woven texture), a cord lock, and the loop.
+  void _wristCord(Canvas canvas, Size size, Offset top, double lag) {
+    final bead = Offset(top.dx + side * 14 + lag * 0.8, size.height * 0.16);
+    final loopEnd = Offset(top.dx + side * 18 + lag * 1.5, size.height * 0.4);
+    final cord = Path()
+      ..moveTo(top.dx, top.dy + 6)
+      ..quadraticBezierTo(top.dx + side * 4, (top.dy + bead.dy) / 2, bead.dx, bead.dy)
+      ..cubicTo(bead.dx - 30, bead.dy + 60, loopEnd.dx - 28, loopEnd.dy, loopEnd.dx, loopEnd.dy)
+      ..cubicTo(loopEnd.dx + 28, loopEnd.dy, bead.dx + 30, bead.dy + 60, bead.dx, bead.dy);
+    canvas.drawPath(
+      cord.shift(Offset(-side * 3.0, 6)),
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.4)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
+    );
+    canvas.drawPath(
+      cord,
+      Paint()
         ..color = color
         ..style = PaintingStyle.stroke
         ..strokeWidth = 5
-        ..strokeCap = StrokeCap.round;
-      canvas.drawLine(top, bead, cord);
-      final loop = Path()
-        ..moveTo(bead.dx, bead.dy)
-        ..cubicTo(bead.dx - 30, bead.dy + 60, loopEnd.dx - 28, loopEnd.dy, loopEnd.dx, loopEnd.dy)
-        ..cubicTo(loopEnd.dx + 28, loopEnd.dy, bead.dx + 30, bead.dy + 60, bead.dx, bead.dy);
-      canvas.drawPath(loop, cord);
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(center: bead, width: 12, height: 16),
-          const Radius.circular(4),
-        ),
-        Paint()..color = const Color(0xFF3A3D42),
-      );
+        ..strokeCap = StrokeCap.round,
+    );
+    // Woven texture: short slanted ticks along the cord.
+    final weave = Paint()
+      ..color = Colors.white.withValues(alpha: 0.16)
+      ..strokeWidth = 1.1;
+    for (final m in cord.computeMetrics()) {
+      for (var d = 0.0; d < m.length; d += 3.2) {
+        final tan = m.getTangentForOffset(d)!;
+        final n = Offset(-tan.vector.dy, tan.vector.dx);
+        canvas.drawLine(
+          tan.position + n * 2 - tan.vector * 1.2,
+          tan.position - n * 2 + tan.vector * 1.2,
+          weave,
+        );
+      }
     }
+    // Connector: a thin loop through the lug.
+    canvas.drawOval(
+      Rect.fromCenter(center: top.translate(0, 3), width: 9, height: 12),
+      Paint()
+        ..color = const Color(0xFF2A2C30)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    // Cord lock: a little barrel with ridges and a sheen.
+    final lock = RRect.fromRectAndRadius(
+      Rect.fromCenter(center: bead, width: 13, height: 18),
+      const Radius.circular(5),
+    );
+    canvas.drawRRect(
+      lock,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0xFF55595F), Color(0xFF2A2C30), Color(0xFF16171A)],
+        ).createShader(lock.outerRect),
+    );
+    final ridge = Paint()
+      ..color = Colors.white.withValues(alpha: 0.18)
+      ..strokeWidth = 1;
+    for (var y = lock.top + 4; y < lock.bottom - 3; y += 3) {
+      canvas.drawLine(Offset(lock.left + 2, y), Offset(lock.right - 2, y), ridge);
+    }
+  }
+
+  /// A path running alongside [m] at [off] px (positive = right of travel).
+  Path _parallel(PathMetric m, double off, double from, double to) {
+    final out = Path();
+    var first = true;
+    for (var d = from; d <= to; d += 4) {
+      final tan = m.getTangentForOffset(d);
+      if (tan == null) break;
+      final p = tan.position + Offset(-tan.vector.dy, tan.vector.dx) * off;
+      if (first) {
+        out.moveTo(p.dx, p.dy);
+        first = false;
+      } else {
+        out.lineTo(p.dx, p.dy);
+      }
+    }
+    return out;
+  }
+
+  /// Draws a [w] x [h] piece lying across the strap at [at] along it.
+  void _across(Canvas canvas, PathMetric m, double at, double w, double h, void Function(Rect, Paint) draw) {
+    final tan = m.getTangentForOffset(at);
+    if (tan == null) return;
+    canvas.save();
+    canvas.translate(tan.position.dx, tan.position.dy);
+    canvas.rotate(tan.angle * -1 + math.pi / 2);
+    draw(Rect.fromCenter(center: Offset.zero, width: w, height: h), Paint());
+    canvas.restore();
   }
 
   void _dashed(Canvas canvas, Path path, Paint paint) {

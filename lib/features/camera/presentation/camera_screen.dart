@@ -148,8 +148,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       }
       return;
     }
-    unawaited(HapticFeedback.mediumImpact());
-    unawaited(ref.read(captureControllerProvider.notifier).shutter());
+    pressShutter(ref);
   }
 
   bool _canSwap() => !_swapBusy && !_selectorOpen && !ref.read(captureControllerProvider).isRecording;
@@ -461,9 +460,19 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                               ],
                             ),
                           ),
-                          _ModePeek(mode: mode, onSwap: _tossByTap),
                         ],
                       ),
+                    ),
+                  ),
+                  // The other camera's tag floats over the desk, not on the
+                  // body: it tucks away as a swap starts and springs back
+                  // out once the new body has settled.
+                  AnimatedBuilder(
+                    animation: _swap,
+                    builder: (context, _) => _ModePeek(
+                      mode: mode,
+                      onSwap: _tossByTap,
+                      hidden: _dragging || _committing || _swap.isAnimating || _swap.value != 0,
                     ),
                   ),
                   const _DarkroomBannerOverlay(),
@@ -635,8 +644,8 @@ class _DarkroomBannerOverlayState extends ConsumerState<_DarkroomBannerOverlay> 
 /// body (leatherette or brushed metal) with its name. Tap it, or pull it in,
 /// to swap cameras. Film keeps the digital one to its right; digital keeps
 /// the film one to its left (the way the bodies slide).
-class _ModePeek extends StatelessWidget {
-  const _ModePeek({required this.mode, required this.onSwap});
+class _ModePeek extends StatefulWidget {
+  const _ModePeek({required this.mode, required this.onSwap, required this.hidden});
 
   static const topFraction = 0.36;
   static const height = 150.0;
@@ -644,72 +653,126 @@ class _ModePeek extends StatelessWidget {
   final AppMode mode;
   final VoidCallback onSwap;
 
+  /// Tucked away off the edge (a swap is under way).
+  final bool hidden;
+
+  @override
+  State<_ModePeek> createState() => _ModePeekState();
+}
+
+class _ModePeekState extends State<_ModePeek> with SingleTickerProviderStateMixin {
+  /// 0 = out, 1 = tucked away past the screen edge.
+  late final AnimationController _tuck = AnimationController(
+    vsync: this,
+    value: widget.hidden ? 1 : 0,
+    duration: const Duration(milliseconds: 260),
+  );
+
+  // Shown for a tag that has tucked away, until it springs out again (the
+  // mode flips while it's hidden).
+  late AppMode _shownMode = widget.mode;
+
+  @override
+  void didUpdateWidget(_ModePeek old) {
+    super.didUpdateWidget(old);
+    if (widget.hidden && !old.hidden) {
+      // A quick tuck, with a little wind-up.
+      unawaited(_tuck.animateTo(1, duration: const Duration(milliseconds: 220), curve: Curves.easeInBack));
+    } else if (!widget.hidden && old.hidden) {
+      setState(() => _shownMode = widget.mode);
+      // Out again on a spring: overshoots and settles.
+      unawaited(_tuck.animateTo(0, duration: const Duration(milliseconds: 700), curve: Curves.elasticOut));
+    } else if (!widget.hidden && widget.mode != _shownMode) {
+      _shownMode = widget.mode;
+    }
+  }
+
+  @override
+  void dispose() {
+    _tuck.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _tuck,
+      builder: (context, _) {
+        final onRight = _shownMode == AppMode.film;
+        // Slides out past its own edge (plus the touch padding).
+        // (The spring's overshoot pushes it a little further in.)
+        final shift = _tuck.value * 50;
+        return Positioned(
+          right: onRight ? -shift : null,
+          left: onRight ? null : -shift,
+          top: MediaQuery.sizeOf(context).height * _ModePeek.topFraction,
+          child: IgnorePointer(ignoring: _tuck.value > 0.05, child: _tab(context, onRight)),
+        );
+      },
+    );
+  }
+
+  Widget _tab(BuildContext context, bool onRight) {
+    final mode = _shownMode;
+    final onSwap = widget.onSwap;
     final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
     final p = RetroPalette.forMode(other);
-    final onRight = mode == AppMode.film;
-    const w = 30.0, h = height;
+    const w = 30.0, h = _ModePeek.height;
     final radius = onRight
         ? const BorderRadius.horizontal(left: Radius.circular(12))
         : const BorderRadius.horizontal(right: Radius.circular(12));
-    return Positioned(
-      right: onRight ? 0 : null,
-      left: onRight ? null : 0,
-      top: MediaQuery.sizeOf(context).height * topFraction,
-      child: Semantics(
-        button: true,
-        label: other == AppMode.film ? 'Switch to the film camera' : 'Switch to the digital camera',
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          // Pulling it in is the body's own sideways drag (CameraScreen).
-          onTap: onSwap,
-          child: Padding(
-            // Generous, invisible touch area around the slim tab.
-            padding: EdgeInsets.only(left: onRight ? 14 : 0, right: onRight ? 0 : 14),
-            child: Container(
-              width: w,
-              height: h,
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: radius,
-                boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
-              ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  SurfaceTexture(
-                    leather: other == AppMode.film,
-                    base: other == AppMode.film ? p.body : p.bodyHighlight,
-                    light: p.bodyHighlight,
-                    dark: p.bodyShadow,
-                  ),
-                  // Edge of the body catching the light.
-                  Align(
-                    alignment: onRight ? Alignment.centerLeft : Alignment.centerRight,
-                    child: Container(width: 2, color: p.bodyHighlight.withValues(alpha: 0.7)),
-                  ),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(onRight ? Icons.chevron_left : Icons.chevron_right, size: 16, color: p.accent),
-                      const SizedBox(height: 4),
-                      RotatedBox(
-                        quarterTurns: onRight ? 3 : 1,
-                        child: Text(
-                          other == AppMode.film ? 'FILM' : 'DIGITAL',
-                          style: TextStyle(
-                            color: p.text,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 2,
-                          ),
+    return Semantics(
+      button: true,
+      label: other == AppMode.film ? 'Switch to the film camera' : 'Switch to the digital camera',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        // Pulling it in is the body's own sideways drag (CameraScreen).
+        onTap: onSwap,
+        child: Padding(
+          // Generous, invisible touch area around the slim tab.
+          padding: EdgeInsets.only(left: onRight ? 14 : 0, right: onRight ? 0 : 14),
+          child: Container(
+            width: w,
+            height: h,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: radius,
+              boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 8, offset: Offset(0, 2))],
+            ),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                SurfaceTexture(
+                  leather: other == AppMode.film,
+                  base: other == AppMode.film ? p.body : p.bodyHighlight,
+                  light: p.bodyHighlight,
+                  dark: p.bodyShadow,
+                ),
+                // Edge of the body catching the light.
+                Align(
+                  alignment: onRight ? Alignment.centerLeft : Alignment.centerRight,
+                  child: Container(width: 2, color: p.bodyHighlight.withValues(alpha: 0.7)),
+                ),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(onRight ? Icons.chevron_left : Icons.chevron_right, size: 16, color: p.accent),
+                    const SizedBox(height: 4),
+                    RotatedBox(
+                      quarterTurns: onRight ? 3 : 1,
+                      child: Text(
+                        other == AppMode.film ? 'FILM' : 'DIGITAL',
+                        style: TextStyle(
+                          color: p.text,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
                         ),
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

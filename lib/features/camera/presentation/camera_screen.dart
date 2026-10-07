@@ -176,8 +176,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (!_dragging) return;
     final dir = _dirFor(ref.read(appModeProvider));
     _raw = (_raw + (d.primaryDelta ?? 0) * dir / _travel()).clamp(-0.6, 1.15);
-    // The wrong way only gives a little: the other camera isn't there.
-    _swap.value = _raw >= 0 ? _raw : _raw * 0.25;
+    // The wrong way only gives a little: the other camera isn't there. In
+    // film mode that way is the corkboard swipe, so the body stays put.
+    final film = ref.read(appModeProvider) == AppMode.film;
+    _swap.value = _raw >= 0 ? _raw : (film ? 0 : _raw * 0.25);
   }
 
   void _onDragEnd(DragEndDetails d) {

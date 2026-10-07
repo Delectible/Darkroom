@@ -470,8 +470,8 @@ darkroom, corkboard, ambience).
   only, run through desktop ffmpeg in `video_audio_ffmpeg_test`.
 - [ ] **18.5 High-resolution film setting:** came with the original code,
   never requested. Asked Gabe whether to drop it.
-- [~] **18.6 Logo eyes:** blue X on the left, red X on the right (opposite
-  their fringe colours). Sample sent; waiting for approval.
+- [-] **18.6 Logo eyes:** blue X on the left, red X on the right (opposite
+  their fringe colours). Sample sent; Gabe: keep the old logo for now.
 - [x] **18.7 Darkroom close-up:** tap a print / Polaroid / reel in the
   darkroom strip for a big view of it developing live; board greyed
   behind; tap anywhere to go back.
@@ -480,3 +480,8 @@ darkroom, corkboard, ambience).
 - [x] **18.9 Corkboard thud too quiet:** its modes were below what a phone
   speaker plays; moved up to ~175-1300 Hz and made louder.
   → 18.1-18.4, 18.7-18.9: 1.3.27 · 2026-10-07 · 466b3f3
+
+## 19. Corkboard swipe wiggle (2026-10-07)
+
+- [x] **19.1** Swiping right in film mode (the corkboard gesture) no longer
+  nudges the camera body before the board comes in.

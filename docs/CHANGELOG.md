@@ -346,4 +346,4 @@ darkroom, corkboard, ambience).
   BRICKS (brick breaker), PINBALL (Space Rabbit Pinball: hold either half
   for that flipper, hold to pull the plunger, light R-A-B-B-I-T). Listed in
   README.TXT and hinted in Tip of the Day.
-  → 1.3.21 · 2026-10-07 · (this commit)
+  → 1.3.21 · 2026-10-07 · 9a112d5

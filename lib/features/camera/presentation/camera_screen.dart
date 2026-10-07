@@ -9,9 +9,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sfx.dart';
 import '../../../core/device/system_gestures.dart';
+import '../../../core/device/volume_keys.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/providers.dart';
-import '../../../core/theme/darkroom_mark.dart';
 import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../cameras/domain/camera_spec.dart';
@@ -82,12 +82,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     super.initState();
     unawaited(Sfx.cameraSwap.preload());
     unawaited(Sfx.zoomMotor.preload());
-    HardwareKeyboard.instance.addHandler(_onKey);
+    VolumeKeys.listen(_volume);
   }
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.removeHandler(_onKey);
+    VolumeKeys.listen(null);
+    unawaited(VolumeKeys.capture(false));
     unawaited(GestureExclusion.clear());
     _swap.dispose();
     _outgoing?.dispose();
@@ -115,42 +116,40 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     final media = MediaQuery.of(context);
     _excludedFor = media.size;
     unawaited(GestureExclusion.set(_peekBands(media.size), media.devicePixelRatio));
+    unawaited(VolumeKeys.capture(true));
   }
 
+  /// Another screen goes on top: the edges and the volume buttons are the
+  /// phone's again until it closes.
   void _releaseEdges() {
     _excludedFor = null;
     unawaited(GestureExclusion.clear());
+    unawaited(VolumeKeys.capture(false));
   }
 
   /// Volume buttons: the shutter, or (setting on, digital bodies) the zoom
   /// rocker, held to drive. Only while the camera itself is on screen;
   /// anywhere else they change the volume as usual.
   int _volumeZoomDir = 0;
-  bool _onKey(KeyEvent e) {
-    final key = e.logicalKey;
-    final up = key == LogicalKeyboardKey.audioVolumeUp;
-    if (!up && key != LogicalKeyboardKey.audioVolumeDown) return false;
-    if (e is KeyUpEvent) {
+  void _volume(bool up, bool pressed) {
+    if (!pressed) {
       if (_volumeZoomDir != 0) {
         _volumeZoomDir = 0;
         ref.read(zoomProvider.notifier).stop();
       }
-      return mounted && ModalRoute.of(context)?.isCurrent == true;
+      return;
     }
-    if (!mounted || _selectorOpen || _swapBusy || ModalRoute.of(context)?.isCurrent != true) return false;
-    if (e is KeyRepeatEvent) return true;
+    if (!mounted || _selectorOpen || _swapBusy || ModalRoute.of(context)?.isCurrent != true) return;
     final digital = ref.read(appModeProvider) == AppMode.digital;
     if (digital && ref.read(globalSettingsProvider).volumeZoom) {
       if (ref.read(zoomProvider).canZoom) {
         _volumeZoomDir = up ? 1 : -1;
-        unawaited(HapticFeedback.selectionClick());
         ref.read(zoomProvider.notifier).start(_volumeZoomDir);
       }
-      return true;
+      return;
     }
     unawaited(HapticFeedback.mediumImpact());
     unawaited(ref.read(captureControllerProvider.notifier).shutter());
-    return true;
   }
 
   bool _canSwap() => !_swapBusy && !_selectorOpen && !ref.read(captureControllerProvider).isRecording;
@@ -419,7 +418,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                           SafeArea(
                             child: Column(
                               children: [
-                                _TopBar(onSettings: () => showSettingsSheet(context)),
+                                _TopBar(
+                                  onSettings: () async {
+                                    _releaseEdges();
+                                    await showSettingsSheet(context);
+                                    _claimEdges();
+                                  },
+                                ),
                                 Expanded(
                                   child: Padding(
                                     padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
@@ -491,8 +496,7 @@ class _TopBar extends ConsumerWidget {
           AspectButton(
             onCycle: () => unawaited(ref.read(cameraSettingsProvider.notifier).cycleAspect(spec.id)),
           ),
-          // The maker's badge: the rabbit pressed into the body.
-          const Expanded(child: Center(child: _BodyBadge())),
+          const Spacer(),
           ValueListenableBuilder<int>(
             valueListenable: processing,
             // Only build the spinner while something is processing: an
@@ -710,29 +714,6 @@ class _ModePeek extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// The Darkroom rabbit on the camera body: debossed into the leatherette on
-/// film bodies, printed on the brushed metal of digital ones.
-class _BodyBadge extends ConsumerWidget {
-  const _BodyBadge();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final p = RetroPalette.of(context);
-    final film = ref.watch(appModeProvider) == AppMode.film;
-    if (!film) return DarkroomMark(size: 15, color: p.bodyShadow.withValues(alpha: 0.55));
-    return Stack(
-      children: [
-        // Light catching the lower edge of the pressing, then the pressing.
-        Transform.translate(
-          offset: const Offset(0, 0.8),
-          child: DarkroomMark(size: 16, color: p.bodyHighlight.withValues(alpha: 0.35)),
-        ),
-        DarkroomMark(size: 16, color: Colors.black.withValues(alpha: 0.45)),
-      ],
     );
   }
 }

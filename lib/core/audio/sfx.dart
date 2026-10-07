@@ -7,27 +7,28 @@ import 'package:video_player/video_player.dart';
 /// already ship (no extra native audio dependency). Mixes with whatever the
 /// user is listening to instead of taking audio focus.
 class Sfx {
-  Sfx._(this._asset, {this.volume = 0.5, this.loop = false});
+  Sfx._(this._asset, {this.volume = 0.25, this.loop = false});
 
   /// The two camera bodies changing places (mode switch). Kept quiet.
-  static final cameraSwap = Sfx._('assets/sfx/camera_swap.wav', volume: 0.15);
+  static final cameraSwap = Sfx._('assets/sfx/camera_swap.wav', volume: 0.075);
 
   // Projector deck piano keys: press (clunk) and release (lighter tick).
-  static final keyDown = Sfx._('assets/sfx/deck_key_down.wav', volume: 0.55);
-  static final keyUp = Sfx._('assets/sfx/deck_key_up.wav', volume: 0.45);
+  static final keyDown = Sfx._('assets/sfx/deck_key_down.wav', volume: 0.275);
+  static final keyUp = Sfx._('assets/sfx/deck_key_up.wav', volume: 0.225);
 
   // Windows 98 (made by tool/sfx/make_sfx.py; all original sounds).
-  static final w98Click = Sfx._('assets/sfx/w98_click.wav', volume: 0.3);
-  static final w98Ding = Sfx._('assets/sfx/w98_ding.wav', volume: 0.3);
-  static final w98Error = Sfx._('assets/sfx/w98_error.wav', volume: 0.35);
-  static final w98Exit = Sfx._('assets/sfx/w98_exit.wav', volume: 0.3);
-  static final w98Shutdown = Sfx._('assets/sfx/w98_shutdown.wav', volume: 0.4);
-  static final crtOff = Sfx._('assets/sfx/crt_off.wav', volume: 0.45);
+  static final w98Click = Sfx._('assets/sfx/w98_click.wav', volume: 0.15);
+  static final w98Ding = Sfx._('assets/sfx/w98_ding.wav', volume: 0.15);
+  static final w98Error = Sfx._('assets/sfx/w98_error.wav', volume: 0.175);
+  static final w98Login = Sfx._('assets/sfx/w98_login.wav', volume: 0.15);
+  static final w98Exit = Sfx._('assets/sfx/w98_exit.wav', volume: 0.15);
+  static final w98Shutdown = Sfx._('assets/sfx/w98_shutdown.wav', volume: 0.2);
+  static final crtOff = Sfx._('assets/sfx/crt_off.wav', volume: 0.225);
 
-  static List<Sfx> get windows98 => [w98Click, w98Ding, w98Error, w98Exit];
+  static List<Sfx> get windows98 => [w98Click, w98Ding, w98Error, w98Exit, w98Login];
 
   /// Digital bodies' zoom motor: loops while the zoom moves.
-  static final zoomMotor = Sfx._('assets/sfx/zoom_motor.wav', volume: 0.12, loop: true);
+  static final zoomMotor = Sfx._('assets/sfx/zoom_motor.wav', volume: 0.06, loop: true);
 
   final String _asset;
   final double volume;

@@ -50,6 +50,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     for (final s in Sfx.windows98) {
       unawaited(s.preload());
     }
+    Sfx.w98Login.play();
   }
 
   @override
@@ -312,17 +313,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       case StartAction.run:
         await _run();
       case StartAction.shutDown:
-        final r = await _box(
-          'Shut Down Darkroom',
-          'Are you sure you want to shut down the explorer and go back to the camera?',
-          icon: Win98MessageIcon.question,
-          buttons: const ['Yes', 'No'],
-        );
-        if (r == 0 && mounted) {
-          _shutDown = true;
-          await showShutDownSequence(context);
-          if (mounted) Navigator.of(context).pop();
-        }
+        _shutDown = true;
+        await showShutDownSequence(context);
+        if (mounted) Navigator.of(context).pop();
     }
   }
 

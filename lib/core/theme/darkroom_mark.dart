@@ -63,7 +63,9 @@ class DarkroomMarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final s = size.height / (_y1 - _y0);
-    canvas.saveLayer(Offset.zero & size, Paint());
+    // Room round the glyph: the split copies and round caps reach past it.
+    final layer = (Offset.zero & size).inflate(size.height * 0.15);
+    canvas.saveLayer(layer, Paint());
     if (rgbSplit) {
       final d = 5 * s;
       for (final (c, dx) in [
@@ -71,7 +73,7 @@ class DarkroomMarkPainter extends CustomPainter {
         (const Color(0xFF00FF00), 0.0),
         (const Color(0xFF0000FF), d),
       ]) {
-        canvas.saveLayer(Offset.zero & size, Paint()..blendMode = BlendMode.plus);
+        canvas.saveLayer(layer, Paint()..blendMode = BlendMode.plus);
         _glyph(canvas, s, Offset(dx, 0), c);
         canvas.restore();
       }

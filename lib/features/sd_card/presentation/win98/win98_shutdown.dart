@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,10 +8,10 @@ import 'package:flutter/services.dart';
 import '../../../../core/audio/sfx.dart';
 import '../../../../core/theme/darkroom_mark.dart';
 
-/// Start > Shut Down: the "shutting down" screen (sky, clouds and the
-/// rabbit, with a shutdown tune), "It's now safe to turn off your computer",
-/// then the monitor switching off: the picture collapses into a bright
-/// line, the line into a dot, and the dot fades out. Tap to skip ahead.
+/// Start > Shut Down: the "shutting down" screen (sky, clouds and a pixel
+/// rabbit, with a shutdown tune), then the monitor switching off: the
+/// picture collapses into a bright line, the line into a dot, and the dot
+/// fades out. Tap to skip ahead.
 Future<void> showShutDownSequence(BuildContext context) => Navigator.of(context).push(
   PageRouteBuilder<void>(
     opaque: true,
@@ -20,7 +21,7 @@ Future<void> showShutDownSequence(BuildContext context) => Navigator.of(context)
   ),
 );
 
-enum _Stage { shuttingDown, safe, crt, off }
+enum _Stage { shuttingDown, crt, off }
 
 class _ShutDown extends StatefulWidget {
   const _ShutDown();
@@ -44,7 +45,7 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
     super.initState();
     Sfx.w98Shutdown.play();
     unawaited(Sfx.crtOff.preload());
-    _next = Timer(const Duration(milliseconds: 3600), _toSafe);
+    _next = Timer(const Duration(milliseconds: 3800), _toCrt);
   }
 
   @override
@@ -52,13 +53,6 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
     _next?.cancel();
     _crt.dispose();
     super.dispose();
-  }
-
-  void _toSafe() {
-    if (!mounted || _stage != _Stage.shuttingDown) return;
-    _next?.cancel();
-    setState(() => _stage = _Stage.safe);
-    _next = Timer(const Duration(milliseconds: 1600), _toCrt);
   }
 
   void _toCrt() {
@@ -78,14 +72,11 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
     );
   }
 
-  void _skip() => _stage == _Stage.shuttingDown ? _toSafe() : _toCrt();
+  void _skip() => _toCrt();
 
   @override
   Widget build(BuildContext context) {
-    final picture = switch (_stage) {
-      _Stage.shuttingDown => const _ShuttingDownScreen(),
-      _ => const _SafeScreen(),
-    };
+    const picture = _ShuttingDownScreen();
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _skip,
@@ -162,7 +153,7 @@ class _ShuttingDownScreen extends StatelessWidget {
           child: Column(
             children: [
               const Spacer(flex: 3),
-              const DarkroomMark(size: 120, color: Colors.white, rgbSplit: true),
+              const PixelRabbit(height: 132),
               const SizedBox(height: 18),
               Text.rich(
                 TextSpan(
@@ -234,29 +225,69 @@ class _Clouds extends CustomPainter {
   bool shouldRepaint(_Clouds old) => false;
 }
 
-class _SafeScreen extends StatelessWidget {
-  const _SafeScreen();
+/// The rabbit as chunky, mis-converged pixel art (rendered tiny, then
+/// blown up without smoothing), with a trail of loose pixels behind it like
+/// the boot-screen logos of the day.
+class PixelRabbit extends StatefulWidget {
+  const PixelRabbit({super.key, this.height = 120});
+
+  final double height;
+
+  @override
+  State<PixelRabbit> createState() => _PixelRabbitState();
+}
+
+class _PixelRabbitState extends State<PixelRabbit> {
+  static const _h = 30, _w = 44; // the sprite, in pixels
+  ui.Image? _image;
+
+  @override
+  void initState() {
+    super.initState();
+    final rec = ui.PictureRecorder();
+    final canvas = Canvas(rec);
+    const glyphH = 24.0;
+    const left = 16.0, top = 3.0;
+    canvas.saveLayer(const Rect.fromLTWH(0, 0, _w * 1.0, _h * 1.0), Paint());
+    for (final (c, dx) in [
+      (const Color(0xFFFF0000), -1.0),
+      (const Color(0xFF00FF00), 0.0),
+      (const Color(0xFF0000FF), 1.0),
+    ]) {
+      canvas.saveLayer(const Rect.fromLTWH(0, 0, _w * 1.0, _h * 1.0), Paint()..blendMode = BlendMode.plus);
+      canvas.translate(left + dx, top);
+      DarkroomMarkPainter(color: c).paint(canvas, const Size(glyphH * DarkroomMark.aspect, glyphH));
+      canvas.restore();
+    }
+    // Loose pixels trailing off to the left, thinning out.
+    final rnd = math.Random(98);
+    const trail = [Color(0xFFFF4040), Color(0xFF40FF40), Color(0xFF4060FF), Color(0xFFFFFFFF)];
+    for (var x = 0; x < 15; x++) {
+      for (var y = 8; y < 26; y++) {
+        if (rnd.nextDouble() < x / 22) {
+          canvas.drawRect(Rect.fromLTWH(x * 1.0, y * 1.0, 1, 1), Paint()..color = trail[rnd.nextInt(4)]);
+        }
+      }
+    }
+    canvas.restore();
+    _image = rec.endRecording().toImageSync(_w, _h);
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Colors.black,
-      child: Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text(
-            "It's now safe to turn off\nyour computer.",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'W98',
-              color: Color(0xFFFF8C1A),
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              decoration: TextDecoration.none,
-            ),
-          ),
-        ),
-      ),
+    final h = widget.height;
+    return RawImage(
+      image: _image,
+      width: h * _w / _h,
+      height: h,
+      filterQuality: FilterQuality.none,
+      fit: BoxFit.fill,
     );
   }
 }

@@ -13,6 +13,7 @@ import '../../../../core/device/physical_orientation.dart';
 import '../../../../core/device/upright.dart';
 import '../../../../core/processing/photo_pipeline.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/theme/darkroom_mark.dart';
 import '../../../../core/theme/retro_theme.dart';
 import '../../../../core/theme/surfaces.dart';
 import '../../../cameras/domain/camera_spec.dart';
@@ -812,23 +813,39 @@ class _LcdGrid extends CustomPainter {
 /// W | T zoom rocker on every digital body: hold to drive the zoom motor,
 /// and slide across to the other half to reverse it. The rocker claims the
 /// touch the moment it lands, so a slide never tosses the camera body.
-class ZoomRocker extends ConsumerWidget {
+class ZoomRocker extends ConsumerStatefulWidget {
   const ZoomRocker({super.key});
 
   static const _width = 100.0, _height = 40.0;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ZoomRocker> createState() => _ZoomRockerState();
+}
+
+class _ZoomRockerState extends ConsumerState<ZoomRocker> {
+  static const _width = ZoomRocker._width, _height = ZoomRocker._height;
+
+  /// The half the finger is on (-1 W, 1 T), for the whole touch: the rocker
+  /// rebuilds on every zoom step, so this can't live in build().
+  int? _finger;
+
+  @override
+  Widget build(BuildContext context) {
     final palette = RetroPalette.of(context);
     final zoom = ref.watch(zoomProvider);
     final enabled = zoom.canZoom;
     final notifier = ref.read(zoomProvider.notifier);
 
+    // Acts only when the finger lands or crosses to the other half; holding
+    // still at the end of travel does nothing more.
     void drive(Offset local) {
       if (!enabled) return;
       final dir = local.dx < _width / 2 ? -1 : 1;
-      if (ref.read(zoomProvider).direction == dir) return;
-      unawaited(HapticFeedback.selectionClick());
+      if (_finger == dir) return;
+      _finger = dir;
+      final z = ref.read(zoomProvider);
+      final atEnd = dir > 0 ? z.level >= z.max : z.level <= z.min;
+      if (!atEnd) unawaited(HapticFeedback.selectionClick());
       notifier.start(dir);
     }
 
@@ -867,8 +884,14 @@ class ZoomRocker extends ConsumerWidget {
         _ClaimingPan: GestureRecognizerFactoryWithHandlers<_ClaimingPan>(_ClaimingPan.new, (r) {
           r.onDown = (d) => drive(d.localPosition);
           r.onUpdate = (d) => drive(d.localPosition);
-          r.onEnd = (_) => notifier.stop();
-          r.onCancel = notifier.stop;
+          r.onEnd = (_) {
+            _finger = null;
+            notifier.stop();
+          };
+          r.onCancel = () {
+            _finger = null;
+            notifier.stop();
+          };
         }),
       },
       child: Container(
@@ -1031,20 +1054,30 @@ class _LensFlipPainter extends CustomPainter {
         ..lineTo(tip.dx - math.cos(dir + 0.5) * 4, tip.dy - math.sin(dir + 0.5) * 4);
       canvas.drawPath(head, arrow);
     }
-    // The lens: dark coated glass with a highlight; a tiny lamp shows which
-    // way it faces.
-    final lr = r * 0.36;
-    canvas.drawCircle(c, lr + 1.5, Paint()..color = const Color(0xFF1A1A1A));
+    // The cap: a domed metal button with the maker's rabbit pressed into it;
+    // a tiny lamp shows when the front camera is on.
+    final lr = r * 0.4;
+    canvas.drawCircle(c, lr + 1.2, Paint()..color = Colors.black.withValues(alpha: 0.35));
     canvas.drawCircle(
       c,
       lr,
       Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(-0.3, -0.4),
-          colors: [Color(0xFF3B4A6B), Color(0xFF0B0F18)],
+        ..shader = RadialGradient(
+          center: const Alignment(-0.35, -0.45),
+          colors: [Color.lerp(ring, Colors.white, 0.35)!, ringDark],
         ).createShader(Rect.fromCircle(center: c, radius: lr)),
     );
-    canvas.drawCircle(c + Offset(-lr * 0.35, -lr * 0.35), lr * 0.22, Paint()..color = Colors.white70);
+    final gh = lr * 1.25;
+    final gw = gh * DarkroomMark.aspect;
+    for (final (o, color) in [
+      (const Offset(0.6, 0.7), Colors.white.withValues(alpha: 0.45)),
+      (Offset.zero, Colors.black.withValues(alpha: 0.42)),
+    ]) {
+      canvas.save();
+      canvas.translate(c.dx - gw / 2 + o.dx, c.dy - gh / 2 + o.dy);
+      DarkroomMarkPainter(color: color).paint(canvas, Size(gw, gh));
+      canvas.restore();
+    }
     if (front) canvas.drawCircle(c + Offset(r * 0.62, -r * 0.62), 2.6, Paint()..color = accent);
   }
 

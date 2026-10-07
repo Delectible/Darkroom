@@ -118,6 +118,12 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
     _banner = _lives == 3 && _score == 0 ? 'Tap to serve' : _banner;
   }
 
+  /// Follows the finger, but the bat never leaves the field.
+  void _moveBat(double x) {
+    final half = _batW / 2 / _size.width;
+    _bat = (x / _size.width).clamp(half, 1 - half);
+  }
+
   double get _batY => _size.height - 22;
   Rect get _batRect =>
       Rect.fromCenter(center: Offset(_bat * _size.width, _batY), width: _batW, height: _batH);
@@ -208,8 +214,8 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _serve,
-          onPanDown: (d) => _bat = (d.localPosition.dx / _size.width).clamp(0.0, 1.0),
-          onPanUpdate: (d) => _bat = (d.localPosition.dx / _size.width).clamp(0.0, 1.0),
+          onPanDown: (d) => _moveBat(d.localPosition.dx),
+          onPanUpdate: (d) => _moveBat(d.localPosition.dx),
           child: CustomPaint(
             size: box.biggest,
             painter: _BricksPainter(this),

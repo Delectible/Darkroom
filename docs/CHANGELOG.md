@@ -347,3 +347,30 @@ darkroom, corkboard, ambience).
   for that flipper, hold to pull the plunger, light R-A-B-B-I-T). Listed in
   README.TXT and hinted in Tip of the Day.
   → 1.3.21 · 2026-10-07 · 9a112d5
+
+### 15. Requested 2026-10-07 (after build 41)
+
+- [x] **15.1 Shut Down:** no confirmation box and no "safe to turn off"
+  screen: straight to the shutdown screen, then the CRT switch-off. The
+  logo is now chunky pixel art (`PixelRabbit`) with a trail of loose
+  pixels; the clipped left edge is fixed (DarkroomMark's layer was too
+  tight for the colour split).
+- [x] **15.2 Zoom at end of travel:** holding the rocker at the limit no
+  longer re-triggers (motor + haptics) on every finger twitch.
+- [x] **15.3 Volume buttons:** didn't work. Now taken in MainActivity
+  (`darkroom/volume`) while the camera is on screen, so Android can't turn
+  them into a volume change first.
+- [x] **15.4 Bricks:** the bat stays inside the field.
+- [x] **15.5 Sound levels:** every sound 50% quieter.
+- [x] **15.6 Rabbit badge:** off the top bar; it's now pressed into the cap
+  of the lens-flip button.
+- [x] **15.7 Win98 login chime** when the explorer opens.
+  → 1.3.22 · 2026-10-07 · (this commit)
+- [ ] 15.8 Mode tag floats off the body and tucks away (bouncy) during a swap.
+- [ ] 15.9 New shutters: digital square photoreal + deep click; film chrome
+  release with advance lever + mechanical click; Super 8 red run button.
+- [ ] 15.10 Strap and lug on the body's side wall, refined.
+- [ ] 15.11 Corkboard slides in from the left in a wooden frame, woody swoosh.
+- [ ] 15.12 Real Minesweeper.
+- [ ] 15.13 Pinball redesigned closer to Space Cadet; game sound effects;
+  startup sound.

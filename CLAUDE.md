@@ -223,8 +223,9 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
 - Win98 sounds (`Sfx.w98*`, made by `tool/sfx/make_sfx.py`, all original,
   never Microsoft's): click on Win98Button / menu / Start items, error bong
   / warning ding from `showWin98MessageBox`, exit chime when the explorer
-  closes. Start > Shut Down runs `showShutDownSequence` (sky + rabbit +
-  tune, "safe to turn off", CRT collapse). Start > Run knows RABBIT,
+  closes, login chime when it opens. All sounds are kept quiet (halved in
+  1.3.22). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
+  pixel rabbit + tune, then the CRT collapse). Start > Run knows RABBIT,
   DEVELOP, PING, README, MINESWEEPER (`win98_programs.dart`), the games
   SOL / BRICKS / PINBALL (`win98/games/`, tested in `win98_games_test`),
   plus DEFRAG, WINVER, drive letters; Tip of the Day hints at them.
@@ -254,7 +255,9 @@ UI
 - Under the viewfinder: film bodies show the box end in a memo holder
   (`CameraSpec.boxColor/boxInk`), digital bodies a segment-LCD panel with
   battery and card/tape remaining.
-- Volume buttons (Android; `_onKey` in camera_screen.dart) are the shutter
+- Volume buttons (Android; taken in MainActivity via `darkroom/volume` /
+  `VolumeKeys` while the camera screen holds the edges; Flutter's own key
+  events for them never arrived) are the shutter
   while the camera itself is on screen; setting "Volume buttons zoom" makes
   them the zoom on digital bodies. Elsewhere they change the volume.
 - Camera session: "inactive" does NOT close the camera (Android sends it on
@@ -282,8 +285,9 @@ UI
   default/dark/tinted, and the GitHub social preview `docs/social_preview.png`
   (Gabe sets it by hand: repo Settings > General > Social preview).
 - The rabbit in the app, used sparingly: `DarkroomMark`
-  (`core/theme/darkroom_mark.dart`) debossed/printed small on the camera
-  bodies' top bar and on the lab stamp on the back of prints; the 16x16
+  (`core/theme/darkroom_mark.dart`) pressed into the camera
+  bodies' lens-flip cap and on the lab stamp on the back of prints; the
+  shutdown screen's `PixelRabbit`; the 16x16
   `PixelIcon.rabbit` on the Win98 Start button, Start menu banner and About box.
 - Film boxes / camera pictures (`assets/artwork/*.webp`, 1024 px) are 3D
   renders made with `tool/render/` (three.js r185 + three-gpu-pathtracer in

@@ -12,6 +12,7 @@ no samples, no Microsoft sounds, just numpy).
   w98_exit                      short descending chime when leaving Win98
   w98_shutdown                  a few seconds of warm pad for Shut Down
   crt_off                       CRT switching off: pop, whine, crackle
+  w98_login                     a gentle rising chime when Win98 opens
   zoom_motor                    a small geared lens motor, looped while
                                 the zoom moves (seamless 1 s loop)
 """
@@ -185,6 +186,16 @@ def crt_off():
     return out
 
 
+def w98_login():
+    """A soft swell and four rising bell notes: hello, not fanfare."""
+    out = np.zeros(int(SR * 2.4))
+    for f in (261.63, 392.0):
+        place(out, 0.18 * pad_note(f, 2.2, attack=0.5, release=1.2), 0.0)
+    for i, f in enumerate((523.25, 659.25, 783.99, 1046.5)):
+        place(out, (0.5 + 0.1 * i) * bell(f, 1.4, 0.4), 0.12 + i * 0.17)
+    return reverb(out, mix=0.32, room=0.7)
+
+
 def zoom_motor():
     """Whine + gear ripple + a little brush noise. Every partial is a whole
     number of cycles per second and the noise is cross-faded, so the 1 s
@@ -212,3 +223,4 @@ if __name__ == '__main__':
     save('w98_shutdown', w98_shutdown(), peak=0.75)
     save('crt_off', crt_off(), peak=0.8)
     save('zoom_motor', zoom_motor(), peak=0.5)
+    save('w98_login', w98_login(), peak=0.7)

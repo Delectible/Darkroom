@@ -85,6 +85,9 @@ class ZoomController extends Notifier<ZoomState> {
   /// W (-1) or T (+1) pressed.
   void start(int direction) {
     if (!state.canZoom) return;
+    // Already at the end of travel that way: nothing to drive (no blip of
+    // motor and haptics every time a held finger twitches).
+    if (direction > 0 ? state.level >= state.max : state.level <= state.min) return;
     state = state.copyWith(direction: direction, changedAt: DateTime.now());
     _lastTick = DateTime.now();
     _tick ??= Timer.periodic(const Duration(milliseconds: 16), (_) => _step());

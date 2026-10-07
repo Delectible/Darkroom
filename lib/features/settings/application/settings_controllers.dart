@@ -66,11 +66,6 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     await _repo.saveGlobal(state);
   }
 
-  Future<void> setHighResFilm(bool enabled) async {
-    state = state.copyWith(highResFilm: enabled);
-    await _repo.saveGlobal(state);
-  }
-
   Future<void> setSaveOriginalCopy(bool enabled) async {
     if (enabled) {
       final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);

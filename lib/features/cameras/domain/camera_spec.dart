@@ -9,8 +9,7 @@ enum AppMode { film, digital }
 /// in the camera layer so this file stays pure Dart (it is also used by the
 /// background isolate / WorkManager entrypoint).
 enum CaptureQuality {
-  /// Film: 1080p-class sensor stream by default (smooth on old phones); the
-  /// "High-resolution film" setting raises it to 2160p-class.
+  /// Film: 1080p-class sensor stream (smooth shader preview).
   high,
 
   /// ~1080p class: authentic for 2000s digicams and keeps processing cheap.

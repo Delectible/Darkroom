@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
-import '../../settings/application/settings_controllers.dart';
 import 'camera_log.dart';
 import 'camera_ui_state.dart';
 
@@ -107,9 +106,6 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     // Re-open with a different sensor mode / lens when the selection changes.
     ref.listen(activeSpecProvider, (_, _) => _kick());
     ref.listen(lensProvider, (_, _) => _kick());
-    ref.listen(globalSettingsProvider, (prev, next) {
-      if (prev?.highResFilm != next.highResFilm) _kick();
-    });
     ref.listen(activeFlashProvider, (_, next) => _applyFlash(_controller, next));
     ref.onDispose(() {
       _screenVisible = false;
@@ -168,8 +164,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
 
   _Config get _wantConfig {
     final spec = ref.read(activeSpecProvider);
-    final highRes = ref.read(globalSettingsProvider).highResFilm;
-    return _Config(ref.read(lensProvider), presetFor(spec.quality, highResFilm: highRes));
+    return _Config(ref.read(lensProvider), presetFor(spec.quality));
   }
 
   // ---- reconcile loop --------------------------------------------------------

@@ -13,7 +13,6 @@ class GlobalSettings {
     this.darkroomEnabled = true,
     this.notificationsEnabled = true,
     this.saveOriginalCopy = false,
-    this.highResFilm = false,
     this.volumeZoom = false,
     this.soundEffects = true,
     this.haptics = true,
@@ -22,9 +21,6 @@ class GlobalSettings {
   final bool darkroomEnabled;
   final bool notificationsEnabled;
   final bool saveOriginalCopy;
-
-  /// 2160p-class film capture (sharper prints, heavier live preview).
-  final bool highResFilm;
 
   /// The volume buttons are the shutter; with this on they zoom instead on
   /// digital bodies (film keeps them as the shutter).
@@ -41,7 +37,6 @@ class GlobalSettings {
     bool? darkroomEnabled,
     bool? notificationsEnabled,
     bool? saveOriginalCopy,
-    bool? highResFilm,
     bool? volumeZoom,
     bool? soundEffects,
     bool? haptics,
@@ -49,7 +44,6 @@ class GlobalSettings {
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     saveOriginalCopy: saveOriginalCopy ?? this.saveOriginalCopy,
-    highResFilm: highResFilm ?? this.highResFilm,
     volumeZoom: volumeZoom ?? this.volumeZoom,
     soundEffects: soundEffects ?? this.soundEffects,
     haptics: haptics ?? this.haptics,
@@ -89,7 +83,6 @@ class SettingsRepository {
   static const _kDarkroom = 'global.darkroom';
   static const _kNotify = 'global.notifications';
   static const _kOriginal = 'global.saveOriginal';
-  static const _kHighResFilm = 'global.highResFilm';
   static const _kVolumeZoom = 'global.volumeZoom';
   static const _kSounds = 'global.soundEffects';
   static const _kHaptics = 'global.haptics';
@@ -101,7 +94,6 @@ class SettingsRepository {
       darkroomEnabled: read(await _db.getValue(_kDarkroom), d.darkroomEnabled),
       notificationsEnabled: read(await _db.getValue(_kNotify), d.notificationsEnabled),
       saveOriginalCopy: read(await _db.getValue(_kOriginal), d.saveOriginalCopy),
-      highResFilm: read(await _db.getValue(_kHighResFilm), d.highResFilm),
       volumeZoom: read(await _db.getValue(_kVolumeZoom), d.volumeZoom),
       soundEffects: read(await _db.getValue(_kSounds), d.soundEffects),
       haptics: read(await _db.getValue(_kHaptics), d.haptics),
@@ -112,7 +104,6 @@ class SettingsRepository {
     await _db.setValue(_kDarkroom, s.darkroomEnabled ? '1' : '0');
     await _db.setValue(_kNotify, s.notificationsEnabled ? '1' : '0');
     await _db.setValue(_kOriginal, s.saveOriginalCopy ? '1' : '0');
-    await _db.setValue(_kHighResFilm, s.highResFilm ? '1' : '0');
     await _db.setValue(_kVolumeZoom, s.volumeZoom ? '1' : '0');
     await _db.setValue(_kSounds, s.soundEffects ? '1' : '0');
     await _db.setValue(_kHaptics, s.haptics ? '1' : '0');

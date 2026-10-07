@@ -140,10 +140,10 @@ final lensProvider = NotifierProvider<LensNotifier, CameraLensDirection>(LensNot
 ///
 /// The camera plugin uses one preset for both the live preview and the
 /// capture, so this is also the preview stream size. 1080p keeps the shader
-/// preview smooth on old phones; film only goes to 2160p when the user opts
-/// into "High-resolution film".
-ResolutionPreset presetFor(CaptureQuality q, {bool highResFilm = false}) => switch (q) {
-  CaptureQuality.high => highResFilm ? ResolutionPreset.ultraHigh : ResolutionPreset.veryHigh,
+/// preview smooth (a 4K option was dropped in 1.3.29: heavier viewfinder,
+/// no visible gain once the film look is on).
+ResolutionPreset presetFor(CaptureQuality q) => switch (q) {
+  CaptureQuality.high => ResolutionPreset.veryHigh,
   CaptureQuality.standard => ResolutionPreset.veryHigh,
   CaptureQuality.low => ResolutionPreset.medium,
 };

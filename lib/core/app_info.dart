@@ -9,7 +9,8 @@ class AppInfo {
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'The camera no longer wiggles when you swipe right to bring in the corkboard. '
+      'Removed the High-resolution film switch: film always shoots in the smooth 1080p mode. '
+          'The camera no longer wiggles when you swipe right to bring in the corkboard. '
           'Tap a print in the darkroom to watch it develop up close. Photos open over the dimmed corkboard. Much quieter sounds, a louder corkboard knock, Sound effects and Haptics switches in settings, tape-style audio for Super 8 and camcorder clips, and a Polaroid note added after saving can be saved as a new copy. '
           'Swipe right on a film camera to bring in the corkboard (swipe left to put it away). The board now fills the screen top to bottom and lands with a proper wooden knock. Super 8 strip turns in one piece and is less grainy, a bigger film shutter release, quieter sounds, and you can grab the camera again while it springs back. '
           'A finer, granular cork board (coffee rings and all) that no longer bounces past its ends, a slower slide-in that lands with a soft wooden thud, and the Super 8 viewfinder swings round when you turn the phone. '

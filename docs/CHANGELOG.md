@@ -468,8 +468,8 @@ darkroom, corkboard, ambience).
   compression, wow + flutter, faint hiss); camcorder = tape (muffled, hiss
   pumped by the AGC, slight wow, head click at the start). LGPL filters
   only, run through desktop ffmpeg in `video_audio_ffmpeg_test`.
-- [ ] **18.5 High-resolution film setting:** came with the original code,
-  never requested. Asked Gabe whether to drop it.
+- [x] **18.5 High-resolution film setting:** came with the original code,
+  never requested. Gabe: drop it. Film always uses the 1080p-class stream.
 - [-] **18.6 Logo eyes:** blue X on the left, red X on the right (opposite
   their fringe colours). Sample sent; Gabe: keep the old logo for now.
 - [x] **18.7 Darkroom close-up:** tap a print / Polaroid / reel in the

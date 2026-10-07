@@ -364,11 +364,6 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
                         onChanged: (v) => unawaited(g.setSaveOriginalCopy(v)),
                       ),
                       Win98Checkbox(
-                        value: global.highResFilm,
-                        label: 'High-resolution film',
-                        onChanged: (v) => unawaited(g.setHighResFilm(v)),
-                      ),
-                      Win98Checkbox(
                         value: global.soundEffects,
                         label: 'Sound effects',
                         onChanged: (v) => unawaited(g.setSoundEffects(v)),

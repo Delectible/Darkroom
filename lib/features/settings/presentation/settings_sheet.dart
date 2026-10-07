@@ -81,13 +81,6 @@ class _SettingsSheet extends ConsumerWidget {
           onChanged: (v) => unawaited(g.setSaveOriginalCopy(v)),
         ),
         _Toggle(
-          title: 'High-resolution film',
-          subtitle:
-              'Sharper film prints (4K sensor mode). Smoother preview when off — best for older phones.',
-          value: global.highResFilm,
-          onChanged: (v) => unawaited(g.setHighResFilm(v)),
-        ),
-        _Toggle(
           title: 'Sound effects',
           subtitle: 'Shutter clicks, swooshes and the rest. Videos keep their sound.',
           value: global.soundEffects,

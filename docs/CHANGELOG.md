@@ -274,4 +274,4 @@ darkroom, corkboard, ambience).
   look, both cameras. The phone runs Impeller on GLES; since Flutter 3.45
   the engine no longer needs the shaders' GLES y-flip, so ours flipped the
   picture. Removed it (photos were fine: they're rendered on the CPU).
-  → 1.3.18 · 2026-10-07 · (this commit)
+  → 1.3.18 · 2026-10-07 · 479ca98

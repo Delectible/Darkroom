@@ -270,3 +270,8 @@ darkroom, corkboard, ambience).
   was a shot still processing when you leave the app, which iOS paused until
   the next launch. The app now asks iOS for ~30 s of background time while
   shots are processing. No battery prompts. → 1.3.17 · 2026-10-06 · 9db90d4
+- [x] **11.3 Upside-down viewfinder on Galaxy S10+ (Android 12):** every
+  look, both cameras. The phone runs Impeller on GLES; since Flutter 3.45
+  the engine no longer needs the shaders' GLES y-flip, so ours flipped the
+  picture. Removed it (photos were fine: they're rendered on the CPU).
+  → 1.3.18 · 2026-10-07 · (this commit)

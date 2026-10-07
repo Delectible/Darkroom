@@ -85,6 +85,11 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
 - **Shader uniform layouts** in Dart must match the `.frag` files exactly
   (float order/count, sampler count). The same test checks it.
   `shaders/film.frag` takes 3 samplers: camera, LUT, grain.
+- **No GLES y-flip in the shaders.** Since Flutter 3.45 the engine already
+  hands `ImageFilter.shader` its input upright on GLES; the old
+  `#ifdef IMPELLER_TARGET_OPENGLES uv.y = 1 - uv.y` (still in the dart:ui
+  docs) flipped the viewfinder on GLES phones (Galaxy S10+; Pixels use
+  Vulkan). The contract test forbids it.
 - The activity is **locked to portrait**. Landscape is detected with the
   accelerometer (`lib/core/device/physical_orientation.dart`); icons rotate in
   place (`Upright` / `UprightBox`) and photos are saved upright.

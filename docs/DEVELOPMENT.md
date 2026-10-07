@@ -251,8 +251,10 @@ visible crop), followed by look‑specific floats. `LookSpec.commonUniforms` /
 `extraUniforms` write them in the same order. `test/look_and_shader_contract_test.dart`
 parses the `.frag` files and fails if Dart and GLSL drift apart. On Impeller the
 filter path is `ImageFilter.shader` (zero readbacks). The engine owns `uSize`
-and the input sampler, and the GLES Y‑flip is handled with
-`IMPELLER_TARGET_OPENGLES`.
+and the input sampler. Since Flutter 3.45 that input arrives the same way up
+on GLES as on Vulkan, so the shaders must **not** flip `uv.y` under
+`IMPELLER_TARGET_OPENGLES` (the dart:ui docs still say to; doing so turned
+the viewfinder upside down on GLES phones such as the Galaxy S10+).
 
 ## 7. Dev tools
 

@@ -53,6 +53,15 @@ void main() {
       expect(2 + floats.length, FilmUniformLayout.floatCount);
       expect(_samplers(src), 3); // camera, LUT, grain
     });
+
+    // Flutter >= 3.45 feeds ImageFilter.shader its input the same way up on
+    // GLES as on Vulkan; flipping it again showed an upside-down viewfinder
+    // on GLES phones (Galaxy S10+).
+    for (final kind in ShaderKind.values) {
+      test('${kind.asset} does not flip the input on GLES', () {
+        expect(File(kind.asset).readAsStringSync(), isNot(contains('IMPELLER_TARGET_OPENGLES')));
+      });
+    }
   });
 
   group('Film model', () {

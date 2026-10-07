@@ -84,9 +84,8 @@ vec3 lut(vec3 s) {
 
 vec2 inputUv(vec2 frag) {
   vec2 uv = frag / uSize;
-#ifdef IMPELLER_TARGET_OPENGLES
-  uv.y = 1.0 - uv.y;
-#endif
+  // No GLES y-flip: since Flutter 3.45 the engine hands the filter input
+  // the same way up on every backend (a manual flip turns it upside down).
   return uv;
 }
 

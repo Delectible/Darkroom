@@ -15,6 +15,8 @@ class GlobalSettings {
     this.saveOriginalCopy = false,
     this.highResFilm = false,
     this.volumeZoom = false,
+    this.soundEffects = true,
+    this.haptics = true,
   });
 
   final bool darkroomEnabled;
@@ -28,18 +30,29 @@ class GlobalSettings {
   /// digital bodies (film keeps them as the shutter).
   final bool volumeZoom;
 
+  /// The app's own sounds (shutters, clicks, swooshes...). Video and clip
+  /// audio play regardless.
+  final bool soundEffects;
+
+  /// Vibration feedback.
+  final bool haptics;
+
   GlobalSettings copyWith({
     bool? darkroomEnabled,
     bool? notificationsEnabled,
     bool? saveOriginalCopy,
     bool? highResFilm,
     bool? volumeZoom,
+    bool? soundEffects,
+    bool? haptics,
   }) => GlobalSettings(
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     saveOriginalCopy: saveOriginalCopy ?? this.saveOriginalCopy,
     highResFilm: highResFilm ?? this.highResFilm,
     volumeZoom: volumeZoom ?? this.volumeZoom,
+    soundEffects: soundEffects ?? this.soundEffects,
+    haptics: haptics ?? this.haptics,
   );
 }
 
@@ -78,6 +91,8 @@ class SettingsRepository {
   static const _kOriginal = 'global.saveOriginal';
   static const _kHighResFilm = 'global.highResFilm';
   static const _kVolumeZoom = 'global.volumeZoom';
+  static const _kSounds = 'global.soundEffects';
+  static const _kHaptics = 'global.haptics';
 
   Future<GlobalSettings> loadGlobal() async {
     bool read(String? v, bool fallback) => v == null ? fallback : v == '1';
@@ -88,6 +103,8 @@ class SettingsRepository {
       saveOriginalCopy: read(await _db.getValue(_kOriginal), d.saveOriginalCopy),
       highResFilm: read(await _db.getValue(_kHighResFilm), d.highResFilm),
       volumeZoom: read(await _db.getValue(_kVolumeZoom), d.volumeZoom),
+      soundEffects: read(await _db.getValue(_kSounds), d.soundEffects),
+      haptics: read(await _db.getValue(_kHaptics), d.haptics),
     );
   }
 
@@ -97,6 +114,8 @@ class SettingsRepository {
     await _db.setValue(_kOriginal, s.saveOriginalCopy ? '1' : '0');
     await _db.setValue(_kHighResFilm, s.highResFilm ? '1' : '0');
     await _db.setValue(_kVolumeZoom, s.volumeZoom ? '1' : '0');
+    await _db.setValue(_kSounds, s.soundEffects ? '1' : '0');
+    await _db.setValue(_kHaptics, s.haptics ? '1' : '0');
   }
 
   Future<Map<String, CameraLocalSettings>> loadCameraSettings() async {

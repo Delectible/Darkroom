@@ -3,11 +3,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../win98_widgets.dart';
+import '../../../../../core/device/haptics.dart';
 
 /// BRICKS.EXE: brick breaker. Drag anywhere on the field to move the bat,
 /// tap to serve. Three balls; clear the wall to win.
@@ -192,7 +192,7 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
         _served = false;
         _banner = 'You win! $_score points. Tap to play again';
         Sfx.gameWin.play();
-        unawaited(HapticFeedback.mediumImpact());
+        unawaited(Haptics.mediumImpact());
       }
       break;
     }

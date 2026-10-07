@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/media_repository.dart';
@@ -21,6 +20,7 @@ import '../../application/camera_ui_state.dart';
 import '../../../cameras/presentation/artwork/camera_artwork.dart';
 import '../../application/capture_controller.dart';
 import '../../application/zoom_controller.dart';
+import '../../../../core/device/haptics.dart';
 
 export 'shutters.dart' show ShutterButton, pressShutter;
 
@@ -444,7 +444,7 @@ class _SwipeToCycleState extends ConsumerState<SwipeToCycle> {
     if (ref.read(captureControllerProvider).isRecording) return;
     if (dx.abs() < 24 && v.abs() < 300) return;
     final step = (v.abs() >= 300 ? v : dx) < 0 ? 1 : -1;
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(Haptics.selectionClick());
     unawaited(ref.read(selectedCameraProvider.notifier).step(ref.read(appModeProvider), step));
   }
 
@@ -713,7 +713,7 @@ class _ZoomRockerState extends ConsumerState<ZoomRocker> {
       _finger = dir;
       final z = ref.read(zoomProvider);
       final atEnd = dir > 0 ? z.level >= z.max : z.level <= z.min;
-      if (!atEnd) unawaited(HapticFeedback.selectionClick());
+      if (!atEnd) unawaited(Haptics.selectionClick());
       notifier.start(dir);
     }
 
@@ -818,7 +818,7 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
   bool _down = false;
 
   void _flip() {
-    unawaited(HapticFeedback.mediumImpact());
+    unawaited(Haptics.mediumImpact());
     setState(() => _turns += 0.5);
     ref.read(lensProvider.notifier).toggle();
   }

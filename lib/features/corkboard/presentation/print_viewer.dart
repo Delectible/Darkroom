@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/media_repository.dart';
@@ -12,6 +11,7 @@ import '../../viewer/presentation/media_actions.dart';
 import '../../viewer/presentation/zoomable.dart';
 import '../../../core/processing/instant_frame.dart';
 import 'instant_print.dart';
+import '../../../core/device/haptics.dart';
 
 /// Inspecting prints on a dark light-table: swipe between them, pinch to
 /// look closer, Save copies one to the phone's photo library.
@@ -21,7 +21,9 @@ class PrintViewerScreen extends ConsumerStatefulWidget {
   final List<MediaItem> items;
   final int initialIndex;
 
+  /// Held up in front of the corkboard: the board stays behind, dimmed.
   static Route<void> route(List<MediaItem> items, int index) => PageRouteBuilder<void>(
+    opaque: false,
     transitionDuration: const Duration(milliseconds: 260),
     reverseTransitionDuration: const Duration(milliseconds: 200),
     pageBuilder: (_, _, _) => PrintViewerScreen(items: items, initialIndex: index < 0 ? 0 : index),
@@ -57,7 +59,7 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     final err = await keepMedia(ref.read(filmRepositoryProvider), item, album: filmAlbum);
     if (!mounted) return;
     setState(() => _saving = false);
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(Haptics.lightImpact());
     messenger.showSnackBar(SnackBar(content: Text(err ?? 'Saved to your photo library ($filmAlbum).')));
   }
 
@@ -112,7 +114,33 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     );
     text.dispose();
     if (note == null || !mounted) return;
-    await ref.read(filmRepositoryProvider).setNote(item.id, note);
+    final repo = ref.read(filmRepositoryProvider);
+    if (note == (item.note ?? '')) return;
+    await repo.setNote(item.id, note);
+    // Already in the photo library: that copy can't be changed, so offer a
+    // new one with the note on it.
+    if (!item.isSaved || !mounted) return;
+    final again = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save a copy with the note?'),
+        content: const Text(
+          'This print is already in your photo library without it. A new copy is added; the old one stays.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save copy')),
+        ],
+      ),
+    );
+    if (again != true || !mounted) return;
+    final fresh = await repo.byId(item.id);
+    if (fresh == null || !mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final err = await saveToGallery(fresh, album: filmAlbum);
+    if (!mounted) return;
+    unawaited(Haptics.lightImpact());
+    messenger.showSnackBar(SnackBar(content: Text(err ?? 'Saved a copy with the note ($filmAlbum).')));
   }
 
   Future<void> _delete(MediaItem item) async {
@@ -151,13 +179,14 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     final spec = CameraCatalog.byId(item.cameraId);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF15120F),
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
+          // The corkboard behind, dimmed (a little more towards the edges).
           const Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                gradient: RadialGradient(radius: 0.9, colors: [Color(0xFF2B241D), Color(0xFF100D0B)]),
+                gradient: RadialGradient(radius: 0.9, colors: [Color(0xB3100D0B), Color(0xE6100D0B)]),
               ),
             ),
           ),

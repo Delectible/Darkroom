@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/audio/sfx.dart';
@@ -15,6 +14,7 @@ import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
 import 'pixel_icons.dart';
 import 'win98_widgets.dart';
+import '../../../../core/device/haptics.dart';
 
 Widget win98Icon(Win98MessageIcon i) => PixelIconView(switch (i) {
   Win98MessageIcon.info => PixelIcon.info,
@@ -367,6 +367,16 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
                         value: global.highResFilm,
                         label: 'High-resolution film',
                         onChanged: (v) => unawaited(g.setHighResFilm(v)),
+                      ),
+                      Win98Checkbox(
+                        value: global.soundEffects,
+                        label: 'Sound effects',
+                        onChanged: (v) => unawaited(g.setSoundEffects(v)),
+                      ),
+                      Win98Checkbox(
+                        value: global.haptics,
+                        label: 'Haptics',
+                        onChanged: (v) => unawaited(g.setHaptics(v)),
                       ),
                     ],
                   ),
@@ -900,7 +910,7 @@ Future<String?> showRunDialog(BuildContext context) {
 
 /// The famous blue screen (hold the taskbar clock).
 Future<void> showBlueScreen(BuildContext context) {
-  unawaited(HapticFeedback.heavyImpact());
+  unawaited(Haptics.heavyImpact());
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
       transitionDuration: Duration.zero,
@@ -1015,10 +1025,7 @@ class _FloppySpanState extends State<_FloppySpan> with SingleTickerProviderState
     _read.forward(from: 0);
     // The drive's head chatter, felt rather than heard.
     _grind?.cancel();
-    _grind = Timer.periodic(
-      const Duration(milliseconds: 140),
-      (_) => unawaited(HapticFeedback.selectionClick()),
-    );
+    _grind = Timer.periodic(const Duration(milliseconds: 140), (_) => unawaited(Haptics.selectionClick()));
   }
 
   void _onRead(AnimationStatus s) {
@@ -1034,13 +1041,13 @@ class _FloppySpanState extends State<_FloppySpan> with SingleTickerProviderState
       setState(() => _phase = _SpanPhase.autoSwap);
       return;
     }
-    unawaited(HapticFeedback.mediumImpact()); // disk ejects
+    unawaited(Haptics.mediumImpact()); // disk ejects
     setState(() => _phase = _SpanPhase.insert);
   }
 
   void _inserted() {
     _swaps++;
-    unawaited(HapticFeedback.heavyImpact()); // clunk
+    unawaited(Haptics.heavyImpact()); // clunk
     _startReading();
   }
 

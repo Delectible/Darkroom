@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/audio/sfx.dart';
 import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
 import '../../application/capture_controller.dart';
+import '../../../../core/device/haptics.dart';
 
 /// Bumped every time the shutter fires (on-screen button or volume key), so
 /// the button can play its stroke and sound either way.
@@ -73,13 +73,13 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
     switch (kind) {
       case _Kind.digital:
         Sfx.shutterDigital.play();
-        unawaited(HapticFeedback.lightImpact());
+        unawaited(Haptics.lightImpact());
       case _Kind.film:
         Sfx.shutterFilm.play();
-        unawaited(HapticFeedback.mediumImpact());
+        unawaited(Haptics.mediumImpact());
       case _Kind.run:
         Sfx.shutterRun.play();
-        unawaited(HapticFeedback.mediumImpact());
+        unawaited(Haptics.mediumImpact());
     }
     _stroke.duration = Duration(milliseconds: kind == _Kind.film ? 650 : 220);
     unawaited(_stroke.forward(from: 0));

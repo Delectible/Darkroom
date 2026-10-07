@@ -3,10 +3,10 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../core/audio/sfx.dart';
 import '../../../../core/theme/darkroom_mark.dart';
+import '../../../../core/device/haptics.dart';
 
 /// Start > Shut Down: the "shutting down" screen (sky, clouds and a pixel
 /// rabbit, with a shutdown tune), then the monitor switching off: the
@@ -60,7 +60,7 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
     _next?.cancel();
     setState(() => _stage = _Stage.crt);
     Sfx.crtOff.play();
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(Haptics.lightImpact());
     unawaited(
       _crt.forward().then((_) {
         if (!mounted) return;

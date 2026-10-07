@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 
@@ -15,6 +14,7 @@ import 'explorer_dialogs.dart';
 import 'pixel_icons.dart';
 import 'win98_media_player.dart';
 import 'win98_widgets.dart';
+import '../../../../core/device/haptics.dart';
 
 /// "Imaging" / "Media Player"-style window for files on Local Disk (C:).
 /// ◀ ▶ flip through the folder in its current sort order (no swiping, like
@@ -58,7 +58,7 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
   void _go(int delta) {
     final next = _index + delta;
     if (next < 0 || next >= _items.length) {
-      unawaited(HapticFeedback.selectionClick());
+      unawaited(Haptics.selectionClick());
       return;
     }
     setState(() {

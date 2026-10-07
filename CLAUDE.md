@@ -195,7 +195,11 @@ Film Mode
   stamp; instant prints show their black backing).
 - Darkroom strip: prints go DEV -> STOP -> FIX -> WASH trays under the
   safelight (image comes up in DEV); reels turn in a developing tank; instant
-  prints develop in the open.
+  prints develop in the open. Tap one for a close-up of it developing
+  (`showDarkroomCloseUp`). The print viewer is see-through: the board stays
+  behind it, dimmed.
+- Video audio: Super 8 = sound-stripe chain, camcorder = tape chain
+  (`VideoProfile.super8Audio` / `camcorderAudio`).
 - **Polaroid 600** (`printStyle: instant`): square only, 8-shot packs,
   develops in 20 s (watch it fade in on the corkboard's darkroom strip).
   Notes are typed in the print viewer (Write / tap the border), drawn in the
@@ -231,8 +235,10 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
 - Win98 sounds (`Sfx.w98*`, made by `tool/sfx/make_sfx.py`, all original,
   never Microsoft's): click on Win98Button / menu / Start items, error bong
   / warning ding from `showWin98MessageBox`, exit chime when the explorer
-  closes, login chime when it opens. All sounds are kept quiet (halved in
-  1.3.22, then `Sfx.master` 0.7 in 1.3.26). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
+  closes, login chime when it opens. All sounds are kept quiet: levels are
+  baked into the .wav files (`LEVELS` in make_sfx.py; the app plays them at
+  full scale). Settings: Sound effects (`Sfx.enabled`) and Haptics
+  (`Haptics`, use it instead of HapticFeedback). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
   pixel rabbit + tune, then the CRT collapse). Start > Run knows RABBIT,
   DEVELOP, PING, README (`win98_programs.dart`), the games SOL / BRICKS /
   PINBALL (Space Rabbit: missions, ranks) / WINMINE (`win98/games/`, rules

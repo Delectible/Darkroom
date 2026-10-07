@@ -88,6 +88,18 @@ class _SettingsSheet extends ConsumerWidget {
           onChanged: (v) => unawaited(g.setHighResFilm(v)),
         ),
         _Toggle(
+          title: 'Sound effects',
+          subtitle: 'Shutter clicks, swooshes and the rest. Videos keep their sound.',
+          value: global.soundEffects,
+          onChanged: (v) => unawaited(g.setSoundEffects(v)),
+        ),
+        _Toggle(
+          title: 'Haptics',
+          subtitle: 'Little vibrations on the shutter, swaps and buttons.',
+          value: global.haptics,
+          onChanged: (v) => unawaited(g.setHaptics(v)),
+        ),
+        _Toggle(
           title: 'Volume buttons zoom',
           subtitle:
               'The volume buttons take the picture. Turn this on to zoom with them on digital cameras instead.',

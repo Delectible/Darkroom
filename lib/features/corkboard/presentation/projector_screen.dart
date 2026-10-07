@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
@@ -15,6 +14,7 @@ import '../../../core/providers.dart';
 import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
 import 'reel_painter.dart';
+import '../../../core/device/haptics.dart';
 
 /// Super 8 reels play on a home-movie projector: a warm beam on the screen,
 /// and below it the machine's deck: the reel (tap its label tape to rename
@@ -269,7 +269,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   void _togglePlay() {
     final c = _c;
     if (c == null) return;
-    unawaited(HapticFeedback.mediumImpact());
+    unawaited(Haptics.mediumImpact());
     if (c.value.isPlaying && _shuttle == ReelShuttle.none) {
       _watch?.cancel();
       unawaited(c.pause());
@@ -297,7 +297,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   /// START: one press spools back to the beginning (press again to stop).
   void _toStart() {
     if (_shuttle == ReelShuttle.toStart) {
-      unawaited(HapticFeedback.mediumImpact());
+      unawaited(Haptics.mediumImpact());
       _stopShuttle(seekTo: _shuttlePos);
       return;
     }
@@ -308,7 +308,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   void _engage(ReelShuttle mode) {
     final c = _c;
     if (c == null || _shuttle == mode) return;
-    unawaited(HapticFeedback.mediumImpact());
+    unawaited(Haptics.mediumImpact());
     _watch?.cancel();
     _scrubPos = null;
     _shuttlePos = _shuttle != ReelShuttle.none ? _shuttlePos : (_seekTarget ?? c.value.position);
@@ -347,7 +347,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     _shuttlePos = next;
     _seek(next);
     if (done) {
-      unawaited(HapticFeedback.heavyImpact()); // the reel runs out / bottoms
+      unawaited(Haptics.heavyImpact()); // the reel runs out / bottoms
       _stopShuttle(seekTo: next);
     }
     if (mounted) setState(() {});
@@ -372,7 +372,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   void _step(int d) {
     final next = _index + d;
     if (next < 0 || next >= _ids.length) return;
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(Haptics.selectionClick());
     setState(() => _index = next);
     unawaited(_load());
   }

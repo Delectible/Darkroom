@@ -3,11 +3,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../win98_widgets.dart';
+import '../../../../../core/device/haptics.dart';
 
 /// PINBALL.EXE: "Space Rabbit", a small space table in the spirit of the
 /// one that came with the machine: a mission panel with your rank, three
@@ -245,7 +245,7 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     _mission++;
     _progress = 0;
     Sfx.gameWin.play();
-    unawaited(HapticFeedback.mediumImpact());
+    unawaited(Haptics.mediumImpact());
     _say('Mission complete! Promoted to ${_ranks[_rank]}', 3);
   }
 
@@ -418,7 +418,7 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
           _score += 5000;
           _lit.fillRange(0, 6, false);
           _say('R-A-B-B-I-T! +5000');
-          unawaited(HapticFeedback.mediumImpact());
+          unawaited(Haptics.mediumImpact());
           _progressOn('rabbit');
         }
       }

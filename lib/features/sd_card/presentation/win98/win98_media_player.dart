@@ -4,10 +4,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 
 import 'win98_widgets.dart';
+import '../../../../core/device/haptics.dart';
 
 enum _Transport { previous, rewind, play, pause, stop, fastForward, next }
 
@@ -77,7 +77,7 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
   void _press(_Transport t) {
     final c = _c;
     if (c == null) return;
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(Haptics.selectionClick());
     switch (t) {
       case _Transport.play:
         if (_atEnd(c.value)) {

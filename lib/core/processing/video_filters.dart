@@ -26,6 +26,24 @@ class VideoProfile {
   final List<String> audioArgs;
   final String? audioFilter;
 
+  /// Super 8 sound film (a magnetic stripe beside the picture): mono, thin
+  /// (no deep bass, no crisp top), gently squashed, a slow wow and a faster
+  /// flutter from the transport, and a faint hiss.
+  static const super8Audio =
+      'aformat=channel_layouts=mono,highpass=f=120,lowpass=f=6000,lowpass=f=7500,'
+      'acompressor=threshold=0.1:ratio=3:attack=15:release=250:makeup=2,'
+      'vibrato=f=0.7:d=0.25,vibrato=f=6.5:d=0.012,'
+      "aeval=exprs='val(0)+0.0025*(random(0)*2-1)'";
+
+  /// 90s camcorder tape: mono, a little muffled, tape hiss that the
+  /// automatic level control pumps up in the quiet bits (hiss goes in before
+  /// the compressor), a slight wow, and a click as the heads engage.
+  static const camcorderAudio =
+      'aformat=channel_layouts=mono,highpass=f=90,lowpass=f=8000,lowpass=f=9500,'
+      "aeval=exprs='val(0)+0.004*(random(0)*2-1)+if(lt(t,0.012),0.15*(random(1)*2-1)*(1-t/0.012),0)',"
+      'acompressor=threshold=0.05:ratio=6:attack=5:release=400:makeup=3,'
+      'vibrato=f=0.5:d=0.1';
+
   static VideoProfile forSpec(CameraSpec spec) {
     if (spec.film != null) {
       // Super 8: 18 fps, sound-camera style mono audio.
@@ -34,7 +52,7 @@ class VideoProfile {
         fps: '18',
         bitrateKbps: 4500, // grain is expensive to encode; starve it and it smears
         audioArgs: ['-c:a', 'aac', '-b:a', '80k', '-ac', '1', '-ar', '32000'],
-        audioFilter: 'highpass=f=110,lowpass=f=6500,acompressor=threshold=0.125:ratio=2.5',
+        audioFilter: super8Audio,
       );
     }
     return switch (spec.look!.kind) {
@@ -60,7 +78,7 @@ class VideoProfile {
         fps: '30000/1001',
         bitrateKbps: 1800,
         audioArgs: ['-c:a', 'aac', '-b:a', '96k', '-ac', '1'],
-        audioFilter: 'highpass=f=80,lowpass=f=9000,acompressor=threshold=0.1:ratio=3',
+        audioFilter: camcorderAudio,
       ),
     };
   }

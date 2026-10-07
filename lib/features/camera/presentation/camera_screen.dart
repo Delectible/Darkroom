@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sfx.dart';
@@ -28,6 +27,7 @@ import '../application/zoom_controller.dart';
 import 'body_swap.dart';
 import 'viewport.dart';
 import 'widgets/camera_controls.dart';
+import '../../../core/device/haptics.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
@@ -169,7 +169,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     final at = _swap.value;
     _raw = at >= 0 ? at : at / 0.25;
     setState(() => _dragging = true);
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(Haptics.selectionClick());
   }
 
   void _onDragUpdate(DragUpdateDetails d) {
@@ -229,7 +229,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       return;
     }
     Sfx.cameraSwap.play();
-    unawaited(HapticFeedback.mediumImpact());
+    unawaited(Haptics.mediumImpact());
     setState(() {
       _outgoing?.dispose();
       _outgoing = still;
@@ -239,7 +239,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       unawaited(ref.read(appModeProvider.notifier).toggle());
     });
     await _swap.animateWith(SpringSimulation(_spring, _swap.value, 1, velocity));
-    unawaited(HapticFeedback.lightImpact()); // it lands in your hands
+    unawaited(Haptics.lightImpact()); // it lands in your hands
     if (!mounted) return;
     setState(() {
       final shot = _outgoing;
@@ -282,7 +282,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
         if (slide.status == AnimationStatus.forward && slide.value >= 0.93) {
           slide.removeListener(landed);
           Sfx.corkThud.play();
-          unawaited(HapticFeedback.lightImpact());
+          unawaited(Haptics.lightImpact());
         }
       }
 

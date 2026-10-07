@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
+import '../../../core/audio/sfx.dart';
+import '../../../core/device/haptics.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../../core/providers.dart';
@@ -9,7 +11,29 @@ import '../../cameras/domain/camera_catalog.dart';
 
 class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
   @override
-  GlobalSettings build() => ref.read(initialGlobalSettingsProvider);
+  GlobalSettings build() {
+    final s = ref.read(initialGlobalSettingsProvider);
+    _apply(s);
+    return s;
+  }
+
+  /// Sounds and haptics are switched app-wide (no ref needed at call sites).
+  static void _apply(GlobalSettings s) {
+    Sfx.enabled = s.soundEffects;
+    Haptics.enabled = s.haptics;
+  }
+
+  Future<void> setSoundEffects(bool enabled) async {
+    state = state.copyWith(soundEffects: enabled);
+    _apply(state);
+    await _repo.saveGlobal(state);
+  }
+
+  Future<void> setHaptics(bool enabled) async {
+    state = state.copyWith(haptics: enabled);
+    _apply(state);
+    await _repo.saveGlobal(state);
+  }
 
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 

@@ -7,62 +7,64 @@ import 'package:video_player/video_player.dart';
 /// already ship (no extra native audio dependency). Mixes with whatever the
 /// user is listening to instead of taking audio focus.
 class Sfx {
-  Sfx._(this._asset, {this.volume = 0.25, this.loop = false});
+  Sfx._(this._asset, {this.loop = false});
 
   /// The two camera bodies changing places (mode switch). Kept quiet.
-  static final cameraSwap = Sfx._('assets/sfx/camera_swap.wav', volume: 0.075);
+  static final cameraSwap = Sfx._('assets/sfx/camera_swap.wav');
 
   /// The framed corkboard sliding in from the left (and back out).
-  static final corkSwoosh = Sfx._('assets/sfx/cork_swoosh.wav', volume: 0.12);
-  static final corkThud = Sfx._('assets/sfx/cork_thud.wav', volume: 0.16);
+  static final corkSwoosh = Sfx._('assets/sfx/cork_swoosh.wav');
+  static final corkThud = Sfx._('assets/sfx/cork_thud.wav');
 
   // Projector deck piano keys: press (clunk) and release (lighter tick).
-  static final keyDown = Sfx._('assets/sfx/deck_key_down.wav', volume: 0.275);
-  static final keyUp = Sfx._('assets/sfx/deck_key_up.wav', volume: 0.225);
+  static final keyDown = Sfx._('assets/sfx/deck_key_down.wav');
+  static final keyUp = Sfx._('assets/sfx/deck_key_up.wav');
 
   // Shutters: quiet, so they never take over.
-  static final shutterDigital = Sfx._('assets/sfx/shutter_digital.wav', volume: 0.12);
-  static final shutterFilm = Sfx._('assets/sfx/shutter_film.wav', volume: 0.12);
-  static final shutterRun = Sfx._('assets/sfx/shutter_run.wav', volume: 0.12);
+  static final shutterDigital = Sfx._('assets/sfx/shutter_digital.wav');
+  static final shutterFilm = Sfx._('assets/sfx/shutter_film.wav');
+  static final shutterRun = Sfx._('assets/sfx/shutter_run.wav');
 
   // Windows 98 (made by tool/sfx/make_sfx.py; all original sounds).
-  static final w98Click = Sfx._('assets/sfx/w98_click.wav', volume: 0.15);
-  static final w98Ding = Sfx._('assets/sfx/w98_ding.wav', volume: 0.15);
-  static final w98Error = Sfx._('assets/sfx/w98_error.wav', volume: 0.175);
-  static final w98Login = Sfx._('assets/sfx/w98_login.wav', volume: 0.15);
-  static final w98Exit = Sfx._('assets/sfx/w98_exit.wav', volume: 0.15);
-  static final w98Shutdown = Sfx._('assets/sfx/w98_shutdown.wav', volume: 0.2);
-  static final crtOff = Sfx._('assets/sfx/crt_off.wav', volume: 0.225);
+  static final w98Click = Sfx._('assets/sfx/w98_click.wav');
+  static final w98Ding = Sfx._('assets/sfx/w98_ding.wav');
+  static final w98Error = Sfx._('assets/sfx/w98_error.wav');
+  static final w98Login = Sfx._('assets/sfx/w98_login.wav');
+  static final w98Exit = Sfx._('assets/sfx/w98_exit.wav');
+  static final w98Shutdown = Sfx._('assets/sfx/w98_shutdown.wav');
+  static final crtOff = Sfx._('assets/sfx/crt_off.wav');
 
   static List<Sfx> get windows98 => [w98Click, w98Ding, w98Error, w98Exit, w98Login];
 
   // Games in Start > Run (tool/sfx/make_sfx.py game_* etc.).
-  static final gameBop = Sfx._('assets/sfx/game_bop.wav', volume: 0.1);
-  static final gameBlip = Sfx._('assets/sfx/game_blip.wav', volume: 0.1);
-  static final gameLose = Sfx._('assets/sfx/game_lose.wav', volume: 0.12);
-  static final gameWin = Sfx._('assets/sfx/game_win.wav', volume: 0.12);
-  static final cardSnap = Sfx._('assets/sfx/card_snap.wav', volume: 0.15);
-  static final cardRiffle = Sfx._('assets/sfx/card_riffle.wav', volume: 0.15);
-  static final mineBoom = Sfx._('assets/sfx/mine_boom.wav', volume: 0.15);
-  static final pinFlipper = Sfx._('assets/sfx/pin_flipper.wav', volume: 0.14);
-  static final pinBumper = Sfx._('assets/sfx/pin_bumper.wav', volume: 0.1);
-  static final pinChime = Sfx._('assets/sfx/pin_chime.wav', volume: 0.1);
-  static final pinSling = Sfx._('assets/sfx/pin_sling.wav', volume: 0.1);
-  static final pinDrop = Sfx._('assets/sfx/pin_drop.wav', volume: 0.12);
-  static final pinWarp = Sfx._('assets/sfx/pin_warp.wav', volume: 0.1);
-  static final pinLaunch = Sfx._('assets/sfx/pin_launch.wav', volume: 0.12);
-  static final pinDrain = Sfx._('assets/sfx/pin_drain.wav', volume: 0.12);
-  static final pinStart = Sfx._('assets/sfx/pin_start.wav', volume: 0.12);
+  static final gameBop = Sfx._('assets/sfx/game_bop.wav');
+  static final gameBlip = Sfx._('assets/sfx/game_blip.wav');
+  static final gameLose = Sfx._('assets/sfx/game_lose.wav');
+  static final gameWin = Sfx._('assets/sfx/game_win.wav');
+  static final cardSnap = Sfx._('assets/sfx/card_snap.wav');
+  static final cardRiffle = Sfx._('assets/sfx/card_riffle.wav');
+  static final mineBoom = Sfx._('assets/sfx/mine_boom.wav');
+  static final pinFlipper = Sfx._('assets/sfx/pin_flipper.wav');
+  static final pinBumper = Sfx._('assets/sfx/pin_bumper.wav');
+  static final pinChime = Sfx._('assets/sfx/pin_chime.wav');
+  static final pinSling = Sfx._('assets/sfx/pin_sling.wav');
+  static final pinDrop = Sfx._('assets/sfx/pin_drop.wav');
+  static final pinWarp = Sfx._('assets/sfx/pin_warp.wav');
+  static final pinLaunch = Sfx._('assets/sfx/pin_launch.wav');
+  static final pinDrain = Sfx._('assets/sfx/pin_drain.wav');
+  static final pinStart = Sfx._('assets/sfx/pin_start.wav');
 
   /// Digital bodies' zoom motor: loops while the zoom moves.
-  static final zoomMotor = Sfx._('assets/sfx/zoom_motor.wav', volume: 0.06, loop: true);
+  static final zoomMotor = Sfx._('assets/sfx/zoom_motor.wav', loop: true);
 
-  /// Every sound's level is scaled by this (halved in 1.3.22, another 30%
-  /// off in 1.3.26).
-  static const master = 0.7;
+  // Levels are baked into the .wav files (tool/sfx/make_sfx.py LEVELS)
+  // and played at full scale: the player's own volume didn't reliably turn
+  // them down on the phone.
+
+  /// Settings > Sound effects. Off: [play] does nothing.
+  static bool enabled = true;
 
   final String _asset;
-  final double volume;
 
   /// Loops until [stop] (a motor, not a one-shot).
   final bool loop;
@@ -79,7 +81,7 @@ class Sfx {
     );
     try {
       await c.initialize();
-      await c.setVolume(volume * master);
+      await c.setVolume(1);
       if (loop) await c.setLooping(true);
       _c = c;
     } catch (e) {
@@ -93,6 +95,7 @@ class Sfx {
   int _gen = 0;
 
   void play() {
+    if (!enabled) return;
     final gen = ++_gen;
     unawaited(() async {
       await preload();

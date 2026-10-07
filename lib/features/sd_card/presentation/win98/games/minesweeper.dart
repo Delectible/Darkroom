@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../win98_widgets.dart';
+import '../../../../../core/device/haptics.dart';
 
 /// WINMINE.EXE: Minesweeper the way it came with the machine: mine counter,
 /// smiley, timer. Tap to dig, hold to plant a flag; tap a number whose
@@ -148,7 +148,7 @@ class _MinesweeperGameState extends State<MinesweeperGame> {
     if (!ok) {
       _clock?.cancel();
       Sfx.mineBoom.play();
-      unawaited(HapticFeedback.heavyImpact());
+      unawaited(Haptics.heavyImpact());
     } else if (_field.won) {
       _clock?.cancel();
       // Flags go on every mine, the way the real one finishes.
@@ -170,7 +170,7 @@ class _MinesweeperGameState extends State<MinesweeperGame> {
 
   void _hold(int i) {
     if (_field.lost || _field.won || _field.open[i]) return;
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(Haptics.selectionClick());
     Sfx.cardSnap.play();
     setState(() => _field.toggleFlag(i));
   }

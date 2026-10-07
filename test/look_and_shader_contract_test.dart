@@ -144,9 +144,10 @@ void main() {
 
     test('every graph only uses filters present in the LGPL min build', () {
       const crop = PixelRect(0, 0, 1080, 1440);
-      final graphs = <String>[];
+      final graphs = <String>[], audio = <String>[];
       for (final spec in CameraCatalog.all) {
         final profile = VideoProfile.forSpec(spec);
+        if (profile.audioFilter != null) audio.add(profile.audioFilter!);
         for (final turns in [0, 1]) {
           if (spec.film != null) {
             graphs.add(
@@ -179,7 +180,7 @@ void main() {
           }
         }
       }
-      for (final g in graphs) {
+      for (final g in [...graphs, ...audio]) {
         final used = VideoFilters.filterNames(g);
         expect(used.intersection(notInMinBuild), isEmpty, reason: g);
         expect(used, isNotEmpty);

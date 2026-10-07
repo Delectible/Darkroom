@@ -430,8 +430,8 @@ darkroom, corkboard, ambience).
   turns the shader's input. The swing is now done inside film.frag
   (`uSpin`, floats 29-30), so strip, hole and picture turn as one
   (`super8_strip_shader_test`: half a turn = the same image upside down).
-- [ ] **17.2 Polaroid note after saving:** a note added after Save isn't in
-  the gallery copy. Options sent to Gabe; waiting for his pick.
+- [x] **17.2 Polaroid note after saving:** a note added after Save isn't in
+  the gallery copy. Gabe picked option 2 (see 18.1).
 - [x] **17.3 Corkboard thud:** re-synthesised as a struck wooden body (a
   short noise knock ringing a few low, damped modes, plus a dull thump), no
   pitched tones.
@@ -448,7 +448,34 @@ darkroom, corkboard, ambience).
 - [x] **17.7 Bigger film shutter:** release dome 22 (was 16.5), collar 31
   (was 25), longer lever.
 - [x] **17.8 Quieter:** every sound 30% down (`Sfx.master = 0.7`).
-- [ ] **17.9 More settings:** suggestions sent to Gabe.
+- [x] **17.9 More settings:** Gabe picked haptics + sound effects (18.3).
 - [x] **17.10 Super 8 grain:** 0.75x on every strength (0.085 -> 0.064).
-- [ ] **17.11 Super 8 / camcorder audio:** options sent to Gabe.
+- [x] **17.11 Super 8 / camcorder audio:** both, no whir/whine (18.4).
   → 17.1, 17.3-17.8, 17.10: 1.3.26 · 2026-10-07 · 3bf7683
+
+## 18. Darkroom close-up, quieter, settings, tape audio (2026-10-07)
+
+- [x] **18.1 Polaroid note after saving:** changing the note on a print
+  that's already in the photo library asks "Save a copy with the note?"
+  (the old copy can't be changed; it stays).
+- [x] **18.2 Sounds still too loud / volume not changing:** the 30% cut was
+  only -3 dB and the player's volume may not apply on the phone, so the
+  levels are now baked into the .wav files (`make_sfx.py` LEVELS, another
+  0.35x on top of the old levels, about -9 dB) and played at full scale.
+- [x] **18.3 Settings:** Sound effects and Haptics switches (camera settings
+  sheet and Win98 Options). `Sfx.enabled`, `Haptics` wraps HapticFeedback.
+- [x] **18.4 Tape audio:** Super 8 = sound stripe (mono, thin band, gentle
+  compression, wow + flutter, faint hiss); camcorder = tape (muffled, hiss
+  pumped by the AGC, slight wow, head click at the start). LGPL filters
+  only, run through desktop ffmpeg in `video_audio_ffmpeg_test`.
+- [ ] **18.5 High-resolution film setting:** came with the original code,
+  never requested. Asked Gabe whether to drop it.
+- [~] **18.6 Logo eyes:** blue X on the left, red X on the right (opposite
+  their fringe colours). Sample sent; waiting for approval.
+- [x] **18.7 Darkroom close-up:** tap a print / Polaroid / reel in the
+  darkroom strip for a big view of it developing live; board greyed
+  behind; tap anywhere to go back.
+- [x] **18.8 Print viewer over the board:** the viewer is a see-through
+  route; the corkboard stays behind, dimmed.
+- [x] **18.9 Corkboard thud too quiet:** its modes were below what a phone
+  speaker plays; moved up to ~175-1300 Hz and made louder.

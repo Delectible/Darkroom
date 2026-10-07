@@ -108,8 +108,45 @@ def pad_note(freq, seconds, attack=0.25, release=0.8):
     return s * e
 
 
+# Playback level of each sound, baked into the file (the app plays them at
+# full scale). Keep them low: these sit under everything else on the phone.
+LEVELS = {
+    'cork_swoosh': 0.042,
+    'cork_thud': 0.1575,
+    'deck_key_down': 0.0963,
+    'deck_key_up': 0.0788,
+    'shutter_digital': 0.042,
+    'shutter_film': 0.042,
+    'shutter_run': 0.042,
+    'w98_click': 0.0525,
+    'w98_ding': 0.0525,
+    'w98_error': 0.0612,
+    'w98_login': 0.0525,
+    'w98_exit': 0.0525,
+    'w98_shutdown': 0.07,
+    'crt_off': 0.0788,
+    'game_bop': 0.035,
+    'game_blip': 0.035,
+    'game_lose': 0.042,
+    'game_win': 0.042,
+    'card_snap': 0.0525,
+    'card_riffle': 0.0525,
+    'mine_boom': 0.0525,
+    'pin_flipper': 0.049,
+    'pin_bumper': 0.035,
+    'pin_chime': 0.035,
+    'pin_sling': 0.035,
+    'pin_drop': 0.042,
+    'pin_warp': 0.035,
+    'pin_launch': 0.042,
+    'pin_drain': 0.042,
+    'pin_start': 0.042,
+    'zoom_motor': 0.021,
+}
+
+
 def save(name, x, peak=0.9):
-    x = x / (np.max(np.abs(x)) + 1e-9) * peak
+    x = x / (np.max(np.abs(x)) + 1e-9) * peak * LEVELS.get(name, 0.05)
     path = os.path.join(ROOT, 'assets', 'sfx', f'{name}.wav')
     with wave.open(path, 'wb') as w:
         w.setnchannels(1)
@@ -280,17 +317,20 @@ def cork_thud():
     k = int(SR * 0.006)
     hit[:k] = lowpass(noise(0.006), 1800) * np.hanning(2 * k)[k:] ** 0.5
     out = np.zeros(n)
-    for f, q, g in ((92, 7, 1.0), (151, 8, 0.7), (233, 9, 0.5), (347, 10, 0.32), (512, 11, 0.2), (780, 12, 0.1)):
+    # Modes sit where a phone speaker can play them (it can't do much below
+    # ~200 Hz, so a 'heavy' thud there is silent on the phone).
+    for f, q, g in ((175, 6, 0.55), (262, 8, 1.0), (395, 9, 0.85), (590, 10, 0.55), (870, 12, 0.3),
+                    (1310, 14, 0.14)):
         out += g * resonator(hit, f, q)
     out /= np.max(np.abs(out)) + 1e-9
     # Dull low thump: the mass of the board.
     x = t(0.35)
-    thump = np.sin(2 * np.pi * 62 * x) * np.exp(-x / 0.035) * np.clip(x / 0.003, 0, 1)
-    out = out + 0.5 * thump
+    thump = np.sin(2 * np.pi * 110 * x) * np.exp(-x / 0.04) * np.clip(x / 0.003, 0, 1)
+    out = out + 0.35 * thump
     # A touch of contact grit on the attack.
     grit = bandpass(noise(0.01), 600, 3000) * env(int(SR * 0.01), 0.0003, 0.003)
-    place(out, 0.15 * grit / (np.max(np.abs(grit)) + 1e-9), 0.0)
-    out = lowpass(out, 2200) * np.exp(-x / 0.09)
+    place(out, 0.25 * grit / (np.max(np.abs(grit)) + 1e-9), 0.0)
+    out = lowpass(out, 3200) * np.exp(-x / 0.11)
     return reverb(out, mix=0.08, room=0.25)
 
 

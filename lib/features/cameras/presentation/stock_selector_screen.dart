@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/device/system_gestures.dart';
@@ -14,6 +13,7 @@ import '../../settings/application/settings_controllers.dart';
 import '../domain/camera_catalog.dart';
 import '../domain/camera_spec.dart';
 import 'artwork/camera_artwork.dart';
+import '../../../core/device/haptics.dart';
 
 /// Opens the full-screen film / camera picker (slides up; swipe down or the
 /// chevron closes it).
@@ -122,7 +122,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
 
   void _select(int i) {
     _index = i;
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(Haptics.selectionClick());
     unawaited(ref.read(selectedCameraProvider.notifier).select(widget.mode, _specs[i].id));
     setState(() {});
   }

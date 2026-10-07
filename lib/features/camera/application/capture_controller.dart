@@ -14,6 +14,7 @@ import '../../settings/application/settings_controllers.dart';
 import 'camera_session_controller.dart';
 import 'camera_ui_state.dart';
 import 'zoom_controller.dart';
+import '../../../core/device/haptics.dart';
 
 @immutable
 class CaptureState {
@@ -135,7 +136,7 @@ class CaptureController extends Notifier<CaptureState> {
     if (c == null || state.busy || c.value.isTakingPicture) return;
     if (ref.read(activeSpecProvider).recordsVideo) return;
     final ctx = _context(c);
-    unawaited(HapticFeedback.mediumImpact());
+    unawaited(Haptics.mediumImpact());
     state = state.copyWith(
       busy: true,
       shutterCount: state.shutterCount + 1,
@@ -161,7 +162,7 @@ class CaptureController extends Notifier<CaptureState> {
     final spec = ref.read(activeSpecProvider);
     if (!spec.recordsVideo) return;
     final ctx = _context(c);
-    unawaited(HapticFeedback.heavyImpact());
+    unawaited(Haptics.heavyImpact());
     try {
       await c.prepareForVideoRecording();
       if (ctx.flash == FlashSetting.on) {
@@ -205,7 +206,7 @@ class CaptureController extends Notifier<CaptureState> {
     state = state.copyWith(clearRecording: true);
     try {
       final file = await c.stopVideoRecording();
-      unawaited(HapticFeedback.lightImpact());
+      unawaited(Haptics.lightImpact());
       try {
         await c.setFlashMode(FlashMode.off);
         await c.setFlashMode(switch (ctx.flash) {

@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/device/system_gestures.dart';
@@ -19,6 +18,7 @@ import 'instant_print.dart';
 import 'print_viewer.dart';
 import 'projector_screen.dart';
 import 'reel_painter.dart';
+import '../../../core/device/haptics.dart';
 
 /// Film gallery: developed prints and Super 8 reels pinned to a cork board,
 /// with the darkroom (still developing) in a red safelight strip on top.
@@ -121,7 +121,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
     }
     if (!mounted) return;
     setState(() => _saving = false);
-    unawaited(HapticFeedback.lightImpact());
+    unawaited(Haptics.lightImpact());
     messenger.showSnackBar(
       SnackBar(
         content: Text(
@@ -138,7 +138,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
 
   /// Easter egg: tap a pin to take the print down.
   Future<void> _unpin(MediaItem item) async {
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(Haptics.selectionClick());
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -157,7 +157,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
       ),
     );
     if (ok != true || !mounted) return;
-    unawaited(HapticFeedback.mediumImpact()); // pin pops
+    unawaited(Haptics.mediumImpact()); // pin pops
     setState(() => _falling.add(item.id));
   }
 
@@ -695,7 +695,7 @@ class PinnedPrint extends StatelessWidget {
       builder: (anchor) => GestureDetector(
         onTap: onOpen,
         onLongPress: () {
-          unawaited(HapticFeedback.mediumImpact());
+          unawaited(Haptics.mediumImpact());
           unawaited(shareMedia(anchor, item));
         },
         child: Transform.translate(
@@ -811,7 +811,7 @@ class PinnedInstant extends StatelessWidget {
       builder: (anchor) => GestureDetector(
         onTap: onOpen,
         onLongPress: () {
-          unawaited(HapticFeedback.mediumImpact());
+          unawaited(Haptics.mediumImpact());
           unawaited(shareMedia(anchor, item));
         },
         child: Transform.translate(
@@ -877,7 +877,7 @@ class PinnedReel extends StatelessWidget {
       builder: (anchor) => GestureDetector(
         onTap: onOpen,
         onLongPress: () {
-          unawaited(HapticFeedback.mediumImpact());
+          unawaited(Haptics.mediumImpact());
           unawaited(shareMedia(anchor, item));
         },
         child: Center(
@@ -1107,26 +1107,35 @@ class _Tray extends ConsumerWidget {
     final ss = (left.inSeconds % 60).clamp(0, 59).toString().padLeft(2, '0');
     final thumb = item.thumbPath;
 
+    // Tap a print, Polaroid or reel for a close look at it developing.
+    Widget closeUp(Widget tray) => GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => showDarkroomCloseUp(context, item.id),
+      child: tray,
+    );
+
     if (item.isVideo && !failed) {
-      return SizedBox(
-        width: 84,
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: AspectRatio(aspectRatio: 1, child: _TankTray(progress: processing ? 0 : progress)),
+      return closeUp(
+        SizedBox(
+          width: 84,
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: AspectRatio(aspectRatio: 1, child: _TankTray(progress: processing ? 0 : progress)),
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              processing && left.isNegative
-                  ? 'fixing…'
-                  : '${DevelopingTankPainter.stageFor(progress)} $mm:$ss',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                processing && left.isNegative
+                    ? 'fixing…'
+                    : '${DevelopingTankPainter.stageFor(progress)} $mm:$ss',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -1134,52 +1143,61 @@ class _Tray extends ConsumerWidget {
     if (spec.isInstant && !failed) {
       // Instant film develops in the light: the picture surfaces through the
       // blue-grey sheet in front of you (eased between the 1 s ticks).
-      return SizedBox(
-        width: 84,
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(end: processing ? 0 : progress),
-                  duration: const Duration(seconds: 1),
-                  builder: (context, p, _) => InstantPrint(
-                    develop: p,
-                    shadow: false,
-                    picture: thumb == null || processing
-                        ? const SizedBox.shrink()
-                        : Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 160, gaplessPlayback: true),
+      return closeUp(
+        SizedBox(
+          width: 84,
+          child: Column(
+            children: [
+              Expanded(
+                child: Center(
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(end: processing ? 0 : progress),
+                    duration: const Duration(seconds: 1),
+                    builder: (context, p, _) => InstantPrint(
+                      develop: p,
+                      shadow: false,
+                      picture: thumb == null || processing
+                          ? const SizedBox.shrink()
+                          : Image.file(
+                              File(thumb),
+                              fit: BoxFit.cover,
+                              cacheWidth: 160,
+                              gaplessPlayback: true,
+                            ),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}',
-              style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                '0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}',
+                style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     if (!item.isVideo && !failed) {
       final stage = PrintTrayPainter.stageFor(processing ? 0 : progress);
-      return SizedBox(
-        width: 84,
-        child: Column(
-          children: [
-            Expanded(
-              child: _PrintTray(progress: processing ? 0 : progress, thumb: processing ? null : thumb),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              processing && left.isNegative ? 'fixing…' : '${stage.label} $mm:$ss',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
-            ),
-          ],
+      return closeUp(
+        SizedBox(
+          width: 84,
+          child: Column(
+            children: [
+              Expanded(
+                child: _PrintTray(progress: processing ? 0 : progress, thumb: processing ? null : thumb),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                processing && left.isNegative ? 'fixing…' : '${stage.label} $mm:$ss',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -1246,6 +1264,108 @@ class _Tray extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A close look at one print (or Polaroid, or reel) in the darkroom: the
+/// board greys out a little behind it and it carries on developing in
+/// front of you. Tap anywhere to go back.
+Future<void> showDarkroomCloseUp(BuildContext context, String id) => showGeneralDialog<void>(
+  context: context,
+  barrierDismissible: true,
+  barrierLabel: 'Back to the corkboard',
+  barrierColor: Colors.black45,
+  transitionDuration: const Duration(milliseconds: 240),
+  pageBuilder: (context, _, _) => _DarkroomCloseUp(id: id),
+  transitionBuilder: (context, a, _, child) => FadeTransition(
+    opacity: a,
+    child: ScaleTransition(
+      scale: Tween(begin: 0.85, end: 1.0).animate(CurvedAnimation(parent: a, curve: Curves.easeOutCubic)),
+      child: child,
+    ),
+  ),
+);
+
+class _DarkroomCloseUp extends ConsumerWidget {
+  const _DarkroomCloseUp({required this.id});
+
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(filmItemsProvider).value ?? const <MediaItem>[];
+    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final item = items.where((m) => m.id == id).firstOrNull;
+    const ink = Color(0xFFFF8A80);
+    Widget body;
+    var label = '';
+    if (item == null) {
+      body = const SizedBox.shrink();
+    } else {
+      final spec = CameraCatalog.byId(item.cameraId);
+      final total = item.readyAt.difference(item.capturedAt).inMilliseconds.clamp(1, 1 << 31);
+      final left = item.readyAt.difference(now);
+      final processing = item.status == MediaStatus.processing;
+      final progress = processing ? 0.0 : (1 - left.inMilliseconds / total).clamp(0.0, 1.0);
+      final thumb = processing ? null : item.thumbPath;
+      final mm = left.inMinutes.clamp(0, 99).toString();
+      final ss = (left.inSeconds % 60).clamp(0, 59).toString().padLeft(2, '0');
+      final done = !left.isNegative ? false : !processing;
+      final width = math.min(MediaQuery.sizeOf(context).width * 0.82, 420.0);
+      if (item.isVideo) {
+        label = done ? 'DEVELOPED' : '${DevelopingTankPainter.stageFor(progress)} $mm:$ss';
+        body = SizedBox.square(
+          dimension: width * 0.8,
+          child: _TankTray(progress: progress),
+        );
+      } else if (spec.isInstant) {
+        label = done ? 'DEVELOPED' : 'DEVELOPING 0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}';
+        body = SizedBox(
+          width: width * 0.8,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(end: progress),
+            duration: const Duration(seconds: 1),
+            builder: (context, p, _) => InstantPrint(
+              develop: p,
+              picture: thumb == null
+                  ? const SizedBox.shrink()
+                  : Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 720, gaplessPlayback: true),
+            ),
+          ),
+        );
+      } else {
+        final stage = PrintTrayPainter.stageFor(progress);
+        label = done ? 'DEVELOPED' : (processing && left.isNegative ? 'FIXING…' : '${stage.label} $mm:$ss');
+        body = SizedBox(
+          width: width,
+          height: width * 1.25,
+          child: _PrintTray(progress: progress, thumb: thumb, cacheWidth: 900),
+        );
+      }
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => Navigator.of(context).pop(),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            body,
+            const SizedBox(height: 14),
+            Text(
+              label,
+              style: const TextStyle(
+                color: ink,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2,
+                decoration: TextDecoration.none,
+              ),
             ),
           ],
         ),
@@ -1433,7 +1553,7 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
   }
 
   void _toggle() {
-    unawaited(HapticFeedback.selectionClick());
+    unawaited(Haptics.selectionClick());
     _back = !_back;
     if (_back) {
       _flip.forward();
@@ -1726,10 +1846,11 @@ class PrintTrayPainter extends CustomPainter {
 /// The print in its tray: paper floating in the chemistry, the latent image
 /// surfacing during the developer stage, all seen by red safelight.
 class _PrintTray extends StatefulWidget {
-  const _PrintTray({required this.progress, required this.thumb});
+  const _PrintTray({required this.progress, required this.thumb, this.cacheWidth = 160});
 
   final double progress;
   final String? thumb;
+  final int cacheWidth;
 
   @override
   State<_PrintTray> createState() => _PrintTrayState();
@@ -1800,7 +1921,7 @@ class _PrintTrayState extends State<_PrintTray> with SingleTickerProviderStateMi
                           child: Image.file(
                             File(thumb),
                             fit: BoxFit.cover,
-                            cacheWidth: 160,
+                            cacheWidth: widget.cacheWidth,
                             gaplessPlayback: true,
                           ),
                         ),

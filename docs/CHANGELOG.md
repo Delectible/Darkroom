@@ -295,4 +295,4 @@ darkroom, corkboard, ambience).
   watchdog re-threads once if the picture doesn't move after PLAY.
 - [x] **12.3 Dial lag:** seeks are coalesced (one in flight, newest target
   waits) and the needle follows the finger, so the frame catches up fast.
-  → 1.3.19 · 2026-10-07 · (this commit)
+  → 1.3.19 · 2026-10-07 · 7b5dd65

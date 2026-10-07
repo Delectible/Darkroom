@@ -135,7 +135,7 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.dingo.darkroom
           releaseFiles: dist/Darkroom-${{ github.run_number }}.aab
-          track: internal
+          tracks: internal
           # 'completed' rolls out to testers straight away. While the app is
           # still a draft in the Play Console, Play only takes 'draft':
           # set the repo variable PLAY_RELEASE_STATUS=draft until then.

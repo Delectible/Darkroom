@@ -11,6 +11,11 @@ Read this first. It's the hand-off from the earlier development sessions
 - Usually works from his phone. Keep replies short and plain.
 - For big revisions, ask clarifying questions first, then implement.
 - He's often low on usage: keep changes focused, don't gold-plate.
+- After every push that builds, wait for the run; once its `play` job has
+  uploaded, wait ~2 more minutes, then send Gabe a push notification
+  (PushNotification) that the build is on Google Play: version, build
+  number, one-line what's new. If the build or the upload fails, notify
+  that instead.
 - Every user-visible change: bump `version` in `pubspec.yaml` (raise the
   `+build` number too) and add a line to `AppInfo.revisions` in
   `lib/core/app_info.dart` (shown in the Win98 Help > About).

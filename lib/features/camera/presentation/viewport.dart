@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -32,6 +33,15 @@ import '../application/zoom_controller.dart';
 /// with the same inputs, so the saved frame == what's inside the mask.
 class CameraViewport extends ConsumerWidget {
   const CameraViewport({super.key});
+
+  /// The live viewfinder's own layer, for taking a still of it.
+  static final snapKey = GlobalKey(debugLabel: 'viewfinder');
+
+  /// A still shown over the viewfinder while the body is tossed: the look
+  /// shaders are ImageFilter.shader filters, and under the toss's 3D
+  /// transform only their input moves (the Super 8 strip's sprocket hole
+  /// slid about on its own). The rest of the body stays live.
+  static final freeze = ValueNotifier<ui.Image?>(null);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -68,81 +78,104 @@ class CameraViewport extends ConsumerWidget {
         }
         final maskRect = Rect.fromLTWH(shown.left * w, shown.top * h, shown.width * w, shown.height * h);
 
+        final radius = BorderRadius.circular(spec.mode == AppMode.film ? 6 : 3);
         return Center(
           child: SizedBox(
             width: w,
             height: h,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(spec.mode == AppMode.film ? 6 : 3),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ColoredBox(color: palette.screen),
-                  // Super 8: when the phone turns, the strip swings round into
-                  // its new place instead of jumping.
-                  _StripTurn(
-                    turns: turns,
-                    cameraId: spec.id,
-                    strip: maskRect.size,
-                    builder: (spin, spinScale) {
-                      // The live picture turns inside the shader (strip, hole
-                      // and image together); the mask with a matching matrix.
-                      final Widget maskLayer = IgnorePointer(
-                        child: CustomPaint(
-                          painter: _AspectMaskPainter(
-                            hole: maskRect,
-                            shade: palette.screen.withValues(alpha: spec.mode == AppMode.film ? 0.93 : 0.86),
-                            frame: spec.mode == AppMode.film
-                                ? palette.screenInk.withValues(alpha: 0.55)
-                                : palette.screenInk.withValues(alpha: 0.8),
-                            brackets: spec.mode == AppMode.digital,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                RepaintBoundary(
+                  key: snapKey,
+                  child: ClipRRect(
+                    borderRadius: radius,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        ColoredBox(color: palette.screen),
+                        // Super 8: when the phone turns, the strip swings round into
+                        // its new place instead of jumping.
+                        _StripTurn(
+                          turns: turns,
+                          cameraId: spec.id,
+                          strip: maskRect.size,
+                          builder: (spin, spinScale) {
+                            // The live picture turns inside the shader (strip, hole
+                            // and image together); the mask with a matching matrix.
+                            final Widget maskLayer = IgnorePointer(
+                              child: CustomPaint(
+                                painter: _AspectMaskPainter(
+                                  hole: maskRect,
+                                  shade: palette.screen.withValues(
+                                    alpha: spec.mode == AppMode.film ? 0.93 : 0.86,
+                                  ),
+                                  frame: spec.mode == AppMode.film
+                                      ? palette.screenInk.withValues(alpha: 0.55)
+                                      : palette.screenInk.withValues(alpha: 0.8),
+                                  brackets: spec.mode == AppMode.digital,
+                                ),
+                              ),
+                            );
+                            return Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                if (session.isReady)
+                                  _FocusablePreview(
+                                    controller: controller!,
+                                    child: LiveLookPreview(
+                                      spec: spec,
+                                      grain: local.grain,
+                                      crop: mask,
+                                      canvas: strip,
+                                      turns: turns,
+                                      spin: spin,
+                                      spinScale: spinScale,
+                                      child: _RotationCorrectedPreview(controller: controller),
+                                    ),
+                                  )
+                                else
+                                  _Standby(session: session),
+                                if (spin == 0 && spinScale == 1)
+                                  maskLayer
+                                else
+                                  Transform(
+                                    alignment: Alignment.center,
+                                    transform: Matrix4.rotationZ(spin)
+                                      ..scaleByDouble(spinScale, spinScale, 1, 1),
+                                    child: maskLayer,
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                        Positioned.fromRect(
+                          rect: maskRect,
+                          // In the user's frame: held sideways, the readouts (and the
+                          // date, which is burned into the upright photo) follow.
+                          child: IgnorePointer(
+                            child: UprightBox(
+                              child: _HudOverlay(spec: spec, timestamp: local.timestamp),
+                            ),
                           ),
                         ),
-                      );
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          if (session.isReady)
-                            _FocusablePreview(
-                              controller: controller!,
-                              child: LiveLookPreview(
-                                spec: spec,
-                                grain: local.grain,
-                                crop: mask,
-                                canvas: strip,
-                                turns: turns,
-                                spin: spin,
-                                spinScale: spinScale,
-                                child: _RotationCorrectedPreview(controller: controller),
-                              ),
-                            )
-                          else
-                            _Standby(session: session),
-                          if (spin == 0 && spinScale == 1)
-                            maskLayer
-                          else
-                            Transform(
-                              alignment: Alignment.center,
-                              transform: Matrix4.rotationZ(spin)..scaleByDouble(spinScale, spinScale, 1, 1),
-                              child: maskLayer,
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                  Positioned.fromRect(
-                    rect: maskRect,
-                    // In the user's frame: held sideways, the readouts (and the
-                    // date, which is burned into the upright photo) follow.
-                    child: IgnorePointer(
-                      child: UprightBox(
-                        child: _HudOverlay(spec: spec, timestamp: local.timestamp),
-                      ),
+                        const IgnorePointer(child: _ShutterBlink()),
+                      ],
                     ),
                   ),
-                  const IgnorePointer(child: _ShutterBlink()),
-                ],
-              ),
+                ),
+                // While the body is tossed, a still of the viewfinder stands in
+                // for it (see [freeze]).
+                ValueListenableBuilder<ui.Image?>(
+                  valueListenable: freeze,
+                  builder: (context, still, _) => still == null
+                      ? const SizedBox.shrink()
+                      : ClipRRect(
+                          borderRadius: radius,
+                          child: RawImage(image: still, fit: BoxFit.fill),
+                        ),
+                ),
+              ],
             ),
           ),
         );

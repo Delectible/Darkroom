@@ -10,6 +10,7 @@ import '../../../../core/audio/sfx.dart';
 import '../../../../core/app_info.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../camera/application/camera_log.dart';
+import '../../../camera/application/camera_ui_state.dart' show userNameProvider;
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../viewer/presentation/media_actions.dart';
@@ -623,6 +624,7 @@ const _tips = [
 
 Future<void> showTipOfTheDay(BuildContext context) {
   var i = math.Random().nextInt(_tips.length);
+  final name = ProviderScope.containerOf(context).read(userNameProvider);
   return showWin98Window<void>(
     context,
     title: 'Tip of the Day',
@@ -649,7 +651,7 @@ Future<void> showTipOfTheDay(BuildContext context) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Did you know...',
+                          name == null ? 'Did you know...' : 'Welcome back, $name. Did you know...',
                           style: W98.text.copyWith(fontWeight: FontWeight.w800, fontSize: 14),
                         ),
                         const SizedBox(height: 6),

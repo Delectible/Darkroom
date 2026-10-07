@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +7,7 @@ import '../../../../core/audio/sfx.dart';
 import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
 import '../../application/capture_controller.dart';
+import '../body_swap.dart' show BodyYaw;
 import '../../../../core/device/haptics.dart';
 
 /// Bumped every time the shutter fires (on-screen button or volume key), so
@@ -57,6 +57,19 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
     }
   }
 
+  bool _cached = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Every layer decoded up front: presses and body swaps never wait on one.
+    if (_cached) return;
+    _cached = true;
+    for (final name in _SpriteShutter.all) {
+      unawaited(precacheImage(AssetImage(_SpriteShutter.asset(name)), context));
+    }
+  }
+
   @override
   void dispose() {
     _stroke.dispose();
@@ -99,27 +112,33 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
       builder: (context, _) {
         final t = _stroke.isAnimating ? _stroke.value : 0.0;
         return switch (kind) {
-          _Kind.digital => CustomPaint(
-            size: const Size(92, 78),
-            painter: _DigitalKeyPainter(
-              pressed: _down || (t > 0 && t < 0.6),
-              rec: video,
-              recording: recording,
-            ),
+          _Kind.digital => _SpriteShutter(
+            box: const Size(92, 78),
+            span: 96,
+            base: 'digital-base',
+            cap: video ? 'digitalrec-cap' : 'digital-cap',
+            pressed: _down || (t > 0 && t < 0.6),
+            capHeight: 10,
+            lamp: recording ? const _Lamp(Offset.zero, 0.09, Color(0xFFFF3B30)) : null,
           ),
-          _Kind.film => CustomPaint(
-            size: const Size(108, 86),
-            // Chrome, whatever the body's trim.
-            painter: _FilmReleasePainter(
-              pressed: _down,
-              stroke: t,
-              metal: const Color(0xFFC4C8CD),
-              metalDark: const Color(0xFF5F646A),
-            ),
+          _Kind.film => _SpriteShutter(
+            box: const Size(108, 86),
+            span: 138,
+            hub: const Offset(0.6, 0.52),
+            base: 'film-base',
+            cap: 'film-cap',
+            pressed: _down,
+            capHeight: 12,
+            lever: _leverAngle(t),
           ),
-          _Kind.run => CustomPaint(
-            size: const Size(86, 86),
-            painter: _RunButtonPainter(pressed: _down || recording, recording: recording),
+          _Kind.run => _SpriteShutter(
+            box: const Size(86, 86),
+            span: 108,
+            base: 'run-base',
+            cap: 'run-cap',
+            pressed: _down || recording,
+            capHeight: 13,
+            lamp: recording ? const _Lamp(Offset(0.36, -0.36), 0.05, Color(0xFFFF453A)) : null,
           ),
         };
       },
@@ -157,242 +176,131 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
   }
 }
 
-Paint _shadow(double blur, [double alpha = 0.45]) => Paint()
-  ..color = Colors.black.withValues(alpha: alpha)
-  ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur);
-
-/// A compact camera's shutter key: brushed-silver bezel, a squared key with
-/// a soft dome that sinks when pressed. Camcorders get a red record dot.
-class _DigitalKeyPainter extends CustomPainter {
-  _DigitalKeyPainter({required this.pressed, required this.rec, required this.recording});
-
-  final bool pressed;
-  final bool rec;
-  final bool recording;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final outer = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(18));
-    canvas.drawRRect(outer.shift(const Offset(0, 3)), _shadow(5));
-    canvas.drawRRect(
-      outer,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF2F4F6), Color(0xFFB7BCC2), Color(0xFF8D9399)],
-        ).createShader(outer.outerRect),
-    );
-    canvas.drawRRect(
-      outer.deflate(0.5),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.35)
-        ..style = PaintingStyle.stroke,
-    );
-    // The well the key sits in.
-    final well = outer.deflate(6);
-    canvas.drawRRect(well, Paint()..color = const Color(0xFF2B2E33));
-    // The key: travels 2.5 px and darkens a touch when pressed.
-    final travel = pressed ? 2.5 : 0.0;
-    final key = RRect.fromRectAndRadius(
-      well.outerRect.deflate(3).shift(Offset(0, travel)),
-      const Radius.circular(12),
-    );
-    if (!pressed) canvas.drawRRect(key.shift(const Offset(0, 2.5)), Paint()..color = const Color(0xFF15171A));
-    canvas.drawRRect(
-      key,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: pressed
-              ? const [Color(0xFFC9CED3), Color(0xFF9DA3A9)]
-              : const [Color(0xFFF7F8FA), Color(0xFFC3C8CE)],
-        ).createShader(key.outerRect),
-    );
-    // Soft dome highlight.
-    final glint = RRect.fromRectAndRadius(
-      Rect.fromLTWH(key.left + 8, key.top + 4, key.width - 16, key.height * 0.32),
-      const Radius.circular(8),
-    );
-    canvas.drawRRect(glint, Paint()..color = Colors.white.withValues(alpha: pressed ? 0.25 : 0.55));
-    if (rec) {
-      final c = key.center;
-      if (recording) canvas.drawCircle(c, 15, _shadow(6, 0.0)..color = const Color(0xAAFF2A1E));
-      canvas.drawCircle(c, 9, Paint()..color = recording ? const Color(0xFFFF3B2E) : const Color(0xFFC0281E));
-      canvas.drawCircle(c + const Offset(-2.5, -2.5), 2.5, Paint()..color = Colors.white54);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DigitalKeyPainter old) =>
-      old.pressed != pressed || old.rec != rec || old.recording != recording;
+/// The advance lever's turn (radians, clockwise from parked) during a
+/// stroke [t]: swings out, then springs home.
+double _leverAngle(double t) {
+  final swing = t <= 0
+      ? 0.0
+      : t < 0.45
+      ? Curves.easeOut.transform(t / 0.45)
+      : 1 - Curves.easeInOutBack.transform(((t - 0.45) / 0.55).clamp(0.0, 1.0));
+  return 0.18 + swing * 0.95;
 }
 
-/// A chrome shutter release in the hub of the film-advance lever. Each
-/// frame the lever swings out (winding on) and springs home.
-class _FilmReleasePainter extends CustomPainter {
-  _FilmReleasePainter({
+/// A glowing lamp over the sprite: [at] relative to the hub in sprite
+/// spans, [radius] in spans.
+class _Lamp {
+  const _Lamp(this.at, this.radius, this.color);
+
+  final Offset at;
+  final double radius;
+  final Color color;
+}
+
+/// A shutter drawn from path-traced layers (tool/render/items/shutter.js):
+/// the fixed base, the button cap (pressed or not) and, for film, the
+/// advance lever. While the body tips during a swap the cap and lever slide
+/// a little against the base (BodyYaw), so the button reads as solid rather
+/// than printed on.
+class _SpriteShutter extends StatelessWidget {
+  const _SpriteShutter({
+    required this.box,
+    required this.span,
+    required this.base,
+    required this.cap,
     required this.pressed,
-    required this.stroke,
-    required this.metal,
-    required this.metalDark,
+    required this.capHeight,
+    this.hub = const Offset(0.5, 0.5),
+    this.lever,
+    this.lamp,
   });
 
+  /// Layout size of the button.
+  final Size box;
+
+  /// Size of the (square) sprites on screen.
+  final double span;
+
+  /// Where the sprites' centre sits in [box] (fractions).
+  final Offset hub;
+  final String base;
+  final String cap;
   final bool pressed;
-  final double stroke;
-  final Color metal;
-  final Color metalDark;
+
+  /// How far the cap stands off the body, in logical px (for the parallax).
+  final double capHeight;
+
+  /// Film: the lever's turn from parked, radians clockwise.
+  final double? lever;
+  final _Lamp? lamp;
+
+  static String asset(String name) => 'assets/shutters/shutter_$name.webp';
+
+  /// Every layer, for precaching.
+  static const all = [
+    'digital-base', 'digital-cap', 'digital-cap-down', 'digitalrec-cap', 'digitalrec-cap-down', //
+    'film-base', 'film-cap', 'film-cap-down', 'film-lever', 'run-base', 'run-cap', 'run-cap-down',
+  ];
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final c = Offset(size.width * 0.6, size.height * 0.52);
-    // The lever: parked pointing left along the body; swings up and out.
-    final swing = stroke <= 0
-        ? 0.0
-        : stroke < 0.45
-        ? Curves.easeOut.transform(stroke / 0.45)
-        : 1 - Curves.easeInOutBack.transform(((stroke - 0.45) / 0.55).clamp(0.0, 1.0));
-    final angle = math.pi + 0.18 + swing * 0.95;
-    final dir = Offset.fromDirection(angle);
-    final normal = Offset(-dir.dy, dir.dx);
-    const len = 54.0;
-    final tip = c + dir * len;
-    final arm = Path()
-      ..moveTo((c + normal * 9).dx, (c + normal * 9).dy)
-      ..lineTo((tip + normal * 4).dx, (tip + normal * 4).dy)
-      ..lineTo((tip - normal * 4).dx, (tip - normal * 4).dy)
-      ..lineTo((c - normal * 9).dx, (c - normal * 9).dy)
-      ..close();
-    canvas.drawPath(arm.shift(const Offset(0, 3)), _shadow(3));
-    canvas.drawPath(
-      arm,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color.lerp(metal, Colors.white, 0.6)!, metal, metalDark],
-        ).createShader(Rect.fromCircle(center: c, radius: len)),
-    );
-    // Plastic thumb pad on the lever's tip.
-    canvas.drawCircle(tip, 7, Paint()..color = const Color(0xFF15120F));
-    canvas.drawCircle(tip + const Offset(-1.5, -1.5), 2.5, Paint()..color = Colors.white24);
-    // Knurled collar round the hub.
-    canvas.drawCircle(c.translate(0, 3), 31, _shadow(4));
-    canvas.drawCircle(
-      c,
-      31,
-      Paint()
-        ..shader = SweepGradient(
-          colors: [metal, metalDark, metal, metalDark, metal],
-        ).createShader(Rect.fromCircle(center: c, radius: 31)),
-    );
-    final knurl = Paint()
-      ..color = Colors.black.withValues(alpha: 0.25)
-      ..strokeWidth = 1;
-    for (var i = 0; i < 72; i++) {
-      final d = Offset.fromDirection(i * math.pi * 2 / 72);
-      canvas.drawLine(c + d * 27, c + d * 31, knurl);
+  Widget build(BuildContext context) {
+    final shift = BodyYaw.parallax(context, pressed ? capHeight * 0.6 : capHeight);
+    final c = Offset(box.width * hub.dx, box.height * hub.dy);
+    Widget layer(String name, {double dx = 0, double angle = 0, bool sunk = false}) {
+      Widget img = Image.asset(asset(name), filterQuality: FilterQuality.medium, gaplessPlayback: true);
+      if (sunk) {
+        // Pressed in: a touch smaller (further away) and in its own shade.
+        img = Transform.scale(
+          scale: 0.97,
+          child: ColorFiltered(
+            colorFilter: const ColorFilter.matrix([
+              0.86, 0, 0, 0, 0, //
+              0, 0.86, 0, 0, 0, //
+              0, 0, 0.86, 0, 0, //
+              0, 0, 0, 1, 0,
+            ]),
+            child: img,
+          ),
+        );
+      }
+      return Positioned(
+        left: c.dx - span / 2 + dx,
+        top: c.dy - span / 2,
+        width: span,
+        height: span,
+        child: Transform.rotate(angle: angle, child: img),
+      );
     }
-    // The release: a machined chrome dome with a cable-release socket.
-    final dome = pressed ? 20.0 : 22.0;
-    canvas.drawCircle(c, dome + 1.5, Paint()..color = const Color(0xFF26231F));
-    canvas.drawCircle(
-      c + (pressed ? const Offset(0, 0.8) : Offset.zero),
-      dome,
-      Paint()
-        ..shader = RadialGradient(
-          center: pressed ? Alignment.center : const Alignment(-0.4, -0.5),
-          colors: const [Color(0xFFFFFFFF), Color(0xFFC9CCD0), Color(0xFF6E7277)],
-          stops: const [0, 0.45, 1],
-        ).createShader(Rect.fromCircle(center: c, radius: dome)),
-    );
-    final rings = Paint()
-      ..color = Colors.black.withValues(alpha: 0.12)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.7;
-    for (var r = 5.0; r < dome; r += 2.6) {
-      canvas.drawCircle(c, r, rings);
-    }
-    canvas.drawCircle(c, 4, Paint()..color = const Color(0xFF1A1714));
-    canvas.drawCircle(c, 1.8, Paint()..color = const Color(0xFF5A5650));
-  }
 
-  @override
-  bool shouldRepaint(_FilmReleasePainter old) =>
-      old.pressed != pressed || old.stroke != stroke || old.metal != metal;
-}
-
-/// Super 8: a chunky red RUN button in a black lock collar. It latches in
-/// while the camera runs, with the run lamp lit.
-class _RunButtonPainter extends CustomPainter {
-  _RunButtonPainter({required this.pressed, required this.recording});
-
-  final bool pressed;
-  final bool recording;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final outer = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(22));
-    canvas.drawRRect(outer.shift(const Offset(0, 3)), _shadow(5));
-    canvas.drawRRect(
-      outer,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF3A3A3C), Color(0xFF111112)],
-        ).createShader(outer.outerRect),
-    );
-    // Ribbed grip round the collar.
-    final rib = Paint()
-      ..color = Colors.white.withValues(alpha: 0.06)
-      ..strokeWidth = 1.2;
-    for (var x = outer.left + 10; x < outer.right - 10; x += 4) {
-      canvas.drawLine(Offset(x, outer.top + 2), Offset(x, outer.top + 7), rib);
-      canvas.drawLine(Offset(x, outer.bottom - 7), Offset(x, outer.bottom - 2), rib);
-    }
-    // The run lamp.
-    final lamp = Offset(outer.right - 13, outer.top + 13);
-    if (recording) canvas.drawCircle(lamp, 7, _shadow(4, 0)..color = const Color(0xCCFF2A1E));
-    canvas.drawCircle(
-      lamp,
-      3.4,
-      Paint()..color = recording ? const Color(0xFFFF3B2E) : const Color(0xFF4A1512),
-    );
-    // The button: travels in and stays in while running.
-    final travel = pressed ? 2.5 : 0.0;
-    final key = RRect.fromRectAndRadius(
-      outer.outerRect.deflate(15).shift(Offset(0, travel)),
-      const Radius.circular(14),
-    );
-    if (!pressed) canvas.drawRRect(key.shift(const Offset(0, 3)), Paint()..color = const Color(0xFF5A0E0A));
-    canvas.drawRRect(
-      key,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.3, -0.5),
-          radius: 1.1,
-          colors: pressed
-              ? const [Color(0xFFD8392B), Color(0xFF8E1A12)]
-              : const [Color(0xFFFF6A57), Color(0xFFC4241A), Color(0xFF8E1A12)],
-        ).createShader(key.outerRect),
-    );
-    final tp = TextPainter(
-      text: TextSpan(
-        text: 'RUN',
-        style: TextStyle(
-          color: Colors.white.withValues(alpha: 0.85),
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.5,
-        ),
+    final l = lamp;
+    return SizedBox.fromSize(
+      size: box,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          layer(base),
+          if (lever != null) layer('film-lever', dx: shift * 0.6, angle: lever!),
+          layer(pressed ? '$cap-down' : cap, dx: shift, sunk: pressed),
+          if (l != null)
+            Positioned(
+              left: c.dx + l.at.dx * span - l.radius * span + shift,
+              top: c.dy + l.at.dy * span - l.radius * span,
+              width: l.radius * 2 * span,
+              height: l.radius * 2 * span,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: l.color.withValues(alpha: 0.85),
+                    boxShadow: [
+                      BoxShadow(color: l.color.withValues(alpha: 0.7), blurRadius: 10, spreadRadius: 2),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, key.center - Offset(tp.width / 2, tp.height / 2));
+    );
   }
-
-  @override
-  bool shouldRepaint(_RunButtonPainter old) => old.pressed != pressed || old.recording != recording;
 }

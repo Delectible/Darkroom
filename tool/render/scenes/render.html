@@ -33,7 +33,9 @@ if (q.get('campos')) c.position = q.get('campos').split(',').map(Number);
 const cam = new THREE.PerspectiveCamera(c.fov, W / H, 1, 5000);
 cam.position.set(...c.position); cam.lookAt(new THREE.Vector3(...c.target));
 // auto-frame: keep the view direction, fit the object's box to `fill` of the frame
-{
+// (items rendered as aligned layers, like the shutter sprites, ask for a
+// fixed camera instead: `fixedFrame: true`)
+if (!built.fixedFrame) {
   const fill = +(q.get('fill') || built.fill || 0.84);
   built.object.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(built.object, true);

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/providers.dart';
 import 'core/theme/retro_theme.dart';
+import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/camera_screen.dart';
+import 'features/onboarding/onboarding_screen.dart';
 
 class DarkroomApp extends ConsumerStatefulWidget {
   const DarkroomApp({super.key});
@@ -35,7 +37,29 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       title: 'Darkroom',
       debugShowCheckedModeBanner: false,
       theme: RetroPalette.film.toTheme(),
-      home: const CameraScreen(),
+      home: const _Home(),
+    );
+  }
+}
+
+/// The first-run tour once, then the camera.
+class _Home extends ConsumerStatefulWidget {
+  const _Home();
+
+  @override
+  ConsumerState<_Home> createState() => _HomeState();
+}
+
+class _HomeState extends ConsumerState<_Home> {
+  late bool _tour = ref.read(sharedPrefsProvider).getBool(PrefKeys.onboarded) != true;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 450),
+      child: _tour
+          ? OnboardingScreen(key: const ValueKey('tour'), onDone: () => setState(() => _tour = false))
+          : const CameraScreen(key: ValueKey('camera')),
     );
   }
 }

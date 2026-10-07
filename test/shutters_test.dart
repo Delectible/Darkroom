@@ -6,6 +6,7 @@ import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/camera/application/capture_controller.dart';
 import 'package:darkroom/features/camera/presentation/widgets/camera_controls.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
+import 'package:darkroom/features/camera/presentation/body_swap.dart' show BodyYaw;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,8 @@ void main() {
                 one(AppMode.film, 'portra400'),
                 one(AppMode.film, 'super8'),
                 one(AppMode.digital, 'camcorder90'),
+                // Tipped, as mid-toss: the caps slide against their bases.
+                BodyYaw(yaw: 0.7, child: one(AppMode.film, 'super8')),
               ],
             ),
           ),
@@ -77,6 +80,11 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 400));
+    // Let the sprite layers decode.
+    for (var i = 0; i < 4; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 150)));
+      await tester.pump();
+    }
     // Fire the film one and catch its lever mid-swing.
     await tester.tap(find.byType(ShutterButton).at(1));
     await tester.pump(const Duration(milliseconds: 200));

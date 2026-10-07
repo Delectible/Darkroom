@@ -23,6 +23,10 @@ class PrefKeys {
   static const explorerFilter = 'ui.explorer.filter';
   static const explorerTree = 'ui.explorer.tree';
 
+  /// First-run tour seen (and the name the user gave, if any).
+  static const onboarded = 'user.onboarded';
+  static const userName = 'user.name';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -34,8 +38,32 @@ class PrefKeys {
     explorerSortAsc,
     explorerFilter,
     explorerTree,
+    onboarded,
+    userName,
   };
 }
+
+/// What the user asked to be called (first-run tour), or null.
+class UserNameNotifier extends Notifier<String?> {
+  @override
+  String? build() {
+    final v = ref.read(sharedPrefsProvider).getString(PrefKeys.userName)?.trim();
+    return v == null || v.isEmpty ? null : v;
+  }
+
+  Future<void> set(String? name) async {
+    final v = name?.trim() ?? '';
+    state = v.isEmpty ? null : v;
+    final p = ref.read(sharedPrefsProvider);
+    if (v.isEmpty) {
+      await p.remove(PrefKeys.userName);
+    } else {
+      await p.setString(PrefKeys.userName, v);
+    }
+  }
+}
+
+final userNameProvider = NotifierProvider<UserNameNotifier, String?>(UserNameNotifier.new);
 
 class AppModeNotifier extends Notifier<AppMode> {
   @override

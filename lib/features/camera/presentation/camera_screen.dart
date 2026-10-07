@@ -58,27 +58,29 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// Picture of the body that is leaving, once the toss has committed.
   ui.Image? _outgoing;
 
-  /// The body as it looked at rest, shown over the live one while it's
-  /// dragged or springs back. A shader filter under the toss's 3D transform
-  /// only moves its input, so the Super 8 strip's sprocket hole (drawn by
-  /// the shader) slid around on its own; a snapshot moves as one piece.
-  ui.Image? _moveStill;
+  /// The viewfinder as it looked at rest, per body, shown in place of the
+  /// live one while the body is tossed (CameraViewport.freeze): a shader
+  /// filter under the toss's 3D transform only moves its input, so the
+  /// Super 8 strip's sprocket hole slid about on its own. Only the
+  /// viewfinder is frozen; the controls stay live (the shutter's cap shifts
+  /// against its base for depth, BodyYaw).
+  final Map<AppMode, ui.Image> _lastFrame = {};
 
   void _snapMoving() {
-    if (_moveStill != null) return;
+    if (CameraViewport.freeze.value != null) return;
     try {
-      final boundary = _bodyKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = CameraViewport.snapKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null || boundary.debugNeedsPaint) return;
-      _moveStill = boundary.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context) * 0.6);
-    } catch (_) {
-      _moveStill = null;
-    }
+      final mode = ref.read(appModeProvider);
+      final still = boundary.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context) * 0.6);
+      final old = _lastFrame[mode];
+      _lastFrame[mode] = still;
+      CameraViewport.freeze.value = still;
+      old?.dispose();
+    } catch (_) {}
   }
 
-  void _dropMoving() {
-    _moveStill?.dispose();
-    _moveStill = null;
-  }
+  void _dropMoving() => CameraViewport.freeze.value = null;
 
   /// Last picture of each body, slid in as the other camera while dragging.
   final Map<AppMode, ui.Image> _lastLook = {};
@@ -115,8 +117,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     unawaited(GestureExclusion.clear());
     _swap.dispose();
     _outgoing?.dispose();
-    _moveStill?.dispose();
-    for (final image in _lastLook.values) {
+    CameraViewport.freeze.value = null;
+    for (final image in [..._lastLook.values, ..._lastFrame.values]) {
       image.dispose();
     }
     super.dispose();
@@ -274,6 +276,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       _outgoing?.dispose();
       _outgoing = still;
       _committed = true;
+      // The arriving body's viewfinder: as it was last time, until it lands.
+      CameraViewport.freeze.value = _lastFrame[from == AppMode.film ? AppMode.digital : AppMode.film];
       // Flips the mode synchronously (the save happens after), so this
       // frame already builds the new body in the arriving slot.
       unawaited(ref.read(appModeProvider.notifier).toggle());
@@ -442,20 +446,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                       final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
                       Widget picture(ui.Image? image, AppMode m) =>
                           image == null ? BodyStandIn(mode: m) : RawImage(image: image, fit: BoxFit.fill);
-                      // The live body, covered by its at-rest snapshot while it moves.
-                      final still = moving ? _moveStill : null;
-                      final live = Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          child!,
-                          if (still != null) RawImage(image: still, fit: BoxFit.fill),
-                        ],
-                      );
+
                       if (!moving) {
                         return SwapStage(
                           progress: 0,
                           dir: _dirFor(mode),
-                          leaving: live,
+                          leaving: child!,
                           leavingMode: mode,
                           arriving: null,
                           arrivingMode: other,
@@ -469,23 +465,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                               dir: _dirFor(other),
                               leaving: picture(_outgoing, other),
                               leavingMode: other,
-                              // Live underneath; while it flies in, its picture
-                              // from last time on top (see _moveStill).
-                              arriving: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  child,
-                                  if (_lastLook[mode] case final look?)
-                                    RawImage(image: look, fit: BoxFit.fill),
-                                ],
-                              ),
+                              arriving: child,
                               arrivingMode: mode,
                               liveArriving: true,
                             )
                           : SwapStage(
                               progress: _swap.value,
                               dir: _dirFor(mode),
-                              leaving: live,
+                              leaving: child!,
                               leavingMode: mode,
                               arriving: picture(_lastLook[other], other),
                               arrivingMode: other,

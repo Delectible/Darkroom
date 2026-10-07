@@ -3,13 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.30';
+  static const version = '1.3.31';
   static const build = '1998.10.05';
 
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'Swipe left on a digital camera for Windows 98 (it switches on like an old monitor). A volume slider for sound effects, tap off a photo to put it down, a nicer look at prints developing, kinder messages when a shot is ruined (with Copy error report), crash reports in Help, faster Polaroid sharing, a smoother camera picker, and fixes for Super 8 sound and the sprocket hole during a camera swap. '
+      'A welcome tour for new users (with your name on your prints), and photoreal 3D shutter buttons that keep their depth as you toss the camera. '
+          'Swipe left on a digital camera for Windows 98 (it switches on like an old monitor). A volume slider for sound effects, tap off a photo to put it down, a nicer look at prints developing, kinder messages when a shot is ruined (with Copy error report), crash reports in Help, faster Polaroid sharing, a smoother camera picker, and fixes for Super 8 sound and the sprocket hole during a camera swap. '
           'Removed the High-resolution film switch: film always shoots in the smooth 1080p mode. '
           'The camera no longer wiggles when you swipe right to bring in the corkboard. '
           'Tap a print in the darkroom to watch it develop up close. Photos open over the dimmed corkboard. Much quieter sounds, a louder corkboard knock, Sound effects and Haptics switches in settings, tape-style audio for Super 8 and camcorder clips, and a Polaroid note added after saving can be saved as a new copy. '

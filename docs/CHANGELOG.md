@@ -512,13 +512,20 @@ swipe is LEFT in digital mode (right still swaps to film).
 - [x] **20.7 Volume:** a Sound effects slider (0 = off, half by default;
   player volume = level²) in settings and Win98 Options, with a sample
   sound. (The baked files peak around -30 dBFS.)
-- [ ] **20.8 3D shutter buttons:** pre-rendered photoreal (next release).
+- [x] **20.8 3D shutter buttons:** path-traced layers (`tool/render/items/shutter.js`:
+  base, cap up/down, film lever) in `assets/shutters/`, stacked by
+  `_SpriteShutter`; the cap and lever slide against the base as the body
+  tips (`BodyYaw`, `Raised`), and the gallery / stock buttons get the same
+  depth. During a toss only the viewfinder is frozen
+  (`CameraViewport.freeze`), so the controls stay live.
 - [x] **20.9 Win98 swipe:** swipe left in digital mode; the explorer
   switches on like a CRT (dot, line, opens, degauss wobble).
 - [x] **20.10 Slow Polaroid share:** the framed export is cached per
   picture + note and capped at 2048 px (pure-Dart JPEG encode).
-- [ ] **20.11 Start screen:** features, gestures, name, permissions
-  (next release).
+- [x] **20.11 Start screen:** six pages (hello, film, digital, gestures,
+  your name, permissions with reasons and one Allow all), friendly and a
+  bit cheeky; shown once (`PrefKeys.onboarded`), replay from Win98 Help >
+  Welcome Tour. The name goes on the lab stamp and in Tip of the Day.
 - [x] **20.12 Carousel:** closing is a trigger (no finger tracking, leaves
   at speed); held sideways it rises from the user's bottom edge and the
   hero flight is skipped (it flew sideways then snapped).

@@ -17,6 +17,7 @@ import '../../../../core/theme/retro_theme.dart';
 import '../../../../core/theme/surfaces.dart';
 import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
+import '../body_swap.dart' show Raised;
 import '../../../cameras/presentation/artwork/camera_artwork.dart';
 import '../../application/capture_controller.dart';
 import '../../application/zoom_controller.dart';
@@ -168,19 +169,29 @@ class StockButton extends ConsumerWidget {
             color: const Color(0xFF151515),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: palette.metalDark),
+            // A recessed tray: light catches its lower lip, shade under the top.
+            boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 5, offset: Offset(1.5, 2.5))],
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF0B0B0B), Color(0xFF1C1C1C)],
+            ),
           ),
-          child: Upright(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 260),
-              transitionBuilder: (c, a) => FadeTransition(
-                opacity: a,
-                child: ScaleTransition(scale: Tween(begin: 0.8, end: 1.0).animate(a), child: c),
-              ),
-              // Flies into the picker's carousel (and back) on open/close.
-              child: Hero(
-                key: ValueKey(spec.id),
-                tag: 'artwork-${spec.id}',
-                child: CameraArtwork(spec: spec),
+          child: Raised(
+            height: 8,
+            child: Upright(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 260),
+                transitionBuilder: (c, a) => FadeTransition(
+                  opacity: a,
+                  child: ScaleTransition(scale: Tween(begin: 0.8, end: 1.0).animate(a), child: c),
+                ),
+                // Flies into the picker's carousel (and back) on open/close.
+                child: Hero(
+                  key: ValueKey(spec.id),
+                  tag: 'artwork-${spec.id}',
+                  child: CameraArtwork(spec: spec),
+                ),
               ),
             ),
           ),
@@ -496,7 +507,10 @@ class GalleryButton extends ConsumerWidget {
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
-                child: film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb),
+                child: Raised(
+                  height: 5,
+                  child: film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb),
+                ),
               ),
               if (badge > 0 || newPrints > 0)
                 Positioned(

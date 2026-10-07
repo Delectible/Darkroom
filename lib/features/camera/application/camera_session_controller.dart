@@ -233,7 +233,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       } on CameraException catch (e) {
         CameraLog.add('open failed: ${e.code} ${e.description ?? ''}');
         await _safeDispose(c);
-        if (_isCameraPermissionError(e.code)) {
+        if (isCameraPermissionError(e.code)) {
           _permissionBlocked = true;
           state = state.copyWith(
             status: SessionStatus.permissionDenied,
@@ -241,7 +241,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
           );
           return;
         }
-        if (_isAudioPermissionError(e.code) && !_audioDenied) {
+        if (isAudioPermissionError(e.code) && !_audioDenied) {
           // Keep shooting: videos will simply be silent.
           _audioDenied = true;
           continue;
@@ -356,14 +356,14 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     }
   }
 
-  static bool _isCameraPermissionError(String code) => const {
+  static bool isCameraPermissionError(String code) => const {
     'CameraAccessDenied',
     'CameraAccessDeniedWithoutPrompt',
     'CameraAccessRestricted',
     'cameraPermission',
   }.contains(code);
 
-  static bool _isAudioPermissionError(String code) =>
+  static bool isAudioPermissionError(String code) =>
       const {'AudioAccessDenied', 'AudioAccessDeniedWithoutPrompt', 'AudioAccessRestricted'}.contains(code);
 }
 

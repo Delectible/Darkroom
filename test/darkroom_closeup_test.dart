@@ -60,7 +60,10 @@ void main() {
               builder: (context) => Scaffold(
                 backgroundColor: const Color(0xFFB4875A),
                 body: Center(
-                  child: TextButton(onPressed: () => showDarkroomCloseUp(context, 'p1'), child: const Text('open')),
+                  child: TextButton(
+                    onPressed: () => showDarkroomCloseUp(context, 'p1'),
+                    child: const Text('open'),
+                  ),
                 ),
               ),
             ),

@@ -13,6 +13,7 @@ import '../../../core/theme/darkroom_mark.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../../core/shaders/shader_library.dart';
+import '../../camera/application/camera_ui_state.dart' show userNameProvider;
 import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
 import 'instant_print.dart';
@@ -1710,7 +1711,7 @@ class _DogEar extends CustomPainter {
 
 /// The back of a print: the paper maker's watermark and the lab's stamp
 /// (frame, stock, date). Instant prints have their black backing instead.
-class _PrintBack extends StatelessWidget {
+class _PrintBack extends ConsumerWidget {
   const _PrintBack({required this.item, this.instant = false});
 
   final MediaItem item;
@@ -1719,8 +1720,9 @@ class _PrintBack extends StatelessWidget {
   static const _months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final spec = CameraCatalog.byId(item.cameraId);
+    final owner = ref.watch(userNameProvider);
     final d = item.readyAt;
     final date = '${d.day.toString().padLeft(2, '0')} ${_months[d.month - 1]} ${d.year}';
     final frame = item.fileName.replaceAll(RegExp(r'\.[A-Za-z0-9]+$'), '');
@@ -1792,7 +1794,7 @@ class _PrintBack extends StatelessWidget {
                       const DarkroomMark(size: 14, color: Color(0xCC2B4C8C)),
                       const SizedBox(height: 2),
                       Text(
-                        '$frame\n${spec.name.toUpperCase()}\nDEV $date',
+                        '${owner == null ? '' : 'FOR ${owner.toUpperCase()}\n'}$frame\n${spec.name.toUpperCase()}\nDEV $date',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Color(0xCC2B4C8C),

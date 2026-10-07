@@ -11,6 +11,7 @@ import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
+import '../../../onboarding/onboarding_screen.dart';
 import 'explorer_dialogs.dart';
 import 'explorer_panes.dart';
 import 'pixel_icons.dart';
@@ -568,6 +569,15 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                 Win98MenuItem(
                                   'Tip of the Day...',
                                   onSelected: () => showTipOfTheDay(context),
+                                ),
+                                Win98MenuItem(
+                                  'Welcome Tour...',
+                                  onSelected: () => Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (context) =>
+                                          OnboardingScreen(onDone: () => Navigator.of(context).pop()),
+                                    ),
+                                  ),
                                 ),
                                 Win98MenuItem(
                                   'How Do I...',

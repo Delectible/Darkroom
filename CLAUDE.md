@@ -259,7 +259,7 @@ UI
   follows the thumb and tips away in perspective; a flick or a long drag
   tosses it and the other body comes in on the same motion (spring settle),
   else it springs back (and can be grabbed again mid-spring). While it
-  moves, the body is shown as its at-rest snapshot (`_moveStill`): shader
+  moves, its viewfinder is a still (`CameraViewport.freeze`): shader
   filters under the 3D transform only move their input. Each body continues past the screen: rounded end,
   side wall with strap lug, neck strap (film) / wrist cord (digital). Until
   the toss commits the arriving body is a picture of it from last time
@@ -272,6 +272,11 @@ UI
 - Shutter (`widgets/shutters.dart`): digital = compact shutter key
   (camcorder: red dot), film = chrome release in an advance-lever hub (lever
   swings each frame), Super 8 = red RUN button that latches while filming.
+  Drawn from path-traced layers (`assets/shutters/`, made by
+  `tool/render/items/shutter.js`: base, cap up/down, film lever; fixed
+  top-down camera so they stack). The cap and lever slide against the base
+  as the body tips (`BodyYaw` / `Raised` in body_swap.dart); the gallery
+  and stock buttons are `Raised` too.
   Quiet sounds `Sfx.shutter*`. Fire via `pressShutter(ref)` so the button
   animates for volume keys too.
 - The other camera's FILM/DIGITAL tag floats over the desk (outside the
@@ -306,6 +311,15 @@ UI
 - On the camera screen, swiping sideways on the stock name or the film box
   steps to the next/previous stock without opening the carousel.
 - Zoomed-in photos pan; swiping to the next photo only works at normal zoom.
+
+## First run
+
+- `OnboardingScreen` (features, gestures, name, permissions with reasons,
+  one Allow all) shows once (`PrefKeys.onboarded`); Win98 Help > Welcome
+  Tour replays it. Camera + mic are asked by opening a CameraController
+  once (the camera plugin has no request call). The name
+  (`userNameProvider`) goes on the print backs' lab stamp and in Tip of the
+  Day.
 
 ## Art
 

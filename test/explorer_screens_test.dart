@@ -7,6 +7,8 @@ import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/sd_card/application/sd_card_controller.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_screen.dart';
+import 'package:darkroom/features/camera/application/camera_ui_state.dart'
+    show UserNameNotifier, userNameProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,6 +79,7 @@ void main() {
         overrides: [
           sdCardItemsProvider.overrideWith((ref) => Stream.value(items)),
           explorerPrefsProvider.overrideWith(_Prefs.new),
+          userNameProvider.overrideWith(_Name.new),
           initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
           initialCameraSettingsProvider.overrideWithValue(const {}),
         ],
@@ -134,4 +137,9 @@ void main() {
       await future;
     }
   });
+}
+
+class _Name extends UserNameNotifier {
+  @override
+  String? build() => 'Gabe';
 }

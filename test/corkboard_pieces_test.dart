@@ -94,19 +94,23 @@ void main() {
                   children: [
                     SizedBox(
                       height: 230,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: PinnedPrint(item: item('portra400'), onOpen: () {}),
-                          ),
-                          const SizedBox(width: 18),
-                          Expanded(
-                            child: PinnedInstant(
-                              item: item('polaroid600', note: 'the lake, 2026'),
-                              onOpen: () {},
+                      // The print backs put your name on the lab stamp.
+                      child: ProviderScope(
+                        overrides: [userNameProvider.overrideWith(_Name.new)],
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: PinnedPrint(item: item('portra400'), onOpen: () {}),
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 18),
+                            Expanded(
+                              child: PinnedInstant(
+                                item: item('polaroid600', note: 'the lake, 2026'),
+                                onOpen: () {},
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -200,4 +204,9 @@ class _Tank extends CustomPainter {
 
   @override
   bool shouldRepaint(_Tank old) => false;
+}
+
+class _Name extends UserNameNotifier {
+  @override
+  String? build() => 'Gabe';
 }

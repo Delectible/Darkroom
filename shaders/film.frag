@@ -34,6 +34,7 @@ uniform float uFps;          // 22    cadence of grain / weave / dust
 uniform float uGrainHi;      // 23    extra grain toward white (B&W negatives)
 uniform vec4 uCanvas;        // 24-27 Super 8: film-strip canvas in the box (normalised)
 uniform float uTurns;        // 28    Super 8: quarter turns from box to the viewer's upright frame
+uniform vec2 uSpin;          // 29-30 Super 8: swing when the phone turns (radians cw, scale)
 
 uniform sampler2D uTexture;  // camera (bound by the engine)
 uniform sampler2D uLut;      // (size*size) x size strip, blue slices side by side
@@ -166,6 +167,13 @@ vec4 stripColor(vec2 u, float aspect, float px) {
 
 void main() {
   vec2 frag = FlutterFragCoord().xy;
+  // Super 8: while the strip swings round to a new orientation, the whole
+  // picture (strip, sprocket hole and image) turns about the box centre.
+  if (uSpin.x != 0.0 || uSpin.y != 1.0) {
+    vec2 d = (frag - uSize * 0.5) / max(uSpin.y, 1e-3);
+    float cs = cos(uSpin.x), sn = sin(uSpin.x);
+    frag = uSize * 0.5 + vec2(cs * d.x + sn * d.y, -sn * d.x + cs * d.y);
+  }
   float frame = floor(uTime * uFps);
   vec2 frameSize = uSize * uCrop.zw;
 

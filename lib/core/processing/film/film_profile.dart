@@ -269,7 +269,7 @@ class FilmProfile {
       highlightCap: 0.85,
       shadowTint: [0.012, 0.006, -0.006],
       highlightTint: [-0.012, 0.012, -0.006],
-      grainAmount: 0.085,
+      grainAmount: 0.064, // 0.085 until 1.3.26: too grainy
       grainChroma: 0.45,
       grainResolution: 380,
       halation: 0.3,

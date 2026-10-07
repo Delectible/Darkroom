@@ -108,7 +108,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
             ),
           ),
           _Kind.film => CustomPaint(
-            size: const Size(104, 84),
+            size: const Size(108, 86),
             // Chrome, whatever the body's trim.
             painter: _FilmReleasePainter(
               pressed: _down,
@@ -256,13 +256,13 @@ class _FilmReleasePainter extends CustomPainter {
     final angle = math.pi + 0.18 + swing * 0.95;
     final dir = Offset.fromDirection(angle);
     final normal = Offset(-dir.dy, dir.dx);
-    const len = 50.0;
+    const len = 54.0;
     final tip = c + dir * len;
     final arm = Path()
-      ..moveTo((c + normal * 8).dx, (c + normal * 8).dy)
+      ..moveTo((c + normal * 9).dx, (c + normal * 9).dy)
       ..lineTo((tip + normal * 4).dx, (tip + normal * 4).dy)
       ..lineTo((tip - normal * 4).dx, (tip - normal * 4).dy)
-      ..lineTo((c - normal * 8).dx, (c - normal * 8).dy)
+      ..lineTo((c - normal * 9).dx, (c - normal * 9).dy)
       ..close();
     canvas.drawPath(arm.shift(const Offset(0, 3)), _shadow(3));
     canvas.drawPath(
@@ -278,24 +278,24 @@ class _FilmReleasePainter extends CustomPainter {
     canvas.drawCircle(tip, 7, Paint()..color = const Color(0xFF15120F));
     canvas.drawCircle(tip + const Offset(-1.5, -1.5), 2.5, Paint()..color = Colors.white24);
     // Knurled collar round the hub.
-    canvas.drawCircle(c.translate(0, 3), 25, _shadow(4));
+    canvas.drawCircle(c.translate(0, 3), 31, _shadow(4));
     canvas.drawCircle(
       c,
-      25,
+      31,
       Paint()
         ..shader = SweepGradient(
           colors: [metal, metalDark, metal, metalDark, metal],
-        ).createShader(Rect.fromCircle(center: c, radius: 25)),
+        ).createShader(Rect.fromCircle(center: c, radius: 31)),
     );
     final knurl = Paint()
       ..color = Colors.black.withValues(alpha: 0.25)
       ..strokeWidth = 1;
-    for (var i = 0; i < 60; i++) {
-      final d = Offset.fromDirection(i * math.pi * 2 / 60);
-      canvas.drawLine(c + d * 21.5, c + d * 25, knurl);
+    for (var i = 0; i < 72; i++) {
+      final d = Offset.fromDirection(i * math.pi * 2 / 72);
+      canvas.drawLine(c + d * 27, c + d * 31, knurl);
     }
     // The release: a machined chrome dome with a cable-release socket.
-    final dome = pressed ? 15.0 : 16.5;
+    final dome = pressed ? 20.0 : 22.0;
     canvas.drawCircle(c, dome + 1.5, Paint()..color = const Color(0xFF26231F));
     canvas.drawCircle(
       c + (pressed ? const Offset(0, 0.8) : Offset.zero),
@@ -314,8 +314,8 @@ class _FilmReleasePainter extends CustomPainter {
     for (var r = 5.0; r < dome; r += 2.6) {
       canvas.drawCircle(c, r, rings);
     }
-    canvas.drawCircle(c, 3.2, Paint()..color = const Color(0xFF1A1714));
-    canvas.drawCircle(c, 1.4, Paint()..color = const Color(0xFF5A5650));
+    canvas.drawCircle(c, 4, Paint()..color = const Color(0xFF1A1714));
+    canvas.drawCircle(c, 1.8, Paint()..color = const Color(0xFF5A5650));
   }
 
   @override

@@ -422,3 +422,32 @@ darkroom, corkboard, ambience).
   in and comes to rest against the edge, with a soft wooden thud and a light
   haptic as it lands (`cork_thud.wav`; the swoosh no longer has a knock).
   → 1.3.25 · 2026-10-07 · 27dcc29
+
+## 17. Corkboard swipe, edge to edge, Super 8 fixes (2026-10-07)
+
+- [x] **17.1 Super 8 sprocket hole:** during the swing (16.1) the hole
+  floated on its own: a Flutter transform round an ImageFilter.shader only
+  turns the shader's input. The swing is now done inside film.frag
+  (`uSpin`, floats 29-30), so strip, hole and picture turn as one
+  (`super8_strip_shader_test`: half a turn = the same image upside down).
+- [ ] **17.2 Polaroid note after saving:** a note added after Save isn't in
+  the gallery copy. Options sent to Gabe; waiting for his pick.
+- [x] **17.3 Corkboard thud:** re-synthesised as a struck wooden body (a
+  short noise knock ringing a few low, damped modes, plus a dull thump), no
+  pitched tones.
+- [x] **17.4 Edge to edge:** the corkboard's content scrolls right up to the
+  frame, under the status and home bars (no SafeArea strip where only cork
+  showed); it still starts and ends clear of them.
+- [x] **17.5 Swipe for the corkboard:** in film mode, a clear swipe right on
+  the camera brings the corkboard in (triggered, not dragged); a swipe left
+  on the board puts it away. Touches from the side strips are left to the
+  phone's back gesture.
+- [x] **17.6 Re-grab during spring-back:** a half-hearted swap no longer
+  locks the body while it springs back: touch it again and the drag carries
+  on from where it is.
+- [x] **17.7 Bigger film shutter:** release dome 22 (was 16.5), collar 31
+  (was 25), longer lever.
+- [x] **17.8 Quieter:** every sound 30% down (`Sfx.master = 0.7`).
+- [ ] **17.9 More settings:** suggestions sent to Gabe.
+- [x] **17.10 Super 8 grain:** 0.75x on every strength (0.085 -> 0.064).
+- [ ] **17.11 Super 8 / camcorder audio:** options sent to Gabe.

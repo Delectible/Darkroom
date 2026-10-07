@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/system_gestures.dart';
 import '../../../core/theme/darkroom_mark.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
@@ -59,6 +60,25 @@ class CorkboardScreen extends ConsumerStatefulWidget {
 class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
   bool _saving = false;
   final _scroll = ScrollController();
+
+  /// Swipe left to put the board away (it slides back out to the left).
+  /// Like the swipe that brings it in, it doesn't follow the thumb: a clear
+  /// swipe triggers it. Touches from the screen's side strips are left to
+  /// the phone's back gesture.
+  double? _swipeFrom;
+  double _swipeDx = 0;
+
+  void _swipeStart(DragStartDetails d) {
+    _swipeDx = 0;
+    _swipeFrom = SystemGestureZones.startsInEdge(context, d.globalPosition) ? null : d.globalPosition.dx;
+  }
+
+  void _swipeEnd(DragEndDetails d) {
+    if (_swipeFrom == null) return;
+    _swipeFrom = null;
+    final v = d.primaryVelocity ?? 0;
+    if (v < -700 || (_swipeDx < -110 && v < 200)) Navigator.of(context).maybePop();
+  }
 
   @override
   void dispose() {
@@ -170,21 +190,33 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
       if (unseen) unawaited(ref.read(darkroomEngineProvider).markSeen());
     });
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF4A3220),
-      // A wooden frame round the whole board.
-      body: CustomPaint(
-        foregroundPainter: const _WoodFrame(thickness: _WoodFrame.width),
-        child: Padding(
-          padding: const EdgeInsets.all(_WoodFrame.width),
-          child: ClipRect(
-            child: Stack(
-              children: [
-                Positioned.fill(child: _CorkWall(scroll: _scroll)),
-                SafeArea(
+    // System bars overlap the board: start the content clear of them, but
+    // let it scroll out under them to the frame.
+    final insets = MediaQuery.paddingOf(context);
+    final topInset = math.max(0.0, insets.top - _WoodFrame.width);
+    final bottomInset = math.max(0.0, insets.bottom - _WoodFrame.width);
+
+    return GestureDetector(
+      onHorizontalDragStart: _swipeStart,
+      onHorizontalDragUpdate: (d) => _swipeDx += d.primaryDelta ?? 0,
+      onHorizontalDragEnd: _swipeEnd,
+      onHorizontalDragCancel: () => _swipeFrom = null,
+      child: Scaffold(
+        backgroundColor: const Color(0xFF4A3220),
+        // A wooden frame round the whole board.
+        body: CustomPaint(
+          foregroundPainter: const _WoodFrame(thickness: _WoodFrame.width),
+          child: Padding(
+            padding: const EdgeInsets.all(_WoodFrame.width),
+            child: ClipRect(
+              child: Stack(
+                children: [
+                  Positioned.fill(child: _CorkWall(scroll: _scroll)),
                   // The prints are pinned to the cork: no bounce or stretch
-                  // past the ends, or they'd slide off the wall.
-                  child: ScrollConfiguration(
+                  // past the ends, or they'd slide off the wall. They scroll
+                  // right up to the frame, under the status bar and the home
+                  // bar, rather than vanishing a strip short of the edges.
+                  ScrollConfiguration(
                     behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
                     child: CustomScrollView(
                       controller: _scroll,
@@ -192,6 +224,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
                       // Build (and decode) prints well before they scroll into view.
                       scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
                       slivers: [
+                        SliverToBoxAdapter(child: SizedBox(height: topInset)),
                         SliverToBoxAdapter(
                           child: _Header(
                             onBack: () => Navigator.of(context).pop(),
@@ -248,11 +281,12 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
                               }),
                             ),
                           ),
+                        SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
                       ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

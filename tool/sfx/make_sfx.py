@@ -255,20 +255,43 @@ def cork_swoosh():
     return reverb(sweep * shape, mix=0.12, room=0.4)
 
 
+def resonator(x, freq, q):
+    """Two-pole resonant bandpass (a struck mode of a solid body)."""
+    w = 2 * np.pi * freq / SR
+    r = np.exp(-w / (2 * q))
+    a1, a2 = -2 * r * np.cos(w), r * r
+    y = np.zeros_like(x)
+    y1 = y2 = 0.0
+    for i, v in enumerate(x):
+        y0 = (1 - r) * v - a1 * y1 - a2 * y2
+        y[i] = y0
+        y2, y1 = y1, y0
+    return y
+
+
 def cork_thud():
-    # The framed board hitting its stop: a short hollow body (a low, quickly
-    # falling tone), a little resonance from the frame, a soft contact tick.
-    x = t(0.3)
-    n = len(x)
-    pitch = 95 + 45 * np.exp(-x / 0.02)
-    body = np.sin(2 * np.pi * np.cumsum(pitch) / SR) * np.exp(-x / 0.06)
-    wood = (0.35 * np.sin(2 * np.pi * 235 * x) + 0.18 * np.sin(2 * np.pi * 530 * x)) * np.exp(-x / 0.03)
-    out = body + wood
-    out[: int(SR * 0.002)] *= np.linspace(0, 1, int(SR * 0.002))
-    tick = lowpass(bandpass(noise(0.012), 400, 2500), 2000) * env(int(SR * 0.012), 0.0005, 0.004)
-    place(out, 0.4 * tick, 0.0)
-    out = lowpass(out, 1800)
-    return reverb(out[:n], mix=0.1, room=0.3)
+    # A heavy framed board stopping against wood: a short, soft knock
+    # (a few milliseconds of filtered noise) rings a handful of low,
+    # inharmonic, heavily damped body modes, under a dull low thump. No
+    # pitched tones: what makes it wood rather than electronic is that every
+    # mode is noise-excited and dies within a few tens of milliseconds.
+    n = int(SR * 0.35)
+    hit = np.zeros(n)
+    k = int(SR * 0.006)
+    hit[:k] = lowpass(noise(0.006), 1800) * np.hanning(2 * k)[k:] ** 0.5
+    out = np.zeros(n)
+    for f, q, g in ((92, 7, 1.0), (151, 8, 0.7), (233, 9, 0.5), (347, 10, 0.32), (512, 11, 0.2), (780, 12, 0.1)):
+        out += g * resonator(hit, f, q)
+    out /= np.max(np.abs(out)) + 1e-9
+    # Dull low thump: the mass of the board.
+    x = t(0.35)
+    thump = np.sin(2 * np.pi * 62 * x) * np.exp(-x / 0.035) * np.clip(x / 0.003, 0, 1)
+    out = out + 0.5 * thump
+    # A touch of contact grit on the attack.
+    grit = bandpass(noise(0.01), 600, 3000) * env(int(SR * 0.01), 0.0003, 0.003)
+    place(out, 0.15 * grit / (np.max(np.abs(grit)) + 1e-9), 0.0)
+    out = lowpass(out, 2200) * np.exp(-x / 0.09)
+    return reverb(out, mix=0.08, room=0.25)
 
 
 def square(freq, seconds, duty=0.5):

@@ -57,6 +57,10 @@ class Sfx {
   /// Digital bodies' zoom motor: loops while the zoom moves.
   static final zoomMotor = Sfx._('assets/sfx/zoom_motor.wav', volume: 0.06, loop: true);
 
+  /// Every sound's level is scaled by this (halved in 1.3.22, another 30%
+  /// off in 1.3.26).
+  static const master = 0.7;
+
   final String _asset;
   final double volume;
 
@@ -75,7 +79,7 @@ class Sfx {
     );
     try {
       await c.initialize();
-      await c.setVolume(volume);
+      await c.setVolume(volume * master);
       if (loop) await c.setLooping(true);
       _c = c;
     } catch (e) {

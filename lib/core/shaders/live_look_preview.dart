@@ -32,6 +32,8 @@ class LiveLookPreview extends ConsumerStatefulWidget {
     this.grain = GrainStrength.normal,
     this.canvas,
     this.turns = 0,
+    this.spin = 0,
+    this.spinScale = 1,
   });
 
   final CameraSpec spec;
@@ -45,6 +47,12 @@ class LiveLookPreview extends ConsumerStatefulWidget {
   /// and the viewer's quarter turns so the strip stays upright for them.
   final UnitRect? canvas;
   final int turns;
+
+  /// Super 8: the strip swinging round to a new [turns] (radians clockwise
+  /// about the box centre, and its scale). Done in the shader so the strip,
+  /// its sprocket hole and the picture turn as one.
+  final double spin;
+  final double spinScale;
   final Widget child;
 
   @override
@@ -136,6 +144,8 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
           size: size,
           canvas: widget.canvas,
           turns: widget.turns,
+          spin: widget.spin,
+          spinScale: widget.spinScale,
         );
       } else {
         LookUniforms.apply(shader, widget.spec.look!, time: t, crop: widget.crop, size: size);

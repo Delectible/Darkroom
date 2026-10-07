@@ -151,7 +151,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     pressShutter(ref);
   }
 
-  bool _canSwap() => !_swapBusy && !_selectorOpen && !ref.read(captureControllerProvider).isRecording;
+  /// A body still springing back from a half-hearted swipe can be grabbed
+  /// again straight away; only a toss in flight can't.
+  bool _canSwap() => !_committing && !_selectorOpen && !ref.read(captureControllerProvider).isRecording;
 
   void _onDragStart(DragStartDetails d) {
     if (!_canSwap()) return;
@@ -162,8 +164,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // Nor from the home-gesture strip at the bottom (sliding along it
     // switches apps).
     if (d.globalPosition.dy > media.size.height - SystemGestureZones.bottom(media)) return;
-    _raw = 0;
-    _swap.value = 0;
+    // Catch it mid-spring: carry on from where it is.
+    _swap.stop();
+    final at = _swap.value;
+    _raw = at >= 0 ? at : at / 0.25;
     setState(() => _dragging = true);
     unawaited(HapticFeedback.selectionClick());
   }
@@ -184,7 +188,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (v > 1.1 || (_swap.value > 0.38 && v > -0.6)) {
       unawaited(_commitSwap(v));
     } else {
+      // Film: a clear swipe to the right (the way with no camera) brings
+      // the corkboard in; it doesn't follow the thumb, the swipe triggers it.
+      final film = ref.read(appModeProvider) == AppMode.film;
+      final cork = film && (v < -1.1 || (_raw < -0.25 && v < 0.3));
       unawaited(_settleBack(v));
+      if (cork) unawaited(_push(const CorkboardScreen()));
     }
   }
 

@@ -106,6 +106,8 @@ class FilmUniforms {
     ui.Size? size,
     UnitRect? canvas,
     int turns = 0,
+    double spin = 0,
+    double spinScale = 1,
   }) {
     if (size != null) {
       shader
@@ -121,6 +123,8 @@ class FilmUniforms {
       fps: fps,
       canvas: canvas,
       turns: turns,
+      spin: spin,
+      spinScale: spinScale,
     )) {
       shader.setFloat(i++, v);
     }

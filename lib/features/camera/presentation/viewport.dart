@@ -84,39 +84,51 @@ class CameraViewport extends ConsumerWidget {
                     turns: turns,
                     cameraId: spec.id,
                     strip: maskRect.size,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (session.isReady)
-                          _FocusablePreview(
-                            controller: controller!,
-                            child: LiveLookPreview(
-                              spec: spec,
-                              grain: local.grain,
-                              crop: mask,
-                              canvas: strip,
-                              turns: turns,
-                              child: _RotationCorrectedPreview(controller: controller),
-                            ),
-                          )
-                        else
-                          _Standby(session: session),
-                        IgnorePointer(
-                          child: CustomPaint(
-                            painter: _AspectMaskPainter(
-                              hole: maskRect,
-                              shade: palette.screen.withValues(
-                                alpha: spec.mode == AppMode.film ? 0.93 : 0.86,
-                              ),
-                              frame: spec.mode == AppMode.film
-                                  ? palette.screenInk.withValues(alpha: 0.55)
-                                  : palette.screenInk.withValues(alpha: 0.8),
-                              brackets: spec.mode == AppMode.digital,
-                            ),
+                    builder: (spin, spinScale) {
+                      // The live picture turns inside the shader (strip, hole
+                      // and image together); the mask with a matching matrix.
+                      final Widget maskLayer = IgnorePointer(
+                        child: CustomPaint(
+                          painter: _AspectMaskPainter(
+                            hole: maskRect,
+                            shade: palette.screen.withValues(alpha: spec.mode == AppMode.film ? 0.93 : 0.86),
+                            frame: spec.mode == AppMode.film
+                                ? palette.screenInk.withValues(alpha: 0.55)
+                                : palette.screenInk.withValues(alpha: 0.8),
+                            brackets: spec.mode == AppMode.digital,
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (session.isReady)
+                            _FocusablePreview(
+                              controller: controller!,
+                              child: LiveLookPreview(
+                                spec: spec,
+                                grain: local.grain,
+                                crop: mask,
+                                canvas: strip,
+                                turns: turns,
+                                spin: spin,
+                                spinScale: spinScale,
+                                child: _RotationCorrectedPreview(controller: controller),
+                              ),
+                            )
+                          else
+                            _Standby(session: session),
+                          if (spin == 0 && spinScale == 1)
+                            maskLayer
+                          else
+                            Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.rotationZ(spin)..scaleByDouble(spinScale, spinScale, 1, 1),
+                              child: maskLayer,
+                            ),
+                        ],
+                      );
+                    },
                   ),
                   Positioned.fromRect(
                     rect: maskRect,
@@ -142,16 +154,20 @@ class CameraViewport extends ConsumerWidget {
 /// Swings the Super 8 viewfinder round when the phone is turned: the new
 /// layout starts rotated back to where the old one was (and scaled to its
 /// size), then turns and grows into place, so the strip follows the phone
-/// instead of snapping.
+/// instead of snapping. The turn is drawn by film.frag (`uSpin`): a Flutter
+/// transform round an ImageFilter.shader only turns its input, which left
+/// the shader-drawn sprocket hole behind.
 class _StripTurn extends StatefulWidget {
-  const _StripTurn({required this.turns, required this.cameraId, required this.strip, required this.child});
+  const _StripTurn({required this.turns, required this.cameraId, required this.strip, required this.builder});
 
   final int turns;
   final String cameraId;
 
   /// The strip's size on screen in this layout.
   final Size strip;
-  final Widget child;
+
+  /// Builds the viewfinder turned by (radians clockwise, scale).
+  final Widget Function(double spin, double scale) builder;
 
   @override
   State<_StripTurn> createState() => _StripTurnState();
@@ -187,16 +203,10 @@ class _StripTurnState extends State<_StripTurn> with SingleTickerProviderStateMi
   @override
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _a,
-    child: widget.child,
-    builder: (context, child) {
-      if (_a.value >= 1) return child!;
+    builder: (context, _) {
+      if (_a.value >= 1) return widget.builder(0, 1);
       final t = Curves.easeInOutCubic.transform(_a.value);
-      final scale = _fromScale + (1 - _fromScale) * t;
-      return Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.rotationZ(_fromAngle * (1 - t))..scaleByDouble(scale, scale, 1, 1),
-        child: child,
-      );
+      return widget.builder(_fromAngle * (1 - t), _fromScale + (1 - _fromScale) * t);
     },
   );
 }

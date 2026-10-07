@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -91,4 +92,63 @@ void main() {
       });
     });
   }
+
+  // The swing when the phone turns is drawn by the shader, so the strip,
+  // its sprocket hole and the picture turn together: half a turn about the
+  // centre shows the same image upside down.
+  testWidgets('strip spins as one piece', (tester) async {
+    await tester.runAsync(() async {
+      const w = 300, h = 400, previewAspect = 4 / 3;
+      final card = <int>[];
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          card.addAll(x < w / 2 && y < h / 2 ? [220, 40, 40, 255] : [40, 60, 200, 255]);
+        }
+      }
+      final camera = await pixels(card, w, h);
+      final film = FilmProfile.forStock('super8')!;
+      final lut = FilmLut.build(film);
+      final lutImg = await pixels(lut.toRgbaStrip(), lut.size * lut.size, lut.size);
+      final grain = GrainField.generate();
+      final grainImg = await pixels(grain.toRgba8(), grain.size, grain.size);
+      final program = await ui.FragmentProgram.fromAsset('shaders/film.frag');
+      Future<ByteData> render(double spin) async {
+        final shader = program.fragmentShader();
+        FilmUniforms.apply(
+          shader,
+          film,
+          time: 0,
+          crop: CropMath.previewMask(previewAspect: previewAspect, ratio: AspectRatioOption.r4x3),
+          grain: GrainStrength.weak,
+          fps: 18,
+          lut: lutImg,
+          grainImage: grainImg,
+          size: const ui.Size(w * 1.0, h * 1.0),
+          canvas: CineStrip.previewCanvas(boxAspect: previewAspect, turns: 1),
+          turns: 1,
+          spin: spin,
+        );
+        shader.setImageSampler(0, camera);
+        final rec = ui.PictureRecorder();
+        ui.Canvas(rec).drawRect(const ui.Rect.fromLTWH(0, 0, w * 1.0, h * 1.0), ui.Paint()..shader = shader);
+        final out = await rec.endRecording().toImage(w, h);
+        return (await out.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      }
+
+      final a = await render(0), b = await render(math.pi);
+      int lum(ByteData d, int x, int y) {
+        final i = (y * w + x) * 4;
+        return d.getUint8(i) + d.getUint8(i + 1) + d.getUint8(i + 2);
+      }
+
+      var differ = 0, n = 0;
+      for (var y = 10; y < h - 10; y += 7) {
+        for (var x = 10; x < w - 10; x += 7) {
+          n++;
+          if ((lum(a, x, y) - lum(b, w - 1 - x, h - 1 - y)).abs() > 60) differ++;
+        }
+      }
+      expect(differ / n, lessThan(0.03));
+    });
+  });
 }

@@ -19,14 +19,15 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
 
   /// Sounds and haptics are switched app-wide (no ref needed at call sites).
   static void _apply(GlobalSettings s) {
-    Sfx.enabled = s.soundEffects;
+    Sfx.level = s.sfxVolume;
     Haptics.enabled = s.haptics;
   }
 
-  Future<void> setSoundEffects(bool enabled) async {
-    state = state.copyWith(soundEffects: enabled);
+  /// Sound effects level, 0 (off) .. 1; saved when the slider is let go.
+  Future<void> setSfxVolume(double v, {bool save = true}) async {
+    state = state.copyWith(sfxVolume: v.clamp(0.0, 1.0));
     _apply(state);
-    await _repo.saveGlobal(state);
+    if (save) await _repo.saveGlobal(state);
   }
 
   Future<void> setHaptics(bool enabled) async {

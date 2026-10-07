@@ -252,6 +252,11 @@ class DevelopingTankPainter extends CustomPainter {
 
   static String stageFor(double p) => stages[(p * stages.length).floor().clamp(0, stages.length - 1)];
 
+  /// The same stages in full, for the close-up.
+  static const names = ['Developing', 'Bleaching', 'Fixing', 'Washing'];
+
+  static String nameFor(double p) => names[(p * names.length).floor().clamp(0, names.length - 1)];
+
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);

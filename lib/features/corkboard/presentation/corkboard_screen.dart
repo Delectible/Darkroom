@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -1077,18 +1078,50 @@ class _Tray extends ConsumerWidget {
   final MediaItem item;
   final DateTime now;
 
+  /// What went wrong in the darkroom, as the darkroom would tell it. The
+  /// real (technical) error is one tap away: Copy error report.
+  static const _printExcuses = [
+    'Someone opened the darkroom door halfway through. The light got in and fogged it.',
+    'The developer was tired. So was the person minding it. It came out blank.',
+    'The fixer ran out partway, and the picture slipped away with it.',
+    'A cat knocked the tray over. We are choosing to blame the cat.',
+    'The safelight flickered white for a second. That second was enough.',
+  ];
+  static const _reelExcuses = [
+    'The reel jumped its sprockets in the tank and never quite got wet.',
+    'Light leaked into the tank. The whole reel came out a lovely shade of nothing.',
+    'The film kinked on the spiral and stuck to itself.',
+  ];
+
   /// Shows why a print was ruined (the processing error is kept on the row).
   Future<void> _explainRuined(BuildContext context, WidgetRef ref) async {
+    final excuses = item.isVideo ? _reelExcuses : _printExcuses;
+    final excuse = excuses[item.id.hashCode.abs() % excuses.length];
     final discard = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(item.isVideo ? 'Ruined reel' : 'Ruined print'),
-        content: SingleChildScrollView(
-          child: SelectableText(item.error ?? 'Unknown error', style: const TextStyle(fontSize: 12)),
-        ),
+        icon: const Icon(Icons.light, color: Color(0xFFE57373)),
+        title: Text(item.isVideo ? "This reel didn't make it" : "This one didn't develop"),
+        content: Text(excuse, textAlign: TextAlign.center),
+        actionsAlignment: MainAxisAlignment.spaceBetween,
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Discard')),
+          TextButton.icon(
+            icon: const Icon(Icons.copy, size: 16),
+            label: const Text('Copy error report'),
+            onPressed: () {
+              unawaited(Clipboard.setData(ClipboardData(text: errorReport(item))));
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Error report copied. Paste it into a message.')));
+            },
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep')),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Throw away')),
+            ],
+          ),
         ],
       ),
     );
@@ -1318,13 +1351,15 @@ class _DarkroomCloseUp extends ConsumerWidget {
       final done = !left.isNegative ? false : !processing;
       final width = math.min(MediaQuery.sizeOf(context).width * 0.82, 420.0);
       if (item.isVideo) {
-        label = done ? 'DEVELOPED' : '${DevelopingTankPainter.stageFor(progress)} $mm:$ss';
+        label = done ? 'Developed' : '${DevelopingTankPainter.nameFor(progress)}  $mm:$ss';
         body = SizedBox.square(
           dimension: width * 0.8,
           child: _TankTray(progress: progress),
         );
       } else if (spec.isInstant) {
-        label = done ? 'DEVELOPED' : 'DEVELOPING 0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}';
+        label = done
+            ? 'Developed'
+            : 'Developing  0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}';
         body = SizedBox(
           width: width * 0.8,
           child: TweenAnimationBuilder<double>(
@@ -1340,11 +1375,11 @@ class _DarkroomCloseUp extends ConsumerWidget {
         );
       } else {
         final stage = PrintTrayPainter.stageFor(progress);
-        label = done ? 'DEVELOPED' : (processing && left.isNegative ? 'FIXING…' : '${stage.label} $mm:$ss');
+        label = done ? 'Developed' : (processing && left.isNegative ? 'Fixing…' : '${stage.name}  $mm:$ss');
         body = SizedBox(
           width: width,
           height: width * 1.25,
-          child: _PrintTray(progress: progress, thumb: thumb, cacheWidth: 900),
+          child: _PrintTray(progress: progress, thumb: thumb, cacheWidth: 900, large: true),
         );
       }
     }
@@ -1357,16 +1392,26 @@ class _DarkroomCloseUp extends ConsumerWidget {
           children: [
             body,
             const SizedBox(height: 14),
-            Text(
-              label,
-              style: const TextStyle(
-                color: ink,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2,
-                decoration: TextDecoration.none,
+            if (label.isNotEmpty)
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.8),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      color: ink,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -1772,9 +1817,13 @@ class _PrintBack extends StatelessWidget {
 
 /// One stage of black-and-white print processing.
 class PrintStage {
-  const PrintStage(this.label, this.until, this.tray, this.liquid);
+  const PrintStage(this.label, this.name, this.until, this.tray, this.liquid);
 
+  /// Short, for the little trays in the strip.
   final String label;
+
+  /// In full, for the close-up.
+  final String name;
 
   /// Fraction of the darkroom time this stage ends at.
   final double until;
@@ -1792,50 +1841,60 @@ class PrintTrayPainter extends CustomPainter {
   final PrintStage stage;
 
   static const stages = [
-    PrintStage('DEV', 0.55, Color(0xFF8E2A22), Color(0xFF3A1A12)),
-    PrintStage('STOP', 0.65, Color(0xFFD6CEC2), Color(0xFF4A3A22)),
-    PrintStage('FIX', 0.90, Color(0xFF6A6A6A), Color(0xFF2E2E30)),
-    PrintStage('WASH', 1.01, Color(0xFF3F5D78), Color(0xFF1E3446)),
+    PrintStage('DEV', 'Developing', 0.55, Color(0xFF8E2A22), Color(0xFF3A1A12)),
+    PrintStage('STOP', 'Stop bath', 0.65, Color(0xFFD6CEC2), Color(0xFF4A3A22)),
+    PrintStage('FIX', 'Fixing', 0.90, Color(0xFF6A6A6A), Color(0xFF2E2E30)),
+    PrintStage('WASH', 'Washing', 1.01, Color(0xFF3F5D78), Color(0xFF1E3446)),
   ];
 
   static PrintStage stageFor(double p) => stages.firstWhere((s) => p < s.until, orElse: () => stages.last);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final r = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(6));
+    // Drawn for the little strip trays; the close-up scales everything up.
+    final k = (size.shortestSide / 84).clamp(1.0, 6.0);
+    final r = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(6 * k));
     // Tray body (lip lighter than the well).
     canvas.drawRRect(r, Paint()..color = stage.tray);
-    final well = RRect.fromRectAndRadius((Offset.zero & size).deflate(4), const Radius.circular(4));
+    final well = RRect.fromRectAndRadius((Offset.zero & size).deflate(4 * k), Radius.circular(4 * k));
     canvas.drawRRect(well, Paint()..color = stage.liquid);
     // Ridges on the tray floor, seen through the chemistry.
     final ridge = Paint()
       ..color = Colors.black.withValues(alpha: 0.18)
-      ..strokeWidth = 1;
-    for (var x = well.left + 6; x < well.right - 4; x += 7) {
-      canvas.drawLine(Offset(x, well.top + 3), Offset(x, well.bottom - 3), ridge);
+      ..strokeWidth = k;
+    for (var x = well.left + 6 * k; x < well.right - 4 * k; x += 7 * k) {
+      canvas.drawLine(Offset(x, well.top + 3 * k), Offset(x, well.bottom - 3 * k), ridge);
     }
     // Gentle rocking: highlights drift across the surface (faster under the
     // running water of the wash).
     final speed = stage.label == 'WASH' ? 2.4 : 1.0;
     final glint = Paint()
       ..color = Colors.white.withValues(alpha: 0.10)
-      ..strokeWidth = 1.2
+      ..strokeWidth = 1.2 * k
       ..style = PaintingStyle.stroke;
-    for (var k = 0; k < 3; k++) {
-      final y = well.top + well.height * ((ripple * speed + k / 3) % 1.0);
-      final path = Path()..moveTo(well.left + 2, y);
-      for (var x = well.left + 2; x <= well.right - 2; x += 4) {
-        path.lineTo(x, y + math.sin(x * 0.25 + ripple * math.pi * 2 * speed) * 1.4);
+    for (var n = 0; n < 3; n++) {
+      final y = well.top + well.height * ((ripple * speed + n / 3) % 1.0);
+      final path = Path()..moveTo(well.left + 2 * k, y);
+      for (var x = well.left + 2 * k; x <= well.right - 2 * k; x += 4 * k) {
+        path.lineTo(x, y + math.sin(x / k * 0.25 + ripple * math.pi * 2 * speed) * 1.4 * k);
       }
       canvas.drawPath(path, glint);
     }
     // Bamboo tongs resting on the lip.
     final tongs = Paint()
       ..color = const Color(0xFFD9B77A)
-      ..strokeWidth = 2
+      ..strokeWidth = 2 * k
       ..strokeCap = StrokeCap.round;
-    canvas.drawLine(Offset(size.width - 6, 2), Offset(size.width - 20, size.height * 0.42), tongs);
-    canvas.drawLine(Offset(size.width - 2, 6), Offset(size.width - 16, size.height * 0.46), tongs);
+    canvas.drawLine(
+      Offset(size.width - 6 * k, 2 * k),
+      Offset(size.width - 20 * k, size.height * 0.42),
+      tongs,
+    );
+    canvas.drawLine(
+      Offset(size.width - 2 * k, 6 * k),
+      Offset(size.width - 16 * k, size.height * 0.46),
+      tongs,
+    );
   }
 
   @override
@@ -1843,14 +1902,77 @@ class PrintTrayPainter extends CustomPainter {
       old.progress != progress || old.ripple != ripple || old.stage != stage;
 }
 
+/// A thin film of liquid moving over the print: broad soft sheen bands that
+/// slosh to and fro with the rocking tray (or stream steadily across in the
+/// wash), and fine wavy caustic lines riding on them.
+class _WaterOverPaper extends CustomPainter {
+  _WaterOverPaper(this.t, {required this.flowing}) : super(repaint: t);
+
+  final Animation<double> t;
+  final bool flowing;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.clipRect(Offset.zero & size);
+    final w = size.width, h = size.height;
+    final phase = t.value * math.pi * 2;
+    // Where the water front is: rocking back and forth, or streaming.
+    final shift = flowing ? (t.value * 3 % 1.0) * w * 1.6 - w * 0.3 : math.sin(phase) * w * 0.35;
+    for (var i = 0; i < 3; i++) {
+      final x = (shift + i * w * 0.55) % (w * 1.6) - w * 0.3;
+      final band = Rect.fromLTWH(x - w * 0.18, -h * 0.1, w * 0.36, h * 1.2);
+      canvas.save();
+      canvas.translate(band.center.dx, band.center.dy);
+      canvas.rotate(0.35);
+      canvas.translate(-band.center.dx, -band.center.dy);
+      canvas.drawRect(
+        band,
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0),
+              Colors.white.withValues(alpha: 0.09),
+              Colors.white.withValues(alpha: 0),
+            ],
+          ).createShader(band),
+      );
+      canvas.restore();
+    }
+    final line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = Colors.white.withValues(alpha: 0.10);
+    for (var n = 0; n < 7; n++) {
+      final y0 = h * (n + 0.5) / 7;
+      final path = Path()..moveTo(0, y0);
+      for (var x = 0.0; x <= w; x += 6) {
+        path.lineTo(
+          x,
+          y0 +
+              math.sin(x * 0.045 + phase * (flowing ? 3 : 1) + n * 1.7) * 3 +
+              math.sin(x * 0.11 - phase + n) * 1.5,
+        );
+      }
+      canvas.drawPath(path, line);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WaterOverPaper old) => old.flowing != flowing;
+}
+
 /// The print in its tray: paper floating in the chemistry, the latent image
 /// surfacing during the developer stage, all seen by red safelight.
 class _PrintTray extends StatefulWidget {
-  const _PrintTray({required this.progress, required this.thumb, this.cacheWidth = 160});
+  const _PrintTray({required this.progress, required this.thumb, this.cacheWidth = 160, this.large = false});
 
   final double progress;
   final String? thumb;
   final int cacheWidth;
+
+  /// The close-up: a roomier tray, and the chemistry visibly washing over
+  /// the paper.
+  final bool large;
 
   @override
   State<_PrintTray> createState() => _PrintTrayState();
@@ -1884,7 +2006,7 @@ class _PrintTrayState extends State<_PrintTray> with SingleTickerProviderStateMi
             // Everything in here is seen by red safelight.
             foregroundDecoration: BoxDecoration(
               color: const Color(0x38C62828),
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(widget.large ? 20 : 6),
             ),
             child: CustomPaint(
               painter: PrintTrayPainter(progress: p, ripple: _rock.value, stage: stage),
@@ -1892,7 +2014,9 @@ class _PrintTrayState extends State<_PrintTray> with SingleTickerProviderStateMi
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 12, 10, 14),
+            padding: widget.large
+                ? const EdgeInsets.fromLTRB(36, 42, 36, 46)
+                : const EdgeInsets.fromLTRB(10, 12, 10, 14),
             child: Transform.rotate(
               angle: -0.04,
               child: Stack(
@@ -1907,7 +2031,7 @@ class _PrintTrayState extends State<_PrintTray> with SingleTickerProviderStateMi
                   ),
                   if (thumb != null)
                     Padding(
-                      padding: const EdgeInsets.all(3),
+                      padding: EdgeInsets.all(widget.large ? 12 : 3),
                       child: Opacity(
                         opacity: dev,
                         child: ColorFiltered(
@@ -1926,6 +2050,12 @@ class _PrintTrayState extends State<_PrintTray> with SingleTickerProviderStateMi
                           ),
                         ),
                       ),
+                    ),
+                  // The chemistry washing over the paper as the tray rocks
+                  // (a running stream in the wash).
+                  if (widget.large)
+                    IgnorePointer(
+                      child: CustomPaint(painter: _WaterOverPaper(_rock, flowing: stage.label == 'WASH')),
                     ),
                 ],
               ),

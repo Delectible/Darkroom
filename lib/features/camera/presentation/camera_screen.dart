@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -57,6 +58,28 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// Picture of the body that is leaving, once the toss has committed.
   ui.Image? _outgoing;
 
+  /// The body as it looked at rest, shown over the live one while it's
+  /// dragged or springs back. A shader filter under the toss's 3D transform
+  /// only moves its input, so the Super 8 strip's sprocket hole (drawn by
+  /// the shader) slid around on its own; a snapshot moves as one piece.
+  ui.Image? _moveStill;
+
+  void _snapMoving() {
+    if (_moveStill != null) return;
+    try {
+      final boundary = _bodyKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null || boundary.debugNeedsPaint) return;
+      _moveStill = boundary.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context) * 0.6);
+    } catch (_) {
+      _moveStill = null;
+    }
+  }
+
+  void _dropMoving() {
+    _moveStill?.dispose();
+    _moveStill = null;
+  }
+
   /// Last picture of each body, slid in as the other camera while dragging.
   final Map<AppMode, ui.Image> _lastLook = {};
 
@@ -92,6 +115,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     unawaited(GestureExclusion.clear());
     _swap.dispose();
     _outgoing?.dispose();
+    _moveStill?.dispose();
     for (final image in _lastLook.values) {
       image.dispose();
     }
@@ -167,19 +191,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // Catch it mid-spring: carry on from where it is.
     _swap.stop();
     final at = _swap.value;
-    _raw = at >= 0 ? at : at / 0.25;
-    setState(() => _dragging = true);
-    unawaited(Haptics.selectionClick());
+    _raw = at >= 0 ? at : 0;
+    _dragging = true;
   }
 
   void _onDragUpdate(DragUpdateDetails d) {
     if (!_dragging) return;
     final dir = _dirFor(ref.read(appModeProvider));
+    final was = _swap.value;
     _raw = (_raw + (d.primaryDelta ?? 0) * dir / _travel()).clamp(-0.6, 1.15);
-    // The wrong way only gives a little: the other camera isn't there. In
-    // film mode that way is the corkboard swipe, so the body stays put.
-    final film = ref.read(appModeProvider) == AppMode.film;
-    _swap.value = _raw >= 0 ? _raw : (film ? 0 : _raw * 0.25);
+    // The way with no camera is the corkboard (film) / explorer (digital)
+    // swipe: the body doesn't move at all that way, so nothing twitches
+    // before the swipe triggers.
+    if (was == 0 && _raw > 0) {
+      _snapMoving();
+      unawaited(Haptics.selectionClick());
+    }
+    _swap.value = math.max(0.0, _raw);
   }
 
   void _onDragEnd(DragEndDetails d) {
@@ -190,25 +218,35 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (v > 1.1 || (_swap.value > 0.38 && v > -0.6)) {
       unawaited(_commitSwap(v));
     } else {
-      // Film: a clear swipe to the right (the way with no camera) brings
-      // the corkboard in; it doesn't follow the thumb, the swipe triggers it.
-      final film = ref.read(appModeProvider) == AppMode.film;
-      final cork = film && (v < -1.1 || (_raw < -0.25 && v < 0.3));
-      unawaited(_settleBack(v));
-      if (cork) unawaited(_push(const CorkboardScreen()));
+      // A clear swipe the way with no camera (right in film, left in
+      // digital) brings in the corkboard / the explorer. It doesn't follow
+      // the thumb: the swipe triggers it.
+      final away = v < -1.1 || (_raw < -0.25 && v < 0.3);
+      if (_swap.value != 0) unawaited(_settleBack(v));
+      if (away) {
+        unawaited(
+          _push(ref.read(appModeProvider) == AppMode.film ? const CorkboardScreen() : const ExplorerScreen()),
+        );
+      }
     }
   }
 
   Future<void> _settleBack(double velocity) async {
     await _swap.animateWith(SpringSimulation(_spring, _swap.value, 0, velocity));
     // The spring stops within a hair of 0: land exactly, back at rest.
-    if (mounted && !_committing) setState(() => _swap.value = 0);
+    if (mounted && !_committing) {
+      setState(() {
+        _swap.value = 0;
+        _dropMoving();
+      });
+    }
   }
 
   /// Tap on the other camera: toss without a drag.
   void _tossByTap() {
     if (!_canSwap()) return;
     _swap.value = 0;
+    _snapMoving();
     setState(() => _dragging = false);
     unawaited(_commitSwap(2.4));
   }
@@ -253,6 +291,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       _committed = false;
       _committing = false;
       _swap.value = 0;
+      _dropMoving();
     });
   }
 
@@ -274,6 +313,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     }
     final ModalRoute<void> route = cork
         ? CorkboardScreen.slideIn()
+        : page is ExplorerScreen
+        ? ExplorerScreen.powerOn()
         : MaterialPageRoute<void>(builder: (_) => page);
     final done = Navigator.of(context).push(route);
     // The framed board lands against the edge with a soft wooden thud
@@ -397,15 +438,24 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                   AnimatedBuilder(
                     animation: _swap,
                     builder: (context, child) {
-                      final moving = _dragging || _committing || _swap.isAnimating || _swap.value != 0;
+                      final moving = _committing || _swap.isAnimating || _swap.value != 0;
                       final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
                       Widget picture(ui.Image? image, AppMode m) =>
                           image == null ? BodyStandIn(mode: m) : RawImage(image: image, fit: BoxFit.fill);
+                      // The live body, covered by its at-rest snapshot while it moves.
+                      final still = moving ? _moveStill : null;
+                      final live = Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          child!,
+                          if (still != null) RawImage(image: still, fit: BoxFit.fill),
+                        ],
+                      );
                       if (!moving) {
                         return SwapStage(
                           progress: 0,
                           dir: _dirFor(mode),
-                          leaving: child!,
+                          leaving: live,
                           leavingMode: mode,
                           arriving: null,
                           arrivingMode: other,
@@ -419,14 +469,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                               dir: _dirFor(other),
                               leaving: picture(_outgoing, other),
                               leavingMode: other,
-                              arriving: child,
+                              // Live underneath; while it flies in, its picture
+                              // from last time on top (see _moveStill).
+                              arriving: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  child,
+                                  if (_lastLook[mode] case final look?)
+                                    RawImage(image: look, fit: BoxFit.fill),
+                                ],
+                              ),
                               arrivingMode: mode,
                               liveArriving: true,
                             )
                           : SwapStage(
                               progress: _swap.value,
                               dir: _dirFor(mode),
-                              leaving: child!,
+                              leaving: live,
                               leavingMode: mode,
                               arriving: picture(_lastLook[other], other),
                               arrivingMode: other,
@@ -507,7 +566,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                     builder: (context, _) => _ModePeek(
                       mode: mode,
                       onSwap: _tossByTap,
-                      hidden: _dragging || _committing || _swap.isAnimating || _swap.value != 0,
+                      hidden: _committing || _swap.isAnimating || _swap.value != 0,
                     ),
                   ),
                   const _DarkroomBannerOverlay(),

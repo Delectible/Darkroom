@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../core/app_info.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/processing/instant_frame.dart';
 import '../../cameras/domain/camera_catalog.dart';
@@ -15,11 +16,15 @@ Future<String?> exportPathFor(MediaItem item) async {
   if (path == null || !File(path).existsSync()) return null;
   if (item.isVideo || !CameraCatalog.byId(item.cameraId).isInstant) return path;
   try {
-    return await InstantFrame.exportJpeg(
-      picturePath: path,
-      note: item.note,
-      outPath: '${Directory.systemTemp.path}/instant_export/${item.fileName}',
-    );
+    // Framing + JPEG-encoding a full-size instant print takes seconds (the
+    // encoder is pure Dart), so each version (picture + note) is made once
+    // and reused: sharing the same print again is instant.
+    final stamp = File(path).lastModifiedSync().millisecondsSinceEpoch;
+    final key = '${item.id}_${stamp}_${(item.note ?? '').trim().hashCode.toUnsigned(32)}';
+    final dir = Directory('${Directory.systemTemp.path}/instant_export/$key');
+    final out = File('${dir.path}/${item.fileName}');
+    if (out.existsSync() && out.lengthSync() > 0) return out.path;
+    return await InstantFrame.exportJpeg(picturePath: path, note: item.note, outPath: out.path);
   } catch (e) {
     // Never lose the share/save over the frame: fall back to the bare picture.
     debugPrint('Instant export failed: $e');
@@ -138,4 +143,17 @@ String formatDuration(int? ms) {
   if (ms == null) return '';
   final d = Duration(milliseconds: ms);
   return '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+}
+
+/// Plain-text report for a shot that failed to process (to paste into a
+/// message).
+String errorReport(MediaItem item) {
+  final spec = CameraCatalog.byId(item.cameraId);
+  return [
+    '${AppInfo.name} ${AppInfo.version} on ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+    '${spec.name} (${item.cameraId}) · ${item.isVideo ? 'video' : 'photo'} · ${item.fileName}',
+    'Taken ${item.capturedAt.toIso8601String()}',
+    '',
+    item.error ?? 'Unknown error',
+  ].join('\n');
 }

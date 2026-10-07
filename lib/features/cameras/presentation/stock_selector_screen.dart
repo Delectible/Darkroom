@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart' show Drag;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/physical_orientation.dart';
 import '../../../core/device/system_gestures.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/processing/film/film_profile.dart';
@@ -18,17 +19,27 @@ import '../../../core/device/haptics.dart';
 /// Opens the full-screen film / camera picker (slides up; swipe down or the
 /// chevron closes it).
 Future<void> showStockSelector(BuildContext context, AppMode mode) {
+  // It rises from the bottom as the user holds the phone: held sideways
+  // (the activity stays portrait) that's one of the screen's long edges.
+  final turns = uprightQuarterTurns(ProviderScope.containerOf(context).read(physicalOrientationProvider));
+  final from = switch (turns) {
+    1 => const Offset(-1, 0),
+    2 => const Offset(0, -1),
+    3 => const Offset(1, 0),
+    _ => const Offset(0, 1),
+  };
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
       opaque: false,
       transitionDuration: const Duration(milliseconds: 340),
-      reverseTransitionDuration: const Duration(milliseconds: 260),
+      reverseTransitionDuration: const Duration(milliseconds: 280),
       pageBuilder: (_, _, _) => StockSelectorScreen(mode: mode),
       transitionsBuilder: (context, animation, _, child) => SlideTransition(
-        position: Tween(
-          begin: const Offset(0, 1),
-          end: Offset.zero,
-        ).chain(CurveTween(curve: Curves.easeOutCubic)).animate(animation),
+        // Closing is a trigger (no finger tracking), so it leaves at speed
+        // and eases off as it goes, rather than starting from a standstill.
+        position: Tween(begin: from, end: Offset.zero).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInQuad),
+        ),
         child: child,
       ),
     ),
@@ -65,8 +76,7 @@ class StockSelectorScreen extends ConsumerStatefulWidget {
   ConsumerState<StockSelectorScreen> createState() => _StockSelectorScreenState();
 }
 
-class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
-    with SingleTickerProviderStateMixin {
+class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
   static const _bg = Color(0xFF121212);
   static const _muted = Color(0xFF9A9A9A);
 
@@ -75,13 +85,9 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
   late PageController _pages;
   late int _index;
 
-  /// Swipe-down-to-close offset.
-  double _drag = 0;
-  late final AnimationController _settle =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 220))..addListener(
-        () => setState(() => _drag = _dragFrom * (1 - Curves.easeOutCubic.transform(_settle.value))),
-      );
-  double _dragFrom = 0;
+  /// How far a downward (close) swipe has gone. Closing is a trigger: the
+  /// sheet doesn't follow the finger, a clear swipe down sends it away.
+  double _down = 0;
 
   bool get _film => widget.mode == AppMode.film;
 
@@ -97,7 +103,6 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
   @override
   void dispose() {
     _pages.dispose();
-    _settle.dispose();
     super.dispose();
   }
 
@@ -198,8 +203,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
         final vertical = _travel.dy > 0 && _travel.dy.abs() > _travel.dx.abs() * _verticalBias;
         if (vertical) {
           _axis = _Axis.vertical;
-          _settle.stop();
-          setState(() => _drag = math.max(0, _drag + _travel.dy));
+          _down = _travel.dy;
         } else if (_pages.hasClients && _specs.length > 1) {
           _axis = _Axis.horizontal;
           _scroll = _pages.position.drag(
@@ -211,7 +215,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
       case _Axis.horizontal:
         _scrollBy(d, d.delta.dx);
       case _Axis.vertical:
-        setState(() => _drag = math.max(0, _drag + d.delta.dy));
+        _down += d.delta.dy;
     }
   }
 
@@ -237,11 +241,11 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
         );
       case _Axis.vertical:
         final vy = d.velocity.pixelsPerSecond.dy;
-        if (_drag > 140 || vy > 700) {
+        if (_down > 60 || vy > 500) {
+          _axis = _Axis.undecided;
           Navigator.of(context).pop();
           return;
         }
-        _springBack();
       case _Axis.undecided:
         break;
     }
@@ -250,13 +254,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
 
   void _onPanCancel() {
     _scroll?.cancel();
-    if (_axis == _Axis.vertical) _springBack();
     _axis = _Axis.undecided;
-  }
-
-  void _springBack() {
-    _dragFrom = _drag;
-    _settle.forward(from: 0);
   }
 
   @override
@@ -265,10 +263,12 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
     final grain = spec?.film == null
         ? GrainStrength.normal
         : ref.watch(cameraSettingsProvider)[spec!.id]?.grain ?? GrainStrength.normal;
-    final fade = (1 - _drag / 600).clamp(0.0, 1.0);
+    // Held sideways the hero flight from the camera screen would be worked
+    // out in the unrotated frame (it flew sideways, then snapped): skip it.
+    final upright = uprightQuarterTurns(ref.watch(physicalOrientationProvider)).isEven;
 
     return Material(
-      color: _bg.withValues(alpha: fade),
+      color: _bg,
       child: SafeArea(
         child: UprightBox(
           child: GestureDetector(
@@ -277,8 +277,8 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen>
             onPanUpdate: _onPanUpdate,
             onPanEnd: _onPanEnd,
             onPanCancel: _onPanCancel,
-            child: Transform.translate(
-              offset: Offset(0, _drag),
+            child: HeroMode(
+              enabled: upright,
               child: Column(
                 children: [
                   // Grab handle.

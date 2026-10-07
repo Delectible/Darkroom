@@ -62,6 +62,8 @@ class InstantFrame {
     return tp;
   }
 
+  static const maxPictureSide = 2048.0;
+
   /// Renders the framed print (picture + border + note) to a JPEG at
   /// [outPath]. Runs the drawing on the UI isolate (needs the font engine)
   /// and the JPEG encode on a background isolate.
@@ -73,7 +75,10 @@ class InstantFrame {
     final codec = await ui.instantiateImageCodec(await File(picturePath).readAsBytes());
     final picture = (await codec.getNextFrame()).image;
     codec.dispose();
-    final s = math.min(picture.width, picture.height).toDouble();
+    final side0 = math.min(picture.width, picture.height).toDouble();
+    // A real instant print is small: 2048 px across the picture is plenty,
+    // and keeps the (pure-Dart) JPEG encode to a moment.
+    final s = math.min(side0, maxPictureSide);
     final w = (s * (1 + 2 * side)).round(), h = (s * (1 + top + bottom)).round();
 
     final recorder = ui.PictureRecorder();
@@ -84,7 +89,11 @@ class InstantFrame {
       PaperTexture.paint(texture, w.toDouble()),
     );
     final dst = pictureRect(s);
-    final src = Rect.fromCenter(center: Offset(picture.width / 2, picture.height / 2), width: s, height: s);
+    final src = Rect.fromCenter(
+      center: Offset(picture.width / 2, picture.height / 2),
+      width: side0,
+      height: side0,
+    );
     canvas.drawImageRect(picture, src, dst, Paint()..filterQuality = FilterQuality.high);
     // The picture sits a hair below the paper surface.
     canvas.drawRect(

@@ -186,7 +186,9 @@ Film Mode
   swoosh, soft thud as it lands (`Sfx.corkThud`). No bounce or stretch when
   scrolling past the ends; content scrolls to the frame, under the system
   bars. Film mode: a clear swipe right on the camera opens it (triggered,
-  not dragged), a swipe left on the board closes it.
+  not dragged), a swipe left on the board closes it. Digital mode: a swipe
+  left opens the Win98 explorer (`ExplorerScreen.powerOn`, CRT switching
+  on). The body never moves the way with no camera.
 - The cork wall scrolls with the prints (shader tiles keyed to the scroll
   offset): granulated cork after Gabe's sample, with wear: pin holes,
   coffee rings, water marks, faded patches. Easter eggs: tap a
@@ -236,9 +238,9 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   never Microsoft's): click on Win98Button / menu / Start items, error bong
   / warning ding from `showWin98MessageBox`, exit chime when the explorer
   closes, login chime when it opens. All sounds are kept quiet: levels are
-  baked into the .wav files (`LEVELS` in make_sfx.py; the app plays them at
-  full scale). Settings: Sound effects (`Sfx.enabled`) and Haptics
-  (`Haptics`, use it instead of HapticFeedback). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
+  baked into the .wav files (`LEVELS` in make_sfx.py). Settings: Sound
+  effects slider (`Sfx.level`, player volume = level², half by default)
+  and Haptics (`Haptics`, use it instead of HapticFeedback). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
   pixel rabbit + tune, then the CRT collapse). Start > Run knows RABBIT,
   DEVELOP, PING, README (`win98_programs.dart`), the games SOL / BRICKS /
   PINBALL (Space Rabbit: missions, ranks) / WINMINE (`win98/games/`, rules
@@ -256,7 +258,9 @@ UI
   driven by `_swap` in camera_screen.dart). Drag the body sideways: it
   follows the thumb and tips away in perspective; a flick or a long drag
   tosses it and the other body comes in on the same motion (spring settle),
-  else it springs back (and can be grabbed again mid-spring). Each body continues past the screen: rounded end,
+  else it springs back (and can be grabbed again mid-spring). While it
+  moves, the body is shown as its at-rest snapshot (`_moveStill`): shader
+  filters under the 3D transform only move their input. Each body continues past the screen: rounded end,
   side wall with strap lug, neck strap (film) / wrist cord (digital). Until
   the toss commits the arriving body is a picture of it from last time
   (`_lastLook`, or `BodyStandIn`); on commit the leaving body becomes a
@@ -282,6 +286,10 @@ UI
   events for them never arrived) are the shutter
   while the camera itself is on screen; setting "Volume buttons zoom" makes
   them the zoom on digital bodies. Elsewhere they change the volume.
+- Crash reports stay on the phone (`core/diagnostics/crash_log.dart`):
+  Dart errors + Android ApplicationExitInfo; Win98 Help > Crash Reports.
+  Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
+- `AppInfo.version` must match pubspec (test/app_info_test.dart).
 - Camera session: "inactive" does NOT close the camera (Android sends it on
   any focus blip; closing made the Pixel's viewfinder flap). Only hidden /
   paused do. `CameraLog` keeps recent session events: Win98 Help > Camera Log.

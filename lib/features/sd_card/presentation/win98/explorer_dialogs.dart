@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/audio/sfx.dart';
 
 import '../../../../core/app_info.dart';
+import '../../../../core/diagnostics/crash_log.dart';
 import '../../../camera/application/camera_log.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../settings/application/settings_controllers.dart';
@@ -363,10 +365,23 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
                         label: 'Also save an unfiltered original',
                         onChanged: (v) => unawaited(g.setSaveOriginalCopy(v)),
                       ),
-                      Win98Checkbox(
-                        value: global.soundEffects,
-                        label: 'Sound effects',
-                        onChanged: (v) => unawaited(g.setSoundEffects(v)),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 6, 4, 2),
+                        child: Text(
+                          'Sound effects volume: ${global.sfxVolume <= 0 ? 'off' : '${(global.sfxVolume * 100).round()}%'}',
+                          style: W98.text,
+                        ),
+                      ),
+                      SizedBox(
+                        height: 30,
+                        child: Win98Slider(
+                          value: global.sfxVolume,
+                          onChanged: (v) => unawaited(g.setSfxVolume(v, save: false)),
+                          onChangeEnd: (v) {
+                            unawaited(g.setSfxVolume(v));
+                            Sfx.w98Click.play();
+                          },
+                        ),
                       ),
                       Win98Checkbox(
                         value: global.haptics,
@@ -520,6 +535,71 @@ Future<void> showCameraLog(BuildContext context) {
           ),
         ],
       ),
+    ),
+  );
+}
+
+/// Help > Crash Reports: crashes kept on the phone (CrashLog), newest
+/// first, with Copy (to paste into a message) and Clear.
+Future<void> showCrashReports(BuildContext context) {
+  return showWin98Window<void>(
+    context,
+    title: 'Crash Reports - Notepad',
+    width: 340,
+    icon: const PixelIconView(PixelIcon.info),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) {
+        final reports = CrashLog.reports;
+        final text = reports.isEmpty
+            ? 'No crashes recorded. Nice.'
+            : reports.map((r) => r.text).join('\n\n----------------\n\n');
+        return Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: Win98Bevel(
+                  style: BevelStyle.sunken,
+                  color: Colors.white,
+                  padding: const EdgeInsets.all(6),
+                  child: SingleChildScrollView(child: Text(text, style: W98.text.copyWith(fontSize: 11))),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (reports.isNotEmpty) ...[
+                    Win98Button(
+                      minWidth: 64,
+                      onPressed: () {
+                        CrashLog.clear();
+                        setState(() {});
+                      },
+                      child: const Text('Clear'),
+                    ),
+                    const SizedBox(width: 6),
+                    Win98Button(
+                      minWidth: 64,
+                      onPressed: () => unawaited(Clipboard.setData(ClipboardData(text: text))),
+                      child: const Text('Copy'),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Win98Button(
+                    minWidth: 64,
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     ),
   );
 }

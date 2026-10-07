@@ -487,3 +487,42 @@ darkroom, corkboard, ambience).
 - [x] **19.1** Swiping right in film mode (the corkboard gesture) no longer
   nudges the camera body before the board comes in.
   → 1.3.28 · 2026-10-07 · e8f614b
+
+## 20. Big batch: Win98 swipe, crash reports, close-up, volume (2026-10-07)
+
+Answers: 3D buttons pre-rendered; crash reports on the phone only; Win98
+comes in with a CRT power-on; start screen also asks for a name; Win98
+swipe is LEFT in digital mode (right still swaps to film).
+
+- [x] **20.1 Swipe jiggle:** the body no longer reacts at all to a swipe
+  the way with no camera (no visual switch, no haptic until it moves).
+- [x] **20.2 Tap off a photo** (on the dimmed board) puts it down.
+- [x] **20.3 Crash reports:** kept on the phone (`CrashLog`): uncaught
+  Dart/Flutter errors plus Android's own record of crashes / freezes
+  (ApplicationExitInfo, channel `darkroom/crash`). Win98 Help > Crash
+  Reports, with Copy and Clear.
+- [x] **20.4 Super 8 "Input contains NaN" at the AAC encoder:** every audio
+  chain now starts and ends with a NaN/clip guard (`_clean`); desktop
+  ffmpeg test feeds it NaN.
+- [x] **20.5 Ruined shots:** a darkroom excuse (light got in, the cat...)
+  with Copy error report (`errorReport`); Win98 keeps its error box and
+  gets a Copy button.
+- [x] **20.6 Close-up:** stage in full words (Developing, Stop bath...) on
+  an 80% black pill, a roomier tray, water washing over the paper.
+- [x] **20.7 Volume:** a Sound effects slider (0 = off, half by default;
+  player volume = level²) in settings and Win98 Options, with a sample
+  sound. (The baked files peak around -30 dBFS.)
+- [ ] **20.8 3D shutter buttons:** pre-rendered photoreal (next release).
+- [x] **20.9 Win98 swipe:** swipe left in digital mode; the explorer
+  switches on like a CRT (dot, line, opens, degauss wobble).
+- [x] **20.10 Slow Polaroid share:** the framed export is cached per
+  picture + note and capped at 2048 px (pure-Dart JPEG encode).
+- [ ] **20.11 Start screen:** features, gestures, name, permissions
+  (next release).
+- [x] **20.12 Carousel:** closing is a trigger (no finger tracking, leaves
+  at speed); held sideways it rises from the user's bottom edge and the
+  hero flight is skipped (it flew sideways then snapped).
+- [x] **20.13 Sprocket hole during a toss:** the moving body shows its
+  at-rest snapshot (`_moveStill`); the arriving body its last picture.
+- [x] **20.14 AppInfo.version** was stuck at 1.3.24; a test now ties it to
+  pubspec.

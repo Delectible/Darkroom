@@ -14,7 +14,7 @@ class GlobalSettings {
     this.notificationsEnabled = true,
     this.saveOriginalCopy = false,
     this.volumeZoom = false,
-    this.soundEffects = true,
+    this.sfxVolume = 0.5,
     this.haptics = true,
   });
 
@@ -26,9 +26,9 @@ class GlobalSettings {
   /// digital bodies (film keeps them as the shutter).
   final bool volumeZoom;
 
-  /// The app's own sounds (shutters, clicks, swooshes...). Video and clip
-  /// audio play regardless.
-  final bool soundEffects;
+  /// Level of the app's own sounds (shutters, clicks, swooshes...), 0 = off.
+  /// Video and clip audio play regardless.
+  final double sfxVolume;
 
   /// Vibration feedback.
   final bool haptics;
@@ -38,14 +38,14 @@ class GlobalSettings {
     bool? notificationsEnabled,
     bool? saveOriginalCopy,
     bool? volumeZoom,
-    bool? soundEffects,
+    double? sfxVolume,
     bool? haptics,
   }) => GlobalSettings(
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
     saveOriginalCopy: saveOriginalCopy ?? this.saveOriginalCopy,
     volumeZoom: volumeZoom ?? this.volumeZoom,
-    soundEffects: soundEffects ?? this.soundEffects,
+    sfxVolume: sfxVolume ?? this.sfxVolume,
     haptics: haptics ?? this.haptics,
   );
 }
@@ -84,7 +84,8 @@ class SettingsRepository {
   static const _kNotify = 'global.notifications';
   static const _kOriginal = 'global.saveOriginal';
   static const _kVolumeZoom = 'global.volumeZoom';
-  static const _kSounds = 'global.soundEffects';
+  static const _kSounds = 'global.soundEffects'; // 1.3.27-29 on/off
+  static const _kSfxVolume = 'global.sfxVolume';
   static const _kHaptics = 'global.haptics';
 
   Future<GlobalSettings> loadGlobal() async {
@@ -95,7 +96,11 @@ class SettingsRepository {
       notificationsEnabled: read(await _db.getValue(_kNotify), d.notificationsEnabled),
       saveOriginalCopy: read(await _db.getValue(_kOriginal), d.saveOriginalCopy),
       volumeZoom: read(await _db.getValue(_kVolumeZoom), d.volumeZoom),
-      soundEffects: read(await _db.getValue(_kSounds), d.soundEffects),
+      sfxVolume: switch ((await _db.getValue(_kSfxVolume), await _db.getValue(_kSounds))) {
+        (final String v, _) => double.tryParse(v)?.clamp(0.0, 1.0) ?? d.sfxVolume,
+        (null, '0') => 0.0,
+        _ => d.sfxVolume,
+      },
       haptics: read(await _db.getValue(_kHaptics), d.haptics),
     );
   }
@@ -105,7 +110,7 @@ class SettingsRepository {
     await _db.setValue(_kNotify, s.notificationsEnabled ? '1' : '0');
     await _db.setValue(_kOriginal, s.saveOriginalCopy ? '1' : '0');
     await _db.setValue(_kVolumeZoom, s.volumeZoom ? '1' : '0');
-    await _db.setValue(_kSounds, s.soundEffects ? '1' : '0');
+    await _db.setValue(_kSfxVolume, s.sfxVolume.toStringAsFixed(3));
     await _db.setValue(_kHaptics, s.haptics ? '1' : '0');
   }
 

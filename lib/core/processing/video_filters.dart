@@ -29,20 +29,29 @@ class VideoProfile {
   /// Super 8 sound film (a magnetic stripe beside the picture): mono, thin
   /// (no deep bass, no crisp top), gently squashed, a slow wow and a faster
   /// flutter from the transport, and a faint hiss.
+  ///
+  /// The chains start and end with [_clean]: a Super 8 take failed on the
+  /// phone (FFmpeg 8) with "Input contains (near) NaN/+-Inf" at the AAC
+  /// encoder, so no bad sample gets into the IIR filters or out to AAC.
   static const super8Audio =
-      'aformat=channel_layouts=mono,highpass=f=120,lowpass=f=6000,lowpass=f=7500,'
+      'aformat=sample_fmts=dbl:channel_layouts=mono,$_clean,'
+      'highpass=f=120,lowpass=f=6000,lowpass=f=7500,'
       'acompressor=threshold=0.1:ratio=3:attack=15:release=250:makeup=2,'
       'vibrato=f=0.7:d=0.25,vibrato=f=6.5:d=0.012,'
-      "aeval=exprs='val(0)+0.0025*(random(0)*2-1)'";
+      "aeval=exprs='val(0)+0.0025*(random(0)*2-1)',$_clean";
 
   /// 90s camcorder tape: mono, a little muffled, tape hiss that the
   /// automatic level control pumps up in the quiet bits (hiss goes in before
   /// the compressor), a slight wow, and a click as the heads engage.
   static const camcorderAudio =
-      'aformat=channel_layouts=mono,highpass=f=90,lowpass=f=8000,lowpass=f=9500,'
+      'aformat=sample_fmts=dbl:channel_layouts=mono,$_clean,'
+      'highpass=f=90,lowpass=f=8000,lowpass=f=9500,'
       "aeval=exprs='val(0)+0.004*(random(0)*2-1)+if(lt(t,0.012),0.15*(random(1)*2-1)*(1-t/0.012),0)',"
       'acompressor=threshold=0.05:ratio=6:attack=5:release=400:makeup=3,'
-      'vibrato=f=0.5:d=0.1';
+      'vibrato=f=0.5:d=0.1,$_clean';
+
+  /// NaN -> silence, anything out of range clipped to full scale.
+  static const _clean = "aeval=exprs='if(isnan(val(0)),0,clip(val(0),-1,1))'";
 
   static VideoProfile forSpec(CameraSpec spec) {
     if (spec.film != null) {
@@ -62,7 +71,7 @@ class VideoProfile {
         fps: '15',
         bitrateKbps: 2500,
         audioArgs: ['-c:a', 'aac', '-b:a', '64k', '-ac', '1'],
-        audioFilter: 'highpass=f=150,lowpass=f=7000',
+        audioFilter: '$_clean,highpass=f=150,lowpass=f=7000,$_clean',
       ),
       // QCIF-class phone video, 12 fps, 8 kHz voice-band audio.
       ShaderKind.jpegPixel => const VideoProfile(
@@ -71,7 +80,7 @@ class VideoProfile {
         bitrateKbps: 96,
         upscale: 3,
         audioArgs: ['-c:a', 'aac', '-b:a', '24k', '-ac', '1', '-ar', '8000'],
-        audioFilter: 'highpass=f=300,lowpass=f=3400',
+        audioFilter: '$_clean,highpass=f=300,lowpass=f=3400,$_clean',
       ),
       ShaderKind.vhs => const VideoProfile(
         longEdge: 640,

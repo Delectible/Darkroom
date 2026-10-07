@@ -25,7 +25,10 @@ void main() {
       final out = '${dir.path}/out.m4a';
       final r = await Process.run(ffmpeg, [
         '-loglevel', 'error', '-y', //
-        '-f', 'lavfi', '-i', 'sine=f=330:d=1,aformat=channel_layouts=stereo',
+        // A burst of NaN up front: a Super 8 take once died with "Input
+        // contains (near) NaN" at the AAC encoder.
+        '-t', '1', '-f', 'lavfi', //
+        '-i', "aevalsrc=exprs='if(lt(t,0.1),0/0,sin(2*PI*330*t))':s=48000,aformat=channel_layouts=stereo",
         '-af', profile.audioFilter!,
         ...profile.audioArgs,
         out,

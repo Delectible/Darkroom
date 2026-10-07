@@ -12,6 +12,7 @@ import 'package:workmanager/workmanager.dart';
 import 'app.dart';
 import 'core/background/background_worker.dart';
 import 'core/db/app_database.dart';
+import 'core/diagnostics/crash_log.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/paths/app_paths.dart';
 import 'core/providers.dart';
@@ -38,6 +39,9 @@ Future<void> main() async {
       cacheOptions: const SharedPreferencesWithCacheOptions(allowList: PrefKeys.all),
     ),
   ).wait;
+
+  // Crash reports stay on the phone (Win98 Help > Crash Reports).
+  await CrashLog.install(paths.supportDir);
 
   final settingsRepo = SettingsRepository(db);
   final (global, cameraSettings) = await (settingsRepo.loadGlobal(), settingsRepo.loadCameraSettings()).wait;

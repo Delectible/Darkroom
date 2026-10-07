@@ -57,12 +57,12 @@ class Sfx {
   /// Digital bodies' zoom motor: loops while the zoom moves.
   static final zoomMotor = Sfx._('assets/sfx/zoom_motor.wav', loop: true);
 
-  // Levels are baked into the .wav files (tool/sfx/make_sfx.py LEVELS)
-  // and played at full scale: the player's own volume didn't reliably turn
-  // them down on the phone.
+  // Each sound's own level is baked into its .wav (tool/sfx/make_sfx.py
+  // LEVELS); the player volume is only the user's slider ([level]).
 
-  /// Settings > Sound effects. Off: [play] does nothing.
-  static bool enabled = true;
+  /// Settings > Sound effects slider, 0 (off) .. 1. The player volume is
+  /// level², so the slider feels even (half way = a quarter of full scale).
+  static double level = 0.5;
 
   final String _asset;
 
@@ -81,7 +81,7 @@ class Sfx {
     );
     try {
       await c.initialize();
-      await c.setVolume(1);
+      await c.setVolume(level * level);
       if (loop) await c.setLooping(true);
       _c = c;
     } catch (e) {
@@ -95,13 +95,14 @@ class Sfx {
   int _gen = 0;
 
   void play() {
-    if (!enabled) return;
+    if (level <= 0) return;
     final gen = ++_gen;
     unawaited(() async {
       await preload();
       final c = _c;
       if (c == null || gen != _gen) return;
       try {
+        await c.setVolume(level * level); // the slider may have moved
         await c.seekTo(Duration.zero);
         if (gen != _gen) return;
         await c.play();

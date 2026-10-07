@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/audio/sfx.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
@@ -80,11 +81,13 @@ class _SettingsSheet extends ConsumerWidget {
           value: global.saveOriginalCopy,
           onChanged: (v) => unawaited(g.setSaveOriginalCopy(v)),
         ),
-        _Toggle(
-          title: 'Sound effects',
-          subtitle: 'Shutter clicks, swooshes and the rest. Videos keep their sound.',
-          value: global.soundEffects,
-          onChanged: (v) => unawaited(g.setSoundEffects(v)),
+        _VolumeSlider(
+          value: global.sfxVolume,
+          onChanged: (v) => unawaited(g.setSfxVolume(v, save: false)),
+          onChangeEnd: (v) {
+            unawaited(g.setSfxVolume(v));
+            Sfx.shutterFilm.play(); // a sample at the new level
+          },
         ),
         _Toggle(
           title: 'Haptics',
@@ -155,6 +158,55 @@ class _Toggle extends StatelessWidget {
         style: TextStyle(color: p.text, fontWeight: FontWeight.w700),
       ),
       subtitle: Text(subtitle, style: TextStyle(color: p.textMuted, fontSize: 12)),
+    );
+  }
+}
+
+/// Sound effects level: off at the far left, half way by default.
+class _VolumeSlider extends StatelessWidget {
+  const _VolumeSlider({required this.value, required this.onChanged, required this.onChangeEnd});
+
+  final double value;
+  final ValueChanged<double> onChanged;
+  final ValueChanged<double> onChangeEnd;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = RetroPalette.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Sound effects',
+                  style: TextStyle(color: p.text, fontWeight: FontWeight.w700),
+                ),
+              ),
+              Text(
+                value <= 0 ? 'Off' : '${(value * 100).round()}%',
+                style: TextStyle(color: p.textMuted, fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          Text(
+            'Shutter clicks, swooshes and the rest. Videos keep their sound.',
+            style: TextStyle(color: p.textMuted, fontSize: 12),
+          ),
+          Row(
+            children: [
+              Icon(Icons.volume_off, size: 18, color: p.textMuted),
+              Expanded(
+                child: Slider.adaptive(value: value, onChanged: onChanged, onChangeEnd: onChangeEnd),
+              ),
+              Icon(Icons.volume_up, size: 18, color: p.textMuted),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

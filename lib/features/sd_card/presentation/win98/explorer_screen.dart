@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/audio/sfx.dart';
@@ -30,6 +32,20 @@ import 'win98_widgets.dart';
 ///  * My Computer — the drives.
 class ExplorerScreen extends ConsumerStatefulWidget {
   const ExplorerScreen({super.key});
+
+  /// The monitor switching on: a dot of light, a bright line that opens
+  /// into the picture, then a little degauss wobble as it settles. Going
+  /// back plays it the other way (the set switching off).
+  static PageRouteBuilder<void> powerOn() => PageRouteBuilder<void>(
+    transitionDuration: const Duration(milliseconds: 820),
+    reverseTransitionDuration: const Duration(milliseconds: 520),
+    pageBuilder: (context, _, _) => const ExplorerScreen(),
+    transitionsBuilder: (context, a, _, child) => AnimatedBuilder(
+      animation: a,
+      child: child,
+      builder: (context, child) => _CrtOn(t: a.value, child: child!),
+    ),
+  );
 
   @override
   ConsumerState<ExplorerScreen> createState() => _ExplorerScreenState();
@@ -91,9 +107,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         item.fileName,
         'The file is corrupt and cannot be opened.\n\n${item.error ?? 'Unknown error'}\n\nDelete it?',
         icon: Win98MessageIcon.error,
-        buttons: const ['Delete', 'Keep'],
+        buttons: const ['Delete', 'Keep', 'Copy'],
       );
       if (r == 0) await deleteMedia(ref.read(sdCardRepositoryProvider), item);
+      if (r == 2) await Clipboard.setData(ClipboardData(text: errorReport(item)));
       return;
     }
     if (!item.isReady) {
@@ -564,6 +581,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                   ),
                                 ),
                                 Win98MenuItem('Camera Log...', onSelected: () => showCameraLog(context)),
+                                Win98MenuItem(
+                                  'Crash Reports...',
+                                  onSelected: () => showCrashReports(context),
+                                ),
                                 const Win98MenuItem.separator(),
                                 Win98MenuItem('About Darkroom', onSelected: () => showAboutDarkroom(context)),
                               ],
@@ -926,6 +947,58 @@ class _TaskbarState extends State<_Taskbar> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One frame of the CRT power-on at [t] (0..1).
+class _CrtOn extends StatelessWidget {
+  const _CrtOn({required this.t, required this.child});
+
+  final double t;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (t >= 1) return child;
+    double seg(double a, double b) => ((t - a) / (b - a)).clamp(0.0, 1.0);
+    final dot = Curves.easeOut.transform(seg(0.0, 0.12)); // a spot of light
+    final line = Curves.easeOutCubic.transform(seg(0.08, 0.32)); // spreads into a line
+    final open = Curves.easeOutCubic.transform(seg(0.3, 0.62)); // the line opens up
+    final settle = seg(0.62, 1.0);
+    // Degauss: a fading horizontal wobble and a little breathing in size.
+    final wobble = math.sin(settle * math.pi * 7) * (1 - settle) * 0.012;
+    final sx = math.max(0.012, line) * (1 + wobble);
+    final sy = math.max(0.006, open) * (1 - wobble * 0.6);
+    final glow = (1 - open) * dot; // the beam is white-hot until it opens
+    return ColoredBox(
+      color: Colors.black,
+      child: Opacity(
+        opacity: dot,
+        child: Center(
+          child: Transform(
+            alignment: Alignment.center,
+            transform: Matrix4.diagonal3Values(sx, sy, 1),
+            child: Stack(
+              fit: StackFit.passthrough,
+              children: [
+                child,
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: ColoredBox(
+                      color: Color.lerp(
+                        Colors.white.withValues(alpha: glow),
+                        const Color(0x00000000),
+                        settle,
+                      )!,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

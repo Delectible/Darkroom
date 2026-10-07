@@ -209,6 +209,7 @@ Thanks for using Darkroom 98!
 Things you can run from Start > Run...
 
   SOL.EXE       Solitaire
+  WINMINE.EXE   Minesweeper
   BRICKS.EXE    knock down the wall
   PINBALL.EXE   Space Rabbit Pinball
   RABBIT.EXE    say hello to the mascot
@@ -219,7 +220,6 @@ Things you can run from Start > Run...
   A:  C:  E:    jump to a drive
 
 Known issues:
-  - There is no Minesweeper.
   - Film cannot be rushed.
 ''';
 

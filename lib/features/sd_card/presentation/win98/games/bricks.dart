@@ -177,7 +177,7 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
       final speed = math.min(v.distance * 1.01, _speed * 1.6);
       v = Offset(math.cos(a), math.sin(a)) * speed;
       p = Offset(p.dx, bat.top - _ballR);
-      Sfx.w98Click.play();
+      Sfx.gameBop.play();
     }
     for (final b in _bricks) {
       if (!b.alive || !b.rect.inflate(_ballR).contains(p)) continue;
@@ -187,10 +187,11 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
       final r = b.rect;
       final fromSide = _ball.dx < r.left || _ball.dx > r.right;
       v = fromSide ? Offset(-v.dx, v.dy) : Offset(v.dx, -v.dy);
-      Sfx.w98Click.play();
+      Sfx.gameBlip.play();
       if (_bricks.every((b) => !b.alive)) {
         _served = false;
         _banner = 'You win! $_score points. Tap to play again';
+        Sfx.gameWin.play();
         unawaited(HapticFeedback.mediumImpact());
       }
       break;
@@ -198,7 +199,7 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
     if (p.dy > _size.height + _ballR) {
       _lives--;
       _served = false;
-      Sfx.w98Ding.play();
+      Sfx.gameLose.play();
       _banner = _lives > 0 ? '$_lives left. Tap to serve' : 'Game over: $_score points. Tap to play again';
       return;
     }

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:darkroom/features/sd_card/presentation/win98/games/bricks.dart';
+import 'package:darkroom/features/sd_card/presentation/win98/games/minesweeper.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/games/pinball.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/games/solitaire.dart';
 import 'package:flutter/material.dart';
@@ -68,10 +69,46 @@ void main() {
     });
   });
 
+  group('Minesweeper', () {
+    test('the first dig is safe and opens an area; the mines are all laid', () {
+      for (var seed = 0; seed < 30; seed++) {
+        final f = MineField(MineLevel.beginner, seed: seed);
+        expect(f.dig(40), isTrue);
+        expect(f.mine.where((m) => m).length, 10);
+        expect(f.open[40], isTrue);
+        for (final j in f.around(40)) {
+          expect(f.mine[j], isFalse, reason: 'the squares round the first dig are clear');
+        }
+      }
+    });
+
+    test('digging every safe square wins; a mine loses', () {
+      final f = MineField(MineLevel.beginner, seed: 3)..dig(0);
+      for (var i = 0; i < f.cells; i++) {
+        if (!f.mine[i]) f.dig(i);
+      }
+      expect(f.won, isTrue);
+      final g = MineField(MineLevel.beginner, seed: 3)..dig(0);
+      final mine = g.mine.indexOf(true);
+      expect(g.dig(mine), isFalse);
+      expect(g.lost, isTrue);
+    });
+
+    test('a number with its flags placed clears round it', () {
+      final f = MineField(MineLevel.beginner, seed: 7)..dig(40);
+      final n = List.generate(f.cells, (i) => i).firstWhere((i) => f.open[i] && f.count(i) > 0);
+      for (final j in f.around(n)) {
+        if (f.mine[j]) f.toggleFlag(j);
+      }
+      expect(f.chord(n), isTrue);
+      expect(f.around(n).every((j) => f.open[j] || f.flag[j]), isTrue);
+    });
+  });
+
   testWidgets('pinball: a launched ball leaves the lane, plays, and drains', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Center(child: SizedBox(width: 280, height: 420, child: PinballGame())),
+        home: Center(child: SizedBox(width: 280, child: PinballGame())),
       ),
     );
     final at = tester.getCenter(find.byType(PinballGame));
@@ -92,7 +129,8 @@ void main() {
   for (final (name, game, height) in [
     ('solitaire', const SolitaireGame(), 430.0),
     ('bricks', const BricksGame(), 380.0),
-    ('pinball', const PinballGame(), 420.0),
+    ('pinball', const PinballGame(), 560.0),
+    ('minesweeper', const MinesweeperGame(), 420.0),
   ]) {
     testWidgets('$name runs', (tester) async {
       tester.view.physicalSize = const Size(1280, 2856);

@@ -381,7 +381,18 @@ darkroom, corkboard, ambience).
   keeper, edge stitching, a rounded highlight and a buckle; the digital
   wrist cord is braided with a cord lock and a connector loop.
   → 1.3.23 · 2026-10-07 · 60df9c0
-- [ ] 15.11 Corkboard slides in from the left in a wooden frame, woody swoosh.
-- [ ] 15.12 Real Minesweeper.
-- [ ] 15.13 Pinball redesigned closer to Space Cadet; game sound effects;
-  startup sound.
+- [x] **15.11 Corkboard:** slides in from the left (with a little
+  overshoot) inside a wooden picture frame (mitred, grained), with a deep
+  woody swoosh in and out (`cork_swoosh.wav`).
+- [x] **15.12 Minesweeper (WINMINE):** the real thing: LED mine counter and
+  timer, smiley (worried while pressing, dead, cool), Beginner 9x9/10 and
+  Intermediate 16x16/40, tap to dig, hold to flag, tap a satisfied number to
+  clear round it, first dig always safe. Rules tested.
+- [x] **15.13 Pinball + game sounds:** Space Rabbit rebuilt in the spirit of
+  Space Cadet: a mission panel (score, ball, rank, mission), three attack
+  bumpers, slingshots, in/outlanes, FUEL drop targets, a wormhole that
+  throws the ball back in up top, R-A-B-B-I-T rollovers, missions that
+  promote you Cadet -> Admiral; start-up tune, flipper, bumper, sling,
+  target, warp, launch and drain sounds. Bricks bops and blips, cards snap
+  and riffle, mines go boom; win and lose jingles.
+  → 1.3.24 · 2026-10-07 · (this commit)

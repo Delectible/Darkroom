@@ -17,6 +17,12 @@ no samples, no Microsoft sounds, just numpy).
   shutter_film                  a mechanical shutter (two-part clack) and
                                 the advance lever ratcheting back
   shutter_run                   Super 8 run button: a soft latch clunk
+  cork_swoosh                   the framed corkboard sliding in: a deep,
+                                woody whoosh and a soft knock as it lands
+  game_*                        Win98 games: bricks (bop, blip, lose, win),
+                                cards (snap, riffle), mines (boom),
+                                pinball (flipper, bumper, chime, warp,
+                                launch, drain, start-up tune, sling, drop)
   zoom_motor                    a small geared lens motor, looped while
                                 the zoom moves (seamless 1 s loop)
 """
@@ -231,6 +237,163 @@ def shutter_run():
     return out
 
 
+def cork_swoosh():
+    x = t(0.75)
+    n = len(x)
+    # A low, breathy sweep (filtered noise rising then falling in pitch).
+    raw = noise(0.75)
+    sweep = np.zeros(n)
+    cut = 250 + 900 * np.sin(np.pi * np.clip(x / 0.55, 0, 1))
+    acc = 0.0
+    for i in range(n):
+        a = np.exp(-2 * np.pi * cut[i] / SR)
+        acc = (1 - a) * raw[i] + a * acc
+        sweep[i] = acc
+    shape = np.sin(np.pi * np.clip(x / 0.55, 0, 1)) ** 1.5
+    out = sweep * shape
+    # Wooden knock as the frame lands: a hollow low tone with a click.
+    knock = (np.sin(2 * np.pi * 180 * t(0.12)) + 0.5 * np.sin(2 * np.pi * 410 * t(0.12))) * env(int(SR * 0.12), 0.001, 0.025)
+    click = bandpass(noise(0.008), 800, 3500) * env(int(SR * 0.008), 0.0003, 0.002)
+    place(out, 0.35 * knock, 0.5)
+    place(out, 0.25 * click, 0.5)
+    return reverb(out, mix=0.12, room=0.4)
+
+
+def square(freq, seconds, duty=0.5):
+    x = t(seconds)
+    f = np.broadcast_to(freq, x.shape) if np.ndim(freq) else np.full(x.shape, float(freq))
+    phase = np.cumsum(f) / SR
+    return np.where((phase % 1) < duty, 1.0, -1.0)
+
+
+def tone_env(n, attack=0.002, release=0.03):
+    x = np.arange(n) / SR
+    total = n / SR
+    return np.clip(x / attack, 0, 1) * np.clip((total - x) / release, 0, 1)
+
+
+def game_bop():
+    x = square(330, 0.05)
+    return lowpass(x, 3000) * tone_env(len(x), release=0.02)
+
+
+def game_blip():
+    f = np.linspace(660, 990, int(SR * 0.06))
+    x = square(f, 0.06, duty=0.25)
+    return lowpass(x, 4000) * tone_env(len(x), release=0.03)
+
+
+def game_lose():
+    f = np.geomspace(440, 110, int(SR * 0.45))
+    x = square(f, 0.45)
+    return lowpass(x, 2500) * tone_env(len(x), release=0.12)
+
+
+def game_win():
+    out = np.zeros(int(SR * 0.6))
+    for i, f in enumerate((523.25, 659.25, 783.99, 1046.5)):
+        n = square(f, 0.11, duty=0.25)
+        place(out, lowpass(n, 4000) * tone_env(len(n), release=0.04), i * 0.1)
+    return out
+
+
+def card_snap():
+    out = np.zeros(int(SR * 0.07))
+    place(out, bandpass(noise(0.02), 1500, 7000) * env(int(SR * 0.02), 0.0005, 0.004), 0)
+    place(out, 0.4 * np.sin(2 * np.pi * 160 * t(0.03)) * env(int(SR * 0.03), 0.001, 0.008), 0)
+    return out
+
+
+def card_riffle():
+    out = np.zeros(int(SR * 0.5))
+    for i in range(16):
+        place(out, (0.4 + 0.3 * rng.random()) * bandpass(noise(0.008), 2000, 8000)
+              * env(int(SR * 0.008), 0.0003, 0.0015), 0.02 + i * 0.026 + 0.004 * rng.random())
+    return out
+
+
+def mine_boom():
+    x = t(0.9)
+    raw = noise(0.9)
+    body = lowpass(lowpass(raw, 500), 400) * np.exp(-x / 0.25)
+    thump = np.sin(2 * np.pi * 55 * x) * np.exp(-x / 0.18)
+    crack = bandpass(noise(0.04), 1000, 6000) * env(int(SR * 0.04), 0.0005, 0.01)
+    out = 2.5 * body + 0.8 * thump
+    place(out, 0.5 * crack, 0)
+    return reverb(out, mix=0.15, room=0.5)
+
+
+def pin_flipper():
+    out = np.zeros(int(SR * 0.09))
+    place(out, np.sin(2 * np.pi * 95 * t(0.06)) * env(int(SR * 0.06), 0.001, 0.015), 0)
+    place(out, 0.6 * bandpass(noise(0.01), 800, 5000) * env(int(SR * 0.01), 0.0003, 0.002), 0)
+    return out
+
+
+def pin_bumper():
+    out = np.zeros(int(SR * 0.35))
+    place(out, bell(1180, 0.3, 0.07, ((1, 1), (2.7, 0.5), (4.1, 0.25))), 0)
+    place(out, 0.6 * np.sin(2 * np.pi * 120 * t(0.05)) * env(int(SR * 0.05), 0.001, 0.012), 0)
+    return out
+
+
+def pin_chime():
+    return pad(bell(1760, 0.35, 0.12), 0.05)
+
+
+def pin_sling():
+    out = np.zeros(int(SR * 0.12))
+    place(out, square(220, 0.06, duty=0.3) * tone_env(int(SR * 0.06), release=0.03) * 0.5, 0)
+    place(out, bandpass(noise(0.012), 1000, 6000) * env(int(SR * 0.012), 0.0003, 0.003), 0)
+    return lowpass(out, 5000)
+
+
+def pin_drop():
+    return bandpass(noise(0.03), 600, 3000) * env(int(SR * 0.03), 0.0005, 0.008) + \
+        0.5 * np.sin(2 * np.pi * 300 * t(0.03)) * env(int(SR * 0.03), 0.001, 0.01)
+
+
+def pin_warp():
+    x = t(0.7)
+    f = 1400 * np.exp(-x / 0.25) + 120
+    phase = np.cumsum(f) / SR
+    tone = np.sin(2 * np.pi * phase) * (1 + 0.4 * np.sin(2 * np.pi * 18 * x))
+    return reverb(tone * np.exp(-x / 0.35) * np.clip(x / 0.01, 0, 1), mix=0.3, room=0.6)
+
+
+def pin_launch():
+    x = t(0.5)
+    f = 600 * np.exp(-x / 0.18) + 90 + 30 * np.sin(2 * np.pi * 26 * x)
+    phase = np.cumsum(f) / SR
+    spring = np.sin(2 * np.pi * phase) * np.exp(-x / 0.2)
+    out = 0.6 * spring
+    place(out, bandpass(noise(0.02), 1500, 6000) * env(int(SR * 0.02), 0.0005, 0.004), 0)
+    return out
+
+
+def pin_drain():
+    x = t(0.6)
+    f = np.geomspace(300, 70, len(x))
+    phase = np.cumsum(f) / SR
+    return np.sin(2 * np.pi * phase) * np.clip((0.6 - x) / 0.15, 0, 1) * np.clip(x / 0.01, 0, 1)
+
+
+def pin_start():
+    """Space Rabbit's start-up: a rising synth sweep into a little
+    arpeggio (all original)."""
+    out = np.zeros(int(SR * 2.4))
+    x = t(0.9)
+    sweep_f = np.geomspace(110, 880, len(x))
+    phase = np.cumsum(sweep_f) / SR
+    sweep = (np.sin(2 * np.pi * phase) + 0.3 * np.sin(4 * np.pi * phase)) * np.clip(x / 0.6, 0, 1)
+    place(out, 0.4 * lowpass(sweep, 3000) * np.clip((0.9 - x) / 0.2, 0, 1), 0)
+    for i, f in enumerate((440.0, 554.37, 659.25, 880.0, 659.25, 880.0, 1108.73)):
+        n = square(f, 0.16, duty=0.3)
+        place(out, 0.35 * lowpass(n, 3500) * tone_env(len(n), release=0.06), 0.85 + i * 0.13)
+    place(out, 0.5 * bell(1760, 0.8, 0.3), 0.85 + 7 * 0.13)
+    return reverb(out, mix=0.25, room=0.6)
+
+
 def zoom_motor():
     """Whine + gear ripple + a little brush noise. Every partial is a whole
     number of cycles per second and the noise is cross-faded, so the 1 s
@@ -262,3 +425,11 @@ if __name__ == '__main__':
     save('shutter_digital', shutter_digital(), peak=0.8)
     save('shutter_film', shutter_film(), peak=0.8)
     save('shutter_run', shutter_run(), peak=0.8)
+    save('cork_swoosh', cork_swoosh(), peak=0.8)
+    for name, fn in [('game_bop', game_bop), ('game_blip', game_blip), ('game_lose', game_lose),
+                     ('game_win', game_win), ('card_snap', card_snap), ('card_riffle', card_riffle),
+                     ('mine_boom', mine_boom), ('pin_flipper', pin_flipper), ('pin_bumper', pin_bumper),
+                     ('pin_chime', pin_chime), ('pin_sling', pin_sling), ('pin_drop', pin_drop),
+                     ('pin_warp', pin_warp), ('pin_launch', pin_launch), ('pin_drain', pin_drain),
+                     ('pin_start', pin_start)]:
+        save(name, fn(), peak=0.7)

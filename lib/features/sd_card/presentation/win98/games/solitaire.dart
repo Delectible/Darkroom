@@ -171,10 +171,22 @@ class SolitaireGame extends StatefulWidget {
 class _SolitaireGameState extends State<SolitaireGame> {
   Klondike _game = Klondike();
 
+  @override
+  void initState() {
+    super.initState();
+    Sfx.cardRiffle.play();
+  }
+
+  void _redeal() {
+    Sfx.cardRiffle.play();
+    setState(() => _game = Klondike());
+  }
+
   void _act(bool Function() move) {
     final ok = move();
     if (ok) {
-      Sfx.w98Click.play();
+      Sfx.cardSnap.play();
+      if (_game.won) Sfx.gameWin.play();
     } else {
       Sfx.w98Ding.play();
     }
@@ -278,7 +290,7 @@ class _SolitaireGameState extends State<SolitaireGame> {
           children.add(
             Positioned.fill(
               child: GestureDetector(
-                onTap: () => setState(() => _game = Klondike()),
+                onTap: _redeal,
                 child: Container(
                   color: Colors.black38,
                   alignment: Alignment.center,
@@ -303,7 +315,7 @@ class _SolitaireGameState extends State<SolitaireGame> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Win98Button(onPressed: () => setState(() => _game = Klondike()), child: const Text('Deal')),
+                Win98Button(onPressed: _redeal, child: const Text('Deal')),
                 const Spacer(),
                 Text('Moves: ${_game.moves}'),
               ],

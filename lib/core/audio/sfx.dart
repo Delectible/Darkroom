@@ -12,6 +12,9 @@ class Sfx {
   /// The two camera bodies changing places (mode switch). Kept quiet.
   static final cameraSwap = Sfx._('assets/sfx/camera_swap.wav', volume: 0.075);
 
+  /// The framed corkboard sliding in from the left (and back out).
+  static final corkSwoosh = Sfx._('assets/sfx/cork_swoosh.wav', volume: 0.12);
+
   // Projector deck piano keys: press (clunk) and release (lighter tick).
   static final keyDown = Sfx._('assets/sfx/deck_key_down.wav', volume: 0.275);
   static final keyUp = Sfx._('assets/sfx/deck_key_up.wav', volume: 0.225);
@@ -31,6 +34,24 @@ class Sfx {
   static final crtOff = Sfx._('assets/sfx/crt_off.wav', volume: 0.225);
 
   static List<Sfx> get windows98 => [w98Click, w98Ding, w98Error, w98Exit, w98Login];
+
+  // Games in Start > Run (tool/sfx/make_sfx.py game_* etc.).
+  static final gameBop = Sfx._('assets/sfx/game_bop.wav', volume: 0.1);
+  static final gameBlip = Sfx._('assets/sfx/game_blip.wav', volume: 0.1);
+  static final gameLose = Sfx._('assets/sfx/game_lose.wav', volume: 0.12);
+  static final gameWin = Sfx._('assets/sfx/game_win.wav', volume: 0.12);
+  static final cardSnap = Sfx._('assets/sfx/card_snap.wav', volume: 0.15);
+  static final cardRiffle = Sfx._('assets/sfx/card_riffle.wav', volume: 0.15);
+  static final mineBoom = Sfx._('assets/sfx/mine_boom.wav', volume: 0.15);
+  static final pinFlipper = Sfx._('assets/sfx/pin_flipper.wav', volume: 0.14);
+  static final pinBumper = Sfx._('assets/sfx/pin_bumper.wav', volume: 0.1);
+  static final pinChime = Sfx._('assets/sfx/pin_chime.wav', volume: 0.1);
+  static final pinSling = Sfx._('assets/sfx/pin_sling.wav', volume: 0.1);
+  static final pinDrop = Sfx._('assets/sfx/pin_drop.wav', volume: 0.12);
+  static final pinWarp = Sfx._('assets/sfx/pin_warp.wav', volume: 0.1);
+  static final pinLaunch = Sfx._('assets/sfx/pin_launch.wav', volume: 0.12);
+  static final pinDrain = Sfx._('assets/sfx/pin_drain.wav', volume: 0.12);
+  static final pinStart = Sfx._('assets/sfx/pin_start.wav', volume: 0.12);
 
   /// Digital bodies' zoom motor: loops while the zoom moves.
   static final zoomMotor = Sfx._('assets/sfx/zoom_motor.wav', volume: 0.06, loop: true);

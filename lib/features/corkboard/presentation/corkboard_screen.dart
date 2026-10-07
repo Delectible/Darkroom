@@ -25,6 +25,25 @@ import 'reel_painter.dart';
 /// Nothing reaches the phone's photo library until it is saved — per print,
 /// or with "Save all".
 class CorkboardScreen extends ConsumerStatefulWidget {
+  /// The board slides in from the left in its wooden frame (and back out).
+  static Route<void> slideIn() => PageRouteBuilder<void>(
+    transitionDuration: const Duration(milliseconds: 560),
+    reverseTransitionDuration: const Duration(milliseconds: 420),
+    pageBuilder: (context, _, _) => const CorkboardScreen(),
+    transitionsBuilder: (context, a, _, child) => SlideTransition(
+      position: Tween(
+        begin: const Offset(-1, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: a, curve: Curves.easeOutBack, reverseCurve: Curves.easeInCubic)),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 30, offset: Offset(10, 0))],
+        ),
+        child: child,
+      ),
+    ),
+  );
+
   const CorkboardScreen({super.key});
 
   @override
@@ -147,73 +166,175 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFF4A3220),
-      body: Stack(
-        children: [
-          Positioned.fill(child: _CorkWall(scroll: _scroll)),
-          SafeArea(
-            child: CustomScrollView(
-              controller: _scroll,
-              // Build (and decode) prints well before they scroll into view.
-              scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _Header(
-                    onBack: () => Navigator.of(context).pop(),
-                    unsaved: unsaved,
-                    total: developed.length,
-                    saving: _saving,
-                    onSaveAll: () => _saveAll(developed),
+      // A wooden frame round the whole board.
+      body: CustomPaint(
+        foregroundPainter: const _WoodFrame(thickness: _WoodFrame.width),
+        child: Padding(
+          padding: const EdgeInsets.all(_WoodFrame.width),
+          child: ClipRect(
+            child: Stack(
+              children: [
+                Positioned.fill(child: _CorkWall(scroll: _scroll)),
+                SafeArea(
+                  child: CustomScrollView(
+                    controller: _scroll,
+                    // Build (and decode) prints well before they scroll into view.
+                    scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: _Header(
+                          onBack: () => Navigator.of(context).pop(),
+                          unsaved: unsaved,
+                          total: developed.length,
+                          saving: _saving,
+                          onSaveAll: () => _saveAll(developed),
+                        ),
+                      ),
+                      if (inDarkroom.isNotEmpty)
+                        SliverToBoxAdapter(
+                          child: _DarkroomStrip(items: inDarkroom, now: now),
+                        ),
+                      if (developed.isEmpty)
+                        const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
+                          sliver: SliverGrid(
+                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 220,
+                              mainAxisSpacing: 26,
+                              crossAxisSpacing: 22,
+                              childAspectRatio: 0.78,
+                            ),
+                            delegate: SliverChildBuilderDelegate(childCount: developed.length, (context, i) {
+                              final m = developed[i];
+                              void open() => _open(context, developed, m);
+                              void unpin() => _unpin(m);
+                              final falling = _falling.contains(m.id);
+                              final pinned = m.isVideo
+                                  ? PinnedReel(item: m, onOpen: open, onPinTap: unpin, showPin: !falling)
+                                  : CameraCatalog.byId(m.cameraId).isInstant
+                                  ? PinnedInstant(item: m, onOpen: open, onPinTap: unpin, showPin: !falling)
+                                  : PinnedPrint(item: m, onOpen: open, onPinTap: unpin, showPin: !falling);
+                              final child = _Falling(
+                                falling: falling,
+                                pinColor: _pinColors[math.Random(m.id.hashCode).nextInt(_pinColors.length)],
+                                pinAt: m.isVideo ? Alignment.center : Alignment.topCenter,
+                                onFallen: () => _discard(m),
+                                child: pinned,
+                              );
+                              if (!_animatePin(m, i)) return KeyedSubtree(key: ValueKey(m.id), child: child);
+                              return _PinIn(
+                                key: ValueKey(m.id),
+                                delay: Duration(milliseconds: 40 * math.min(i, 8)),
+                                child: child,
+                              );
+                            }),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (inDarkroom.isNotEmpty)
-                  SliverToBoxAdapter(
-                    child: _DarkroomStrip(items: inDarkroom, now: now),
-                  ),
-                if (developed.isEmpty)
-                  const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
-                    sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 220,
-                        mainAxisSpacing: 26,
-                        crossAxisSpacing: 22,
-                        childAspectRatio: 0.78,
-                      ),
-                      delegate: SliverChildBuilderDelegate(childCount: developed.length, (context, i) {
-                        final m = developed[i];
-                        void open() => _open(context, developed, m);
-                        void unpin() => _unpin(m);
-                        final falling = _falling.contains(m.id);
-                        final pinned = m.isVideo
-                            ? PinnedReel(item: m, onOpen: open, onPinTap: unpin, showPin: !falling)
-                            : CameraCatalog.byId(m.cameraId).isInstant
-                            ? PinnedInstant(item: m, onOpen: open, onPinTap: unpin, showPin: !falling)
-                            : PinnedPrint(item: m, onOpen: open, onPinTap: unpin, showPin: !falling);
-                        final child = _Falling(
-                          falling: falling,
-                          pinColor: _pinColors[math.Random(m.id.hashCode).nextInt(_pinColors.length)],
-                          pinAt: m.isVideo ? Alignment.center : Alignment.topCenter,
-                          onFallen: () => _discard(m),
-                          child: pinned,
-                        );
-                        if (!_animatePin(m, i)) return KeyedSubtree(key: ValueKey(m.id), child: child);
-                        return _PinIn(
-                          key: ValueKey(m.id),
-                          delay: Duration(milliseconds: 40 * math.min(i, 8)),
-                          child: child,
-                        );
-                      }),
-                    ),
-                  ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
+}
+
+/// A plain wooden picture frame: mitred corners, a little grain, a lighter
+/// bevel on the inside edge.
+class _WoodFrame extends CustomPainter {
+  const _WoodFrame({required this.thickness});
+
+  static const width = 14.0;
+  final double thickness;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height, t = thickness;
+    final sides = <(Path, Alignment, Alignment)>[
+      (
+        Path()..addPolygon([Offset.zero, Offset(w, 0), Offset(w - t, t), Offset(t, t)], true),
+        Alignment.topCenter,
+        Alignment.bottomCenter,
+      ),
+      (
+        Path()..addPolygon([Offset(0, h), Offset(w, h), Offset(w - t, h - t), Offset(t, h - t)], true),
+        Alignment.bottomCenter,
+        Alignment.topCenter,
+      ),
+      (
+        Path()..addPolygon([Offset.zero, Offset(t, t), Offset(t, h - t), Offset(0, h)], true),
+        Alignment.centerLeft,
+        Alignment.centerRight,
+      ),
+      (
+        Path()..addPolygon([Offset(w, 0), Offset(w - t, t), Offset(w - t, h - t), Offset(w, h)], true),
+        Alignment.centerRight,
+        Alignment.centerLeft,
+      ),
+    ];
+    for (final (path, outside, inside) in sides) {
+      final bounds = path.getBounds();
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = LinearGradient(
+            begin: outside,
+            end: inside,
+            colors: const [Color(0xFF3B2414), Color(0xFF7A4F2E), Color(0xFFA77446)],
+            stops: const [0, 0.55, 1],
+          ).createShader(bounds),
+      );
+      // Grain running along each side.
+      canvas.save();
+      canvas.clipPath(path);
+      final grain = Paint()
+        ..color = const Color(0x33200F05)
+        ..strokeWidth = 1;
+      final horizontal = bounds.width > bounds.height;
+      for (var k = 0; k < 7; k++) {
+        final f = (k + 0.5) / 7;
+        final p = Path();
+        if (horizontal) {
+          final y = bounds.top + bounds.height * f;
+          p.moveTo(bounds.left, y);
+          for (var x = bounds.left; x <= bounds.right; x += 12) {
+            p.lineTo(x, y + 0.9 * math.sin(x * 0.045 + k * 1.7));
+          }
+        } else {
+          final x = bounds.left + bounds.width * f;
+          p.moveTo(x, bounds.top);
+          for (var y = bounds.top; y <= bounds.bottom; y += 12) {
+            p.lineTo(x + 0.9 * math.sin(y * 0.045 + k * 1.7), y);
+          }
+        }
+        canvas.drawPath(p, grain..style = PaintingStyle.stroke);
+      }
+      canvas.restore();
+    }
+    // Mitre joints and the inner lip.
+    final joint = Paint()
+      ..color = const Color(0x66000000)
+      ..strokeWidth = 1;
+    canvas.drawLine(Offset.zero, Offset(t, t), joint);
+    canvas.drawLine(Offset(w, 0), Offset(w - t, t), joint);
+    canvas.drawLine(Offset(0, h), Offset(t, h - t), joint);
+    canvas.drawLine(Offset(w, h), Offset(w - t, h - t), joint);
+    canvas.drawRect(
+      Rect.fromLTRB(t, t, w - t, h - t),
+      Paint()
+        ..color = const Color(0x88000000)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_WoodFrame old) => old.thickness != thickness;
 }
 
 /// Items land on the board with a small "pressed in" settle.

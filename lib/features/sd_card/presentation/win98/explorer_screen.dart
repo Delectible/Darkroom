@@ -14,6 +14,7 @@ import 'explorer_panes.dart';
 import 'pixel_icons.dart';
 import 'win98_viewer.dart';
 import 'games/bricks.dart';
+import 'games/minesweeper.dart';
 import 'games/pinball.dart';
 import 'games/solitaire.dart';
 import 'win98_programs.dart';
@@ -340,9 +341,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         return showBricks(context);
       case 'pinball' || 'spacecadet' || 'space cadet' || 'spacerabbit':
         return showPinball(context);
-      case 'minesweeper' || 'winmine':
-        await _box('Minesweeper', 'There is no Minesweeper. We checked.', icon: Win98MessageIcon.error);
-        return;
+      case 'minesweeper' || 'winmine' || 'mines':
+        return showMinesweeper(context);
     }
     if (!mounted) return;
     switch (cmd) {

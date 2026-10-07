@@ -249,6 +249,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// (saves battery and lets the gallery's video player own the media
   /// pipeline), then re-acquires on return.
   Future<void> _push(Widget page) async {
+    final cork = page is CorkboardScreen;
     final session = ref.read(cameraSessionProvider.notifier);
     if (ref.read(captureControllerProvider).isRecording) {
       await ref.read(captureControllerProvider.notifier).stopRecording();
@@ -256,7 +257,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     session.setScreenVisible(false);
     if (!mounted) return;
     _releaseEdges();
-    await Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
+    if (cork) Sfx.corkSwoosh.play();
+    await Navigator.of(
+      context,
+    ).push(cork ? CorkboardScreen.slideIn() : MaterialPageRoute<void>(builder: (_) => page));
+    if (cork) Sfx.corkSwoosh.play();
     _claimEdges();
     session.setScreenVisible(true);
   }

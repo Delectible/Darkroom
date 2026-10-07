@@ -180,6 +180,8 @@ Film Mode
   Gabe's scans, strong flicker, dust (dark + light), hairs, long scratches
   and the odd warm flare (`_renderDustFrames`).
 - Corkboard pins must sit **on** the photo, not in the cork above it.
+- The corkboard slides in from the left in a wooden frame
+  (`CorkboardScreen.slideIn`, `_WoodFrame`) with a woody swoosh.
 - The cork wall scrolls with the prints (shader tiles keyed to the scroll
   offset, with wear: pin holes, stains, faded patches). Easter eggs: tap a
   pin -> "Would you like to discard this image?" -> pin pops, print falls
@@ -226,8 +228,9 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   closes, login chime when it opens. All sounds are kept quiet (halved in
   1.3.22). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
   pixel rabbit + tune, then the CRT collapse). Start > Run knows RABBIT,
-  DEVELOP, PING, README, MINESWEEPER (`win98_programs.dart`), the games
-  SOL / BRICKS / PINBALL (`win98/games/`, tested in `win98_games_test`),
+  DEVELOP, PING, README (`win98_programs.dart`), the games SOL / BRICKS /
+  PINBALL (Space Rabbit: missions, ranks) / WINMINE (`win98/games/`, rules
+  and physics tested in `win98_games_test`), each with its own sounds,
   plus DEFRAG, WINVER, drive letters; Tip of the Day hints at them.
 - Win98 touch targets: menu titles open on touch-down and touching another
   title while a menu is open switches to it (`showWin98Menu` siblings);

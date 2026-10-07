@@ -400,4 +400,4 @@ darkroom, corkboard, ambience).
   front edge while the lug sits half the wall's depth back, so the ring
   floated beside the slot. The strap now has its own matrix at the lug's
   depth and the ring / cord loop is centred on the slot.
-  → 1.3.24 · 2026-10-07 · (this commit)
+  → 1.3.24 · 2026-10-07 · b340f7c

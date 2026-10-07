@@ -255,5 +255,5 @@ UI
 1. Tidier camcorder viewfinder in its artwork.
 2. Digital camera looks: tune against reference photos when Gabe sends them.
 3. First iOS run: the CI .ipa builds (build 19); still to try it on Gabe's iPhone.
-4. Play Console: first .aab uploaded by hand, then the service account
-   secret so CI uploads each build (see docs/DEVELOPMENT.md section 9).
+4. (Done 2026-10-07, build 35: CI uploads to Play internal testing.) If
+   Gabe drops the Cloud project, delete the secret and he uploads by hand.

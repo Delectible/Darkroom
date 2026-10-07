@@ -176,14 +176,17 @@ Film Mode
   (glowing rim) on the viewer's left, slivers of the neighbouring frames
   across frame lines. The viewfinder shader draws the same strip (uniforms
   `uCanvas`, `uTurns`: it rotates with the phone so the hole stays on the
-  viewer's left); FFmpeg composites it from `gate.png`. Faded look tuned to
+  viewer's left; `_StripTurn` swings it round when the phone turns); FFmpeg composites it from `gate.png`. Faded look tuned to
   Gabe's scans, strong flicker, dust (dark + light), hairs, long scratches
   and the odd warm flare (`_renderDustFrames`).
 - Corkboard pins must sit **on** the photo, not in the cork above it.
 - The corkboard slides in from the left in a wooden frame
-  (`CorkboardScreen.slideIn`, `_WoodFrame`) with a woody swoosh.
+  (`CorkboardScreen.slideIn`, `_WoodFrame`): slow, no overshoot, woody
+  swoosh, soft thud as it lands (`Sfx.corkThud`). No bounce or stretch when
+  scrolling past the ends.
 - The cork wall scrolls with the prints (shader tiles keyed to the scroll
-  offset, with wear: pin holes, stains, faded patches). Easter eggs: tap a
+  offset): granulated cork after Gabe's sample, with wear: pin holes,
+  coffee rings, water marks, faded patches. Easter eggs: tap a
   pin -> "Would you like to discard this image?" -> pin pops, print falls
   (same as Throw away); tap a print's folded corner to see the back (lab
   stamp; instant prints show their black backing).

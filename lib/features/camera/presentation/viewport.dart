@@ -78,30 +78,44 @@ class CameraViewport extends ConsumerWidget {
                 fit: StackFit.expand,
                 children: [
                   ColoredBox(color: palette.screen),
-                  if (session.isReady)
-                    _FocusablePreview(
-                      controller: controller!,
-                      child: LiveLookPreview(
-                        spec: spec,
-                        grain: local.grain,
-                        crop: mask,
-                        canvas: strip,
-                        turns: turns,
-                        child: _RotationCorrectedPreview(controller: controller),
-                      ),
-                    )
-                  else
-                    _Standby(session: session),
-                  IgnorePointer(
-                    child: CustomPaint(
-                      painter: _AspectMaskPainter(
-                        hole: maskRect,
-                        shade: palette.screen.withValues(alpha: spec.mode == AppMode.film ? 0.93 : 0.86),
-                        frame: spec.mode == AppMode.film
-                            ? palette.screenInk.withValues(alpha: 0.55)
-                            : palette.screenInk.withValues(alpha: 0.8),
-                        brackets: spec.mode == AppMode.digital,
-                      ),
+                  // Super 8: when the phone turns, the strip swings round into
+                  // its new place instead of jumping.
+                  _StripTurn(
+                    turns: turns,
+                    cameraId: spec.id,
+                    strip: maskRect.size,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        if (session.isReady)
+                          _FocusablePreview(
+                            controller: controller!,
+                            child: LiveLookPreview(
+                              spec: spec,
+                              grain: local.grain,
+                              crop: mask,
+                              canvas: strip,
+                              turns: turns,
+                              child: _RotationCorrectedPreview(controller: controller),
+                            ),
+                          )
+                        else
+                          _Standby(session: session),
+                        IgnorePointer(
+                          child: CustomPaint(
+                            painter: _AspectMaskPainter(
+                              hole: maskRect,
+                              shade: palette.screen.withValues(
+                                alpha: spec.mode == AppMode.film ? 0.93 : 0.86,
+                              ),
+                              frame: spec.mode == AppMode.film
+                                  ? palette.screenInk.withValues(alpha: 0.55)
+                                  : palette.screenInk.withValues(alpha: 0.8),
+                              brackets: spec.mode == AppMode.digital,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Positioned.fromRect(
@@ -123,6 +137,68 @@ class CameraViewport extends ConsumerWidget {
       },
     );
   }
+}
+
+/// Swings the Super 8 viewfinder round when the phone is turned: the new
+/// layout starts rotated back to where the old one was (and scaled to its
+/// size), then turns and grows into place, so the strip follows the phone
+/// instead of snapping.
+class _StripTurn extends StatefulWidget {
+  const _StripTurn({required this.turns, required this.cameraId, required this.strip, required this.child});
+
+  final int turns;
+  final String cameraId;
+
+  /// The strip's size on screen in this layout.
+  final Size strip;
+  final Widget child;
+
+  @override
+  State<_StripTurn> createState() => _StripTurnState();
+}
+
+class _StripTurnState extends State<_StripTurn> with SingleTickerProviderStateMixin {
+  late final AnimationController _a = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+    value: 1,
+  );
+  double _fromAngle = 0, _fromScale = 1;
+
+  @override
+  void didUpdateWidget(_StripTurn old) {
+    super.didUpdateWidget(old);
+    if (old.turns == widget.turns || old.cameraId != widget.cameraId) return;
+    final delta = (widget.turns - old.turns) % 4; // clockwise quarter turns
+    _fromAngle = -(delta == 3 ? -1 : delta) * math.pi / 2;
+    final o = old.strip, n = widget.strip;
+    _fromScale = delta.isOdd && n.width > 0 && n.height > 0
+        ? math.min(o.width / n.height, o.height / n.width).clamp(0.3, 3.0)
+        : 1.0;
+    _a.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _a.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _a,
+    child: widget.child,
+    builder: (context, child) {
+      if (_a.value >= 1) return child!;
+      final t = Curves.easeInOutCubic.transform(_a.value);
+      final scale = _fromScale + (1 - _fromScale) * t;
+      return Transform(
+        alignment: Alignment.center,
+        transform: Matrix4.rotationZ(_fromAngle * (1 - t))..scaleByDouble(scale, scale, 1, 1),
+        child: child,
+      );
+    },
+  );
 }
 
 /// Rotation contract with camera_android_camerax for a portrait-locked UI.

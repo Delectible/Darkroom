@@ -18,7 +18,8 @@ no samples, no Microsoft sounds, just numpy).
                                 the advance lever ratcheting back
   shutter_run                   Super 8 run button: a soft latch clunk
   cork_swoosh                   the framed corkboard sliding in: a deep,
-                                woody whoosh and a soft knock as it lands
+                                woody whoosh
+  cork_thud                     the board landing against its stop
   game_*                        Win98 games: bricks (bop, blip, lose, win),
                                 cards (snap, riffle), mines (boom),
                                 pinball (flipper, bumper, chime, warp,
@@ -238,25 +239,36 @@ def shutter_run():
 
 
 def cork_swoosh():
-    x = t(0.75)
+    x = t(0.9)
     n = len(x)
-    # A low, breathy sweep (filtered noise rising then falling in pitch).
-    raw = noise(0.75)
+    # A low, breathy sweep (filtered noise rising then falling in pitch),
+    # lasting as long as the board takes to slide in.
+    raw = noise(0.9)
     sweep = np.zeros(n)
-    cut = 250 + 900 * np.sin(np.pi * np.clip(x / 0.55, 0, 1))
+    cut = 220 + 760 * np.sin(np.pi * np.clip(x / 0.85, 0, 1))
     acc = 0.0
     for i in range(n):
         a = np.exp(-2 * np.pi * cut[i] / SR)
         acc = (1 - a) * raw[i] + a * acc
         sweep[i] = acc
-    shape = np.sin(np.pi * np.clip(x / 0.55, 0, 1)) ** 1.5
-    out = sweep * shape
-    # Wooden knock as the frame lands: a hollow low tone with a click.
-    knock = (np.sin(2 * np.pi * 180 * t(0.12)) + 0.5 * np.sin(2 * np.pi * 410 * t(0.12))) * env(int(SR * 0.12), 0.001, 0.025)
-    click = bandpass(noise(0.008), 800, 3500) * env(int(SR * 0.008), 0.0003, 0.002)
-    place(out, 0.35 * knock, 0.5)
-    place(out, 0.25 * click, 0.5)
-    return reverb(out, mix=0.12, room=0.4)
+    shape = np.sin(np.pi * np.clip(x / 0.85, 0, 1)) ** 1.5
+    return reverb(sweep * shape, mix=0.12, room=0.4)
+
+
+def cork_thud():
+    # The framed board hitting its stop: a short hollow body (a low, quickly
+    # falling tone), a little resonance from the frame, a soft contact tick.
+    x = t(0.3)
+    n = len(x)
+    pitch = 95 + 45 * np.exp(-x / 0.02)
+    body = np.sin(2 * np.pi * np.cumsum(pitch) / SR) * np.exp(-x / 0.06)
+    wood = (0.35 * np.sin(2 * np.pi * 235 * x) + 0.18 * np.sin(2 * np.pi * 530 * x)) * np.exp(-x / 0.03)
+    out = body + wood
+    out[: int(SR * 0.002)] *= np.linspace(0, 1, int(SR * 0.002))
+    tick = lowpass(bandpass(noise(0.012), 400, 2500), 2000) * env(int(SR * 0.012), 0.0005, 0.004)
+    place(out, 0.4 * tick, 0.0)
+    out = lowpass(out, 1800)
+    return reverb(out[:n], mix=0.1, room=0.3)
 
 
 def square(freq, seconds, duty=0.5):
@@ -426,6 +438,7 @@ if __name__ == '__main__':
     save('shutter_film', shutter_film(), peak=0.8)
     save('shutter_run', shutter_run(), peak=0.8)
     save('cork_swoosh', cork_swoosh(), peak=0.8)
+    save('cork_thud', cork_thud(), peak=0.8)
     for name, fn in [('game_bop', game_bop), ('game_blip', game_blip), ('game_lose', game_lose),
                      ('game_win', game_win), ('card_snap', card_snap), ('card_riffle', card_riffle),
                      ('mine_boom', mine_boom), ('pin_flipper', pin_flipper), ('pin_bumper', pin_bumper),

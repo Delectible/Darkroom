@@ -9,7 +9,8 @@ class AppInfo {
   static const revisions = <(String, String)>[
     (
       '1.3',
-      'The corkboard slides in from the left in a wooden frame. Real Minesweeper (WINMINE), Space Rabbit Pinball rebuilt with missions and ranks, sounds for every game, and the strap hangs from its lug. '
+      'A finer, granular cork board (coffee rings and all) that no longer bounces past its ends, a slower slide-in that lands with a soft wooden thud, and the Super 8 viewfinder swings round when you turn the phone. '
+          'The corkboard slides in from the left in a wooden frame. Real Minesweeper (WINMINE), Space Rabbit Pinball rebuilt with missions and ranks, sounds for every game, and the strap hangs from its lug. '
           'New shutters: a compact shutter key, a chrome release with a film-advance lever, and a red RUN button for Super 8. Leather strap and braided cord, and the mode tag springs out of the way during a swap. '
           'Volume buttons really do take the picture now, quieter sounds, steadier zoom at the ends, and a pixel-art shutdown screen. '
           'Three games in Start > Run (SOL, BRICKS, PINBALL), bigger Windows 98 menus and buttons, and a whirring zoom motor. '

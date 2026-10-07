@@ -14,6 +14,7 @@ class Sfx {
 
   /// The framed corkboard sliding in from the left (and back out).
   static final corkSwoosh = Sfx._('assets/sfx/cork_swoosh.wav', volume: 0.12);
+  static final corkThud = Sfx._('assets/sfx/cork_thud.wav', volume: 0.16);
 
   // Projector deck piano keys: press (clunk) and release (lighter tick).
   static final keyDown = Sfx._('assets/sfx/deck_key_down.wav', volume: 0.275);

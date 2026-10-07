@@ -401,3 +401,23 @@ darkroom, corkboard, ambience).
   floated beside the slot. The strap now has its own matrix at the lug's
   depth and the ring / cord loop is centred on the slot.
   → 1.3.24 · 2026-10-07 · b340f7c
+
+## 16. Cork, slide-in, Super 8 turning (2026-10-07)
+
+- [x] **16.1 Super 8 viewfinder turning:** turning the phone used to snap
+  the film strip into its new orientation (it sat still until the phone was
+  most of the way round). Now the new layout starts where the old one was
+  and swings round (rotating and growing into place, `_StripTurn` in
+  viewport.dart).
+- [x] **16.2 Corkboard overscroll:** no more bounce or stretch past the
+  ends (clamping physics, no overscroll indicator), so the prints never
+  drift off the cork.
+- [x] **16.3 Cork texture:** rebuilt after Gabe's sample: small, irregular
+  pressed granules of varied size and tone (pale tan to orange-brown, the
+  odd dark one), domed and lit from the top left, with dark crevices that
+  are tight in places and open in others; rendered at 2x. Kept the wear:
+  coffee rings (wobbly rims, the odd double ring and drip), water marks,
+  pin holes, sun-faded patches.
+- [x] **16.4 Corkboard slide-in:** slower (860 ms), no overshoot: it eases
+  in and comes to rest against the edge, with a soft wooden thud and a light
+  haptic as it lands (`cork_thud.wav`; the swoosh no longer has a knock).

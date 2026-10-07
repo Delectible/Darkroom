@@ -257,10 +257,29 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     session.setScreenVisible(false);
     if (!mounted) return;
     _releaseEdges();
-    if (cork) Sfx.corkSwoosh.play();
-    await Navigator.of(
-      context,
-    ).push(cork ? CorkboardScreen.slideIn() : MaterialPageRoute<void>(builder: (_) => page));
+    if (cork) {
+      Sfx.corkSwoosh.play();
+      unawaited(Sfx.corkThud.preload());
+    }
+    final ModalRoute<void> route = cork
+        ? CorkboardScreen.slideIn()
+        : MaterialPageRoute<void>(builder: (_) => page);
+    final done = Navigator.of(context).push(route);
+    // The framed board lands against the edge with a soft wooden thud
+    // (started a beat early: the player takes a moment to start).
+    final slide = route.animation;
+    if (cork && slide != null) {
+      void landed() {
+        if (slide.status == AnimationStatus.forward && slide.value >= 0.93) {
+          slide.removeListener(landed);
+          Sfx.corkThud.play();
+          unawaited(HapticFeedback.lightImpact());
+        }
+      }
+
+      slide.addListener(landed);
+    }
+    await done;
     if (cork) Sfx.corkSwoosh.play();
     _claimEdges();
     session.setScreenVisible(true);

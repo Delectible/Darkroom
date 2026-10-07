@@ -395,4 +395,4 @@ darkroom, corkboard, ambience).
   promote you Cadet -> Admiral; start-up tune, flipper, bumper, sling,
   target, warp, launch and drain sounds. Bricks bops and blips, cards snap
   and riffle, mines go boom; win and lose jingles.
-  → 1.3.24 · 2026-10-07 · (this commit)
+  → 1.3.24 · 2026-10-07 · 98b1939

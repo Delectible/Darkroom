@@ -28,10 +28,13 @@ jobs:
       - name: Upload the listing
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/play.json"
+          # supply attaches the listing to a track's release; production has
+          # none yet, so point it at internal testing.
           fastlane run supply \
             package_name:com.dingo.darkroom \
             json_key:"$RUNNER_TEMP/play.json" \
             metadata_path:fastlane/metadata/android \
+            track:internal \
             skip_upload_apk:true \
             skip_upload_aab:true \
             skip_upload_changelogs:true \

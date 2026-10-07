@@ -526,3 +526,4 @@ swipe is LEFT in digital mode (right still swaps to film).
   at-rest snapshot (`_moveStill`); the arriving body its last picture.
 - [x] **20.14 AppInfo.version** was stuck at 1.3.24; a test now ties it to
   pubspec.
+  → 20.1-20.7, 20.9, 20.10, 20.12-20.14: 1.3.30 · 2026-10-07 · 401a16c

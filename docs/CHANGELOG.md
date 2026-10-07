@@ -530,7 +530,9 @@ swipe is LEFT in digital mode (right still swaps to film).
   at speed); held sideways it rises from the user's bottom edge and the
   hero flight is skipped (it flew sideways then snapped).
 - [x] **20.13 Sprocket hole during a toss:** the moving body shows its
-  at-rest snapshot (`_moveStill`); the arriving body its last picture.
+  at-rest snapshot; since 1.3.31 only the viewfinder is frozen
+  (`CameraViewport.freeze`) and the controls stay live.
 - [x] **20.14 AppInfo.version** was stuck at 1.3.24; a test now ties it to
   pubspec.
   → 20.1-20.7, 20.9, 20.10, 20.12-20.14: 1.3.30 · 2026-10-07 · 401a16c
+  → 20.8, 20.11: 1.3.31 · 2026-10-07 · bab2c93

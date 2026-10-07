@@ -332,4 +332,4 @@ darkroom, corkboard, ambience).
   and an original shutdown tune, "It's now safe to turn off your
   computer", then the CRT switching off (picture collapses to a white line,
   then a dot). Tap to skip ahead.
-  → 1.3.20 · 2026-10-07 · (this commit)
+  → 1.3.20 · 2026-10-07 · 381b2fe

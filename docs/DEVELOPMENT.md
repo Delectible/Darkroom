@@ -263,7 +263,7 @@ flutter test                              # unit tests
 dart run tool/pipeline_smoke.dart          # renders every stock from a synthetic 12MP frame
 dart run tool/film_preview.dart sheet.jpg a.jpg b.png  # film looks contact sheet
 dart run tool/video_plan_smoke.dart clip.mp4 640 480   # Super 8 + camcorder; needs desktop ffmpeg
-python3 tool/icon/make_icons.py            # every Android/iOS icon + GitHub social preview (Pillow + numpy)
+python3 tool/icon/make_icons.py            # every Android/iOS icon, GitHub preview, Play icon + feature graphic (Pillow + numpy)
 ```
 
 **App icon.** A rabbit with X'd‑out eyes, split into red/green/blue copies like
@@ -303,7 +303,11 @@ Android build pass, everything is published as a GitHub release `build-N`
   `r0adkll/upload-google-play`, using the secret `PLAY_SERVICE_ACCOUNT_JSON`
   (a Google Cloud service account with the Play Android Developer API
   enabled, invited in Play Console > Users and permissions with release
-  rights for the app). Release notes are the commit subject. While the app
+  rights for the app). Release notes ("What's new") are the version plus
+  the newest line of `AppInfo.revisions` (`tool/play/whats_new.py`). The
+  store listing text, icon and feature graphic are in
+  `fastlane/metadata/android/en-US/` and `play-listing.yml` publishes them
+  when they change (fastlane supply). While the app
   is still a draft in the console, set the repository variable
   `PLAY_RELEASE_STATUS=draft`. Privacy policy: `docs/PRIVACY.md`.
 * **iOS:** the `.ipa` is unsigned; sideload it with Sideloadly and an Apple ID.

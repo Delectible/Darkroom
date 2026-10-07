@@ -275,3 +275,8 @@ darkroom, corkboard, ambience).
   the engine no longer needs the shaders' GLES y-flip, so ours flipped the
   picture. Removed it (photos were fine: they're rendered on the CPU).
   → 1.3.18 · 2026-10-07 · 479ca98
+- [x] **11.4 Play Store page from the repo:** title, short and full
+  description, icon and feature graphic in `fastlane/metadata/android/en-US/`,
+  published by `play-listing.yml`; Play's "What's new" is now the version
+  plus the newest About line (was the commit subject). → (no app change) ·
+  2026-10-07 · (this commit)

@@ -1,7 +1,7 @@
 name: Build
 on:
   push:
-    paths-ignore: ['**.md', 'docs/**']
+    paths-ignore: ['**.md', 'docs/**', 'fastlane/**', '.github/workflows/play-listing.yml']
   workflow_dispatch:
     inputs:
       ios:
@@ -106,6 +106,7 @@ jobs:
   # (a service account invited in Play Console > Users and permissions);
   # without it the job just says so. Only builds from main go to Play.
   # Play only accepts API uploads once the first .aab was uploaded by hand.
+  # The store listing itself is published by play-listing.yml.
   play:
     needs: [check, android]
     if: github.ref == 'refs/heads/main' && needs.check.result == 'success' && needs.android.result == 'success'
@@ -121,14 +122,17 @@ jobs:
       - uses: actions/download-artifact@v4
         if: steps.sa.outputs.ok == 'true'
         with: { name: android, path: dist }
-      - name: Release notes from the commit subject
+      - uses: actions/checkout@v4
         if: steps.sa.outputs.ok == 'true'
-        env:
-          MSG: ${{ github.event.head_commit.message || 'Manual build' }}
+        with: { path: src }
+      # "What's new" = version + the newest line of AppInfo.revisions (the
+      # same words as Help > About in the app).
+      - name: Release notes
+        if: steps.sa.outputs.ok == 'true'
         run: |
           mkdir whatsnew
-          subject="${MSG%%$'\n'*}"
-          printf '%s\n' "${subject:0:480}" > whatsnew/whatsnew-en-US
+          python3 -I src/tool/play/whats_new.py > whatsnew/whatsnew-en-US
+          cat whatsnew/whatsnew-en-US
       - uses: r0adkll/upload-google-play@v1
         if: steps.sa.outputs.ok == 'true'
         with:

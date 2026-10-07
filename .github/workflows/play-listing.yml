@@ -1,0 +1,39 @@
+name: Play Store listing
+# Publishes the store listing in fastlane/metadata/android (title, short and
+# full description, icon, feature graphic) to Google Play with the same
+# service account the build uploads with. Runs when those files change on
+# main, or by hand from the Actions tab. App builds are not touched.
+on:
+  push:
+    branches: [main]
+    paths: ['fastlane/metadata/**', '.github/workflows/play-listing.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: play-listing
+  cancel-in-progress: false
+
+jobs:
+  listing:
+    runs-on: ubuntu-latest
+    env:
+      SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: Look for the Play service account
+        run: |
+          if [ -z "$SA" ]; then echo "::error::No PLAY_SERVICE_ACCOUNT_JSON secret."; exit 1; fi
+      - uses: actions/checkout@v4
+      - run: sudo gem install fastlane --no-document --quiet
+      - name: Upload the listing
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/play.json"
+          fastlane run supply \
+            package_name:com.dingo.darkroom \
+            json_key:"$RUNNER_TEMP/play.json" \
+            metadata_path:fastlane/metadata/android \
+            skip_upload_apk:true \
+            skip_upload_aab:true \
+            skip_upload_changelogs:true \
+            skip_upload_screenshots:true \
+            sync_image_upload:true

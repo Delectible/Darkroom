@@ -50,8 +50,13 @@ Read this first. It's the hand-off from the earlier development sessions
 - **Google Play** is the main way Gabe installs now (internal testing
   track). The `play` job in the workflow uploads every `main` build's .aab
   (secret `PLAY_SERVICE_ACCOUNT_JSON`, repo variable `PLAY_RELEASE_STATUS`,
-  default `completed`). Release notes = commit subject, so keep subjects
-  readable. Privacy policy for the listing: `docs/PRIVACY.md`.
+  default `completed`). Play's "What's new" = version + the **first string
+  of the newest `AppInfo.revisions` entry** (`tool/play/whats_new.py`), so
+  put each version's change, in plain words, at the top of that entry.
+  The store listing (title, descriptions, icon, feature graphic) lives in
+  `fastlane/metadata/android/en-US/`; `play-listing.yml` publishes it when
+  it changes (fastlane supply, same service account). Screenshots aren't in
+  the repo yet. Privacy policy for the listing: `docs/PRIVACY.md`.
 - Release builds are signed with Gabe's **private upload key** (alias
   `upload`), which CI decodes from the repo secrets `ANDROID_KEYSTORE_BASE64`
   and `ANDROID_KEYSTORE_PASSWORD`. Never commit it. Without the secrets

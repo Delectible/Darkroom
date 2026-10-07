@@ -13,6 +13,8 @@ Writes:
            Tinted appearances (Xcode 16+).
   GitHub   docs/social_preview.png (1280x640), the repository's social
            preview: Settings > General > Social preview.
+  Play     512 icon + 1024x500 feature graphic for the store listing
+           (fastlane/metadata/android/en-US/images).
 """
 import json, os, shutil
 import numpy as np
@@ -164,9 +166,11 @@ def status_glyph(px):
 
 
 def social_preview(w=1280, h=640):
-    """GitHub social preview card: the rabbit, the name in the app's pixel
-    font with the same colour split, and the one-line pitch."""
+    """Banner: the rabbit, the name in the app's pixel font with the same
+    colour split, and the one-line pitch. 1280x640 for GitHub's social
+    preview, 1024x500 for the Play Store feature graphic."""
     S = 2
+    k = h / 640
     W, H = w * S, h * S
     t = np.linspace(0, 1, H, dtype=np.float32)[:, None, None]
     top, bot = np.array(BG_TOP, np.float32), np.array(BG_BOT, np.float32)
@@ -181,8 +185,8 @@ def social_preview(w=1280, h=640):
     img[:, x0:x0 + side] = region * (1 - a[..., None]) + rgb
 
     # Name: three offset copies of the text, added like light.
-    font = ImageFont.truetype(os.path.join(ROOT, 'assets', 'fonts', 'DotGothic16-Regular.ttf'), 150 * S)
-    small = ImageFont.truetype(os.path.join(ROOT, 'assets', 'fonts', 'DotGothic16-Regular.ttf'), 34 * S)
+    font = ImageFont.truetype(os.path.join(ROOT, 'assets', 'fonts', 'DotGothic16-Regular.ttf'), round(150 * k * S))
+    small = ImageFont.truetype(os.path.join(ROOT, 'assets', 'fonts', 'DotGothic16-Regular.ttf'), round(34 * k * S))
     tx, ty = round(W * 0.47), round(H * 0.30)
 
     def text_mask(txt, f, dx=0, dy=0):
@@ -190,14 +194,14 @@ def social_preview(w=1280, h=640):
         ImageDraw.Draw(m).text((tx + dx, ty + dy), txt, font=f, fill=255)
         return np.asarray(m, np.float32) / 255
 
-    off = 4 * S
+    off = round(4 * k * S)
     split = np.stack([text_mask('Darkroom', font, -off), text_mask('Darkroom', font),
                       text_mask('Darkroom', font, off)], -1)
     glow = split.max(-1)
     img = img * (1 - glow[..., None]) + split * 255 * _scanlines(H, D)[:, :, :1]
     lines = ['A camera app that makes you', 'wait for your photos.']
     for i, line in enumerate(lines):
-        m = text_mask(line, small, 6 * S, round(H * 0.33) + i * 48 * S)
+        m = text_mask(line, small, round(6 * k * S), round(H * 0.33) + round(i * 48 * k * S))
         img = img * (1 - m[..., None]) + m[..., None] * np.array((200, 196, 188), np.float32)
     out = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8), 'RGB')
     return out.resize((w, h), Image.LANCZOS)
@@ -249,8 +253,11 @@ def main():
                               entry('AppIcon-Tinted-1024.png', 'tinted')],
                    'info': {'version': 1, 'author': 'xcode'}}, f, indent=2)
 
-    save(full_icon(512), 'tool', 'icon', 'play_store_512.png')
     save(social_preview(), 'docs', 'social_preview.png')
+    # Play Store listing images (published by .github/workflows/play-listing.yml).
+    play = ['fastlane', 'metadata', 'android', 'en-US', 'images']
+    save(full_icon(512), *play, 'icon.png')
+    save(social_preview(1024, 500), *play, 'featureGraphic.png')
     print('icons written')
 
 

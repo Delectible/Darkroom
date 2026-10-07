@@ -451,3 +451,4 @@ darkroom, corkboard, ambience).
 - [ ] **17.9 More settings:** suggestions sent to Gabe.
 - [x] **17.10 Super 8 grain:** 0.75x on every strength (0.085 -> 0.064).
 - [ ] **17.11 Super 8 / camcorder audio:** options sent to Gabe.
+  → 17.1, 17.3-17.8, 17.10: 1.3.26 · 2026-10-07 · 3bf7683

@@ -176,14 +176,17 @@ Film Mode
   (glowing rim) on the viewer's left, slivers of the neighbouring frames
   across frame lines. The viewfinder shader draws the same strip (uniforms
   `uCanvas`, `uTurns`: it rotates with the phone so the hole stays on the
-  viewer's left; `_StripTurn` swings it round when the phone turns); FFmpeg composites it from `gate.png`. Faded look tuned to
+  viewer's left; `_StripTurn` swings it round when the phone turns, in the shader via
+  `uSpin` so the hole turns with the strip); FFmpeg composites it from `gate.png`. Faded look tuned to
   Gabe's scans, strong flicker, dust (dark + light), hairs, long scratches
   and the odd warm flare (`_renderDustFrames`).
 - Corkboard pins must sit **on** the photo, not in the cork above it.
 - The corkboard slides in from the left in a wooden frame
   (`CorkboardScreen.slideIn`, `_WoodFrame`): slow, no overshoot, woody
   swoosh, soft thud as it lands (`Sfx.corkThud`). No bounce or stretch when
-  scrolling past the ends.
+  scrolling past the ends; content scrolls to the frame, under the system
+  bars. Film mode: a clear swipe right on the camera opens it (triggered,
+  not dragged), a swipe left on the board closes it.
 - The cork wall scrolls with the prints (shader tiles keyed to the scroll
   offset): granulated cork after Gabe's sample, with wear: pin holes,
   coffee rings, water marks, faded patches. Easter eggs: tap a
@@ -229,7 +232,7 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   never Microsoft's): click on Win98Button / menu / Start items, error bong
   / warning ding from `showWin98MessageBox`, exit chime when the explorer
   closes, login chime when it opens. All sounds are kept quiet (halved in
-  1.3.22). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
+  1.3.22, then `Sfx.master` 0.7 in 1.3.26). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
   pixel rabbit + tune, then the CRT collapse). Start > Run knows RABBIT,
   DEVELOP, PING, README (`win98_programs.dart`), the games SOL / BRICKS /
   PINBALL (Space Rabbit: missions, ranks) / WINMINE (`win98/games/`, rules
@@ -247,7 +250,7 @@ UI
   driven by `_swap` in camera_screen.dart). Drag the body sideways: it
   follows the thumb and tips away in perspective; a flick or a long drag
   tosses it and the other body comes in on the same motion (spring settle),
-  else it springs back. Each body continues past the screen: rounded end,
+  else it springs back (and can be grabbed again mid-spring). Each body continues past the screen: rounded end,
   side wall with strap lug, neck strap (film) / wrist cord (digital). Until
   the toss commits the arriving body is a picture of it from last time
   (`_lastLook`, or `BodyStandIn`); on commit the leaving body becomes a

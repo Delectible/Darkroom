@@ -479,3 +479,4 @@ darkroom, corkboard, ambience).
   route; the corkboard stays behind, dimmed.
 - [x] **18.9 Corkboard thud too quiet:** its modes were below what a phone
   speaker plays; moved up to ~175-1300 Hz and made louder.
+  → 18.1-18.4, 18.7-18.9: 1.3.27 · 2026-10-07 · 466b3f3

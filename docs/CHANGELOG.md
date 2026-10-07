@@ -421,3 +421,4 @@ darkroom, corkboard, ambience).
 - [x] **16.4 Corkboard slide-in:** slower (860 ms), no overshoot: it eases
   in and comes to rest against the edge, with a soft wooden thud and a light
   haptic as it lands (`cork_thud.wav`; the swoosh no longer has a knock).
+  → 1.3.25 · 2026-10-07 · 27dcc29

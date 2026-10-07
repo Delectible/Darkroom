@@ -485,3 +485,4 @@ darkroom, corkboard, ambience).
 
 - [x] **19.1** Swiping right in film mode (the corkboard gesture) no longer
   nudges the camera body before the board comes in.
+  → 1.3.28 · 2026-10-07 · e8f614b

@@ -365,7 +365,7 @@ darkroom, corkboard, ambience).
 - [x] **15.6 Rabbit badge:** off the top bar; it's now pressed into the cap
   of the lens-flip button.
 - [x] **15.7 Win98 login chime** when the explorer opens.
-  → 1.3.22 · 2026-10-07 · (this commit)
+  → 1.3.22 · 2026-10-07 · aea0f03
 - [ ] 15.8 Mode tag floats off the body and tucks away (bouncy) during a swap.
 - [ ] 15.9 New shutters: digital square photoreal + deep click; film chrome
   release with advance lever + mechanical click; Super 8 red run button.

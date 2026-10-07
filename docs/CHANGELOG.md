@@ -396,3 +396,8 @@ darkroom, corkboard, ambience).
   target, warp, launch and drain sounds. Bricks bops and blips, cards snap
   and riffle, mines go boom; win and lose jingles.
   → 1.3.24 · 2026-10-07 · 98b1939
+- [x] **15.14 Strap through the lug:** the strap was drawn at the body's
+  front edge while the lug sits half the wall's depth back, so the ring
+  floated beside the slot. The strap now has its own matrix at the lug's
+  depth and the ring / cord loop is centred on the slot.
+  → 1.3.24 · 2026-10-07 · (this commit)

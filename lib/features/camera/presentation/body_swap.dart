@@ -149,6 +149,9 @@ class BodyPose {
 /// One camera body: the screen-sized [face] plus, while moving, the end of
 /// the body on [capSide] (-1 left, +1 right, 0 none), its side wall, lug and
 /// strap, tipped in perspective about the screen centre.
+/// The lug's slot sits this far below `lugY` (see _SideWallPainter).
+const _lugSlot = 2.0;
+
 class SwapBody extends StatelessWidget {
   const SwapBody({
     super.key,
@@ -250,12 +253,24 @@ class SwapBody extends StatelessWidget {
                 clipBehavior: moving ? Clip.antiAlias : Clip.none,
                 child: face,
               ),
-              if (moving)
-                // Strap from the lug, trailing behind the motion.
+            ],
+          ),
+        ),
+        if (moving)
+          // The strap hangs from the lug, which sits half the wall's depth
+          // back from the face: give it that depth (its own full matrix,
+          // as Flutter flattens nested 3D transforms) so the ring goes
+          // through the lug's slot instead of floating at the front edge.
+          Transform(
+            transform: m.clone()..translateByDouble(0, 0, geo.thickness / 2, 1),
+            child: Stack(
+              clipBehavior: Clip.none,
+              fit: StackFit.expand,
+              children: [
                 Positioned(
                   left: end - 90,
                   width: 180,
-                  top: lugY,
+                  top: lugY + _lugSlot,
                   height: h,
                   child: IgnorePointer(
                     child: CustomPaint(
@@ -269,9 +284,9 @@ class SwapBody extends StatelessWidget {
                     ),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -442,7 +457,7 @@ class _SideWallPainter extends CustomPainter {
         ..strokeWidth = 1,
     );
     final slot = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: c.translate(0, 2), width: 9, height: 12),
+      Rect.fromCenter(center: c.translate(0, _lugSlot), width: 9, height: 12),
       const Radius.circular(4),
     );
     canvas.drawRRect(slot, Paint()..color = const Color(0xFF0B0A09));
@@ -493,8 +508,8 @@ class _StrapPainter extends CustomPainter {
   /// the strap itself (rounded, stitched both edges) and a buckle further
   /// down.
   void _leatherStrap(Canvas canvas, Size size, Offset top, double lag) {
-    final ringC = top.translate(0, 8);
-    final start = ringC.translate(0, 9);
+    final ringC = top; // threaded through the lug's slot
+    final start = ringC.translate(0, 7);
     final mid = Offset(top.dx + side * 26 + lag, size.height * 0.35);
     final bottom = Offset(top.dx + side * 10 + lag * 1.6, size.height * 0.9);
     final path = Path()
@@ -585,9 +600,9 @@ class _StrapPainter extends CustomPainter {
     });
     // Triangular split ring through the lug.
     final ring = Path()
-      ..moveTo(ringC.dx, ringC.dy - 7)
-      ..lineTo(ringC.dx + 8, ringC.dy + 6)
-      ..lineTo(ringC.dx - 8, ringC.dy + 6)
+      ..moveTo(ringC.dx, ringC.dy - 5)
+      ..lineTo(ringC.dx + 8, ringC.dy + 7)
+      ..lineTo(ringC.dx - 8, ringC.dy + 7)
       ..close();
     canvas.drawPath(
       ring,
@@ -654,7 +669,7 @@ class _StrapPainter extends CustomPainter {
     }
     // Connector: a thin loop through the lug.
     canvas.drawOval(
-      Rect.fromCenter(center: top.translate(0, 3), width: 9, height: 12),
+      Rect.fromCenter(center: top, width: 9, height: 12),
       Paint()
         ..color = const Color(0xFF2A2C30)
         ..style = PaintingStyle.stroke

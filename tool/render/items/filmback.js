@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { slab, brushedMetal, plastic, decal, cyl, lensGlass } from '/lib/parts.js';
 import { canvas, tex, rng, noiseCanvas, normalFromHeight, roundRect } from '/lib/tex.js';
 import { drawRabbit } from '/lib/logo.js';
@@ -59,8 +60,8 @@ function pebbleMaps() {
   const rough = tex(rc, { srgb: false, repeat: true });
   // colour: near-black with a faint warm cast, valleys darker
   const [cc, cg] = canvas(N, N);
-  cg.fillStyle = '#16120f'; cg.fillRect(0, 0, N, N);
-  cg.globalAlpha = 0.22; cg.drawImage(hc, 0, 0); cg.globalAlpha = 1;
+  cg.fillStyle = '#0d0b0a'; cg.fillRect(0, 0, N, N);
+  cg.globalAlpha = 0.12; cg.drawImage(hc, 0, 0); cg.globalAlpha = 1;
   const color = tex(cc, { repeat: true });
   for (const t of [normal, rough, color]) t.repeat.set((W - 20) / 70, (LEATHER_Z1 - LEATHER_Z0) / 70);
   return { normal, rough, color };
@@ -124,11 +125,65 @@ function scenePhoto(w = 1152, h = 1536) {
   return c;
 }
 
-// Engraved and paint-filled lettering on metal (a decal, slightly glossy).
-function engraving(w, h, draw, px = 10) {
-  const m = decal(w, h, draw, { px, rough: 0.35, metal: 0.2 });
-  m.rotation.x = -Math.PI / 2;
+// Engraved, paint-filled lettering and marks: real (very thin) geometry
+// lying on the metal. The path tracer ignored decal transparency in a scene
+// this size, so nothing here relies on alpha.
+const inkMat = new THREE.MeshPhysicalMaterial({ color: 0x0d0d0e, roughness: 0.55, clearcoat: 0.3 });
+let _font = null;
+async function font(name = 'helvetiker_bold') {
+  if (!_font) _font = await new FontLoader().loadAsync(`/three/examples/fonts/${name}.typeface.json`);
+  return _font;
+}
+// Text lying flat (+Y up), centred on x (align 'center') or starting at 0.
+async function text(str, size, { mat = inkMat, align = 'center', spacing = 0, depth = 0.12 } = {}) {
+  const f = await font();
+  const shapes = [];
+  let x = 0;
+  const glyphs = [];
+  for (const ch of str) {
+    const sh = f.generateShapes(ch, size);
+    const g = new THREE.ShapeGeometry(sh, 4);
+    g.computeBoundingBox();
+    const adv = ch === ' ' ? size * 0.32 : (g.boundingBox.max.x - g.boundingBox.min.x) + size * 0.1;
+    glyphs.push([g, x - (ch === ' ' ? 0 : g.boundingBox.min.x)]);
+    x += adv + spacing;
+  }
+  const width = x - spacing;
+  const geos = glyphs.map(([g, gx]) => { g.translate(gx - (align === 'center' ? width / 2 : 0), -size / 2, 0); return g; });
+  const merged = mergeGeometries(geos);
+  const ex = new THREE.Mesh(merged, mat);
+  ex.rotation.x = -Math.PI / 2; // shape XY -> lying on XZ, reading toward -Z = up
+  ex.position.y = depth;
+  const g = new THREE.Group(); g.add(ex);
+  return g;
+}
+// A flat shape (in the XY of the drawing, y up = image up) lying on the part.
+function flat(shape, mat = inkMat, y = 0.12) {
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(shape, 12), mat);
+  m.rotation.x = -Math.PI / 2; m.position.y = y;
   return m;
+}
+function capsule(x0, y0, x1, y1, r) {
+  const s = new THREE.Shape(), a = Math.atan2(y1 - y0, x1 - x0);
+  s.absarc(x1, y1, r, a - Math.PI / 2, a + Math.PI / 2, false);
+  s.absarc(x0, y0, r, a + Math.PI / 2, a + Math.PI * 1.5, false);
+  return s;
+}
+// The Darkroom rabbit (tool/render/lib/logo.js) as flat shapes, [h] tall,
+// centred; the X eyes in [eyeMat].
+function rabbit(h, mat = inkMat, eyeMat) {
+  const g = new THREE.Group(), s = h / 129, cx = 104.5, cy = 93.5;
+  const P = (x, y) => [(x - cx) * s, -(y - cy) * s];
+  const ear1 = capsule(...P(80, 104), ...P(70, 40), 11 * s);
+  const ear2a = capsule(...P(110, 100), ...P(120, 48), 11 * s), ear2b = capsule(...P(120, 48), ...P(146, 60), 11 * s);
+  const head = new THREE.Shape(); head.absellipse(...P(94, 122), 42 * s, 36 * s, 0, Math.PI * 2);
+  for (const sh of [ear1, ear2a, ear2b, head]) g.add(flat(sh, mat));
+  for (const [ex, ey] of [[80, 118], [108, 118]]) {
+    for (const d of [1, -1]) {
+      g.add(flat(capsule(...P(ex - 7, ey - 7 * d), ...P(ex + 7, ey + 7 * d), 2.75 * s), eyeMat, 0.2));
+    }
+  }
+  return g;
 }
 
 function knurl(r, h, n, mat, depth = 0.6) {
@@ -167,6 +222,13 @@ function frame(shape, depth, bevel, mat, y0) {
   return m;
 }
 
+// A printed sheet lying flat at height y (texture top = -Z).
+function sheet(w, d, mat, y) {
+  const g = new THREE.PlaneGeometry(w, d);
+  g.rotateX(-Math.PI / 2); g.translate(0, y, 0);
+  return new THREE.Mesh(g, mat);
+}
+
 function screw(r, mat, slotMat, angle) {
   const g = new THREE.Group();
   const head = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), mat);
@@ -181,6 +243,8 @@ export async function build(THREE_, item) {
   const deg = +((item.match(/-a(-?\d+)/) || [])[1] || 0);
   const yaw = (deg * Math.PI) / 180;
   const root = new THREE.Group();
+  const skip = new Set((new URLSearchParams(location.search).get('skip') || '').split(','));
+  const add = (key, ...objs) => { if (!skip.has(key)) root.add(...objs); };
 
   const chrome = brushedMetal(0xdfe1e4, 0.2);
   const satin = brushedMetal(0xcfd2d6, 0.32);
@@ -193,50 +257,38 @@ export async function build(THREE_, item) {
   // Chassis: brushed chrome shell (top + bottom plates and the rim).
   const chassis = slab(W, H, T, 34, 3, chrome);
   chassis.rotation.x = -Math.PI / 2;
-  root.add(chassis);
+  add('chassis', chassis);
 
   // Leatherette panel, slightly proud of the metal, with a cut edge.
   const pm = pebbleMaps();
   const leatherMat = new THREE.MeshPhysicalMaterial({ map: pm.color, normalMap: pm.normal, normalScale: new THREE.Vector2(1.1, 1.1),
-    roughnessMap: pm.rough, roughness: 1, sheen: 0.4, sheenRoughness: 0.6, sheenColor: new THREE.Color(0x3a3029) });
+    roughnessMap: pm.rough, roughness: 1 });
   const lh = LEATHER_Z1 - LEATHER_Z0;
   const leather = slab(W - 18, lh, SKIN * 2, 22, 0.4, leatherMat);
   leather.rotation.x = -Math.PI / 2;
   leather.position.set(0, TOP, (LEATHER_Z0 + LEATHER_Z1) / 2);
-  root.add(leather);
+  add('leather', leather);
 
   // ---- top plate: engraving, screws
   const plateZ = (-H / 2 + LEATHER_Z0) / 2; // centre of the top plate (~-402)
   const ink = '#141414';
-  const mark = engraving(110, 22, (g, w, h) => {
-    g.fillStyle = ink; g.textAlign = 'left'; g.textBaseline = 'middle';
-    drawRabbit(g, h * 0.5, h * 0.52, h * 0.82, ink);
-    g.font = `800 ${h * 0.5}px "Inter Display"`; g.letterSpacing = `${h * 0.12}px`;
-    g.fillText('DARKROOM', h * 1.05, h * 0.54);
-  }, 12);
-  mark.position.set(22, TOP + 0.02, plateZ - 2);
+  const mark = new THREE.Group();
+  const logo = rabbit(15, inkMat, chrome); logo.position.x = -40; mark.add(logo);
+  const word = await text('DARKROOM', 8.5, { align: 'left', spacing: 2.2 }); word.position.x = -28; mark.add(word);
+  mark.position.set(22, TOP, plateZ - 2);
   root.add(mark);
   for (const [x, z, a] of [[-192, -426, 0.4], [192, -426, 1.2], [-192, 424, 2.1], [192, 424, 0.9]]) {
     const s = screw(3.4, polished, gap, a); s.position.set(x, TOP, z); root.add(s);
   }
-  const serial = engraving(170, 9, (g, w, h) => {
-    g.fillStyle = '#2a2a2a'; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = `600 ${h * 0.62}px "DejaVu Sans Condensed"`; g.letterSpacing = `${h * 0.15}px`;
-    g.fillText('No. 1998042   ·   MADE IN THE DARKROOM', w / 2, h * 0.55);
-  }, 14);
-  serial.position.set(0, TOP + 0.02, 412);
+  const serial = await text('No. 1998042  -  MADE IN THE DARKROOM', 4.2, { spacing: 0.9, mat: new THREE.MeshPhysicalMaterial({ color: 0x2a2a2c, roughness: 0.5 }) });
+  serial.position.set(0, TOP, 412);
   root.add(serial);
 
   // ---- flash: three-position slide switch with engraved positions
   const fx = -154, fz = plateZ;
-  const fl = engraving(78, 9, (g, w, h) => {
-    g.fillStyle = ink; g.textBaseline = 'middle'; g.font = `700 ${h * 0.72}px "DejaVu Sans Condensed"`;
-    g.textAlign = 'center';
-    [['A', 0.12], ['ON', 0.5], ['OFF', 0.88]].forEach(([t, u]) => g.fillText(t, w * u, h * 0.55));
-    // lightning bolt
-  }, 14);
-  fl.position.set(fx, TOP + 0.02, fz - 14);
-  root.add(fl);
+  for (const [t, u] of [['A', -26], ['ON', 0], ['OFF', 26]]) {
+    const l = await text(t, 5.2, { spacing: 0.4 }); l.position.set(fx + u, TOP, fz - 14); root.add(l);
+  }
   const slot = new THREE.Mesh(new RoundedBoxGeometry(64, 1.2, 8, 3, 0.6), gap);
   slot.position.set(fx, TOP - 0.3, fz + 2);
   root.add(slot);
@@ -249,13 +301,12 @@ export async function build(THREE_, item) {
   }
   tab.position.set(fx - 26, TOP, fz + 2);
   root.add(tab);
-  const bolt = engraving(8, 11, (g, w, h) => {
-    g.fillStyle = ink; g.beginPath();
-    g.moveTo(w * 0.62, 0); g.lineTo(w * 0.1, h * 0.58); g.lineTo(w * 0.46, h * 0.58); g.lineTo(w * 0.3, h);
-    g.lineTo(w * 0.92, h * 0.38); g.lineTo(w * 0.55, h * 0.38); g.closePath(); g.fill();
-  }, 20);
-  bolt.position.set(fx + 41, TOP + 0.02, fz + 2);
-  root.add(bolt);
+  const boltShape = new THREE.Shape();
+  [[0.62, 0], [0.1, 0.58], [0.46, 0.58], [0.3, 1], [0.92, 0.38], [0.55, 0.38]].forEach(([u, v], i) => {
+    const x = (u - 0.5) * 8, y = (0.5 - v) * 11;
+    i ? boltShape.lineTo(x, y) : boltShape.moveTo(x, y);
+  });
+  const bolt = flat(boltShape); bolt.position.set(fx + 41, TOP, fz + 2); root.add(bolt);
 
   // ---- aspect: knurled dial, engraved ratio on top, index dot on the plate
   const ax = -82;
@@ -263,16 +314,13 @@ export async function build(THREE_, item) {
   aspect.add(knurl(17, 8, 72, satin, 0.9));
   const aTop = new THREE.Mesh(new THREE.CylinderGeometry(15.6, 16.4, 1.2, 96), chrome);
   aTop.position.y = 8.6; aspect.add(aTop);
-  const aCap = engraving(26, 26, (g, w, h) => {
-    g.fillStyle = ink; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.font = `800 ${h * 0.34}px "Inter Display"`; g.fillText('3:2', w / 2, h * 0.52);
-    for (let i = 0; i < 24; i++) {
-      const a = (i / 24) * Math.PI * 2, r0 = w * 0.43, r1 = w * (i % 6 ? 0.47 : 0.5);
-      g.strokeStyle = ink; g.lineWidth = w * 0.012;
-      g.beginPath(); g.moveTo(w / 2 + Math.cos(a) * r0, h / 2 + Math.sin(a) * r0); g.lineTo(w / 2 + Math.cos(a) * r1, h / 2 + Math.sin(a) * r1); g.stroke();
-    }
-  }, 24);
-  aCap.position.y = 9.25; aspect.add(aCap);
+  const ratio = await text('3:2', 7.5, { spacing: 0.6 }); ratio.position.y = 9.2; aspect.add(ratio);
+  for (let i = 0; i < 24; i++) {
+    const a = (i / 24) * Math.PI * 2, long = i % 6 === 0;
+    const tick = new THREE.Mesh(new THREE.BoxGeometry(long ? 2.6 : 1.6, 0.12, 0.35), inkMat);
+    const r = long ? 12.8 : 13.3;
+    tick.position.set(Math.cos(a) * r, 9.26, Math.sin(a) * r); tick.rotation.y = -a; aspect.add(tick);
+  }
   aspect.position.set(ax, TOP, plateZ);
   root.add(aspect);
   const idx = cyl(1.3, 0.3, red, 24); idx.position.set(ax, TOP + 0.1, plateZ - 23); root.add(idx);
@@ -297,14 +345,10 @@ export async function build(THREE_, item) {
   const mc = cyl(14, 2.2, satin, 96); mc.position.y = 1.1; menu.add(mc);
   const mw = cyl(11.6, 0.4, gap, 64); mw.position.y = 2.2; menu.add(mw);
   const mb = new THREE.Mesh(new THREE.CylinderGeometry(10.4, 11, 4.2, 96), polished); mb.position.y = 4.3; menu.add(mb);
-  const mg = engraving(13, 13, (g, w, h) => {
-    g.strokeStyle = ink; g.fillStyle = ink; g.lineWidth = h * 0.09; g.lineCap = 'round';
-    for (const [yy, kx] of [[0.25, 0.65], [0.5, 0.35], [0.75, 0.58]]) {
-      g.beginPath(); g.moveTo(w * 0.12, h * yy); g.lineTo(w * 0.88, h * yy); g.stroke();
-      g.beginPath(); g.arc(w * kx, h * yy, h * 0.11, 0, 7); g.fill();
-    }
-  }, 30);
-  mg.position.y = 6.42; menu.add(mg);
+  for (const [yy, kx] of [[-3.2, 1.6], [0, -1.8], [3.2, 0.8]]) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(10, 0.12, 0.9), inkMat); line.position.set(0, 6.45, yy); menu.add(line);
+    const knob = cyl(1.3, 0.14, inkMat, 24); knob.position.set(kx, 6.5, yy); menu.add(knob);
+  }
   menu.position.set(mx, TOP, plateZ);
   root.add(menu);
 
@@ -316,17 +360,17 @@ export async function build(THREE_, item) {
   lip.position.z = vz; root.add(lip);
   const photo = scenePhoto();
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(vw - 4, vh - 4),
-    new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: tex(photo), emissiveIntensity: 1.25, roughness: 1 }));
+    new THREE.MeshPhysicalMaterial({ color: 0x000000, emissive: 0xffffff, emissiveMap: tex(photo), emissiveIntensity: 1.3, roughness: 0.4, clearcoat: 0.25, clearcoatRoughness: 0.03 }));
   screen.rotation.x = -Math.PI / 2; screen.position.set(0, SURF + 0.3, vz); root.add(screen);
   const glassPane = new THREE.Mesh(new THREE.BoxGeometry(vw - 2, 0.8, vh - 2),
     new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 1, thickness: 0.8, roughness: 0.02, ior: 1.5, metalness: 0 }));
-  glassPane.position.set(0, SURF + 3.2, vz); root.add(glassPane);
+  glassPane.position.set(0, SURF + 3.2, vz); if (skip.has('noglass')) add('glass', glassPane);
 
   // ---- memo clip with the film box end
   const mzz = 192, mxx = -30;
-  const card = new THREE.Mesh(new THREE.BoxGeometry(188, 0.6, 46), [
-    plastic(0xd8cdb6, { rough: 0.85, texture: 0.4 }), plastic(0xd8cdb6, { rough: 0.85, texture: 0.4 }),
-    new THREE.MeshPhysicalMaterial({ roughness: 0.62, map: tex((() => {
+  // (single-material meshes only: the path tracer mixed up textures on
+  // multi-material boxes)
+  const cardTex = tex((() => {
       const [c, g] = canvas(1880, 460), r = rng(3);
       g.fillStyle = '#f1e9da'; g.fillRect(0, 0, 1880, 460);
       g.fillStyle = '#d99a3e'; g.fillRect(0, 300, 1880, 160);
@@ -341,10 +385,11 @@ export async function build(THREE_, item) {
       // card fibres and wear
       for (let i = 0; i < 6000; i++) { g.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '60,40,20'},${r() * 0.06})`; g.fillRect(r() * 1880, r() * 460, 1 + r() * 6, 1); }
       return c;
-    })()) }),
-    plastic(0xd8cdb6, { rough: 0.85 }), plastic(0xd8cdb6, { rough: 0.85 }), plastic(0xd8cdb6, { rough: 0.85 }),
-  ]);
-  card.position.set(mxx, SURF + 0.35, mzz); root.add(card);
+    })());
+  const card = new THREE.Group();
+  card.add(new THREE.Mesh(new THREE.BoxGeometry(188, 0.6, 46), plastic(0xd8cdb6, { rough: 0.85, texture: 0.4 })));
+  card.add(sheet(188, 46, new THREE.MeshPhysicalMaterial({ roughness: 0.62, map: cardTex }), 0.31));
+  card.position.set(mxx, SURF + 0.35, mzz); add('card', card);
   const clip = frame(ringShape(200, 56, 6, 182, 38, 3), 1.6, 0.6, chrome, SURF + 0.7);
   clip.position.set(mxx, 0, mzz); root.add(clip);
   for (const sx of [-96, 96]) { const r = screw(2.2, polished, gap, sx > 0 ? 0.5 : 1.7); r.position.set(mxx + sx, SURF + 2.9, mzz); root.add(r); }
@@ -359,23 +404,26 @@ export async function build(THREE_, item) {
     return tex(c);
   };
   const print = (seed, rot, x, z, y) => {
-    const geo = new THREE.BoxGeometry(58, 0.35, 70, 24, 1, 28);
-    const p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) { const px = p.getX(i), pz = p.getZ(i); p.setY(i, p.getY(i) + 0.0011 * px * px + 0.0004 * pz * pz); }
-    geo.computeVertexNormals();
-    const paper = new THREE.MeshPhysicalMaterial({ color: 0xf2eee6, roughness: 0.7 });
-    const face = new THREE.MeshPhysicalMaterial({ map: printTex(seed), roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.12 });
-    const m = new THREE.Mesh(geo, [paper, paper, face, paper, paper, paper]);
-    m.rotation.y = rot; m.position.set(x, y, z);
-    return m;
+    const bend = (geo) => {
+      const p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) { const px = p.getX(i), pz = p.getZ(i); p.setY(i, p.getY(i) + 0.0011 * px * px + 0.0004 * pz * pz); }
+      geo.computeVertexNormals();
+      return geo;
+    };
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(bend(new THREE.BoxGeometry(58, 0.35, 70, 24, 1, 28)), new THREE.MeshPhysicalMaterial({ color: 0xf2eee6, roughness: 0.7 })));
+    const top = new THREE.PlaneGeometry(58, 70, 24, 28); top.rotateX(-Math.PI / 2); top.translate(0, 0.19, 0);
+    g.add(new THREE.Mesh(bend(top), new THREE.MeshPhysicalMaterial({ map: printTex(seed), roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.12 })));
+    g.rotation.y = rot; g.position.set(x, y, z);
+    return g;
   };
-  root.add(print(2, 0.16, -146, 330, SURF + 0.4), print(0, -0.07, -152, 326, SURF + 1.1));
+  add('prints', print(2, 0.16, -146, 330, SURF + 0.4), print(0, -0.07, -152, 326, SURF + 1.1));
 
   // ---- shutter with the advance lever (the existing turntable model)
   const sh = (await buildShutter(THREE, 'shutter_film-all')).object;
   sh.scale.setScalar(138 / 40);
   sh.position.set(14, SURF, 330);
-  root.add(sh);
+  add('shutter', sh);
 
   // ---- film carton lying on the body
   const cartonTop = tex((() => {
@@ -392,9 +440,11 @@ export async function build(THREE_, item) {
   })());
   const cardboard = new THREE.MeshPhysicalMaterial({ color: 0xe9dfcc, roughness: 0.7 });
   const band = new THREE.MeshPhysicalMaterial({ color: 0xd99a3e, roughness: 0.6 });
-  const carton = new THREE.Mesh(new RoundedBoxGeometry(64, 24, 48, 2, 0.8),
-    [band, band, new THREE.MeshPhysicalMaterial({ map: cartonTop, roughness: 0.45, clearcoat: 0.25 }), cardboard, cardboard, cardboard]);
-  carton.rotation.y = 0.13; carton.position.set(152, SURF + 12, 330); root.add(carton);
+  const carton = new THREE.Group();
+  carton.add(new THREE.Mesh(new RoundedBoxGeometry(64, 24, 48, 2, 0.8), cardboard));
+  const band2 = new THREE.Mesh(new THREE.BoxGeometry(64.2, 9, 48.2), band); band2.position.y = -6; carton.add(band2);
+  carton.add(sheet(62.4, 46.4, new THREE.MeshPhysicalMaterial({ map: cartonTop, roughness: 0.45, clearcoat: 0.25 }), 12.02));
+  carton.rotation.y = 0.13; carton.position.set(152, SURF + 12, 330); add('carton', carton);
 
   shadowy(root);
   // the camera: straight down, swung about the body's long axis
@@ -407,7 +457,17 @@ export async function build(THREE_, item) {
     exposure: 1.0,
     fixedFrame: true,
     envRotation: 180,
-    env: { ambient: 0.22 },
+    // Lit for a straight-down view: a big key softbox high front-left, a
+    // strip light right for crisp edge highlights on the chrome, a weak warm
+    // fill behind, a dark ceiling (no flat bounce washing the leather out).
+    env: { ambient: 0.025, boxes: [
+      { az: -40, el: 52, w: 46, h: 34, i: 9, c: [1.0, 0.96, 0.9] },
+      { az: 70, el: 30, w: 8, h: 60, i: 10, c: [0.95, 0.97, 1.0] },
+      { az: 160, el: 38, w: 60, h: 24, i: 2.2, c: [1.0, 0.92, 0.85] },
+      { az: -120, el: 20, w: 20, h: 30, i: 1.5, c: [1, 1, 1] },
+      // overhead scrim, off-centre: what the chrome mirrors from above
+      { az: -25, el: 72, w: 150, h: 30, i: 3.2, c: [1, 1, 1] },
+    ] },
     camera: { fov, position: [d * Math.sin(yaw), d * Math.cos(yaw), 0], target: [0, 0, 0], up: [0, 0, -1] },
   };
 }

@@ -62,6 +62,7 @@ flutter:
     - assets/sfx/
     - assets/shutters/
     - assets/body/
+    - assets/body/film/
     - assets/body/digital/
   fonts:
     # Handwriting on instant prints (SIL OFL 1.1, see assets/fonts/OFL.txt).

@@ -572,3 +572,4 @@ Answers: turntable renders, no 2D/3D switch.
   flight), and the export decodes straight at 2048 px.
 - [x] **22.4 Ship while rendering:** 1.4.0 goes out with flat (layered)
   shutters (`_SpriteShutter.turntable = false`); the 3D frames follow.
+  → 21.2-21.4, 22.1-22.4: 1.4.0 · 2026-10-08 · 59bddc5

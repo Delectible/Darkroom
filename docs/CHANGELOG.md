@@ -663,3 +663,4 @@ Answers: turntable renders, no 2D/3D switch.
   unchanged) and the body swapped as one picture (`_dragFace`).
 - [x] **27.7 Recorder**: unlabelled frames now say which screen was up
   ("idle camera / corkboard / win98"); the report shows Performance mode.
+  → 27.1-27.4: 1.4.5 · 2026-10-08 · e7b33ff; 27.5-27.7: 1.4.6 · 2026-10-08 · 02ab546

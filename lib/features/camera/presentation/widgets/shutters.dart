@@ -10,6 +10,7 @@ import '../../application/camera_ui_state.dart';
 import '../../application/capture_controller.dart';
 import '../body_swap.dart' show BodyYaw;
 import '../../../../core/device/haptics.dart';
+import '../../../settings/application/settings_controllers.dart';
 
 /// Bumped every time the shutter fires (on-screen button or volume key), so
 /// the button can play its stroke and sound either way.
@@ -106,6 +107,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
     final recording = ref.watch(captureControllerProvider).isRecording;
     final kind = _kind(spec);
     final video = spec.recordsVideo;
+    final turn = ref.watch(globalSettingsProvider.select((s) => s.controls3d));
     switch (kind) {
       case _Kind.digital:
         _precache(video ? 'digitalrec' : 'digital', 96);
@@ -124,6 +126,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
           _Kind.digital => _SpriteShutter(
             kind: video ? 'digitalrec' : 'digital',
             box: const Size(92, 78),
+            turns: turn,
             span: 96,
             pressed: _down || (t > 0 && t < 0.6),
             lamp: recording ? const _Lamp(Offset.zero, 0.09, Color(0xFFFF3B30)) : null,
@@ -131,6 +134,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
           _Kind.film => _SpriteShutter(
             kind: 'film',
             box: const Size(108, 86),
+            turns: turn,
             span: 138,
             hub: const Offset(0.6, 0.52),
             pressed: _down,
@@ -139,6 +143,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
           _Kind.run => _SpriteShutter(
             kind: 'run',
             box: const Size(86, 86),
+            turns: turn,
             span: 108,
             pressed: _down || recording,
             lamp: recording ? const _Lamp(Offset(0.36, -0.36), 0.05, Color(0xFFFF453A)) : null,
@@ -217,6 +222,7 @@ class _SpriteShutter extends StatelessWidget {
     required this.span,
     required this.pressed,
     this.hub = const Offset(0.5, 0.5),
+    this.turns = true,
     this.lever,
     this.lamp,
   });
@@ -233,6 +239,9 @@ class _SpriteShutter extends StatelessWidget {
   /// Where the sprites' centre sits in [box] (fractions).
   final Offset hub;
   final bool pressed;
+
+  /// Follow the body's yaw (setting "3D controls"); false keeps it face-on.
+  final bool turns;
 
   /// Film: the lever's turn from parked, radians clockwise; null or parked
   /// when it isn't moving.
@@ -270,7 +279,7 @@ class _SpriteShutter extends StatelessWidget {
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final c = Offset(box.width * hub.dx, box.height * hub.dy);
-    final yaw = BodyYaw.of(context);
+    final yaw = turns ? BodyYaw.of(context) : 0.0;
     Widget sprite(String name, {double opacity = 1, double angle = 0, bool sunk = false}) {
       Widget img = Image(
         image: provider(name, span, dpr),

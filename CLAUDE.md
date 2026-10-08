@@ -308,12 +308,19 @@ UI
   while the camera itself is on screen; setting "Volume buttons zoom" makes
   them the zoom on digital bodies. Elsewhere they change the volume.
 - Crash reports stay on the phone (`core/diagnostics/crash_log.dart`):
-  Dart errors + Android ApplicationExitInfo; Win98 Help > Crash Reports.
+  Dart errors + Android ApplicationExitInfo; Win98 Help > Debug... >
+  Crash Reports. The Debug window (`win98/debug_menu.dart`, list `_tools`;
+  add new tools there) also has Camera Log, the tour, develop-now, frame
+  graphs (`perfOverlayProvider`), slow motion, system info, a test crash.
+- Setting **3D controls** (`GlobalSettings.controls3d`, asked on the tour's
+  "How fancy?" page): on = controls turn with the body; off = face-on.
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
 - Camera session: "inactive" does NOT close the camera (Android sends it on
   any focus blip; closing made the Pixel's viewfinder flap). Only hidden /
-  paused do. `CameraLog` keeps recent session events: Win98 Help > Camera Log.
+  paused do. `CameraLog` keeps recent session events: Win98 Help > Debug.
+  While the camera is closed the viewport keeps the last stream's aspect
+  (`_lastPreviewAspect`), so the frozen still never squashes.
 - Swipe up on the camera opens the film/camera carousel; swipe down closes it.
 - Phone gestures win at the edges (`core/device/system_gestures.dart`): our
   drags (the camera toss too) ignore touches that start in the home strip (bottom ~56dp), the

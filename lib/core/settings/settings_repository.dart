@@ -16,6 +16,7 @@ class GlobalSettings {
     this.volumeZoom = false,
     this.sfxVolume = 0.5,
     this.haptics = true,
+    this.controls3d = true,
   });
 
   final bool darkroomEnabled;
@@ -33,6 +34,9 @@ class GlobalSettings {
   /// Vibration feedback.
   final bool haptics;
 
+  /// Camera controls drawn in 3D (turning with the body); off = flat.
+  final bool controls3d;
+
   GlobalSettings copyWith({
     bool? darkroomEnabled,
     bool? notificationsEnabled,
@@ -40,6 +44,7 @@ class GlobalSettings {
     bool? volumeZoom,
     double? sfxVolume,
     bool? haptics,
+    bool? controls3d,
   }) => GlobalSettings(
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -47,6 +52,7 @@ class GlobalSettings {
     volumeZoom: volumeZoom ?? this.volumeZoom,
     sfxVolume: sfxVolume ?? this.sfxVolume,
     haptics: haptics ?? this.haptics,
+    controls3d: controls3d ?? this.controls3d,
   );
 }
 
@@ -87,6 +93,7 @@ class SettingsRepository {
   static const _kSounds = 'global.soundEffects'; // 1.3.27-29 on/off
   static const _kSfxVolume = 'global.sfxVolume';
   static const _kHaptics = 'global.haptics';
+  static const _k3d = 'global.controls3d';
 
   Future<GlobalSettings> loadGlobal() async {
     bool read(String? v, bool fallback) => v == null ? fallback : v == '1';
@@ -102,6 +109,7 @@ class SettingsRepository {
         _ => d.sfxVolume,
       },
       haptics: read(await _db.getValue(_kHaptics), d.haptics),
+      controls3d: read(await _db.getValue(_k3d), d.controls3d),
     );
   }
 
@@ -112,6 +120,7 @@ class SettingsRepository {
     await _db.setValue(_kVolumeZoom, s.volumeZoom ? '1' : '0');
     await _db.setValue(_kSfxVolume, s.sfxVolume.toStringAsFixed(3));
     await _db.setValue(_kHaptics, s.haptics ? '1' : '0');
+    await _db.setValue(_k3d, s.controls3d ? '1' : '0');
   }
 
   Future<Map<String, CameraLocalSettings>> loadCameraSettings() async {

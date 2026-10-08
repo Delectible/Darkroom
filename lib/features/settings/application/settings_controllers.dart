@@ -36,6 +36,11 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     await _repo.saveGlobal(state);
   }
 
+  Future<void> setControls3d(bool enabled) async {
+    state = state.copyWith(controls3d: enabled);
+    await _repo.saveGlobal(state);
+  }
+
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);
 
   Future<void> setDarkroomEnabled(bool enabled) async {

@@ -11,6 +11,7 @@ import '../../../../core/providers.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
 import '../../../onboarding/onboarding_screen.dart';
+import 'debug_menu.dart';
 import 'explorer_dialogs.dart';
 import 'explorer_panes.dart';
 import 'pixel_icons.dart';
@@ -599,11 +600,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                         'the viewer to flip through your pictures.',
                                   ),
                                 ),
-                                Win98MenuItem('Camera Log...', onSelected: () => showCameraLog(context)),
-                                Win98MenuItem(
-                                  'Crash Reports...',
-                                  onSelected: () => showCrashReports(context),
-                                ),
+                                Win98MenuItem('Debug...', onSelected: () => showDebugMenu(context)),
                                 const Win98MenuItem.separator(),
                                 Win98MenuItem('About Darkroom', onSelected: () => showAboutDarkroom(context)),
                               ],

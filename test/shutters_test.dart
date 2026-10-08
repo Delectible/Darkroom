@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:darkroom/core/providers.dart';
+import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/core/theme/retro_theme.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/camera/application/capture_controller.dart';
@@ -49,6 +51,7 @@ void main() {
     final key = GlobalKey();
     Widget one(AppMode mode, String id) => ProviderScope(
       overrides: [
+        initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
         appModeProvider.overrideWith(() => _Mode(mode)),
         selectedCameraProvider.overrideWith(() => _Selected({AppMode.film: id, AppMode.digital: id})),
         captureControllerProvider.overrideWith(_Capture.new),

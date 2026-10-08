@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:darkroom/core/db/media_repository.dart';
+import 'package:darkroom/features/sd_card/presentation/win98/debug_menu.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/win98_viewer.dart';
 import 'package:flutter/material.dart';
@@ -93,6 +94,36 @@ void main() {
     expect(find.textContaining('Camera:'), findsOneWidget);
     await shoot(tester, 'win98_viewer');
     dir.deleteSync(recursive: true);
+  });
+
+  testWidgets('debug window lists its tools and switches', (tester) async {
+    await phone(tester);
+    await tester.pumpWidget(
+      app(
+        Builder(
+          builder: (context) => Scaffold(
+            backgroundColor: const Color(0xFF008080),
+            body: Center(
+              child: ElevatedButton(onPressed: () => showDebugMenu(context), child: const Text('go')),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('go'));
+    await tester.pumpAndSettle();
+    expect(find.text('Camera Log'), findsWidgets);
+    expect(find.text('Crash Reports'), findsOneWidget);
+    expect(find.text('Welcome Tour'), findsOneWidget);
+    await tester.tap(find.text('Frame Timing Graphs'));
+    await tester.pump(const Duration(milliseconds: 400)); // past the double-tap wait
+    expect(find.text('Turn On'), findsOneWidget);
+    await tester.tap(find.text('Turn On'));
+    await tester.pump();
+    expect(find.text('Turn Off'), findsOneWidget);
+    await shoot(tester, 'win98_debug');
+    await tester.tap(find.text('Close'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('floppy span dialog asks for the next disk', (tester) async {

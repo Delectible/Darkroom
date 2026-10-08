@@ -43,6 +43,11 @@ class CameraViewport extends ConsumerWidget {
   /// slid about on its own). The rest of the body stays live.
   static final freeze = ValueNotifier<ui.Image?>(null);
 
+  /// The stream's aspect ratio last time a camera was open: while it's
+  /// closed (behind a panel, mid-swap) the box keeps its shape, so the still
+  /// over it isn't squashed.
+  static double _lastPreviewAspect = 16 / 9;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(cameraSessionProvider);
@@ -52,8 +57,8 @@ class CameraViewport extends ConsumerWidget {
     final aspect = spec.aspectLocked ? spec.defaultAspect : local.aspect;
     final controller = session.controller;
     final previewAspect = (controller != null && controller.value.previewSize != null)
-        ? controller.value.aspectRatio
-        : 16 / 9;
+        ? _lastPreviewAspect = controller.value.aspectRatio
+        : _lastPreviewAspect;
     // Super 8 frames landscape however the phone is held, inside a full-gate
     // film strip that stays upright for the viewer.
     final turns = spec.landscapeOnly ? uprightQuarterTurns(ref.watch(physicalOrientationProvider)) : 0;
@@ -172,7 +177,7 @@ class CameraViewport extends ConsumerWidget {
                       ? const SizedBox.shrink()
                       : ClipRRect(
                           borderRadius: radius,
-                          child: RawImage(image: still, fit: BoxFit.fill),
+                          child: RawImage(image: still, fit: BoxFit.cover),
                         ),
                 ),
               ],

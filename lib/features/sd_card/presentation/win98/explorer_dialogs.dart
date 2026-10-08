@@ -389,6 +389,11 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
                         label: 'Haptics',
                         onChanged: (v) => unawaited(g.setHaptics(v)),
                       ),
+                      Win98Checkbox(
+                        value: global.controls3d,
+                        label: '3D controls',
+                        onChanged: (v) => unawaited(g.setControls3d(v)),
+                      ),
                     ],
                   ),
           ),

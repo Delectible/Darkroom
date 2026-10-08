@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.4.3';
+  static const version = '1.4.4';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Films get their own names: Vivid 100, Portrait 400, Classic 400 and Instant 600. Same looks, '
-      'same grain. The mines game is now Minefield (Start > Run..., MINES).';
+      'The frozen viewfinder no longer squashes while a panel slides, a 3D or flat choice for the camera '
+      'buttons (tour and Settings), and a Debug window in Help with logs, the tour and test tools.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -20,7 +20,7 @@ class AppInfo {
         'Welcome tour, with your name on your prints',
         'Darkroom 98 slides in on a beige monitor',
         'Swipe right for the corkboard, left for Darkroom 98',
-        'Photoreal 3D shutter buttons',
+        'Photoreal 3D shutter buttons (or flat)',
         'Watch prints develop up close',
         'Sound volume slider, haptics switch, crash reports',
         'Real phone battery on the digital cameras',

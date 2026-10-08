@@ -96,6 +96,13 @@ class _SettingsSheet extends ConsumerWidget {
           onChanged: (v) => unawaited(g.setHaptics(v)),
         ),
         _Toggle(
+          title: '3D controls',
+          subtitle:
+              'Buttons turn with the camera when you swap. Off: flat buttons, a little lighter on older phones.',
+          value: global.controls3d,
+          onChanged: (v) => unawaited(g.setControls3d(v)),
+        ),
+        _Toggle(
           title: 'Volume buttons zoom',
           subtitle:
               'The volume buttons take the picture. Turn this on to zoom with them on digital cameras instead.',

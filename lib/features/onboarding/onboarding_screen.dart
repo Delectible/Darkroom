@@ -10,6 +10,7 @@ import '../../core/providers.dart';
 import '../../core/theme/darkroom_mark.dart';
 import '../camera/application/camera_session_controller.dart';
 import '../camera/application/camera_ui_state.dart';
+import '../settings/application/settings_controllers.dart';
 
 /// First-run tour: what the app is, how to drive it (gestures), a name for
 /// the lab to write on your prints, then every permission asked for at once
@@ -38,7 +39,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _asking = false;
   final Map<_Ask, bool> _granted = {};
 
-  static const _count = 6;
+  static const _count = 7;
 
   @override
   void dispose() {
@@ -188,6 +189,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                           ),
                         ),
                         onSubmitted: (_) => _next(),
+                      ),
+                    ),
+                  ),
+                  _Page(
+                    icon: Icons.view_in_ar_outlined,
+                    title: 'How fancy?',
+                    body:
+                        'The camera buttons can be little 3D objects that turn when you swap cameras. '
+                        'Flat ones are a touch lighter on older phones. Change it any time in Settings.',
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 18),
+                      child: Row(
+                        children: [
+                          for (final on in [true, false]) ...[
+                            if (!on) const SizedBox(width: 12),
+                            Expanded(
+                              child: _ChoiceCard(
+                                icon: on ? Icons.view_in_ar : Icons.crop_square,
+                                title: on ? '3D' : 'Flat',
+                                note: on ? 'Recommended' : 'Lighter',
+                                selected: ref.watch(globalSettingsProvider.select((s) => s.controls3d)) == on,
+                                onTap: () {
+                                  unawaited(Haptics.selectionClick());
+                                  unawaited(ref.read(globalSettingsProvider.notifier).setControls3d(on));
+                                },
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ),
@@ -405,6 +435,54 @@ class _Gestures extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _ChoiceCard extends StatelessWidget {
+  const _ChoiceCard({
+    required this.icon,
+    required this.title,
+    required this.note,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String note;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = _OnboardingScreenState._accent;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.14) : const Color(0xFF1A1A20),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: selected ? accent : const Color(0xFF3A3632), width: 2),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 36, color: selected ? accent : _OnboardingScreenState._muted),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                color: _OnboardingScreenState._ink,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Text(note, style: const TextStyle(color: _OnboardingScreenState._muted, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }

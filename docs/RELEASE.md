@@ -17,7 +17,8 @@ Gabe in a console / on a phone, C = Claude in the repo).
   corkboard scroll, swap animation. (G, C)
 - [ ] Accessibility basics: screen-reader labels on the main buttons, large
   text doesn't break the Win98 dialogs. (C)
-- [ ] 3D buttons: decide (keep turntable frames / flat / full 3D later).
+- [ ] 3D controls (decided 2026-10-08: all controls 3D, body 2D; 3D / flat
+  setting): tune on the live preview page, then render and ship. (G tunes, C)
 - [ ] Store screenshots: 4-8 phone shots (1080x1920 or larger) of the best
   moments: viewfinder, darkroom, corkboard, projector, Win98, picker. (C
   can stage them from the screen tests; G can take real ones)

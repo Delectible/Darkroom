@@ -615,3 +615,18 @@ Answers: turntable renders, no 2D/3D switch.
   About history or the store listing ("Darkroom 98", "late-90s desktop").
   Solitaire, Notepad, My Computer kept (generic words).
   → 25.1: 1.4.3 · 2026-10-08 · f04cacc
+
+## 26. 3D controls, debug window, steady still (2026-10-08)
+
+- [~] **26.1 3D controls** (24.3 decided: worth it): every control (shutter,
+  flash, zoom, flip, gallery) a 3D object turning with the body; body stays
+  2D. First a live three.js preview page to tune the look, then renders.
+- [x] **26.2 3D / flat setting**: Settings + Win98 Options, asked on a new
+  tour page ("How fancy?"). Today it switches the shutter's turn.
+- [x] **26.3 Debug window** (Help > Debug...): scrolling tool list with
+  room for more: Camera Log, Crash Reports, Welcome Tour, Tour On Next
+  Start, Develop Everything Now, Frame Timing Graphs, Slow Motion, System
+  Info, Test Crash.
+- [x] **26.4 Frozen viewfinder squash**: the box fell back to 16:9 while the
+  camera was closed and the still was stretched to it; it now keeps the
+  last stream's shape and the still is never stretched.

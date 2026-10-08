@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:darkroom/core/providers.dart';
+import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/onboarding/onboarding_screen.dart';
 import 'package:flutter/material.dart';
@@ -26,7 +28,10 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [userNameProvider.overrideWith(_NoName.new)],
+        overrides: [
+          userNameProvider.overrideWith(_NoName.new),
+          initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+        ],
         child: RepaintBoundary(
           key: boundary,
           child: MaterialApp(debugShowCheckedModeBanner: false, home: OnboardingScreen(onDone: () {})),
@@ -34,7 +39,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    for (var page = 0; page < 6; page++) {
+    for (var page = 0; page < 7; page++) {
       if (shots != null) {
         await tester.runAsync(() async {
           final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -43,7 +48,7 @@ void main() {
           await File('$shots/onboarding_$page.png').writeAsBytes(png!.buffer.asUint8List());
         });
       }
-      if (page < 5) {
+      if (page < 6) {
         await tester.tap(find.byType(FilledButton));
         await tester.pumpAndSettle();
       }

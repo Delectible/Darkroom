@@ -136,6 +136,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
         if (!mounted) return;
         final programs = await ref.read(shaderProgramsProvider.future);
         if (mounted) CorkTiles.warm(programs.cork, MediaQuery.sizeOf(context));
+        // The photoreal bodies: every sprite decoded before it's needed.
+        final art = await ref.read(bodyArtProvider.future);
+        if (art != null && mounted && ref.read(globalSettingsProvider).controls3d) {
+          unawaited(art.precache(context));
+        }
       });
     });
   }

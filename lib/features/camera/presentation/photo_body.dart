@@ -23,6 +23,10 @@ class BodyArt {
 
   static const root = 'assets/body';
 
+  /// Performance mode: parts stay face-on while the body turns (no turned
+  /// frames decoded or drawn; the swap moves the body as one picture).
+  static bool faceOnly = false;
+
   /// Pixels per dp the sprites were saved at.
   final double px;
   final Map<String, Map<String, BodyPart>> _parts;
@@ -30,6 +34,37 @@ class BodyArt {
   BodyPart? part(AppMode mode, String name) => _parts[mode.name]?[name];
 
   bool has(AppMode mode) => _parts[mode.name]?.isNotEmpty ?? false;
+
+  /// Decodes every sprite ahead of time (face-on first, then the turned
+  /// frames unless [faceOnly]), so nothing pops in or janks mid-swap.
+  Future<void> precache(BuildContext context) async {
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final width = MediaQuery.sizeOf(context).width;
+    // Big enough for every frame of both bodies (default is 100 MB).
+    PaintingBinding.instance.imageCache.maximumSizeBytes = 260 << 20;
+    final face = <ImageProvider>[], turned = <ImageProvider>[];
+    for (final parts in _parts.values) {
+      for (final p in parts.values) {
+        final panel = p.name == 'panel' || p.name.startsWith('plate');
+        final w = panel ? width : p.canvas.width;
+        for (final st in p.states.isEmpty ? <String?>[null] : p.states) {
+          face.add(bodyImage(p.asset(st, 0), w * dpr));
+        }
+        for (final y in p.yaws.where((y) => y != 0)) {
+          turned.add(bodyImage(p.asset(null, y), w * dpr * 0.6));
+        }
+      }
+    }
+    for (final i in face) {
+      if (!context.mounted) return;
+      await precacheImage(i, context);
+    }
+    if (faceOnly) return;
+    for (final i in turned) {
+      if (!context.mounted) return;
+      await precacheImage(i, context);
+    }
+  }
 
   static Future<BodyArt?> load() async {
     try {
@@ -155,19 +190,19 @@ class BodySprite extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final yaw = BodyYaw.of(context);
+    final yaw = BodyArt.faceOnly ? 0.0 : BodyYaw.of(context);
     final deg = yaw * 180 / math.pi;
     final (lo, hi, f) = part.bracket(deg);
-    Widget frame(int y, double o) => Opacity(
-      opacity: o,
-      child: Image(
-        image: bodyImage(part.asset(state, y), part.canvas.width * dpr * (y == 0 ? 1 : 0.6)),
-        width: part.canvas.width,
-        height: part.canvas.height,
-        fit: BoxFit.fill,
-        filterQuality: FilterQuality.medium,
-        gaplessPlayback: true,
-      ),
+    // Alpha goes into the image paint (an Opacity would cost a layer each).
+    Widget frame(int y, double o) => Image(
+      image: bodyImage(part.asset(state, y), part.canvas.width * dpr * (y == 0 ? 1 : 0.6)),
+      width: part.canvas.width,
+      height: part.canvas.height,
+      fit: BoxFit.fill,
+      filterQuality: FilterQuality.medium,
+      gaplessPlayback: true,
+      color: o < 1 ? Color.fromRGBO(255, 255, 255, o) : null,
+      colorBlendMode: BlendMode.modulate,
     );
     Widget img = Stack(children: [frame(lo, opacity), if (f > 0.02) frame(hi, opacity * f)]);
     if (yaw != 0) {
@@ -198,7 +233,7 @@ class BodySlice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final yaw = BodyYaw.of(context);
+    final yaw = BodyArt.faceOnly ? 0.0 : BodyYaw.of(context);
     final (lo, hi, f) = part.bracket(yaw * 180 / math.pi);
     final box = part.box ?? part.canvas;
     final mx = (part.canvas.width - box.width) / 2, my = (part.canvas.height - box.height) / 2;
@@ -209,21 +244,20 @@ class BodySlice extends StatelessWidget {
         Widget frame(int y, double o) {
           final scale = y == 0 ? 1.0 : 0.6;
           final k = dpr * scale; // decoded px per dp
-          return Opacity(
-            opacity: o,
-            child: Image(
-              image: bodyImage(part.asset(null, y), part.canvas.width * k),
-              width: w,
-              height: h,
-              centerSlice: Rect.fromLTRB(
-                sx * k,
-                sy * k,
-                (part.canvas.width - sx) * k,
-                (part.canvas.height - sy) * k,
-              ),
-              filterQuality: FilterQuality.medium,
-              gaplessPlayback: true,
+          return Image(
+            image: bodyImage(part.asset(null, y), part.canvas.width * k),
+            width: w,
+            height: h,
+            centerSlice: Rect.fromLTRB(
+              sx * k,
+              sy * k,
+              (part.canvas.width - sx) * k,
+              (part.canvas.height - sy) * k,
             ),
+            filterQuality: FilterQuality.medium,
+            gaplessPlayback: true,
+            color: o < 1 ? Color.fromRGBO(255, 255, 255, o) : null,
+            colorBlendMode: BlendMode.modulate,
           );
         }
 
@@ -259,7 +293,7 @@ class BodyBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final yaw = BodyYaw.of(context);
+    final yaw = BodyArt.faceOnly ? 0.0 : BodyYaw.of(context);
     final deg = yaw * 180 / math.pi;
     final panel = art.part(mode, 'panel')!;
     return LayoutBuilder(
@@ -268,16 +302,15 @@ class BodyBackdrop extends StatelessWidget {
         final k = w / panel.canvas.width; // panels are drawn to the screen's width
         Widget layer(BodyPart p, Alignment align, double height) {
           final (lo, hi, f) = p.bracket(deg);
-          Widget img(int y, double o) => Opacity(
-            opacity: o,
-            child: Image(
-              image: bodyImage(p.asset(null, y), w * dpr * (y == 0 ? 1 : 0.6)),
-              width: w,
-              height: p.canvas.height * k,
-              fit: BoxFit.fill,
-              filterQuality: FilterQuality.medium,
-              gaplessPlayback: true,
-            ),
+          Widget img(int y, double o) => Image(
+            image: bodyImage(p.asset(null, y), w * dpr * (y == 0 ? 1 : 0.6)),
+            width: w,
+            height: p.canvas.height * k,
+            fit: BoxFit.fill,
+            filterQuality: FilterQuality.medium,
+            gaplessPlayback: true,
+            color: o < 1 ? Color.fromRGBO(255, 255, 255, o) : null,
+            colorBlendMode: BlendMode.modulate,
           );
           return SizedBox(
             width: w,

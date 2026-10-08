@@ -33,10 +33,12 @@ def render(job):
     if os.path.exists(out): return None
     os.makedirs(os.path.dirname(out), exist_ok=True)
     cw, ch = p['canvas']; px = p.get('px', args.px)
-    rw, rh = round(cw * px * args.ss), round(ch * px * args.ss)
+    # turned frames are only seen in motion, decoded at 60 %: render lighter
+    ss = args.ss if yaw == 0 else 0.8
+    rw, rh = round(cw * px * ss), round(ch * px * ss)
     item = f"body_{mode}-{file}"
     tmp = f'{args.out}/_tmp/{mode}-{file}'; os.makedirs(os.path.dirname(tmp), exist_ok=True)
-    spp = p.get('spp', 128)
+    spp = p.get('spp', 128) if yaw == 0 else min(p.get('spp', 128), 48)
     t0 = time.time()
     def shoot(q, dst, timeout):
         r = subprocess.run(['node', 'shoot.mjs', f'render.html?{q}', dst, str(timeout)], cwd=root, capture_output=True, text=True)

@@ -7,6 +7,7 @@ import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../../core/providers.dart';
 import '../../../core/shaders/shader_library.dart' show FilmUniforms;
+import '../../camera/presentation/photo_body.dart' show BodyArt;
 import '../../../core/settings/settings_repository.dart';
 import '../../cameras/domain/camera_catalog.dart';
 
@@ -23,6 +24,7 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     Sfx.level = s.sfxVolume;
     Haptics.enabled = s.haptics;
     FilmUniforms.lite = s.performance;
+    BodyArt.faceOnly = s.performance;
   }
 
   /// Sound effects level, 0 (off) .. 1; saved when the slider is let go.

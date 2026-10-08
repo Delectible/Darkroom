@@ -379,23 +379,33 @@ class _LcdPanel extends ConsumerWidget {
           fit: BoxFit.scaleDown,
           child: SizedBox.fromSize(
             size: _screen,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: PixelText(spec.name.toUpperCase(), dot: _nameDot, color: _ink),
+            // Switching body: the old readout goes out, then the new one comes
+            // up, like an LCD changing mode (the panel itself stays put).
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              switchInCurve: const Interval(0.5, 1),
+              switchOutCurve: const Interval(0.5, 1),
+              layoutBuilder: (current, previous) =>
+                  Stack(alignment: Alignment.topLeft, children: [...previous, ?current]),
+              child: Column(
+                key: ValueKey(spec.id),
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: PixelText(spec.name.toUpperCase(), dot: _nameDot, color: _ink),
+                        ),
                       ),
-                    ),
-                    CustomPaint(size: const Size(16, 8), painter: _LcdBattery(bars)),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                PixelText(status, dot: _statusDot, color: _ink.withValues(alpha: 0.8)),
-              ],
+                      CustomPaint(size: const Size(16, 8), painter: _LcdBattery(bars)),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  PixelText(status, dot: _statusDot, color: _ink.withValues(alpha: 0.8)),
+                ],
+              ),
             ),
           ),
         ),
@@ -768,7 +778,10 @@ class _ZoomRockerState extends ConsumerState<ZoomRocker> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w900,
-                color: palette.text.withValues(alpha: enabled && !atLimit ? 1 : 0.35),
+                // Dimmed only at the end of travel: while the camera reopens
+                // after a body switch zoom reads as unavailable for a moment,
+                // and dimming then made the W / T flicker.
+                color: palette.text.withValues(alpha: enabled && atLimit ? 0.35 : 1),
               ),
             ),
           ),

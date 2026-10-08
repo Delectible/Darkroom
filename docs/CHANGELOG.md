@@ -587,3 +587,19 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **23.4 Turntable frames on** (21.1): 40 frames, ~870 KB.
 - Monetization: parked until the app is further along (Gabe).
   → 21.1, 23.1-23.4: 1.4.1 · 2026-10-08 · 562cea4
+
+## 24. Polish toward a public release (2026-10-08)
+
+- [x] **24.1 W / T flicker** on switching camera: the labels dimmed while
+  the camera reopened (zoom briefly unavailable); now dimmed only at the
+  end of travel.
+- [x] **24.2 LCD readout** switches with a quick out-then-in fade (~0.2 s).
+- [ ] **24.3 3D buttons** "pretty bogus": answered (cost of full 3D);
+  decision pending, tracked in docs/RELEASE.md.
+- [x] **24.4 Accidental panel swipe:** once a touch has moved the camera
+  (a swap began), letting go can't open the corkboard / explorer.
+- [x] **24.5 Viewfinder held** while the corkboard / explorer / picker is up:
+  the last frame stays until the camera is streaming again.
+- [x] **24.6 Empty floppy** says "There are no files on the floppy disk."
+- [x] **24.7 Release roadmap:** docs/RELEASE.md (Play + App Store
+  checklists, incl. a trademark pass on stock / Windows names).

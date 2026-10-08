@@ -22,6 +22,8 @@ Read this first. It's the hand-off from the earlier development sessions
   plain words (it's Play's "What's new"), and when a main idea lands add a
   few-word bullet to the newest `AppInfo.revisions` entry (Help > About
   shows them as bullets; keep them short).
+- **Release roadmap:** `docs/RELEASE.md` is the checklist to the public
+  Play / App Store release; tick items as they land.
 - **Change log:** `docs/CHANGELOG.md` tracks every requested change by item
   number. Mark items `[~]` when starting and `[x] → version · date · commit`
   when they land; add new requests there. New stocks/cameras arrive on the

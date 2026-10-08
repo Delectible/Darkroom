@@ -195,7 +195,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     final at = _swap.value;
     _raw = at >= 0 ? at : 0;
     _dragging = true;
+    _tossing = at > 0;
   }
+
+  /// This touch has moved the camera (a swap began), so it can't also open
+  /// the corkboard / explorer: dragging the body back and flicking away
+  /// isn't a panel swipe. Cleared when the finger lifts.
+  bool _tossing = false;
 
   void _onDragUpdate(DragUpdateDetails d) {
     if (!_dragging) return;
@@ -205,6 +211,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // The way with no camera is the corkboard (film) / explorer (digital)
     // swipe: the body doesn't move at all that way, so nothing twitches
     // before the swipe triggers.
+    if (_raw > 0) _tossing = true;
     if (was == 0 && _raw > 0) {
       _snapMoving();
       unawaited(Haptics.selectionClick());
@@ -223,7 +230,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       // A clear swipe the way with no camera (right in film, left in
       // digital) brings in the corkboard / the explorer. It doesn't follow
       // the thumb: the swipe triggers it.
-      final away = v < -1.1 || (_raw < -0.25 && v < 0.3);
+      final away = !_tossing && (v < -1.1 || (_raw < -0.25 && v < 0.3));
       if (_swap.value != 0) unawaited(_settleBack(v));
       if (away) {
         unawaited(
@@ -311,6 +318,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (ref.read(captureControllerProvider).isRecording) {
       await ref.read(captureControllerProvider.notifier).stopRecording();
     }
+    // The camera is released while the other screen is up: keep its last
+    // frame in the viewfinder (seen as the panel slides in and away) until
+    // it's live again.
+    _snapMoving();
     session.setScreenVisible(false);
     if (!mounted) return;
     _releaseEdges();
@@ -342,6 +353,20 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (slides) Sfx.corkSwoosh.play();
     _claimEdges();
     session.setScreenVisible(true);
+    _dropWhenLive();
+  }
+
+  /// Lets go of the held frame once the camera is streaming again (a beat
+  /// after it reports ready, so the first frames are in), or after 10 s.
+  void _dropWhenLive([int tries = 0]) {
+    if (!mounted || CameraViewport.freeze.value == null) return;
+    if (ref.read(cameraSessionProvider).isReady || tries > 100) {
+      Future<void>.delayed(const Duration(milliseconds: 350), () {
+        if (mounted && !_dragging && !_committing && _swap.value == 0) _dropMoving();
+      });
+      return;
+    }
+    Future<void>.delayed(const Duration(milliseconds: 100), () => _dropWhenLive(tries + 1));
   }
 
   bool _selectorOpen = false;
@@ -354,12 +379,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (_selectorOpen || ref.read(captureControllerProvider).isRecording) return;
     _selectorOpen = true;
     final session = ref.read(cameraSessionProvider.notifier);
+    _snapMoving();
     session.setScreenVisible(false);
     _releaseEdges();
     await showStockSelector(context, ref.read(appModeProvider));
     _claimEdges();
     _selectorOpen = false;
     session.setScreenVisible(true);
+    _dropWhenLive();
   }
 
   void _openGallery() {

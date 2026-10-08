@@ -28,7 +28,11 @@ class ExplorerFilePane extends StatelessWidget {
     required this.onOpen,
     required this.onClearSelection,
     required this.onSort,
+    this.emptyText,
   });
+
+  /// What an empty drive says (default: SD card or plain folder).
+  final String? emptyText;
 
   final List<MediaItem> items;
   final ExplorerView view;
@@ -46,7 +50,9 @@ class ExplorerFilePane extends StatelessWidget {
     if (items.isEmpty) {
       return GestureDetector(
         onTap: onClearSelection,
-        child: Center(child: Text(locked ? 'There are no files on the SD card.' : 'This folder is empty.')),
+        child: Center(
+          child: Text(emptyText ?? (locked ? 'There are no files on the SD card.' : 'This folder is empty.')),
+        ),
       );
     }
     Widget item(MediaItem m, Widget Function(bool selected) builder) => Builder(

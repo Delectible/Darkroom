@@ -682,6 +682,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                                     },
                                                     selected: _selected,
                                                     locked: place == ExplorerPlace.sd || onFloppy,
+                                                    emptyText: onFloppy
+                                                        ? 'There are no files on the floppy disk.'
+                                                        : null,
                                                     onSelect: (m) => setState(() {
                                                       _selected
                                                         ..clear()

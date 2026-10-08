@@ -3,15 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.4.1';
+  static const version = '1.4.2';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Shutter buttons turn in real 3D as you toss the camera. A crisper, quicker CRT switch-off with a '
-      'lingering glow, the digital cameras\' LCD stays put while its readout changes, and an empty card '
-      'says SD Empty.';
+      'The viewfinder keeps its last picture while the corkboard or Windows 98 slides in and out, '
+      'starting a camera swap no longer opens a panel by accident, the LCD blinks between cameras '
+      'like a real one, steadier zoom buttons, and an empty floppy says so.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

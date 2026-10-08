@@ -703,8 +703,8 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 30. Landscape Win98 space, button animations (2026-10-08)
 
-- [~] **30.1 Landscape Darkroom 98** wastes space round the edges: status
+- [x] **30.1 Landscape Darkroom 98** → 1.5.2 · 2026-10-08 · 5534fe3 wastes space round the edges: status
   bar, cutout margin, bezel; give the file list the room.
-- [~] **30.2 Film aspect dial** is lackluster: animate it.
-- [~] **30.3 Click animation** on the camera's keys (flash, ratio, settings
+- [x] **30.2 Film aspect dial** → 1.5.2 · 2026-10-08 · 5534fe3 is lackluster: animate it.
+- [x] **30.3 Click animation** → 1.5.2 · 2026-10-08 · 5534fe3 on the camera's keys (flash, ratio, settings
   on digital, and any others that need it).

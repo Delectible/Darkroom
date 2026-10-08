@@ -586,3 +586,4 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **23.3 Gallery button** on an empty card says SD EMPTY.
 - [x] **23.4 Turntable frames on** (21.1): 40 frames, ~870 KB.
 - Monetization: parked until the app is further along (Gabe).
+  → 21.1, 23.1-23.4: 1.4.1 · 2026-10-08 · 562cea4

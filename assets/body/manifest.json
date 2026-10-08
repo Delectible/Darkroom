@@ -1,0 +1,183 @@
+{
+ "px": 3.5,
+ "parts": {
+  "digital": {
+   "panel": {
+    "canvas": [
+     412,
+     1000
+    ],
+    "yaws": [
+     0
+    ],
+    "spp": 64,
+    "px": 3,
+    "noShadow": true
+   },
+   "frame": {
+    "canvas": [
+     220,
+     220
+    ],
+    "box": [
+     204,
+     204
+    ],
+    "yaws": [
+     0
+    ],
+    "spp": 128,
+    "slice": 40
+   },
+   "pill": {
+    "canvas": [
+     96,
+     56
+    ],
+    "yaws": [
+     0
+    ],
+    "states": [
+     "up",
+     "down"
+    ],
+    "stateYaw0": [
+     "down"
+    ]
+   },
+   "pillwide": {
+    "canvas": [
+     84,
+     56
+    ],
+    "yaws": [
+     0
+    ],
+    "states": [
+     "up",
+     "down"
+    ],
+    "stateYaw0": [
+     "down"
+    ]
+   },
+   "pillsmall": {
+    "canvas": [
+     64,
+     56
+    ],
+    "yaws": [
+     0
+    ],
+    "states": [
+     "up",
+     "down"
+    ],
+    "stateYaw0": [
+     "down"
+    ]
+   },
+   "lens": {
+    "canvas": [
+     56,
+     56
+    ],
+    "yaws": [
+     0
+    ]
+   },
+   "lensdot": {
+    "canvas": [
+     40,
+     40
+    ],
+    "yaws": [
+     0
+    ],
+    "noShadow": true
+   },
+   "lcd": {
+    "canvas": [
+     124,
+     84
+    ],
+    "box": [
+     116,
+     76
+    ],
+    "yaws": [
+     0
+    ],
+    "slice": 26
+   },
+   "review": {
+    "canvas": [
+     84,
+     84
+    ],
+    "yaws": [
+     0
+    ]
+   },
+   "rocker": {
+    "canvas": [
+     124,
+     64
+    ],
+    "yaws": [
+     0
+    ],
+    "states": [
+     "mid",
+     "w",
+     "t"
+    ],
+    "stateYaw0": [
+     "w",
+     "t"
+    ]
+   },
+   "tray": {
+    "canvas": [
+     84,
+     84
+    ],
+    "yaws": [
+     0
+    ]
+   },
+   "shutter": {
+    "canvas": [
+     120,
+     120
+    ],
+    "yaws": [
+     0
+    ],
+    "states": [
+     "up",
+     "down"
+    ],
+    "stateYaw0": [
+     "down"
+    ]
+   },
+   "rec": {
+    "canvas": [
+     120,
+     120
+    ],
+    "yaws": [
+     0
+    ],
+    "states": [
+     "up",
+     "down"
+    ],
+    "stateYaw0": [
+     "down"
+    ]
+   }
+  }
+ }
+}

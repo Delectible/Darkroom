@@ -4,7 +4,7 @@ description: >-
   darkroom and pins them to a corkboard; Digital Mode buffers shots on a
   virtual SD card browsed through a Windows 98 explorer.
 publish_to: none
-version: 1.4.7+44
+version: 1.5.0+45
 
 environment:
   sdk: ^3.12.0
@@ -61,6 +61,8 @@ flutter:
     - assets/fonts/OFL.txt
     - assets/sfx/
     - assets/shutters/
+    - assets/body/
+    - assets/body/digital/
   fonts:
     # Handwriting on instant prints (SIL OFL 1.1, see assets/fonts/OFL.txt).
     - family: Caveat

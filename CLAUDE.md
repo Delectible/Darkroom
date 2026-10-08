@@ -108,6 +108,14 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   `#ifdef IMPELLER_TARGET_OPENGLES uv.y = 1 - uv.y` (still in the dart:ui
   docs) flipped the viewfinder on GLES phones (Galaxy S10+; Pixels use
   Vulkan). The contract test forbids it.
+- **Landscape screens (1.5)**: `UprightApp` (MaterialApp.builder,
+  `core/device/upright.dart`) turns the whole UI (RotatedBox + turned
+  MediaQuery) when the top page's route has `settings:
+  UprightApp.landscape` and has finished sliding in: the corkboard, print
+  viewer, projector (deck beside the screen), Darkroom 98 and its viewer.
+  Win98Scale lays out 1:1 in landscape (`factorFor`). Tests run the
+  corkboard and explorer both ways (`corkboard_screen_test`,
+  `explorer_screens_test`).
 - The activity is **locked to portrait**. Landscape is detected with the
   accelerometer (`lib/core/device/physical_orientation.dart`); icons rotate in
   place (`Upright` / `UprightBox`) and photos are saved upright.
@@ -323,8 +331,22 @@ UI
   `softStroke` (core/theme/soft_shadow.dart) or gradients. Setting
   **Performance mode** (`GlobalSettings.performance`, `FilmUniforms.lite`):
   viewfinder halation off, the body swaps as one picture (`_dragFace`).
-- Setting **3D controls** (`GlobalSettings.controls3d`, asked on the tour's
-  "How fancy?" page): on = controls turn with the body; off = face-on.
+- Setting **3D controls** (`GlobalSettings.controls3d`, on by default; the
+  tour no longer asks): on = the photoreal bodies (below), controls turn
+  with the body; off = the classic drawn bodies, face-on controls.
+- **Photoreal bodies (1.5)**: every part (leather/aluminium panel, chrome
+  plates, viewfinder frame, keys, dials, shutter, trays) is rendered in
+  Blender Cycles by `tool/render/blender/` (`kit.py` materials + shapes,
+  `parts.py` the parts with the app's dp canvases, `render_body.py`
+  resumable, `mockup.py` lays them out like a Pixel). Needs the pip `bpy`
+  module (`/opt/bpyenv/venv` in Claude's container; Ubuntu's apt Blender
+  lacks the denoiser). `tool/render/body/bundle.py OUT assets/body` copies
+  them in (only complete bodies). The app draws them in its normal layout
+  (`photo_body.dart`: `BodySprite`, `BodySlice` 9-slice, `BodyBackdrop`,
+  `PhotoKey`); turned frames cross-fade with the swap (`BodyYaw`), all
+  decoded up front (`BodyArt.precache`). Performance mode = face-on only
+  (`BodyArt.faceOnly`). `test/photo_body_test.dart` checks every frame is
+  bundled and lays both bodies out (SHOTS saves them).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
 - Camera session: "inactive" does NOT close the camera (Android sends it on

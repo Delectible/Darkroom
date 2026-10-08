@@ -17,8 +17,10 @@ Gabe in a console / on a phone, C = Claude in the repo).
   corkboard scroll, swap animation. (G, C)
 - [ ] Accessibility basics: screen-reader labels on the main buttons, large
   text doesn't break the Win98 dialogs. (C)
-- [ ] 3D controls (decided 2026-10-08: all controls 3D, body 2D; 3D / flat
-  setting): tune on the live preview page, then render and ship. (G tunes, C)
+- [~] 3D bodies (1.5, 2026-10-08: the whole body and every control
+  rendered in Blender; 3D on by default, Settings switch for the classic
+  look). Shipped to internal testing; G checks it on the Pixel and S10+.
+- [~] Landscape for the corkboard, projector and Darkroom 98 (1.5). (G checks)
 - [ ] Store screenshots: 4-8 phone shots (1080x1920 or larger) of the best
   moments: viewfinder, darkroom, corkboard, projector, Win98, picker. (C
   can stage them from the screen tests; G can take real ones)

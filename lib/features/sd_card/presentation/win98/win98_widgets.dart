@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 import '../../../../core/audio/sfx.dart';
+import '../../../../core/diagnostics/perf_recorder.dart';
 
 /// Classic 9x-era system palette.
 class W98 {
@@ -348,6 +349,7 @@ Future<void> showWin98Menu(
   List<GlobalKey> siblings = const [],
   ValueChanged<int>? onSwitch,
 }) async {
+  PerfRecorder.mark('win98 menu', hold: const Duration(milliseconds: 600));
   final box = anchor.findRenderObject()! as RenderBox;
   final topLeft = box.localToGlobal(Offset(0, box.size.height));
   final picked = await showGeneralDialog<Object>(
@@ -1141,6 +1143,7 @@ Future<T?> showWin98Window<T>(
   Widget? icon,
   double width = 320,
 }) {
+  PerfRecorder.mark('win98 window: $title', hold: const Duration(milliseconds: 800));
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: false,

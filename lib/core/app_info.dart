@@ -3,14 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.4.4';
+  static const version = '1.4.5';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The frozen viewfinder no longer squashes while a panel slides, a 3D or flat choice for the camera '
-      'buttons (tour and Settings), and a Debug window in Help with logs, the tour and test tools.';
+      'Smoother on older phones: the camera waits for panels to finish sliding before it starts, the live '
+      'viewfinder rests while a panel covers it, and the corkboard is painted ahead of time. Help > Debug '
+      'has a Performance Recorder.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

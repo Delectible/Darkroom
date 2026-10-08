@@ -115,12 +115,14 @@ void main() {
     expect(find.text('Camera Log'), findsWidgets);
     expect(find.text('Crash Reports'), findsOneWidget);
     expect(find.text('Welcome Tour'), findsOneWidget);
-    await tester.tap(find.text('Frame Timing Graphs'));
-    await tester.pump(const Duration(milliseconds: 400)); // past the double-tap wait
+    expect(find.text('Performance Recorder'), findsWidgets);
+    // The first tool (the performance recorder) is picked: a switch.
     expect(find.text('Turn On'), findsOneWidget);
     await tester.tap(find.text('Turn On'));
     await tester.pump();
     expect(find.text('Turn Off'), findsOneWidget);
+    await tester.tap(find.text('Turn Off'));
+    await tester.pump();
     await shoot(tester, 'win98_debug');
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/audio/sfx.dart';
+import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
 import '../../application/capture_controller.dart';
@@ -25,6 +26,7 @@ final shutterPulseProvider = NotifierProvider<ShutterPulse, int>(ShutterPulse.ne
 
 /// Fires the shutter: the button's stroke and sound, then the capture.
 void pressShutter(WidgetRef ref) {
+  PerfRecorder.mark('shutter');
   ref.read(shutterPulseProvider.notifier).fire();
   unawaited(ref.read(captureControllerProvider.notifier).shutter());
 }

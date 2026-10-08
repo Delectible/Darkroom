@@ -311,7 +311,13 @@ UI
   Dart errors + Android ApplicationExitInfo; Win98 Help > Debug... >
   Crash Reports. The Debug window (`win98/debug_menu.dart`, list `_tools`;
   add new tools there) also has Camera Log, the tour, develop-now, frame
-  graphs (`perfOverlayProvider`), slow motion, system info, a test crash.
+  graphs (`perfOverlayProvider`), slow motion, system info, a test crash,
+  and the Performance Recorder (`core/diagnostics/perf_recorder.dart`:
+  `PerfRecorder.mark('label')` tags the next frames; the report splits UI
+  vs GPU time per label). Mark new heavy moments with it.
+- Slower phones: the camera reopens only after a panel's exit animation
+  (`_settled`), the live viewfinder isn't built under a held still, and
+  the cork wall's shader tiles are cached (`CorkTiles`, warmed at start).
 - Setting **3D controls** (`GlobalSettings.controls3d`, asked on the tour's
   "How fancy?" page): on = controls turn with the body; off = face-on.
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).

@@ -618,7 +618,10 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 26. 3D controls, debug window, steady still (2026-10-08)
 
-- [~] **26.1 3D controls** (24.3 decided: worth it): every control (shutter,
+- [~] **26.1 3D controls** (24.3 decided: worth it; the live preview read as
+  "budget", so a path-traced film body is being tried:
+  `tool/render/items/filmback.js`, first test render lost its textures;
+  parked for 27): every control (shutter,
   flash, zoom, flip, gallery) a 3D object turning with the body; body stays
   2D. First a live three.js preview page to tune the look
   (`tool/preview3d/index.html`, published as an artifact), then renders.
@@ -632,3 +635,19 @@ Answers: turntable renders, no 2D/3D switch.
   camera was closed and the still was stretched to it; it now keeps the
   last stream's shape and the still is never stretched.
   → 26.2-26.4: 1.4.4 · 2026-10-08 · 94fd5b0
+
+## 27. Older phones (Galaxy S10+) (2026-10-08)
+
+- [x] **27.1 Performance Recorder** (Help > Debug): times every frame,
+  labelled by activity (slides, swaps, picker, Win98 menus / windows,
+  corkboard scroll, shutter), split into UI thread vs GPU; Performance
+  Report with Copy. No Android emulator here (no KVM) and an emulator
+  wouldn't behave like the S10+'s Mali GPU anyway, so the phone measures.
+- [x] **27.2 Camera restart moved off the slide**: it reopened as the panel
+  began sliding away; now after the exit animation (picker: after it closes).
+- [x] **27.3 No live viewfinder under a held still** (swap, panels, picker):
+  its look shader was still running every camera frame underneath.
+- [x] **27.4 Cork wall painted ahead**: tiles cached between visits and the
+  first two drawn 2 s after the camera opens (the shader ran in the
+  board's first frame).
+- [ ] **27.5 Performance mode**: decide from Gabe's S10+ report.

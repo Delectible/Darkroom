@@ -125,22 +125,29 @@ class CameraViewport extends ConsumerWidget {
                             return Stack(
                               fit: StackFit.expand,
                               children: [
-                                if (session.isReady)
-                                  _FocusablePreview(
-                                    controller: controller!,
-                                    child: LiveLookPreview(
-                                      spec: spec,
-                                      grain: local.grain,
-                                      crop: mask,
-                                      canvas: strip,
-                                      turns: turns,
-                                      spin: spin,
-                                      spinScale: spinScale,
-                                      child: _RotationCorrectedPreview(controller: controller),
-                                    ),
-                                  )
-                                else
-                                  _Standby(session: session),
+                                // Under a held still (swap, panel, picker) the live
+                                // picture isn't drawn at all: its look shader is the
+                                // most expensive thing on screen.
+                                ValueListenableBuilder<ui.Image?>(
+                                  valueListenable: freeze,
+                                  builder: (context, still, _) => still != null
+                                      ? const SizedBox.expand()
+                                      : session.isReady
+                                      ? _FocusablePreview(
+                                          controller: controller!,
+                                          child: LiveLookPreview(
+                                            spec: spec,
+                                            grain: local.grain,
+                                            crop: mask,
+                                            canvas: strip,
+                                            turns: turns,
+                                            spin: spin,
+                                            spinScale: spinScale,
+                                            child: _RotationCorrectedPreview(controller: controller),
+                                          ),
+                                        )
+                                      : _Standby(session: session),
+                                ),
                                 if (spin == 0 && spinScale == 1)
                                   maskLayer
                                 else

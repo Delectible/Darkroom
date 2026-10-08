@@ -7,7 +7,7 @@ const q = new URLSearchParams(location.search);
 const item = q.get('item'), size = +(q.get('size') || 512), spp = +(q.get('spp') || 32);
 const pass = q.get('pass') || 'obj';         // obj | floor | bg
 const mode = q.get('mode') || 'pt';          // pt | raster
-const W = size, H = size;
+const W = size, H = +(q.get('h') || size);
 const renderer = new THREE.WebGLRenderer({ preserveDrawingBuffer: true, alpha: true, antialias: true });
 renderer.setPixelRatio(1); renderer.setSize(W, H);
 renderer.toneMapping = THREE.AgXToneMapping; renderer.toneMappingExposure = +(q.get('exp') || 1.0);

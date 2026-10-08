@@ -21,6 +21,7 @@ import 'print_viewer.dart';
 import 'projector_screen.dart';
 import 'reel_painter.dart';
 import '../../../core/device/haptics.dart';
+import '../../../core/diagnostics/perf_recorder.dart';
 
 /// Film gallery: developed prints and Super 8 reels pinned to a cork board,
 /// with the darkroom (still developing) in a red safelight strip on top.
@@ -61,7 +62,8 @@ class CorkboardScreen extends ConsumerStatefulWidget {
 
 class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
   bool _saving = false;
-  final _scroll = ScrollController();
+  late final _scroll = ScrollController()
+    ..addListener(() => PerfRecorder.mark('corkboard scroll', hold: const Duration(milliseconds: 150)));
 
   /// Prints whose share file has been queued (id:note).
   final _warmed = <String>{};
@@ -177,6 +179,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
     final route = item.isVideo
         ? ProjectorScreen.route(reels, reels.indexOf(item))
         : PrintViewerScreen.route(prints, prints.indexOf(item));
+    PerfRecorder.mark(item.isVideo ? 'projector open' : 'print viewer open');
     Navigator.of(context).push(route);
   }
 
@@ -580,19 +583,67 @@ class _CorkWall extends ConsumerStatefulWidget {
 }
 
 class _CorkWallState extends ConsumerState<_CorkWall> {
-  static const _scale = 2.0; // texture px per logical px: keeps the granules crisp
-  final _tiles = <int, ui.Image>{};
-  double? _forWidth;
-
   @override
-  void dispose() {
-    for (final t in _tiles.values) {
-      t.dispose();
+  Widget build(BuildContext context) {
+    final programs = ref.watch(shaderProgramsProvider).value;
+    return LayoutBuilder(
+      builder: (context, box) {
+        final size = box.biggest;
+        if (programs == null || !size.isFinite || size.isEmpty) {
+          return const ColoredBox(color: Color(0xFFB4875A));
+        }
+        return CustomPaint(
+          size: size,
+          painter: _CorkWallPainter(
+            scroll: widget.scroll,
+            tileH: size.height,
+            tile: (i) => CorkTiles.tile(programs.cork, i, size),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// The cork wall's rendered tiles, kept between visits (the shader is
+/// expensive on slower GPUs: painting a tile in the board's first frame made
+/// the slide-in stutter) and drawn ahead of time by [warm].
+class CorkTiles {
+  CorkTiles._();
+
+  static const _scale = 2.0; // texture px per logical px: keeps the granules crisp
+  static final _tiles = <int, ui.Image>{};
+  static Size? _forSize;
+
+  static ui.Image tile(ui.FragmentProgram program, int index, Size size) {
+    if (_forSize != size) {
+      for (final t in _tiles.values) {
+        t.dispose();
+      }
+      _tiles.clear();
+      _forSize = size;
     }
-    super.dispose();
+    return _tiles.putIfAbsent(index, () {
+      // Keep a small window of tiles around the current one.
+      if (_tiles.length > 4) {
+        final far = _tiles.keys.reduce((a, b) => (a - index).abs() > (b - index).abs() ? a : b);
+        _tiles.remove(far)?.dispose();
+      }
+      return _render(program, index, size.width, size.height);
+    });
   }
 
-  ui.Image _render(ui.FragmentProgram program, int index, double w, double tileH) {
+  /// Draws the first tiles for the board on a [screen] of this size (inside
+  /// its wooden frame), so the first slide-in only blits them.
+  static void warm(ui.FragmentProgram program, Size screen) {
+    final size = Size(screen.width - 2 * _WoodFrame.width, screen.height - 2 * _WoodFrame.width);
+    if (size.isEmpty) return;
+    for (var i = 0; i < 2; i++) {
+      tile(program, i, size);
+    }
+  }
+
+  static ui.Image _render(ui.FragmentProgram program, int index, double w, double tileH) {
     final pw = (w * _scale).round(), ph = (tileH * _scale).round();
     final shader = program.fragmentShader()
       ..setFloat(0, pw.toDouble())
@@ -605,42 +656,6 @@ class _CorkWallState extends ConsumerState<_CorkWall> {
     final image = recorder.endRecording().toImageSync(pw, ph);
     shader.dispose();
     return image;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final programs = ref.watch(shaderProgramsProvider).value;
-    return LayoutBuilder(
-      builder: (context, box) {
-        final size = box.biggest;
-        if (programs == null || !size.isFinite || size.isEmpty) {
-          return const ColoredBox(color: Color(0xFFB4875A));
-        }
-        if (_forWidth != size.width) {
-          for (final t in _tiles.values) {
-            t.dispose();
-          }
-          _tiles.clear();
-          _forWidth = size.width;
-        }
-        final tileH = size.height;
-        return CustomPaint(
-          size: size,
-          painter: _CorkWallPainter(
-            scroll: widget.scroll,
-            tileH: tileH,
-            tile: (i) => _tiles.putIfAbsent(i, () {
-              // Keep a small window of tiles around the current one.
-              if (_tiles.length > 5) {
-                final far = _tiles.keys.reduce((a, b) => (a - i).abs() > (b - i).abs() ? a : b);
-                _tiles.remove(far)?.dispose();
-              }
-              return _render(programs.cork, i, size.width, tileH);
-            }),
-          ),
-        );
-      },
-    );
   }
 }
 

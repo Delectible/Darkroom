@@ -3,12 +3,14 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/app_info.dart';
 import '../../../../core/device/battery.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/debug_flags.dart';
+import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../../core/providers.dart';
 import '../../../camera/application/camera_session_controller.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
@@ -30,6 +32,21 @@ class _Tool {
 }
 
 final _tools = <_Tool>[
+  _Tool(
+    PixelIcon.hourglass,
+    'Performance Recorder',
+    'Times every frame while on, labelled with what was happening (panel slides, swaps, menus...). '
+        'Turn it on, use the app normally, then open Performance Report.',
+    (_, _) async => PerfRecorder.recording ? PerfRecorder.stop() : PerfRecorder.start(),
+    on: (_) => PerfRecorder.recording,
+  ),
+  _Tool(
+    PixelIcon.views,
+    'Performance Report',
+    'Slow frames per activity, and whether the app (UI) or the graphics chip (GPU) was the hold-up. '
+        'Copy it and send it to Claude.',
+    (context, _) => _perfReport(context),
+  ),
   _Tool(
     PixelIcon.camera,
     'Camera Log',
@@ -99,6 +116,62 @@ final _tools = <_Tool>[
     if (context.mounted) await _done(context, 'Thrown. It should be at the top of Crash Reports.');
   }),
 ];
+
+Future<void> _perfReport(BuildContext context) => showWin98Window<void>(
+  context,
+  title: 'Performance Report - Notepad',
+  width: 340,
+  icon: const PixelIconView(PixelIcon.info),
+  builder: (context) => StatefulBuilder(
+    builder: (context, setState) {
+      final text = PerfRecorder.report();
+      return Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 320),
+              child: Win98Bevel(
+                style: BevelStyle.sunken,
+                color: W98.white,
+                padding: const EdgeInsets.all(6),
+                child: SingleChildScrollView(child: Text(text, style: W98.text.copyWith(fontSize: 10))),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Win98Button(
+                  minWidth: 64,
+                  onPressed: () {
+                    PerfRecorder.clear();
+                    setState(() {});
+                  },
+                  child: const Text('Clear'),
+                ),
+                const SizedBox(width: 6),
+                Win98Button(
+                  minWidth: 64,
+                  onPressed: () => unawaited(Clipboard.setData(ClipboardData(text: text))),
+                  child: const Text('Copy'),
+                ),
+                const SizedBox(width: 6),
+                Win98Button(
+                  minWidth: 64,
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  ),
+);
 
 Future<void> _done(BuildContext context, String text) =>
     showWin98MessageBox(context, title: 'Debug', message: text);

@@ -16,6 +16,7 @@ import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../cameras/presentation/stock_selector_screen.dart';
+import '../../../core/shaders/shader_library.dart';
 import '../../corkboard/presentation/corkboard_screen.dart';
 import '../../darkroom/application/darkroom_controller.dart';
 import '../../sd_card/presentation/win98/explorer_screen.dart';
@@ -29,6 +30,7 @@ import 'body_swap.dart';
 import 'viewport.dart';
 import 'widgets/camera_controls.dart';
 import '../../../core/device/haptics.dart';
+import '../../../core/diagnostics/perf_recorder.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
@@ -108,6 +110,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     unawaited(Sfx.cameraSwap.preload());
     unawaited(Sfx.zoomMotor.preload());
     VolumeKeys.listen(_volume);
+    // Paint the corkboard's cork while nothing is happening, so its first
+    // slide-in doesn't have to.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(seconds: 2), () async {
+        if (!mounted) return;
+        final programs = await ref.read(shaderProgramsProvider.future);
+        if (mounted) CorkTiles.warm(programs.cork, MediaQuery.sizeOf(context));
+      });
+    });
   }
 
   @override
@@ -183,6 +194,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   void _onDragStart(DragStartDetails d) {
     if (!_canSwap()) return;
+    PerfRecorder.mark('camera swap', hold: const Duration(milliseconds: 1600));
     // Back gesture from the sides, notification shade from the top.
     final media = MediaQuery.of(context);
     final allowed = _peekBands(media.size);
@@ -254,6 +266,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// Tap on the other camera: toss without a drag.
   void _tossByTap() {
     if (!_canSwap()) return;
+    PerfRecorder.mark('camera swap', hold: const Duration(milliseconds: 1600));
     _swap.value = 0;
     _snapMoving();
     setState(() => _dragging = false);
@@ -314,6 +327,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // The corkboard and the PC monitor both slide in on a whoosh and land
     // with a soft knock.
     final slides = cork || page is ExplorerScreen;
+    final name = cork ? 'corkboard' : (page is ExplorerScreen ? 'win98' : 'screen');
+    PerfRecorder.mark('$name slide in', hold: const Duration(milliseconds: 1300));
     final session = ref.read(cameraSessionProvider.notifier);
     if (ref.read(captureControllerProvider).isRecording) {
       await ref.read(captureControllerProvider.notifier).stopRecording();
@@ -350,10 +365,33 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       slide.addListener(landed);
     }
     await done;
+    PerfRecorder.mark('$name slide out', hold: const Duration(milliseconds: 1100));
     if (slides) Sfx.corkSwoosh.play();
     _claimEdges();
+    // Reopen the camera once the panel has finished sliding away: starting
+    // it mid-slide made the animation stutter on slower phones.
+    await _settled(route);
+    if (!mounted) return;
+    PerfRecorder.mark('camera reopen', hold: const Duration(milliseconds: 1500));
     session.setScreenVisible(true);
     _dropWhenLive();
+  }
+
+  /// Completes when [route]'s exit animation is over.
+  Future<void> _settled(ModalRoute<void> route) {
+    final a = route.animation;
+    if (a == null || a.isDismissed) return Future.value();
+    final done = Completer<void>();
+    void check(AnimationStatus s) {
+      if (s == AnimationStatus.dismissed && !done.isCompleted) {
+        a.removeStatusListener(check);
+        done.complete();
+      }
+    }
+
+    a.addStatusListener(check);
+    // Never hold the camera hostage to a stuck animation.
+    return done.future.timeout(const Duration(seconds: 2), onTimeout: () => a.removeStatusListener(check));
   }
 
   /// Lets go of the held frame once the camera is streaming again (a beat
@@ -378,13 +416,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   Future<void> _openSelector() async {
     if (_selectorOpen || ref.read(captureControllerProvider).isRecording) return;
     _selectorOpen = true;
+    PerfRecorder.mark('picker open');
     final session = ref.read(cameraSessionProvider.notifier);
     _snapMoving();
     session.setScreenVisible(false);
     _releaseEdges();
     await showStockSelector(context, ref.read(appModeProvider));
     _claimEdges();
+    // Let the picker finish closing (280 ms) before the camera starts up.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
     _selectorOpen = false;
+    if (!mounted) return;
     session.setScreenVisible(true);
     _dropWhenLive();
   }

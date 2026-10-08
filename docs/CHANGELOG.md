@@ -708,3 +708,7 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **30.2 Film aspect dial** → 1.5.2 · 2026-10-08 · 5534fe3 is lackluster: animate it.
 - [x] **30.3 Click animation** → 1.5.2 · 2026-10-08 · 5534fe3 on the camera's keys (flash, ratio, settings
   on digital, and any others that need it).
+
+## 31. Closed testing (2026-10-08)
+
+- [x] **31.1 Promote 1.5.2 to closed testing.** → build 73 promoted · 2026-10-08

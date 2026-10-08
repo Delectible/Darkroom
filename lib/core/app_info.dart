@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.4.6';
+  static const version = '1.4.7';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Faster on older phones: no more live blurs behind the Windows 98 monitor, its slide-in or the camera '
-      'swap, and a new Performance mode in Settings (lighter viewfinder effect, simpler swaps).';
+      'Super 8 grain is gentler: the old Weak setting is the new Normal (Weak and Strong scale from there). '
+      'Plus everything from 1.4.6: faster on older phones and a Performance mode.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

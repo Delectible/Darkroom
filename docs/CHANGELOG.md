@@ -664,3 +664,13 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **27.7 Recorder**: unlabelled frames now say which screen was up
   ("idle camera / corkboard / win98"); the report shows Performance mode.
   → 27.1-27.4: 1.4.5 · 2026-10-08 · e7b33ff; 27.5-27.7: 1.4.6 · 2026-10-08 · 02ab546
+
+## 28. Super 8 grain, closed testing, v1.5 full 3D (2026-10-08)
+
+- [x] **28.1 Super 8 grain** still too strong: old Weak (0.4x amount,
+  1.35x finer) is the new Normal (0.0256, res 513); Weak / Strong scale
+  from it.
+- [ ] **28.2 Promote 1.4.7 to closed testing.**
+- [~] **28.3 v1.5: full 3D bodies**: the whole camera body and every
+  control path-traced; premium, cost no object; must stay smooth on the
+  S10+ and fit every screen shape.

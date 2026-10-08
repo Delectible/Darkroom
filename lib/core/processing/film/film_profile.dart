@@ -269,9 +269,11 @@ class FilmProfile {
       highlightCap: 0.85,
       shadowTint: [0.012, 0.006, -0.006],
       highlightTint: [-0.012, 0.012, -0.006],
-      grainAmount: 0.064, // 0.085 until 1.3.26: too grainy
+      // Normal = what Weak was until 1.4.7 (0.064 / 380: still too grainy;
+      // 0.085 until 1.3.26); Weak and Strong scale from here.
+      grainAmount: 0.0256,
       grainChroma: 0.45,
-      grainResolution: 380,
+      grainResolution: 513,
       halation: 0.3,
       vignette: 0.3,
       exposureDrift: 0,

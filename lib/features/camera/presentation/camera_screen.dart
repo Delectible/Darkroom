@@ -129,6 +129,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     unawaited(Sfx.cameraSwap.preload());
     unawaited(Sfx.zoomMotor.preload());
     VolumeKeys.listen(_volume);
+    // 3D switched on (or performance mode off) later: decode the sprites then.
+    ref.listenManual(globalSettingsProvider.select((s) => (s.controls3d, s.performance)), (prev, next) async {
+      if (!next.$1) return;
+      final art = await ref.read(bodyArtProvider.future);
+      if (art != null && mounted) unawaited(art.precache(context));
+    });
     // Paint the corkboard's cork while nothing is happening, so its first
     // slide-in doesn't have to.
     WidgetsBinding.instance.addPostFrameCallback((_) {

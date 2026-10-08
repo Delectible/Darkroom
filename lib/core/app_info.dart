@@ -3,17 +3,25 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.4.7';
+  static const version = '1.5.0';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Super 8 grain is gentler: the old Weak setting is the new Normal (Weak and Strong scale from there). '
-      'Plus everything from 1.4.6: faster on older phones and a Performance mode.';
+      'Photoreal cameras: the whole body and every control is now a path-traced 3D render, and it turns with '
+      'the camera when you swap. The corkboard, projector and Darkroom 98 turn to landscape with your phone. '
+      '(Settings > 3D controls off brings back the classic look.)';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
+    (
+      '1.5',
+      [
+        'Photoreal 3D camera bodies, rendered in Blender',
+        'Corkboard, projector and Darkroom 98 in landscape',
+      ],
+    ),
     (
       '1.4',
       [

@@ -75,6 +75,25 @@ void main() {
     }
   });
 
+  test('3D off (or no art) draws the classic bodies', () async {
+    final art = await BodyArt.load();
+    if (art == null) return markTestSkipped('no body art bundled');
+    for (final on in [true, false]) {
+      final c = ProviderContainer(
+        overrides: [
+          initialGlobalSettingsProvider.overrideWithValue(GlobalSettings(controls3d: on)),
+          bodyArtProvider.overrideWith((ref) async => art),
+        ],
+      );
+      addTearDown(c.dispose);
+      await c.read(bodyArtProvider.future);
+      for (final mode in AppMode.values) {
+        if (!art.has(mode)) continue;
+        expect(c.read(photoBodyProvider(mode)), on ? same(art) : isNull);
+      }
+    }
+  });
+
   test('every frame the app draws is bundled', () async {
     final art = await BodyArt.load();
     if (art == null) return markTestSkipped('no body art bundled');
@@ -130,8 +149,8 @@ void main() {
   });
 
   for (final mode in AppMode.values) {
-    for (final deg in [0, 9, 27, 45]) {
-      testWidgets('${mode.name} body at $deg degrees', (tester) async {
+    {
+      testWidgets('${mode.name} body through a swap', (tester) async {
         final art = await tester.runAsync(BodyArt.load);
         if (art == null || !art.has(mode)) return markTestSkipped('no ${mode.name} body bundled');
         tester.view.physicalSize = const Size(1280, 2856);
@@ -140,6 +159,7 @@ void main() {
         BodyArt.faceOnly = false;
 
         final film = mode == AppMode.film;
+        final yaw = ValueNotifier<double>(0);
         await tester.pumpWidget(
           ProviderScope(
             overrides: [
@@ -157,8 +177,9 @@ void main() {
               child: MaterialApp(
                 debugShowCheckedModeBanner: false,
                 theme: RetroPalette.forMode(mode).toTheme(),
-                home: BodyYaw(
-                  yaw: deg * math.pi / 180,
+                home: ValueListenableBuilder(
+                  valueListenable: yaw,
+                  builder: (context, deg, child) => BodyYaw(yaw: deg * math.pi / 180, child: child!),
                   child: Scaffold(
                     body: Stack(
                       children: [
@@ -224,17 +245,35 @@ void main() {
           await art.precache(tester.element(find.byType(Scaffold)));
         });
         await tester.pump(const Duration(milliseconds: 300));
-        await tester.pump(const Duration(milliseconds: 300));
         expect(tester.takeException(), isNull);
 
-        if (shots != null) {
-          await tester.runAsync(() async {
-            final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-            final image = await ro.toImage(pixelRatio: 1);
-            final png = await image.toByteData(format: ui.ImageByteFormat.png);
-            await File('$shots/body_${mode.name}_$deg.png').writeAsBytes(png!.buffer.asUint8List());
-          });
+        // Turn through a swap and back a frame at a time: every frame it
+        // needs is already decoded (nothing pops in or stalls mid-swap).
+        final cache = PaintingBinding.instance.imageCache;
+        for (var d = 0.0; d <= 48; d += 1.5) {
+          yaw.value = d;
+          await tester.pump(const Duration(milliseconds: 16));
+          final waiting = <String>[];
+          for (final e in find.byType(Image).evaluate()) {
+            final img = (e.widget as Image).image;
+            if (img is! ResizeImage || img.imageProvider is! AssetImage) continue;
+            final name = (img.imageProvider as AssetImage).assetName;
+            if (!name.startsWith(BodyArt.root)) continue;
+            final key = await img.obtainKey(createLocalImageConfiguration(e));
+            final st = cache.statusForKey(key);
+            if (st.pending || !st.keepAlive) waiting.add(name);
+          }
+          expect(waiting, isEmpty, reason: '${mode.name} at $d degrees');
+          if (shots != null && const [0.0, 9.0, 27.0, 45.0].contains(d)) {
+            await tester.runAsync(() async {
+              final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+              final image = await ro.toImage(pixelRatio: 1);
+              final png = await image.toByteData(format: ui.ImageByteFormat.png);
+              await File('$shots/body_${mode.name}_${d.round()}.png').writeAsBytes(png!.buffer.asUint8List());
+            });
+          }
         }
+        expect(tester.takeException(), isNull);
       });
     }
   }

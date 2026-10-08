@@ -6,6 +6,7 @@ import 'package:darkroom/core/device/physical_orientation.dart';
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/theme/retro_theme.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
+import 'package:darkroom/features/camera/presentation/photo_body.dart';
 import 'package:darkroom/features/camera/presentation/widgets/camera_controls.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/win98_shutdown.dart';
@@ -72,6 +73,8 @@ void main() {
     final key = GlobalKey();
     Widget button(AppMode mode, List<MediaItem> items) => ProviderScope(
       overrides: [
+        // The classic drawn buttons (the photoreal ones: photo_body_test).
+        bodyArtProvider.overrideWith((ref) async => null),
         appModeProvider.overrideWith(() => _Mode(mode)),
         physicalOrientationProvider.overrideWith(_Held.new),
         filmItemsProvider.overrideWith((ref) => Stream.value(items)),

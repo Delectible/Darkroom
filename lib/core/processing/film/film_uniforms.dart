@@ -20,6 +20,7 @@ class FilmUniformLayout {
     int turns = 0,
     double spin = 0,
     double spinScale = 1,
+    bool halation = true,
   }) => [
     time,
     crop.left, crop.top, crop.width, crop.height,
@@ -30,7 +31,7 @@ class FilmUniformLayout {
     p.grainAmount * grain.factor,
     p.grainChroma,
     p.grainResolution * grain.resolution,
-    p.halation,
+    halation ? p.halation : 0,
     p.halationColor[0], p.halationColor[1], p.halationColor[2],
     p.weave,
     p.flicker,

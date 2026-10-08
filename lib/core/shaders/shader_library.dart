@@ -94,6 +94,10 @@ class LookUniforms {
 class FilmUniforms {
   const FilmUniforms._();
 
+  /// Performance mode: the viewfinder skips halation (6 of the shader's 10
+  /// texture reads per pixel). Developed photos are unaffected.
+  static bool lite = false;
+
   static void apply(
     ui.FragmentShader shader,
     FilmProfile p, {
@@ -117,6 +121,7 @@ class FilmUniforms {
     var i = 2;
     for (final v in FilmUniformLayout.floats(
       p,
+      halation: !lite,
       time: time,
       crop: crop,
       grain: grain,

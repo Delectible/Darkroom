@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/scheduler.dart';
 
+import '../shaders/shader_library.dart' show FilmUniforms;
+
 /// Records every frame's timings on the phone (Win98 Help > Debug >
 /// Performance Recorder), labelled with what the app was doing (`mark`), so
 /// a slow device can say exactly what is slow: the UI thread (Dart: build,
@@ -19,6 +21,9 @@ class PerfRecorder {
   static const _keep = 4000;
 
   static String? _label;
+
+  /// The screen on top, for frames nothing labelled ("idle camera"...).
+  static String screen = 'camera';
   static DateTime _labelUntil = DateTime(0);
 
   /// Labels the frames of the next [hold] (an animation, a dialog opening).
@@ -45,7 +50,7 @@ class PerfRecorder {
 
   static void _onTimings(List<ui.FrameTiming> timings) {
     final now = DateTime.now();
-    final label = now.isBefore(_labelUntil) ? _label! : 'other';
+    final label = now.isBefore(_labelUntil) ? _label! : 'idle $screen';
     for (final t in timings) {
       _frames.add(
         _Frame(
@@ -72,6 +77,7 @@ class PerfRecorder {
         'Screen ${view?.physicalSize.width.round()}x${view?.physicalSize.height.round()} '
         '@${view?.devicePixelRatio.toStringAsFixed(2)}x, ${hz.round()} Hz (budget ${budget.toStringAsFixed(1)} ms)',
       )
+      ..writeln('Performance mode: ${FilmUniforms.lite ? 'on' : 'off'}')
       ..writeln('Frames recorded: ${_frames.length}')
       ..writeln()
       ..writeln('activity: frames, slow (>budget), UI avg/p90/max, GPU avg/p90/max (ms)');

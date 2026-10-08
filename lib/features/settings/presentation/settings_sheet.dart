@@ -96,6 +96,13 @@ class _SettingsSheet extends ConsumerWidget {
           onChanged: (v) => unawaited(g.setHaptics(v)),
         ),
         _Toggle(
+          title: 'Performance mode',
+          subtitle:
+              'For older phones: a lighter viewfinder effect and simpler camera swaps. Photos look the same.',
+          value: global.performance,
+          onChanged: (v) => unawaited(g.setPerformance(v)),
+        ),
+        _Toggle(
           title: '3D controls',
           subtitle:
               'Buttons turn with the camera when you swap. Off: flat buttons, a little lighter on older phones.',

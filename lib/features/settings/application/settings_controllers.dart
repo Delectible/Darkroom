@@ -6,6 +6,7 @@ import '../../../core/device/haptics.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../../core/providers.dart';
+import '../../../core/shaders/shader_library.dart' show FilmUniforms;
 import '../../../core/settings/settings_repository.dart';
 import '../../cameras/domain/camera_catalog.dart';
 
@@ -21,6 +22,7 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
   static void _apply(GlobalSettings s) {
     Sfx.level = s.sfxVolume;
     Haptics.enabled = s.haptics;
+    FilmUniforms.lite = s.performance;
   }
 
   /// Sound effects level, 0 (off) .. 1; saved when the slider is let go.
@@ -32,6 +34,12 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
 
   Future<void> setHaptics(bool enabled) async {
     state = state.copyWith(haptics: enabled);
+    _apply(state);
+    await _repo.saveGlobal(state);
+  }
+
+  Future<void> setPerformance(bool enabled) async {
+    state = state.copyWith(performance: enabled);
     _apply(state);
     await _repo.saveGlobal(state);
   }

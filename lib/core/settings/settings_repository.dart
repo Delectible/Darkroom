@@ -17,6 +17,7 @@ class GlobalSettings {
     this.sfxVolume = 0.5,
     this.haptics = true,
     this.controls3d = true,
+    this.performance = false,
   });
 
   final bool darkroomEnabled;
@@ -37,6 +38,10 @@ class GlobalSettings {
   /// Camera controls drawn in 3D (turning with the body); off = flat.
   final bool controls3d;
 
+  /// Lighter graphics for slower phones: the viewfinder skips halation and
+  /// the camera body is swapped as one picture.
+  final bool performance;
+
   GlobalSettings copyWith({
     bool? darkroomEnabled,
     bool? notificationsEnabled,
@@ -45,6 +50,7 @@ class GlobalSettings {
     double? sfxVolume,
     bool? haptics,
     bool? controls3d,
+    bool? performance,
   }) => GlobalSettings(
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -53,6 +59,7 @@ class GlobalSettings {
     sfxVolume: sfxVolume ?? this.sfxVolume,
     haptics: haptics ?? this.haptics,
     controls3d: controls3d ?? this.controls3d,
+    performance: performance ?? this.performance,
   );
 }
 
@@ -94,6 +101,7 @@ class SettingsRepository {
   static const _kSfxVolume = 'global.sfxVolume';
   static const _kHaptics = 'global.haptics';
   static const _k3d = 'global.controls3d';
+  static const _kPerf = 'global.performance';
 
   Future<GlobalSettings> loadGlobal() async {
     bool read(String? v, bool fallback) => v == null ? fallback : v == '1';
@@ -110,6 +118,7 @@ class SettingsRepository {
       },
       haptics: read(await _db.getValue(_kHaptics), d.haptics),
       controls3d: read(await _db.getValue(_k3d), d.controls3d),
+      performance: read(await _db.getValue(_kPerf), d.performance),
     );
   }
 
@@ -121,6 +130,7 @@ class SettingsRepository {
     await _db.setValue(_kSfxVolume, s.sfxVolume.toStringAsFixed(3));
     await _db.setValue(_kHaptics, s.haptics ? '1' : '0');
     await _db.setValue(_k3d, s.controls3d ? '1' : '0');
+    await _db.setValue(_kPerf, s.performance ? '1' : '0');
   }
 
   Future<Map<String, CameraLocalSettings>> loadCameraSettings() async {

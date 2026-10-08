@@ -45,11 +45,30 @@ class ExplorerScreen extends ConsumerStatefulWidget {
       position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
         CurvedAnimation(parent: a, curve: const Cubic(0.3, 0.0, 0.5, 0.94), reverseCurve: Curves.easeInCubic),
       ),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 30, offset: Offset(-10, 0))],
-        ),
-        child: child,
+      // The shadow it casts on the camera: a gradient strip, not a blur
+      // (a full-screen blur cost slower phones a frame every frame).
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.expand,
+        children: [
+          const Positioned(
+            left: -44,
+            width: 44,
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0x00000000), Color(0x66000000), Color(0xCC000000)],
+                    stops: [0, 0.6, 1],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          child,
+        ],
       ),
     ),
   );
@@ -985,12 +1004,20 @@ class ExplorerMonitor extends StatelessWidget {
   Widget build(BuildContext context) {
     return ColoredBox(
       color: const Color(0xFFD9D3C3),
-      child: CustomPaint(
-        foregroundPainter: const _BezelPainter(bezel),
-        child: Padding(
-          padding: const EdgeInsets.all(bezel),
-          child: ClipRRect(borderRadius: BorderRadius.circular(6), child: child),
-        ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(bezel),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: RepaintBoundary(child: child),
+            ),
+          ),
+          const IgnorePointer(
+            child: RepaintBoundary(child: CustomPaint(painter: _BezelPainter(bezel))),
+          ),
+        ],
       ),
     );
   }
@@ -1047,14 +1074,21 @@ class _BezelPainter extends CustomPainter {
     );
     canvas.save();
     canvas.clipRRect(screen);
-    canvas.drawRRect(
-      screen.inflate(6),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 10
-        ..color = const Color(0x55000000)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
-    );
+    // The recess's inner shadow: gradients along each edge (no blur pass).
+    const depth = 9.0, shade = Color(0x4D000000), clear = Color(0x00000000);
+    final r = screen.outerRect;
+    for (final (rect, begin, end) in [
+      (Rect.fromLTWH(r.left, r.top, r.width, depth), Alignment.topCenter, Alignment.bottomCenter),
+      (Rect.fromLTWH(r.left, r.bottom - depth, r.width, depth), Alignment.bottomCenter, Alignment.topCenter),
+      (Rect.fromLTWH(r.left, r.top, depth, r.height), Alignment.centerLeft, Alignment.centerRight),
+      (Rect.fromLTWH(r.right - depth, r.top, depth, r.height), Alignment.centerRight, Alignment.centerLeft),
+    ]) {
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..shader = LinearGradient(begin: begin, end: end, colors: const [shade, clear]).createShader(rect),
+      );
+    }
     // A whisper of glass glare across the top-left.
     canvas.drawRect(
       screen.outerRect,
@@ -1073,10 +1107,11 @@ class _BezelPainter extends CustomPainter {
     canvas.drawCircle(lamp, 2.4, Paint()..color = const Color(0xFF7CFF6B));
     canvas.drawCircle(
       lamp,
-      5,
+      7,
       Paint()
-        ..color = const Color(0x557CFF6B)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+        ..shader = const RadialGradient(
+          colors: [Color(0x667CFF6B), Color(0x007CFF6B)],
+        ).createShader(Rect.fromCircle(center: lamp, radius: 7)),
     );
     final badge = TextPainter(
       text: const TextSpan(

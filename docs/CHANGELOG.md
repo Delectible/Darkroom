@@ -650,4 +650,16 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **27.4 Cork wall painted ahead**: tiles cached between visits and the
   first two drawn 2 s after the camera opens (the shader ran in the
   board's first frame).
-- [ ] **27.5 Performance mode**: decide from Gabe's S10+ report.
+- [x] **27.5 S10+ report** (WQHD+ 1440x2872 @3.5x, 60 Hz): GPU-bound
+  everywhere (UI thread fine). Worst: Win98 slide-in / menus / windows
+  (GPU 40-54 ms: full-screen blurs in the monitor bezel and the slide's
+  30 px shadow, redrawn every frame on Impeller), the swap (desk shadow
+  + strap blurs under a 3D transform), and idle camera ~19 ms (viewfinder
+  shader). Fixed: bezel recess and lamp glow as gradients, slide shadow
+  a gradient strip, desk shadow a baked low-res image (`SoftShadow`),
+  strap/cord shadows as layered strokes (`softStroke`).
+- [x] **27.6 Performance mode** (Settings + Win98 Options, off by default):
+  viewfinder without halation (6 of 10 texture reads per pixel; photos
+  unchanged) and the body swapped as one picture (`_dragFace`).
+- [x] **27.7 Recorder**: unlabelled frames now say which screen was up
+  ("idle camera / corkboard / win98"); the report shows Performance mode.

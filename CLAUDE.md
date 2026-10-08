@@ -318,6 +318,11 @@ UI
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and
   the cork wall's shader tiles are cached (`CorkTiles`, warmed at start).
+  Impeller redraws everything every frame (no raster cache): avoid live
+  blurs on big areas or under 3D transforms; use `SoftShadow` (baked) /
+  `softStroke` (core/theme/soft_shadow.dart) or gradients. Setting
+  **Performance mode** (`GlobalSettings.performance`, `FilmUniforms.lite`):
+  viewfinder halation off, the body swaps as one picture (`_dragFace`).
 - Setting **3D controls** (`GlobalSettings.controls3d`, asked on the tour's
   "How fancy?" page): on = controls turn with the body; off = face-on.
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).

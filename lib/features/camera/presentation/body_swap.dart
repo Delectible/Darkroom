@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../cameras/domain/camera_spec.dart';
+import '../../../core/theme/soft_shadow.dart';
 
 /// Film <-> Digital as two physical cameras on a desk.
 ///
@@ -240,17 +241,11 @@ class SwapBody extends StatelessWidget {
                   width: w + geo.cap,
                   top: 0,
                   height: h,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.all(r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.7),
-                          blurRadius: 34,
-                          offset: Offset(-capSide * 6.0, 22),
-                        ),
-                      ],
-                    ),
+                  child: SoftShadow(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    blurRadius: 34,
+                    offset: Offset(-capSide * 6.0, 22),
+                    radius: r.x,
                   ),
                 ),
                 // The end of the body beyond the screen.
@@ -531,14 +526,7 @@ class _StrapPainter extends CustomPainter {
       ..moveTo(start.dx, start.dy)
       ..quadraticBezierTo(mid.dx, mid.dy, bottom.dx, bottom.dy);
     final metric = path.computeMetrics().first;
-    canvas.drawPath(
-      path.shift(Offset(-side * 4.0, 10)),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.4)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 24
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
-    );
+    softStroke(canvas, path.shift(Offset(-side * 4.0, 10)), 24, 9, Colors.black.withValues(alpha: 0.4));
     final dark = Color.lerp(color, Colors.black, 0.35)!;
     final light = Color.lerp(color, const Color(0xFFE0B48A), 0.28)!;
     // The end tab: narrower, doubled back from the ring to the keeper.
@@ -651,14 +639,7 @@ class _StrapPainter extends CustomPainter {
       ..quadraticBezierTo(top.dx + side * 4, (top.dy + bead.dy) / 2, bead.dx, bead.dy)
       ..cubicTo(bead.dx - 30, bead.dy + 60, loopEnd.dx - 28, loopEnd.dy, loopEnd.dx, loopEnd.dy)
       ..cubicTo(loopEnd.dx + 28, loopEnd.dy, bead.dx + 30, bead.dy + 60, bead.dx, bead.dy);
-    canvas.drawPath(
-      cord.shift(Offset(-side * 3.0, 6)),
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.4)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 6
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
-    );
+    softStroke(canvas, cord.shift(Offset(-side * 3.0, 6)), 6, 4, Colors.black.withValues(alpha: 0.4));
     canvas.drawPath(
       cord,
       Paint()

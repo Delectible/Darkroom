@@ -84,6 +84,24 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   void _dropMoving() => CameraViewport.freeze.value = null;
 
+  /// Performance mode: the body being dragged, as one picture (the live body
+  /// under a 3D transform redraws every shadow and control each frame).
+  ui.Image? _dragFace;
+
+  void _snapBody() {
+    if (_dragFace != null || !ref.read(globalSettingsProvider).performance) return;
+    try {
+      final boundary = _bodyKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null || boundary.debugNeedsPaint) return;
+      _dragFace = boundary.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context) * 0.6);
+    } catch (_) {}
+  }
+
+  void _dropBody() {
+    _dragFace?.dispose();
+    _dragFace = null;
+  }
+
   /// Last picture of each body, slid in as the other camera while dragging.
   final Map<AppMode, ui.Image> _lastLook = {};
 
@@ -129,6 +147,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     _swap.dispose();
     _outgoing?.dispose();
     CameraViewport.freeze.value = null;
+    _dragFace?.dispose();
     for (final image in [..._lastLook.values, ..._lastFrame.values]) {
       image.dispose();
     }
@@ -226,6 +245,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (_raw > 0) _tossing = true;
     if (was == 0 && _raw > 0) {
       _snapMoving();
+      _snapBody();
       unawaited(Haptics.selectionClick());
     }
     _swap.value = math.max(0.0, _raw);
@@ -259,6 +279,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       setState(() {
         _swap.value = 0;
         _dropMoving();
+        _dropBody();
       });
     }
   }
@@ -269,6 +290,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     PerfRecorder.mark('camera swap', hold: const Duration(milliseconds: 1600));
     _swap.value = 0;
     _snapMoving();
+    _snapBody();
     setState(() => _dragging = false);
     unawaited(_commitSwap(2.4));
   }
@@ -282,7 +304,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     ui.Image? still;
     try {
       // Lower resolution is plenty for something moving this fast.
-      still = await boundary?.toImage(pixelRatio: MediaQuery.devicePixelRatioOf(context) * 0.6);
+      still =
+          _dragFace?.clone() ??
+          await boundary?.toImage(pixelRatio: MediaQuery.devicePixelRatioOf(context) * 0.6);
     } catch (_) {
       still = null;
     }
@@ -316,6 +340,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       _committing = false;
       _swap.value = 0;
       _dropMoving();
+      _dropBody();
     });
   }
 
@@ -329,6 +354,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     final slides = cork || page is ExplorerScreen;
     final name = cork ? 'corkboard' : (page is ExplorerScreen ? 'win98' : 'screen');
     PerfRecorder.mark('$name slide in', hold: const Duration(milliseconds: 1300));
+    PerfRecorder.screen = name;
     final session = ref.read(cameraSessionProvider.notifier);
     if (ref.read(captureControllerProvider).isRecording) {
       await ref.read(captureControllerProvider.notifier).stopRecording();
@@ -366,6 +392,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     }
     await done;
     PerfRecorder.mark('$name slide out', hold: const Duration(milliseconds: 1100));
+    PerfRecorder.screen = 'camera';
     if (slides) Sfx.corkSwoosh.play();
     _claimEdges();
     // Reopen the camera once the panel has finished sliding away: starting
@@ -544,7 +571,16 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                           : SwapStage(
                               progress: _swap.value,
                               dir: _dirFor(mode),
-                              leaving: child!,
+                              leaving: _dragFace == null
+                                  ? child!
+                                  : Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        // Kept alive (camera, state), not drawn.
+                                        Visibility.maintain(visible: false, child: child!),
+                                        RawImage(image: _dragFace, fit: BoxFit.fill),
+                                      ],
+                                    ),
                               leavingMode: mode,
                               arriving: picture(_lastLook[other], other),
                               arrivingMode: other,

@@ -24,13 +24,19 @@ scene.environment = env; scene.background = null;
 scene.environmentRotation = new THREE.Euler(0, (built.envRotation || 0) * Math.PI / 180, 0);
 if (pass !== 'bg') scene.add(built.object);
 if (pass !== 'obj') {
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000),
-    new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.9, metalness: 0 }));
-  floor.rotation.x = -Math.PI / 2; floor.position.y = built.floorY ?? 0; scene.add(floor);
+  if (built.floor) scene.add(built.floor);   // items that bring their own (e.g. a surface turned with them)
+  else {
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000),
+      new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.9, metalness: 0 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = built.floorY ?? 0; scene.add(floor);
+  }
 }
 const c = built.camera;
 if (q.get('campos')) c.position = q.get('campos').split(',').map(Number);
-const cam = new THREE.PerspectiveCamera(c.fov, W / H, 1, 5000);
+// c.ortho = [width, height] of the view in scene units (sprites for the app).
+const cam = c.ortho
+  ? new THREE.OrthographicCamera(-c.ortho[0] / 2, c.ortho[0] / 2, c.ortho[1] / 2, -c.ortho[1] / 2, 1, 20000)
+  : new THREE.PerspectiveCamera(c.fov, W / H, 1, 5000);
 if (c.up) cam.up.set(...c.up);
 cam.position.set(...c.position); cam.lookAt(new THREE.Vector3(...c.target));
 // auto-frame: keep the view direction, fit the object's box to `fill` of the frame

@@ -10,6 +10,7 @@ import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
 import '../../application/capture_controller.dart';
 import '../body_swap.dart' show BodyYaw;
+import '../photo_body.dart';
 import '../../../../core/device/haptics.dart';
 import '../../../settings/application/settings_controllers.dart';
 
@@ -110,6 +111,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
     final kind = _kind(spec);
     final video = spec.recordsVideo;
     final turn = ref.watch(globalSettingsProvider.select((s) => s.controls3d));
+    final art = ref.watch(photoBodyProvider(spec.mode));
     switch (kind) {
       case _Kind.digital:
         _precache(video ? 'digitalrec' : 'digital', 96);
@@ -128,6 +130,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
           _Kind.digital => _SpriteShutter(
             kind: video ? 'digitalrec' : 'digital',
             box: const Size(92, 78),
+            art: art,
             turns: turn,
             span: 96,
             pressed: _down || (t > 0 && t < 0.6),
@@ -136,6 +139,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
           _Kind.film => _SpriteShutter(
             kind: 'film',
             box: const Size(108, 86),
+            art: art,
             turns: turn,
             span: 138,
             hub: const Offset(0.6, 0.52),
@@ -145,6 +149,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
           _Kind.run => _SpriteShutter(
             kind: 'run',
             box: const Size(86, 86),
+            art: art,
             turns: turn,
             span: 108,
             pressed: _down || recording,
@@ -225,6 +230,7 @@ class _SpriteShutter extends StatelessWidget {
     required this.pressed,
     this.hub = const Offset(0.5, 0.5),
     this.turns = true,
+    this.art,
     this.lever,
     this.lamp,
   });
@@ -244,6 +250,10 @@ class _SpriteShutter extends StatelessWidget {
 
   /// Follow the body's yaw (setting "3D controls"); false keeps it face-on.
   final bool turns;
+
+  /// The photoreal body's art: its own renders of the shutter, in the
+  /// body's light (null: the turntable frames in assets/shutters).
+  final BodyArt? art;
 
   /// Film: the lever's turn from parked, radians clockwise; null or parked
   /// when it isn't moving.
@@ -312,7 +322,34 @@ class _SpriteShutter extends StatelessWidget {
 
     final List<Widget> layers;
     final stroke = lever != null && (lever! - leverRest).abs() > 1e-3;
-    if (stroke || !turntable) {
+    final mode = kind == 'film' || kind == 'run' ? AppMode.film : AppMode.digital;
+    final art = this.art;
+    if (art != null) {
+      BodyPart part(String n) => art.part(mode, n)!;
+      Widget at(Widget w, BodyPart p) => Positioned(
+        left: c.dx - p.canvas.width / 2,
+        top: c.dy - p.canvas.height / 2,
+        width: p.canvas.width,
+        height: p.canvas.height,
+        child: w,
+      );
+      final st = pressed ? 'down' : 'up';
+      final name = switch (kind) {
+        'film' => 'shutter',
+        'run' => 'run',
+        'digitalrec' => 'rec',
+        _ => 'shutter',
+      };
+      layers = stroke
+          ? [
+              at(BodySprite(part('release'), state: st), part('release')),
+              at(
+                Transform.rotate(angle: lever! - leverRest, child: BodySprite(part('lever'))),
+                part('lever'),
+              ),
+            ]
+          : [at(BodySprite(part(name), state: st), part(name))];
+    } else if (stroke || !turntable) {
       layers = [
         sprite(_base(kind)),
         if (lever != null) sprite('film-lever', angle: lever! - leverRest),

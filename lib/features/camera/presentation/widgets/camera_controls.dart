@@ -18,6 +18,7 @@ import '../../../../core/theme/surfaces.dart';
 import '../../../../core/utils/pixel_font.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../cameras/domain/camera_spec.dart';
+import '../photo_body.dart';
 import '../../application/camera_ui_state.dart';
 import '../../../cameras/presentation/artwork/camera_artwork.dart';
 import '../../application/capture_controller.dart';
@@ -91,6 +92,68 @@ class FlashButton extends ConsumerWidget {
         FlashSetting.off => Icons.flash_off,
       }),
     );
+    final art = ref.watch(photoBodyProvider(mode));
+    if (art != null && mode == AppMode.film) {
+      // A slide switch: the tab sits over A / ON / OFF.
+      final x = switch (flash) {
+        FlashSetting.auto => -27.0,
+        FlashSetting.on => -4.0,
+        FlashSetting.off => 19.0,
+      };
+      return Semantics(
+        button: true,
+        label: 'Flash ${flash.name}',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => unawaited(ref.read(flashProvider.notifier).cycle(mode)),
+          child: SizedBox(
+            width: 76,
+            height: 36,
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                BodySprite(art.part(mode, 'flash')!),
+                TweenAnimationBuilder<double>(
+                  tween: Tween(end: x),
+                  duration: const Duration(milliseconds: 140),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, x, child) => Transform.translate(offset: Offset(x, 6), child: child),
+                  child: BodySprite(art.part(mode, 'flashtab')!),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (art != null) {
+      return SizedBox(
+        width: 76,
+        height: 36,
+        child: PhotoKey(
+          part: art.part(mode, 'pill')!,
+          onTap: () => unawaited(ref.read(flashProvider.notifier).cycle(mode)),
+          child: IconTheme(
+            data: const IconThemeData(color: Color(0xFFE4E6E9), size: 15),
+            child: DefaultTextStyle(
+              style: photoLabel(onMetal: false),
+              child: Upright(
+                child: sideways
+                    ? icon
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [icon, const SizedBox(width: 2), Text(flash.name.toUpperCase())],
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return SizedBox(
       width: 76,
       child: BodyButton(
@@ -123,6 +186,43 @@ class AspectButton extends ConsumerWidget {
     final local = ref.watch(activeCameraSettingsProvider);
     final aspect = spec.aspectLocked ? spec.defaultAspect : local.aspect;
     final sideways = uprightQuarterTurns(ref.watch(physicalOrientationProvider)).isOdd;
+    final art = ref.watch(photoBodyProvider(spec.mode));
+    if (art != null) {
+      final film = spec.mode == AppMode.film;
+      final label = Upright(
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (spec.aspectLocked && !sideways)
+              Icon(Icons.lock, size: 10, color: film ? const Color(0xFF151515) : const Color(0xFFE4E6E9)),
+            Text(
+              aspect.label,
+              style: photoLabel(onMetal: film).copyWith(fontSize: film ? 9.5 : 11),
+            ),
+          ],
+        ),
+      );
+      return SizedBox(
+        width: 64,
+        height: 36,
+        child: film
+            ? GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: spec.aspectLocked ? null : onCycle,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [BodySprite(art.part(AppMode.film, 'aspect')!), label],
+                ),
+              )
+            : PhotoKey(
+                part: art.part(AppMode.digital, 'pillwide')!,
+                onTap: onCycle,
+                enabled: !spec.aspectLocked,
+                child: label,
+              ),
+      );
+    }
     return SizedBox(
       width: 64,
       child: BodyButton(
@@ -158,43 +258,61 @@ class StockButton extends ConsumerWidget {
     final palette = RetroPalette.of(context);
     final spec = ref.watch(activeSpecProvider);
     final film = spec.mode == AppMode.film;
+    final art = ref.watch(photoBodyProvider(spec.mode));
+    final artwork = Upright(
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 260),
+        transitionBuilder: (c, a) => FadeTransition(
+          opacity: a,
+          child: ScaleTransition(scale: Tween(begin: 0.8, end: 1.0).animate(a), child: c),
+        ),
+        // Flies into the picker's carousel (and back) on open/close.
+        child: Hero(
+          key: ValueKey(spec.id),
+          tag: 'artwork-${spec.id}',
+          child: CameraArtwork(spec: spec),
+        ),
+      ),
+    );
     return Semantics(
       button: true,
       label: film ? 'Choose film' : 'Choose camera',
       child: SwipeToCycle(
         onTap: onOpen,
-        child: Container(
-          width: 64,
-          height: 64,
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: const Color(0xFF151515),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: palette.metalDark),
-            // A recessed tray: light catches its lower lip, shade under the top.
-            boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 5, offset: Offset(1.5, 2.5))],
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF0B0B0B), Color(0xFF1C1C1C)],
-            ),
-          ),
-          child: Upright(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 260),
-              transitionBuilder: (c, a) => FadeTransition(
-                opacity: a,
-                child: ScaleTransition(scale: Tween(begin: 0.8, end: 1.0).animate(a), child: c),
+        child: art != null
+            // The rendered tray, the artwork sitting in its well.
+            ? SizedBox(
+                width: 64,
+                height: 64,
+                child: Stack(
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  children: [
+                    BodySprite(art.part(spec.mode, 'tray')!),
+                    Padding(padding: const EdgeInsets.all(7), child: artwork),
+                  ],
+                ),
+              )
+            : Container(
+                width: 64,
+                height: 64,
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF151515),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: palette.metalDark),
+                  // A recessed tray: light catches its lower lip, shade under the top.
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x66000000), blurRadius: 5, offset: Offset(1.5, 2.5)),
+                  ],
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF0B0B0B), Color(0xFF1C1C1C)],
+                  ),
+                ),
+                child: artwork,
               ),
-              // Flies into the picker's carousel (and back) on open/close.
-              child: Hero(
-                key: ValueKey(spec.id),
-                tag: 'artwork-${spec.id}',
-                child: CameraArtwork(spec: spec),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -226,7 +344,9 @@ class StockLabel extends ConsumerWidget {
         // on it changes. Film swaps the box end in the memo holder.
         child: KeyedSubtree(
           key: ValueKey(spec.isFilm ? spec.id : 'lcd'),
-          child: spec.isFilm ? _MemoHolder(spec: spec) : _LcdPanel(spec: spec),
+          child: spec.isFilm
+              ? _MemoHolder(spec: spec, art: ref.watch(photoBodyProvider(AppMode.film)))
+              : _LcdPanel(spec: spec, art: ref.watch(photoBodyProvider(AppMode.digital))),
         ),
       ),
     );
@@ -236,7 +356,10 @@ class StockLabel extends ConsumerWidget {
 /// Film bodies: the memo holder on the back door, with the end flap torn off
 /// the film box slipped in so you remember what's loaded.
 class _MemoHolder extends StatelessWidget {
-  const _MemoHolder({required this.spec});
+  const _MemoHolder({required this.spec, this.art});
+
+  /// Photoreal body: the card sits in the rendered clip.
+  final BodyArt? art;
 
   final CameraSpec spec;
 
@@ -249,6 +372,56 @@ class _MemoHolder extends StatelessWidget {
         : spec.isInstant
         ? '${spec.badge} · ${spec.roll.frames} SHOTS'
         : '${spec.badge} · ${spec.roll.frames} EXP';
+    final card = Container(
+      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+      decoration: BoxDecoration(
+        color: paper,
+        borderRadius: BorderRadius.circular(2),
+        // The holder's lips overlap the card a little.
+        border: Border.symmetric(
+          horizontal: BorderSide(color: Colors.black.withValues(alpha: 0.25), width: 1.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            spec.name.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: ink,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+              fontSize: 13,
+              height: 1.1,
+            ),
+          ),
+          Text(
+            detail,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: ink.withValues(alpha: 0.75),
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+    final clip = art?.part(AppMode.film, 'memo');
+    if (clip != null) {
+      return Stack(
+        children: [
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6), child: card),
+          Positioned.fill(child: BodySlice(clip)),
+        ],
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
@@ -260,47 +433,7 @@ class _MemoHolder extends StatelessWidget {
         ),
         boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 3, offset: Offset(0, 1))],
       ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-        decoration: BoxDecoration(
-          color: paper,
-          borderRadius: BorderRadius.circular(2),
-          // The holder's lips overlap the card a little.
-          border: Border.symmetric(
-            horizontal: BorderSide(color: Colors.black.withValues(alpha: 0.25), width: 1.5),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              spec.name.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: ink,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
-                fontSize: 13,
-                height: 1.1,
-              ),
-            ),
-            Text(
-              detail,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: ink.withValues(alpha: 0.75),
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1,
-                height: 1.2,
-              ),
-            ),
-          ],
-        ),
-      ),
+      child: card,
     );
   }
 }
@@ -308,7 +441,9 @@ class _MemoHolder extends StatelessWidget {
 /// Digital bodies: a little segment-LCD status panel, like the top plate of
 /// a 2000s digicam: the model, battery, and how much card (or tape) is left.
 class _LcdPanel extends ConsumerWidget {
-  const _LcdPanel({required this.spec});
+  final BodyArt? art;
+
+  const _LcdPanel({required this.spec, this.art});
 
   final CameraSpec spec;
 
@@ -358,6 +493,60 @@ class _LcdPanel extends ConsumerWidget {
       final left = math.max(0, capacity - used) ~/ _photoBytes(spec);
       status = 'SD 128MB  ${math.min(left, 9999)} LEFT';
     }
+    final screen = Container(
+      padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(2),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFB0BA9C), _lcd, Color(0xFF8E997C)],
+        ),
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: SizedBox.fromSize(
+          size: _screen,
+          // Switching body: the old readout goes out, then the new one comes
+          // up, like an LCD changing mode (the panel itself stays put).
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            switchInCurve: const Interval(0.5, 1),
+            switchOutCurve: const Interval(0.5, 1),
+            layoutBuilder: (current, previous) =>
+                Stack(alignment: Alignment.topLeft, children: [...previous, ?current]),
+            child: Column(
+              key: ValueKey(spec.id),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: PixelText(spec.name.toUpperCase(), dot: _nameDot, color: _ink),
+                      ),
+                    ),
+                    CustomPaint(size: const Size(16, 8), painter: _LcdBattery(bars)),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                PixelText(status, dot: _statusDot, color: _ink.withValues(alpha: 0.8)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    final bezel = art?.part(AppMode.digital, 'lcd');
+    if (bezel != null) {
+      return Stack(
+        children: [
+          Padding(padding: const EdgeInsets.all(7), child: screen),
+          Positioned.fill(child: BodySlice(bezel)),
+        ],
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
@@ -365,51 +554,7 @@ class _LcdPanel extends ConsumerWidget {
         color: const Color(0xFF2A2D31),
         border: Border.all(color: p.metalDark),
       ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(6, 4, 6, 4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(2),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFB0BA9C), _lcd, Color(0xFF8E997C)],
-          ),
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: SizedBox.fromSize(
-            size: _screen,
-            // Switching body: the old readout goes out, then the new one comes
-            // up, like an LCD changing mode (the panel itself stays put).
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              switchInCurve: const Interval(0.5, 1),
-              switchOutCurve: const Interval(0.5, 1),
-              layoutBuilder: (current, previous) =>
-                  Stack(alignment: Alignment.topLeft, children: [...previous, ?current]),
-              child: Column(
-                key: ValueKey(spec.id),
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: PixelText(spec.name.toUpperCase(), dot: _nameDot, color: _ink),
-                        ),
-                      ),
-                      CustomPaint(size: const Size(16, 8), painter: _LcdBattery(bars)),
-                    ],
-                  ),
-                  const SizedBox(height: 3),
-                  PixelText(status, dot: _statusDot, color: _ink.withValues(alpha: 0.8)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      child: screen,
     );
   }
 }
@@ -536,7 +681,13 @@ class GalleryButton extends ConsumerWidget {
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
-                child: film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb),
+                child: switch (ref.watch(photoBodyProvider(mode))) {
+                  final art? =>
+                    film
+                        ? _PhotoPrints(thumb: thumb, print: art.part(mode, 'print')!)
+                        : _PhotoReview(thumb: thumb, bezel: art.part(mode, 'review')!),
+                  null => film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb),
+                },
               ),
               if (badge > 0 || newPrints > 0)
                 Positioned(
@@ -578,6 +729,132 @@ Widget _thumbImage(String? thumb, Widget empty) => AnimatedSwitcher(
         )
       : empty,
 );
+
+/// Photoreal film body: two rendered prints, the latest picture on the top one.
+class _PhotoPrints extends StatelessWidget {
+  const _PhotoPrints({required this.thumb, required this.print});
+
+  final String? thumb;
+  final BodyPart print;
+
+  @override
+  Widget build(BuildContext context) {
+    // The print sprite is a 58 x 70 dp sheet; the picture sits in its
+    // border like a lab print (wider at the bottom).
+    Widget sheet(Widget picture) => Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        BodySprite(print),
+        Transform.translate(
+          offset: const Offset(0, -3),
+          child: SizedBox(
+            width: 50,
+            height: 54,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRect(child: picture),
+                // the print's gloss over the picture
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment(0.3, 0.2),
+                      colors: [Color(0x30FFFFFF), Color(0x00FFFFFF)],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        Transform.translate(
+          offset: const Offset(3, 2),
+          child: Transform.rotate(angle: 0.11, child: sheet(const ColoredBox(color: Color(0xFF6E6658)))),
+        ),
+        Transform.rotate(
+          angle: -0.05,
+          child: sheet(
+            Upright(
+              child: _thumbImage(
+                thumb,
+                const ColoredBox(
+                  color: Color(0xFFD9D2C3),
+                  child: Center(child: Icon(Icons.push_pin, size: 18, color: Color(0xFF9B8F7A))),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Photoreal digital body: the review screen under its rendered bezel.
+class _PhotoReview extends StatelessWidget {
+  const _PhotoReview({required this.thumb, required this.bezel});
+
+  final String? thumb;
+  final BodyPart bezel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(7),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Upright(
+                child: _thumbImage(
+                  thumb,
+                  const ColoredBox(
+                    color: Color(0xFF14306E),
+                    child: Center(
+                      child: Text(
+                        'SD\nEMPTY',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Color(0xFFBFD3FF),
+                          fontSize: 8,
+                          height: 1.1,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const CustomPaint(painter: _LcdGrid()),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment(0.2, 0.3),
+                    colors: [Color(0x40FFFFFF), Color(0x00FFFFFF)],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Center(child: BodySprite(bezel)),
+      ],
+    );
+  }
+}
 
 /// Film: the latest print as a little photograph lying on the body, tipped
 /// slightly, with another print peeking out underneath.
@@ -789,6 +1066,8 @@ class _ZoomRockerState extends ConsumerState<ZoomRocker> {
       );
     }
 
+    final art = ref.watch(photoBodyProvider(AppMode.digital));
+    final rockerPart = art?.part(AppMode.digital, 'rocker');
     final rocker = RawGestureDetector(
       behavior: HitTestBehavior.opaque,
       gestures: {
@@ -805,22 +1084,37 @@ class _ZoomRockerState extends ConsumerState<ZoomRocker> {
           };
         }),
       },
-      child: Container(
-        width: _width,
-        height: _height,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(_height / 2),
-          border: Border.all(color: Colors.black.withValues(alpha: 0.4)),
-          boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 2, offset: Offset(0, 1))],
-        ),
-        child: Row(
-          children: [
-            half('W', -1, const BorderRadius.horizontal(left: Radius.circular(_height / 2))),
-            Container(width: 1, color: Colors.black.withValues(alpha: 0.35)),
-            half('T', 1, const BorderRadius.horizontal(right: Radius.circular(_height / 2))),
-          ],
-        ),
-      ),
+      child: rockerPart != null
+          ? SizedBox(
+              width: _width,
+              height: _height,
+              child: Center(
+                child: BodySprite(
+                  rockerPart,
+                  state: switch (zoom.direction) {
+                    < 0 => 'w',
+                    > 0 => 't',
+                    _ => 'mid',
+                  },
+                ),
+              ),
+            )
+          : Container(
+              width: _width,
+              height: _height,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(_height / 2),
+                border: Border.all(color: Colors.black.withValues(alpha: 0.4)),
+                boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 2, offset: Offset(0, 1))],
+              ),
+              child: Row(
+                children: [
+                  half('W', -1, const BorderRadius.horizontal(left: Radius.circular(_height / 2))),
+                  Container(width: 1, color: Colors.black.withValues(alpha: 0.35)),
+                  half('T', 1, const BorderRadius.horizontal(right: Radius.circular(_height / 2))),
+                ],
+              ),
+            ),
     );
 
     return Semantics(
@@ -870,6 +1164,8 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
   Widget build(BuildContext context) {
     final palette = RetroPalette.of(context);
     final front = ref.watch(lensProvider) == CameraLensDirection.front;
+    final mode = ref.watch(appModeProvider);
+    final art = ref.watch(photoBodyProvider(mode));
     return Semantics(
       button: true,
       label: front ? 'Use back camera' : 'Use front camera',
@@ -887,23 +1183,42 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
           child: AnimatedScale(
             scale: _down ? 0.92 : 1,
             duration: const Duration(milliseconds: 70),
-            child: AnimatedRotation(
-              turns: _turns,
-              duration: const Duration(milliseconds: 420),
-              curve: Curves.easeOutBack,
-              child: SizedBox(
-                width: 40,
-                height: 40,
-                child: CustomPaint(
-                  painter: _LensFlipPainter(
-                    ring: palette.metal,
-                    ringDark: palette.metalDark,
-                    front: front,
-                    accent: palette.accent,
+            child: art != null
+                ? SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      clipBehavior: Clip.none,
+                      children: [
+                        BodySprite(art.part(mode, 'lens')!),
+                        // only the index turns: the knob's lighting stays put
+                        AnimatedRotation(
+                          turns: _turns,
+                          duration: const Duration(milliseconds: 420),
+                          curve: Curves.easeOutBack,
+                          child: BodySprite(art.part(mode, 'lensdot')!),
+                        ),
+                      ],
+                    ),
+                  )
+                : AnimatedRotation(
+                    turns: _turns,
+                    duration: const Duration(milliseconds: 420),
+                    curve: Curves.easeOutBack,
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CustomPaint(
+                        painter: _LensFlipPainter(
+                          ring: palette.metal,
+                          ringDark: palette.metalDark,
+                          front: front,
+                          accent: palette.accent,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
           ),
         ),
       ),

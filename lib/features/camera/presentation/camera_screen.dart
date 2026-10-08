@@ -27,6 +27,7 @@ import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
 import '../application/zoom_controller.dart';
 import 'body_swap.dart';
+import 'photo_body.dart';
 import 'viewport.dart';
 import 'widgets/camera_controls.dart';
 import '../../../core/device/haptics.dart';
@@ -595,13 +596,24 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                           // Leatherette or brushed metal; the texture tile is rendered
                           // once per body. No cross-fade: the new body slides in whole.
                           Positioned.fill(
-                            child: SurfaceTexture(
-                              key: ValueKey(mode),
-                              leather: mode == AppMode.film,
-                              base: mode == AppMode.film ? palette.body : palette.bodyHighlight,
-                              light: palette.bodyHighlight,
-                              dark: palette.bodyShadow,
-                            ),
+                            child: switch (ref.watch(photoBodyProvider(mode))) {
+                              // The rendered surface: chrome plates reach just
+                              // below the top controls and just under the bottom row.
+                              final art? => BodyBackdrop(
+                                key: ValueKey(mode),
+                                art: art,
+                                mode: mode,
+                                top: MediaQuery.paddingOf(context).top + 58,
+                                bottom: MediaQuery.paddingOf(context).bottom + 12,
+                              ),
+                              null => SurfaceTexture(
+                                key: ValueKey(mode),
+                                leather: mode == AppMode.film,
+                                base: mode == AppMode.film ? palette.body : palette.bodyHighlight,
+                                light: palette.bodyHighlight,
+                                dark: palette.bodyShadow,
+                              ),
+                            },
                           ),
                           SafeArea(
                             child: Column(
@@ -724,11 +736,24 @@ class _TopBar extends ConsumerWidget {
             LensFlipButton(enabled: !ref.watch(captureControllerProvider).isRecording),
             const SizedBox(width: 8),
           ],
-          BodyButton(
-            tooltip: 'Settings',
-            onTap: onSettings,
-            child: const Upright(child: Icon(Icons.tune)),
-          ),
+          switch (ref.watch(photoBodyProvider(spec.mode))) {
+            final art? => SizedBox(
+              width: 44,
+              height: 36,
+              child: spec.mode == AppMode.film
+                  ? PhotoKey(part: art.part(AppMode.film, 'menu')!, onTap: onSettings)
+                  : PhotoKey(
+                      part: art.part(AppMode.digital, 'pillsmall')!,
+                      onTap: onSettings,
+                      child: const Upright(child: Icon(Icons.tune, size: 17, color: Color(0xFFE4E6E9))),
+                    ),
+            ),
+            null => BodyButton(
+              tooltip: 'Settings',
+              onTap: onSettings,
+              child: const Upright(child: Icon(Icons.tune)),
+            ),
+          },
         ],
       ),
     );
@@ -737,16 +762,32 @@ class _TopBar extends ConsumerWidget {
 
 /// Physical surround of the viewfinder: brass-edged eyepiece for film, LCD
 /// bezel for digital.
-class _ViewportBezel extends StatelessWidget {
+class _ViewportBezel extends ConsumerWidget {
   const _ViewportBezel({required this.mode, required this.child});
 
   final AppMode mode;
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final p = RetroPalette.of(context);
     final film = mode == AppMode.film;
+    final frame = ref.watch(photoBodyProvider(mode))?.part(mode, 'frame');
+    if (frame != null) {
+      // The rendered frame round the screen (9-slice), over its edge.
+      return Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.all(film ? 9 : 12),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(film ? 7 : 4),
+              child: ColoredBox(color: p.screen, child: child),
+            ),
+          ),
+          Positioned.fill(child: BodySlice(frame)),
+        ],
+      );
+    }
     return Container(
       padding: EdgeInsets.all(film ? 8 : 10),
       decoration: BoxDecoration(

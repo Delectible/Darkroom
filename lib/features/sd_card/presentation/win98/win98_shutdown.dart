@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../../../core/audio/sfx.dart';
 import '../../../../core/theme/darkroom_mark.dart';
@@ -34,11 +35,17 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
   _Stage _stage = _Stage.shuttingDown;
   Timer? _next;
 
-  /// Drives the CRT collapse (0 = full picture, 1 = gone).
+  /// Drives the CRT switching off (0 = full picture, 1 = glow gone).
   late final AnimationController _crt = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 750),
+    duration: const Duration(milliseconds: 1400),
   );
+
+  /// The "shutting down" screen, taken once as a picture so the switch-off
+  /// only ever draws an image (repainting the live screen and its blurred
+  /// clouds every frame made it stutter).
+  final _screenKey = GlobalKey();
+  ui.Image? _still;
 
   @override
   void initState() {
@@ -52,12 +59,19 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
   void dispose() {
     _next?.cancel();
     _crt.dispose();
+    _still?.dispose();
     super.dispose();
   }
 
   void _toCrt() {
     if (!mounted || _stage.index >= _Stage.crt.index) return;
     _next?.cancel();
+    try {
+      final boundary = _screenKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      _still = boundary?.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context));
+    } catch (_) {
+      _still = null;
+    }
     setState(() => _stage = _Stage.crt);
     Sfx.crtOff.play();
     unawaited(Haptics.lightImpact());
@@ -65,7 +79,7 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
       _crt.forward().then((_) {
         if (!mounted) return;
         setState(() => _stage = _Stage.off);
-        _next = Timer(const Duration(milliseconds: 500), () {
+        _next = Timer(const Duration(milliseconds: 200), () {
           if (mounted) Navigator.of(context).pop();
         });
       }),
@@ -76,61 +90,111 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
 
   @override
   Widget build(BuildContext context) {
-    const picture = _ShuttingDownScreen();
+    final still = _still;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: _skip,
       child: ColoredBox(
         color: Colors.black,
-        child: _stage == _Stage.off
-            ? const SizedBox.expand()
-            : AnimatedBuilder(
-                animation: _crt,
-                builder: (context, _) => _CrtOff(t: _crt.value, child: picture),
-              ),
+        child: switch (_stage) {
+          _Stage.shuttingDown => RepaintBoundary(key: _screenKey, child: const _ShuttingDownScreen()),
+          _Stage.crt => CustomPaint(size: Size.infinite, painter: _CrtOffPainter(_crt, still)),
+          _Stage.off => const SizedBox.expand(),
+        },
       ),
     );
   }
 }
 
-/// The picture squeezed by a dying CRT: the height collapses to a bright
-/// line (0 - 0.55), the line shrinks to a dot (0.55 - 0.85), the dot fades.
-class _CrtOff extends StatelessWidget {
-  const _CrtOff({required this.t, required this.child});
+/// A CRT losing power: the picture snaps into a white-hot line almost at
+/// once (like the plug being pulled), the line pulls in to a dot, and the
+/// dot's phosphor glow lingers for a second before it fades.
+class _CrtOffPainter extends CustomPainter {
+  _CrtOffPainter(this.t, this.still) : super(repaint: t);
 
-  final double t;
-  final Widget child;
+  final Animation<double> t;
+  final ui.Image? still;
+
+  // Phases, as fractions of the 1.4 s run.
+  static const _cut = 0.07, _line = 0.16;
 
   @override
-  Widget build(BuildContext context) {
-    if (t <= 0) return child;
-    double seg(double a, double b) => ((t - a) / (b - a)).clamp(0.0, 1.0);
-    final squash = Curves.easeIn.transform(seg(0, 0.55));
-    final shrink = Curves.easeIn.transform(seg(0.55, 0.85));
-    final fade = seg(0.85, 1);
-    final sy = math.max(0.004, 1 - squash);
-    final sx = math.max(0.006, 1 - shrink);
-    // The beam gets brighter as the picture collapses into it.
-    final glow = squash;
-    return Opacity(
-      opacity: 1 - fade,
-      child: Center(
-        child: Transform(
-          alignment: Alignment.center,
-          transform: Matrix4.diagonal3Values(sx, sy, 1),
-          child: Stack(
-            fit: StackFit.passthrough,
-            children: [
-              child,
-              Positioned.fill(
-                child: ColoredBox(color: Colors.white.withValues(alpha: glow)),
-              ),
-            ],
-          ),
-        ),
-      ),
+  void paint(Canvas canvas, Size size) {
+    final v = t.value;
+    double seg(double a, double b) => ((v - a) / (b - a)).clamp(0.0, 1.0);
+    final c = size.center(Offset.zero);
+    const white = Color(0xFFF4F8FF);
+    if (v < _cut) {
+      // The picture collapses vertically and burns white on the way.
+      final p = Curves.easeIn.transform(seg(0, _cut));
+      final h = math.max(3.0, size.height * (1 - p));
+      final dst = Rect.fromCenter(center: c, width: size.width, height: h);
+      final img = still;
+      if (img != null) {
+        canvas.drawImageRect(
+          img,
+          Offset.zero & Size(img.width.toDouble(), img.height.toDouble()),
+          dst,
+          Paint()..filterQuality = FilterQuality.low,
+        );
+      }
+      canvas.drawRect(dst, Paint()..color = white.withValues(alpha: 0.25 + 0.75 * p));
+      return;
+    }
+    if (v < _line) {
+      // The line pulls in to the middle.
+      final p = Curves.easeInCubic.transform(seg(_cut, _line));
+      final w = math.max(6.0, size.width * (1 - p));
+      _glow(canvas, c, w / 2, 1.0);
+      canvas.drawRect(Rect.fromCenter(center: c, width: w, height: 3), Paint()..color = white);
+      return;
+    }
+    // The dot, fading slowly (phosphor afterglow).
+    final p = seg(_line, 1);
+    final a = math.pow(1 - p, 2.2).toDouble();
+    _glow(canvas, c, 3 + 10 * (1 - p), a);
+    canvas.drawCircle(c, 2.5 * (1 - p * 0.6), Paint()..color = white.withValues(alpha: a));
+  }
+
+  /// A soft blue-white halo around the beam, from gradients (no blur pass).
+  void _glow(Canvas canvas, Offset c, double halfWidth, double alpha) {
+    const r = 28.0;
+    final colors = [
+      const Color(0xFFB9D4FF).withValues(alpha: 0.55 * alpha),
+      const Color(0xFF6E9BFF).withValues(alpha: 0.18 * alpha),
+      const Color(0x006E9BFF),
+    ];
+    const stops = [0.0, 0.35, 1.0];
+    if (halfWidth > r) {
+      // Along a line: an even band above and below it.
+      for (final dir in [-1.0, 1.0]) {
+        final band = Rect.fromLTWH(c.dx - halfWidth, dir < 0 ? c.dy - r : c.dy, halfWidth * 2, r);
+        canvas.drawRect(
+          band,
+          Paint()
+            ..shader = LinearGradient(
+              begin: dir < 0 ? Alignment.bottomCenter : Alignment.topCenter,
+              end: dir < 0 ? Alignment.topCenter : Alignment.bottomCenter,
+              colors: colors,
+              stops: stops,
+            ).createShader(band),
+        );
+      }
+      return;
+    }
+    canvas.drawCircle(
+      c,
+      r + halfWidth,
+      Paint()
+        ..shader = RadialGradient(
+          colors: colors,
+          stops: stops,
+        ).createShader(Rect.fromCircle(center: c, radius: r + halfWidth)),
     );
   }
+
+  @override
+  bool shouldRepaint(_CrtOffPainter old) => old.still != still;
 }
 
 /// "Darkroom is shutting down...": the sky with soft clouds and the rabbit.

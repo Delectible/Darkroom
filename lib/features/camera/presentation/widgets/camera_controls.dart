@@ -222,8 +222,10 @@ class StockLabel extends ConsumerWidget {
             child: c,
           ),
         ),
+        // The digital bodies' LCD is one screen that stays put: only what's
+        // on it changes. Film swaps the box end in the memo holder.
         child: KeyedSubtree(
-          key: ValueKey(spec.id),
+          key: ValueKey(spec.isFilm ? spec.id : 'lcd'),
           child: spec.isFilm ? _MemoHolder(spec: spec) : _LcdPanel(spec: spec),
         ),
       ),
@@ -654,7 +656,7 @@ class _LcdThumb extends StatelessWidget {
                   color: Color(0xFF14306E),
                   child: Center(
                     child: Text(
-                      'NO\nIMAGE',
+                      'SD\nEMPTY',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Color(0xFFBFD3FF),

@@ -241,9 +241,9 @@ class _SpriteShutter extends StatelessWidget {
 
   static const step = 12, maxAngle = 48;
 
-  /// Turntable frames shipped? Until then the buttons are drawn flat from
-  /// their layers (base, film lever, cap).
-  static const turntable = false;
+  /// Turntable frames in use (false: draw the buttons flat from base / lever
+  /// / cap layers; only film's layers are still shipped, for its stroke).
+  static const turntable = true;
 
   static String _base(String kind) => kind == 'digitalrec' ? 'digital-base' : '$kind-base';
 

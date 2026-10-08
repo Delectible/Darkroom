@@ -43,6 +43,9 @@ class _Mode extends AppModeNotifier {
 /// errors. `SHOTS=dir` saves them side by side.
 void main() {
   testWidgets('shutters', (tester) async {
+    tester.view.physicalSize = const Size(1100, 400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final key = GlobalKey();
     Widget one(AppMode mode, String id) => ProviderScope(
       overrides: [
@@ -71,8 +74,10 @@ void main() {
                 one(AppMode.film, 'portra400'),
                 one(AppMode.film, 'super8'),
                 one(AppMode.digital, 'camcorder90'),
-                // Tipped, as mid-toss: the caps slide against their bases.
+                // Tipped, as mid-toss: the turntable frame for that angle.
                 BodyYaw(yaw: 0.7, child: one(AppMode.film, 'super8')),
+                BodyYaw(yaw: -0.6, child: one(AppMode.film, 'portra400')),
+                BodyYaw(yaw: 0.45, child: one(AppMode.digital, 'ccd2003')),
               ],
             ),
           ),

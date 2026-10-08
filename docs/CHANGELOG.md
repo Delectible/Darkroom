@@ -541,7 +541,7 @@ swipe is LEFT in digital mode (right still swaps to film).
 
 Answers: turntable renders, no 2D/3D switch.
 
-- [~] **21.1 3D shutters:** the sliding-layer depth trick read as wrong (the
+- [x] **21.1 3D shutters:** the sliding-layer depth trick read as wrong (the
   parts lost their places relative to each other). Now each shutter is
   path-traced as a whole from 9 angles (-48..48 degrees,
   `shutter_<kind>-all-a<deg>`) plus pressed; the app shows the frame for
@@ -573,3 +573,16 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **22.4 Ship while rendering:** 1.4.0 goes out with flat (layered)
   shutters (`_SpriteShutter.turntable = false`); the 3D frames follow.
   → 21.2-21.4, 22.1-22.4: 1.4.0 · 2026-10-08 · 59bddc5
+
+## 23. CRT switch-off, steady LCD, SD Empty, 3D shutters on (2026-10-08)
+
+- [x] **23.1 CRT shutdown:** it squashed the live screen (and repainted its
+  blurred clouds) every frame, so it stuttered and the squeeze looked
+  cheap. Now one snapshot drawn by a painter: the picture snaps to a
+  white-hot line in ~0.1 s, pulls in to a dot in ~0.1 s, and the phosphor
+  glow lingers about a second (gradients, no blur pass).
+- [x] **23.2 Digital LCD:** no more fade / slide when switching camera; the
+  panel stays mounted and only its readout changes.
+- [x] **23.3 Gallery button** on an empty card says SD EMPTY.
+- [x] **23.4 Turntable frames on** (21.1): 40 frames, ~870 KB.
+- Monetization: parked until the app is further along (Gabe).

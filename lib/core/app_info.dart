@@ -3,15 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.4.0';
+  static const version = '1.4.1';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'A welcome tour, Windows 98 on a beige monitor (swipe left on a digital camera), '
-      'your name under Start > User Profile, the phone\'s real battery on the digital cameras, '
-      'faster Polaroid sharing and a tidier revision history.';
+      'Shutter buttons turn in real 3D as you toss the camera. A crisper, quicker CRT switch-off with a '
+      'lingering glow, the digital cameras\' LCD stays put while its readout changes, and an empty card '
+      'says SD Empty.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -21,7 +21,7 @@ class AppInfo {
         'Welcome tour, with your name on your prints',
         'Windows 98 slides in on a beige monitor',
         'Swipe right for the corkboard, left for Windows 98',
-        'Photoreal shutter buttons',
+        'Photoreal 3D shutter buttons',
         'Watch prints develop up close',
         'Sound volume slider, haptics switch, crash reports',
         'Real phone battery on the digital cameras',

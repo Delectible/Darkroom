@@ -614,3 +614,4 @@ Answers: turntable renders, no 2D/3D switch.
   MINES; the old commands still work). No "Windows" in the app's own text,
   About history or the store listing ("Darkroom 98", "late-90s desktop").
   Solitaire, Notepad, My Computer kept (generic words).
+  → 25.1: 1.4.3 · 2026-10-08 · f04cacc

@@ -17,6 +17,12 @@ LEVER_REST = 0.18  # radians, clockwise on screen
 
 
 # ------------------------------------------------------------------ film
+def _swatch():
+    g = group('swatch')
+    rbox(80, 80, 2, 0.1, 0.2, 'leather', -2, g)
+    return g
+
+
 def f_panel(_):
     g = group('panel')
     rbox(412, 1000, 2, 0.1, 0.4, 'leather', -2, g)
@@ -275,7 +281,7 @@ UPDOWN = dict(states=['up', 'down'], stateYaw0=['down'])
 
 PARTS = {
     'film': {
-        'panel': dict(canvas=(412, 1000), yaws=[0], spp=64, px=3, noShadow=True, build=f_panel),
+        'panel': dict(canvas=(412, 1000), yaws=[0], spp=96, px=4, noShadow=True, build=f_panel),
         'plate-top': dict(canvas=(412, 180), yaws=YAWS, spp=96, px=3, edge=20, build=f_plate(180, 'top')),
         'plate-bot': dict(canvas=(412, 140), yaws=YAWS, spp=96, px=3, edge=20, build=f_plate(140, 'bot')),
         'frame': dict(canvas=(220, 220), box=(196, 196), yaws=YAWS, spp=128, slice=40, build=f_frame),

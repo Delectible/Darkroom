@@ -217,30 +217,67 @@ def mat(name):
         n.inputs['Scale'].default_value = 2.5
         nt.links.new(_coords(nt), n.inputs['Vector'])
         _bump(m, b, n.outputs['Fac'], 0.08, 0.1)
-    elif name == 'leather':    # pebbled leatherette
-        m, b = _principled(name, (0.016, 0.013, 0.011), 0.0, 0.6)
+    elif name == 'leather':    # pebbled leatherette: ~5 dp pebbles, crisp valleys, fine grain
+        m, b = _principled(name, (0.017, 0.014, 0.012), 0.0, 0.6)
         nt = m.node_tree
-        v = nt.nodes.new('ShaderNodeTexVoronoi')
-        v.feature = 'SMOOTH_F1'
-        v.inputs['Scale'].default_value = 0.42
-        v.inputs['Randomness'].default_value = 0.9
         co = _coords(nt)
-        nt.links.new(co, v.inputs['Vector'])
-        n = nt.nodes.new('ShaderNodeTexNoise')
-        n.inputs['Scale'].default_value = 2.2
-        nt.links.new(co, n.inputs['Vector'])
-        mix = nt.nodes.new('ShaderNodeMath')
-        mix.operation = 'MULTIPLY_ADD'
-        mix.inputs[1].default_value = 0.15
-        nt.links.new(n.outputs['Fac'], mix.inputs[0])
-        nt.links.new(v.outputs['Distance'], mix.inputs[2])
-        _bump(m, b, mix.outputs['Value'], 0.55, 0.6)
-        # tops a little smoother (handled), valleys matte
+        # warp the cells a little so the pebbles aren't a perfect lattice
+        warp = nt.nodes.new('ShaderNodeTexNoise')
+        warp.inputs['Scale'].default_value = 0.05
+        wmix = nt.nodes.new('ShaderNodeMix')
+        wmix.data_type = 'VECTOR'
+        wmix.inputs['Factor'].default_value = 0.35
+        nt.links.new(co, wmix.inputs['A'])
+        nt.links.new(warp.outputs['Color'], wmix.inputs['B'])
+        nt.links.new(co, warp.inputs['Vector'])
+        # packed pebbles: narrow valleys along the cell edges, a gentle dome
+        # toward each cell's centre
+        edge = nt.nodes.new('ShaderNodeTexVoronoi')
+        edge.feature = 'DISTANCE_TO_EDGE'
+        edge.inputs['Scale'].default_value = 0.36
+        edge.inputs['Randomness'].default_value = 0.95
+        nt.links.new(wmix.outputs['Result'], edge.inputs['Vector'])
+        f1 = nt.nodes.new('ShaderNodeTexVoronoi')
+        f1.inputs['Scale'].default_value = 0.36
+        f1.inputs['Randomness'].default_value = 0.95
+        nt.links.new(wmix.outputs['Result'], f1.inputs['Vector'])
+        valley = nt.nodes.new('ShaderNodeMapRange')
+        valley.interpolation_type = 'SMOOTHSTEP'
+        valley.inputs['From Min'].default_value = 0.0
+        valley.inputs['From Max'].default_value = 0.1
+        nt.links.new(edge.outputs['Distance'], valley.inputs['Value'])
+        crown = nt.nodes.new('ShaderNodeMath')
+        crown.operation = 'MULTIPLY_ADD'
+        crown.inputs[1].default_value = -0.35
+        crown.inputs[2].default_value = 1.0
+        nt.links.new(f1.outputs['Distance'], crown.inputs[0])
+        dome = nt.nodes.new('ShaderNodeMath')
+        dome.operation = 'MULTIPLY'
+        nt.links.new(valley.outputs['Result'], dome.inputs[0])
+        nt.links.new(crown.outputs['Value'], dome.inputs[1])
+        # fine grain on the tops
+        fine = nt.nodes.new('ShaderNodeTexNoise')
+        fine.inputs['Scale'].default_value = 4.5
+        fine.inputs['Detail'].default_value = 4
+        nt.links.new(co, fine.inputs['Vector'])
+        h = nt.nodes.new('ShaderNodeMath')
+        h.operation = 'MULTIPLY_ADD'
+        h.inputs[1].default_value = 0.1
+        nt.links.new(fine.outputs['Fac'], h.inputs[0])
+        nt.links.new(dome.outputs['Value'], h.inputs[2])
+        _bump(m, b, h.outputs['Value'], 0.6, 0.35)
+        # tops a touch glossier (handled), valleys matte and a shade darker
         rr = nt.nodes.new('ShaderNodeMapRange')
-        rr.inputs['To Min'].default_value = 0.68
-        rr.inputs['To Max'].default_value = 0.48
-        nt.links.new(v.outputs['Distance'], rr.inputs['Value'])
+        rr.inputs['To Min'].default_value = 0.72
+        rr.inputs['To Max'].default_value = 0.5
+        nt.links.new(dome.outputs['Value'], rr.inputs['Value'])
         nt.links.new(rr.outputs['Result'], b.inputs['Roughness'])
+        col = nt.nodes.new('ShaderNodeMix')
+        col.data_type = 'RGBA'
+        col.inputs['A'].default_value = (0.008, 0.007, 0.006, 1)
+        col.inputs['B'].default_value = (0.02, 0.017, 0.014, 1)
+        nt.links.new(dome.outputs['Value'], col.inputs['Factor'])
+        nt.links.new(col.outputs['Result'], b.inputs['Base Color'])
     elif name == 'glass':      # coated lens element
         m, b = _principled(name, (0.01, 0.012, 0.015), 0.0, 0.02,
                            **{'Coat Weight': 1.0, 'Coat Roughness': 0.0, 'IOR': 1.6})

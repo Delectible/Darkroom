@@ -31,6 +31,7 @@ class VideoJob {
     this.rotationTurns = 0,
     this.grain = GrainStrength.normal,
     this.zoomTrack = const [],
+    this.batteryBars = 3,
   });
 
   final String id;
@@ -58,6 +59,10 @@ class VideoJob {
   /// burned-in camcorder zoom bar.
   final List<double> zoomTrack;
 
+  /// The camcorder OSD's battery gauge (0-3 segments): the phone's charge
+  /// when the take was shot.
+  final int batteryBars;
+
   Map<String, Object?> toJson() => {
     'id': id,
     'cameraId': cameraId,
@@ -73,6 +78,7 @@ class VideoJob {
     'rotationTurns': rotationTurns,
     'grain': grain.name,
     'zoomTrack': zoomTrack,
+    'batteryBars': batteryBars,
   };
 
   factory VideoJob.fromJson(Map<String, Object?> j) => VideoJob(
@@ -90,6 +96,7 @@ class VideoJob {
     rotationTurns: j['rotationTurns'] as int? ?? 0,
     grain: GrainStrength.fromName(j['grain'] as String?),
     zoomTrack: [for (final v in (j['zoomTrack'] as List<Object?>? ?? const [])) (v! as num).toDouble()],
+    batteryBars: j['batteryBars'] as int? ?? 3,
   );
 }
 
@@ -220,7 +227,13 @@ class VideoPlanner {
       final extras = <String>[];
       if (hasOsd && spec.timestampStyle == TimestampStyle.camcorderOsd) {
         var idx = nextInput + 1;
-        for (final o in CamcorderOsd.render(job.workDir, outW, outH, job.zoomTrack)) {
+        for (final o in CamcorderOsd.render(
+          job.workDir,
+          outW,
+          outH,
+          job.zoomTrack,
+          batteryBars: job.batteryBars,
+        )) {
           inputs.addAll(['-loop', '1', '-framerate', profile.fps, '-i', o.path]);
           extras.add(o.overlay(idx++));
         }
@@ -472,7 +485,7 @@ class CamcorderOsd {
   static const _white = [240, 240, 240];
   static const _shadow = [10, 10, 10];
 
-  static List<OsdLayer> render(String dir, int w, int h, List<double> zoomTrack) {
+  static List<OsdLayer> render(String dir, int w, int h, List<double> zoomTrack, {int batteryBars = 3}) {
     final dot = math.max(1, (h / 150).round());
     final margin = (h * 0.06).round();
     final layers = <OsdLayer>[];
@@ -507,8 +520,8 @@ class CamcorderOsd {
       box(bx, 0, dot, batH);
       box(bx + batW - dot, 0, dot, batH);
       box(bx + batW, batH ~/ 3, dot * 2, batH ~/ 3); // terminal
-      for (var k = 0; k < 3; k++) {
-        box(bx + 2 * dot + k * 4 * dot, 2 * dot, 3 * dot, batH - 4 * dot); // three bars: full
+      for (var k = 0; k < batteryBars.clamp(0, 3); k++) {
+        box(bx + 2 * dot + k * 4 * dot, 2 * dot, 3 * dot, batH - 4 * dot); // the phone's charge
       }
     }
     layers.add(OsdLayer(_save(dir, 'osd_sp.png', sp), x: '${w - sp.width - margin}', y: '$margin'));

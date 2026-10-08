@@ -153,8 +153,8 @@ class BodyPose {
 const _lugSlot = 2.0;
 
 /// How far the body is turned about its vertical axis (radians, as in
-/// [SwapBody]'s rotateY). Raised controls (the shutter's cap and lever) use
-/// it to shift against their base, so they read as solid while it tips.
+/// [SwapBody]'s rotateY). The shutter shows its turntable frame for it, so
+/// it turns as a solid object while the body tips.
 class BodyYaw extends InheritedWidget {
   const BodyYaw({super.key, required this.yaw, required super.child});
 
@@ -163,25 +163,8 @@ class BodyYaw extends InheritedWidget {
   /// 0 when there's no body around (e.g. tests).
   static double of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<BodyYaw>()?.yaw ?? 0;
 
-  /// Sideways shift, in logical px, of something raised [height] px off the
-  /// body's face (toward the viewer) at the current yaw.
-  static double parallax(BuildContext context, double height) => -height * math.sin(of(context));
-
   @override
   bool updateShouldNotify(BodyYaw old) => old.yaw != yaw;
-}
-
-/// Something standing [height] px proud of the body's face: slides a little
-/// against it while the body tips (see [BodyYaw]).
-class Raised extends StatelessWidget {
-  const Raised({super.key, required this.height, required this.child});
-
-  final double height;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) =>
-      Transform.translate(offset: Offset(BodyYaw.parallax(context, height), 0), child: child);
 }
 
 class SwapBody extends StatelessWidget {

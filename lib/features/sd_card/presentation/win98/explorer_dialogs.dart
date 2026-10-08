@@ -460,17 +460,22 @@ Future<void> showAboutDarkroom(BuildContext context) => showWin98Window<void>(
                   for (final (v, notes) in AppInfo.revisions)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 6),
-                      child: Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'v$v  ',
-                              style: W98.text.copyWith(fontWeight: FontWeight.w700),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Version $v', style: W98.text.copyWith(fontWeight: FontWeight.w700)),
+                          for (final n in notes)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4, top: 1),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('-  ', style: W98.text),
+                                  Expanded(child: Text(n, style: W98.text)),
+                                ],
+                              ),
                             ),
-                            TextSpan(text: notes),
-                          ],
-                        ),
-                        style: W98.text,
+                        ],
                       ),
                     ),
                 ],
@@ -805,7 +810,7 @@ class _DefragState extends State<_Defrag> {
 // Start menu, Run, Shut Down, and the blue screen
 // -----------------------------------------------------------------------------
 
-enum StartAction { camera, documents, options, help, run, shutDown }
+enum StartAction { camera, documents, options, help, run, profile, shutDown }
 
 Future<StartAction?> showStartMenu(BuildContext context) {
   final bottom = MediaQuery.paddingOf(context).bottom + 32;
@@ -883,6 +888,7 @@ Future<StartAction?> showStartMenu(BuildContext context) {
                             _startItem(context, PixelIcon.question, 'Help', StartAction.help),
                             _startItem(context, PixelIcon.upFolder, 'Run...', StartAction.run),
                             const Divider(height: 6, color: W98.shadow),
+                            _startItem(context, PixelIcon.rabbit, 'User Profile...', StartAction.profile),
                             _startItem(context, PixelIcon.computer, 'Shut Down...', StartAction.shutDown),
                           ],
                         ),
@@ -916,6 +922,83 @@ Widget _startItem(BuildContext context, PixelIcon icon, String label, StartActio
     ),
   ),
 );
+
+/// Start > User Profile: the name the tour asked for (on the lab stamp on
+/// the back of prints, and in Tip of the Day). Empty clears it.
+Future<void> showUserProfile(BuildContext context) async {
+  final container = ProviderScope.containerOf(context);
+  final ctrl = TextEditingController(text: container.read(userNameProvider) ?? '');
+  final name = await showWin98Window<String>(
+    context,
+    title: 'User Profile',
+    width: 330,
+    icon: const PixelIconView(PixelIcon.rabbit),
+    builder: (context) => Padding(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Row(
+            children: [
+              PixelIconView(PixelIcon.rabbit, size: 32),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text("Who's using Darkroom? The lab writes this name on the back of your prints."),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Text('Name:  '),
+              Expanded(
+                child: Win98Bevel(
+                  style: BevelStyle.sunken,
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    maxLength: 24,
+                    textCapitalization: TextCapitalization.words,
+                    style: W98.text,
+                    cursorColor: Colors.black,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      counterText: '',
+                    ),
+                    onSubmitted: (v) => Navigator.of(context).pop(v),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(ctrl.text),
+                child: const Text('OK'),
+              ),
+              const SizedBox(width: 6),
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+  ctrl.dispose();
+  if (name != null) await container.read(userNameProvider.notifier).set(name);
+}
 
 /// Start > Run. A few commands do something.
 Future<String?> showRunDialog(BuildContext context) {

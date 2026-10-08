@@ -14,6 +14,7 @@ import '../../settings/application/settings_controllers.dart';
 import 'camera_session_controller.dart';
 import 'camera_ui_state.dart';
 import 'zoom_controller.dart';
+import '../../../core/device/battery.dart';
 import '../../../core/device/haptics.dart';
 
 @immutable
@@ -226,6 +227,7 @@ class CaptureController extends Notifier<CaptureState> {
             duration: DateTime.now().difference(since),
             // Only worth burning in if the zoom actually moved.
             zoomTrack: zoomTrack.length > 2 ? zoomTrack : const [],
+            batteryBars: Battery.bars(await Battery.level()),
           );
       unawaited(_maybeAskNotificationPermission(ctx));
     } on CameraException catch (e) {

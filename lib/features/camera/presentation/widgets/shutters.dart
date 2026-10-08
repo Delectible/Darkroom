@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,16 +58,16 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
     }
   }
 
-  bool _cached = false;
+  /// Sprite sets already decoded (per kind).
+  final _cached = <String>{};
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Every layer decoded up front: presses and body swaps never wait on one.
-    if (_cached) return;
-    _cached = true;
-    for (final name in _SpriteShutter.all) {
-      unawaited(precacheImage(AssetImage(_SpriteShutter.asset(name)), context));
+  /// Every frame of the body's shutter decoded up front: presses and swaps
+  /// never wait on one.
+  void _precache(String kind, double span) {
+    if (!_cached.add(kind)) return;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    for (final name in _SpriteShutter.framesOf(kind)) {
+      unawaited(precacheImage(_SpriteShutter.provider(name, span, dpr), context));
     }
   }
 
@@ -105,6 +106,14 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
     final recording = ref.watch(captureControllerProvider).isRecording;
     final kind = _kind(spec);
     final video = spec.recordsVideo;
+    switch (kind) {
+      case _Kind.digital:
+        _precache(video ? 'digitalrec' : 'digital', 96);
+      case _Kind.film:
+        _precache('film', 138);
+      case _Kind.run:
+        _precache('run', 108);
+    }
 
     final Widget face = AnimatedBuilder(
       key: ValueKey(kind),
@@ -113,31 +122,25 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
         final t = _stroke.isAnimating ? _stroke.value : 0.0;
         return switch (kind) {
           _Kind.digital => _SpriteShutter(
+            kind: video ? 'digitalrec' : 'digital',
             box: const Size(92, 78),
             span: 96,
-            base: 'digital-base',
-            cap: video ? 'digitalrec-cap' : 'digital-cap',
             pressed: _down || (t > 0 && t < 0.6),
-            capHeight: 10,
             lamp: recording ? const _Lamp(Offset.zero, 0.09, Color(0xFFFF3B30)) : null,
           ),
           _Kind.film => _SpriteShutter(
+            kind: 'film',
             box: const Size(108, 86),
             span: 138,
             hub: const Offset(0.6, 0.52),
-            base: 'film-base',
-            cap: 'film-cap',
             pressed: _down,
-            capHeight: 12,
             lever: _leverAngle(t),
           ),
           _Kind.run => _SpriteShutter(
+            kind: 'run',
             box: const Size(86, 86),
             span: 108,
-            base: 'run-base',
-            cap: 'run-cap',
             pressed: _down || recording,
-            capHeight: 13,
             lamp: recording ? const _Lamp(Offset(0.36, -0.36), 0.05, Color(0xFFFF453A)) : null,
           ),
         };
@@ -197,23 +200,29 @@ class _Lamp {
   final Color color;
 }
 
-/// A shutter drawn from path-traced layers (tool/render/items/shutter.js):
-/// the fixed base, the button cap (pressed or not) and, for film, the
-/// advance lever. While the body tips during a swap the cap and lever slide
-/// a little against the base (BodyYaw), so the button reads as solid rather
-/// than printed on.
+/// A shutter drawn from path-traced turntable frames
+/// (tool/render/items/shutter.js): the whole button seen with the body
+/// turned -48..48 degrees in 12 degree steps. While the body tips during a
+/// swap the frame for its angle is shown (neighbours cross-fade), so the
+/// button turns as a solid object. The frames already show the button
+/// foreshortened, and the body's transform squeezes it again, so the
+/// sprite is stretched back by 1/cos(yaw).
+///
+/// Film's advance-lever stroke (the body is still then) uses the separate
+/// base / lever / cap layers, so the lever can swing.
 class _SpriteShutter extends StatelessWidget {
   const _SpriteShutter({
+    required this.kind,
     required this.box,
     required this.span,
-    required this.base,
-    required this.cap,
     required this.pressed,
-    required this.capHeight,
     this.hub = const Offset(0.5, 0.5),
     this.lever,
     this.lamp,
   });
+
+  /// film | run | digital | digitalrec
+  final String kind;
 
   /// Layout size of the button.
   final Size box;
@@ -223,31 +232,53 @@ class _SpriteShutter extends StatelessWidget {
 
   /// Where the sprites' centre sits in [box] (fractions).
   final Offset hub;
-  final String base;
-  final String cap;
   final bool pressed;
 
-  /// How far the cap stands off the body, in logical px (for the parallax).
-  final double capHeight;
-
-  /// Film: the lever's turn from parked, radians clockwise.
+  /// Film: the lever's turn from parked, radians clockwise; null or parked
+  /// when it isn't moving.
   final double? lever;
   final _Lamp? lamp;
 
+  static const step = 12, maxAngle = 48;
+
+  /// Turntable frames shipped? Until then the buttons are drawn flat from
+  /// their layers (base, film lever, cap).
+  static const turntable = false;
+
+  static String _base(String kind) => kind == 'digitalrec' ? 'digital-base' : '$kind-base';
+
+  /// Parked lever (matches the renders).
+  static const leverRest = 0.18;
+
   static String asset(String name) => 'assets/shutters/shutter_$name.webp';
 
-  /// Every layer, for precaching.
-  static const all = [
-    'digital-base', 'digital-cap', 'digital-cap-down', 'digitalrec-cap', 'digitalrec-cap-down', //
-    'film-base', 'film-cap', 'film-cap-down', 'film-lever', 'run-base', 'run-cap', 'run-cap-down',
+  /// Every picture [kind] can show.
+  static List<String> framesOf(String kind) => [
+    if (turntable) ...[
+      for (var a = -maxAngle; a <= maxAngle; a += step) '$kind-all-a$a',
+      '$kind-all-down-a0',
+    ],
+    if (!turntable || kind == 'film') ...[_base(kind), '$kind-cap', '$kind-cap-down'],
+    if (kind == 'film') 'film-lever',
   ];
+
+  /// Decoded at the size it's drawn (crisp, and a fraction of the memory).
+  static ImageProvider provider(String name, double span, double dpr) =>
+      ResizeImage(AssetImage(asset(name)), width: (span * dpr).round(), policy: ResizeImagePolicy.fit);
 
   @override
   Widget build(BuildContext context) {
-    final shift = BodyYaw.parallax(context, pressed ? capHeight * 0.6 : capHeight);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
     final c = Offset(box.width * hub.dx, box.height * hub.dy);
-    Widget layer(String name, {double dx = 0, double angle = 0, bool sunk = false}) {
-      Widget img = Image.asset(asset(name), filterQuality: FilterQuality.medium, gaplessPlayback: true);
+    final yaw = BodyYaw.of(context);
+    Widget sprite(String name, {double opacity = 1, double angle = 0, bool sunk = false}) {
+      Widget img = Image(
+        image: provider(name, span, dpr),
+        width: span,
+        height: span,
+        filterQuality: FilterQuality.medium,
+        gaplessPlayback: true,
+      );
       if (sunk) {
         // Pressed in: a touch smaller (further away) and in its own shade.
         img = Transform.scale(
@@ -263,27 +294,46 @@ class _SpriteShutter extends StatelessWidget {
           ),
         );
       }
-      return Positioned(
-        left: c.dx - span / 2 + dx,
-        top: c.dy - span / 2,
-        width: span,
-        height: span,
-        child: Transform.rotate(angle: angle, child: img),
-      );
+      if (angle != 0) img = Transform.rotate(angle: angle, child: img);
+      if (opacity < 1) img = Opacity(opacity: opacity, child: img);
+      return Positioned(left: c.dx - span / 2, top: c.dy - span / 2, width: span, height: span, child: img);
     }
 
+    final List<Widget> layers;
+    final stroke = lever != null && (lever! - leverRest).abs() > 1e-3;
+    if (stroke || !turntable) {
+      layers = [
+        sprite(_base(kind)),
+        if (lever != null) sprite('film-lever', angle: lever! - leverRest),
+        sprite(pressed ? '$kind-cap-down' : '$kind-cap', sunk: pressed),
+      ];
+    } else if (pressed || yaw == 0) {
+      layers = [sprite(pressed ? '$kind-all-down-a0' : '$kind-all-a0', sunk: pressed)];
+    } else {
+      final deg = (yaw * 180 / math.pi).clamp(-maxAngle.toDouble(), maxAngle.toDouble());
+      final lo = ((deg / step).floor() * step).clamp(-maxAngle, maxAngle - step);
+      final f = ((deg - lo) / step).clamp(0.0, 1.0);
+      final turned = [sprite('$kind-all-a$lo'), if (f > 0.02) sprite('$kind-all-a${lo + step}', opacity: f)];
+      layers = [
+        Positioned.fill(
+          child: Transform(
+            alignment: Alignment(hub.dx * 2 - 1, hub.dy * 2 - 1),
+            transform: Matrix4.diagonal3Values(1 / math.cos(yaw).clamp(0.5, 1.0), 1, 1),
+            child: Stack(clipBehavior: Clip.none, children: turned),
+          ),
+        ),
+      ];
+    }
     final l = lamp;
     return SizedBox.fromSize(
       size: box,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          layer(base),
-          if (lever != null) layer('film-lever', dx: shift * 0.6, angle: lever!),
-          layer(pressed ? '$cap-down' : cap, dx: shift, sunk: pressed),
+          ...layers,
           if (l != null)
             Positioned(
-              left: c.dx + l.at.dx * span - l.radius * span + shift,
+              left: c.dx + l.at.dx * span - l.radius * span,
               top: c.dy + l.at.dy * span - l.radius * span,
               width: l.radius * 2 * span,
               height: l.radius * 2 * span,

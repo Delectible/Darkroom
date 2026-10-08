@@ -17,8 +17,11 @@ Read this first. It's the hand-off from the earlier development sessions
   number, one-line what's new. If the build or the upload fails, notify
   that instead.
 - Every user-visible change: bump `version` in `pubspec.yaml` (raise the
-  `+build` number too) and add a line to `AppInfo.revisions` in
-  `lib/core/app_info.dart` (shown in the Win98 Help > About).
+  `+build` number too) and `AppInfo.version` to match (a test checks), set
+  `AppInfo.latest` in `lib/core/app_info.dart` to this build's change in
+  plain words (it's Play's "What's new"), and when a main idea lands add a
+  few-word bullet to the newest `AppInfo.revisions` entry (Help > About
+  shows them as bullets; keep them short).
 - **Change log:** `docs/CHANGELOG.md` tracks every requested change by item
   number. Mark items `[~]` when starting and `[x] → version · date · commit`
   when they land; add new requests there. New stocks/cameras arrive on the
@@ -55,9 +58,8 @@ Read this first. It's the hand-off from the earlier development sessions
 - **Google Play** is the main way Gabe installs now (internal testing
   track). The `play` job in the workflow uploads every `main` build's .aab
   (secret `PLAY_SERVICE_ACCOUNT_JSON`, repo variable `PLAY_RELEASE_STATUS`,
-  default `completed`). Play's "What's new" = version + the **first string
-  of the newest `AppInfo.revisions` entry** (`tool/play/whats_new.py`), so
-  put each version's change, in plain words, at the top of that entry.
+  default `completed`). Play's "What's new" = version + **`AppInfo.latest`**
+  (`tool/play/whats_new.py`).
   The store listing (title, descriptions, icon, feature graphic) lives in
   `fastlane/metadata/android/en-AU/`; `play-listing.yml` publishes it when
   it changes (fastlane supply, same service account). Screenshots aren't in
@@ -187,8 +189,9 @@ Film Mode
   scrolling past the ends; content scrolls to the frame, under the system
   bars. Film mode: a clear swipe right on the camera opens it (triggered,
   not dragged), a swipe left on the board closes it. Digital mode: a swipe
-  left opens the Win98 explorer (`ExplorerScreen.powerOn`, CRT switching
-  on). The body never moves the way with no camera.
+  left opens the Win98 explorer, which slides in from the right on a beige
+  monitor (`ExplorerScreen.slideIn`, `ExplorerMonitor`) and slides back
+  out however it's closed. The body never moves the way with no camera.
 - The cork wall scrolls with the prints (shader tiles keyed to the scroll
   offset): granulated cork after Gabe's sample, with wear: pin holes,
   coffee rings, water marks, faded patches. Easter eggs: tap a
@@ -269,14 +272,15 @@ UI
   also peeks in at the edge (digital on the right in film mode, film on the
   left); tap it to toss. Sound `assets/sfx/camera_swap.wav` (cloth swish,
   played via video_player at volume 0.15) and haptics.
-- Shutter (`widgets/shutters.dart`): digital = compact shutter key
+- Shutter (`widgets/shutters.dart`, `_SpriteShutter.turntable` switches the
+  3D frames on once they're in assets/shutters): digital = compact shutter key
   (camcorder: red dot), film = chrome release in an advance-lever hub (lever
   swings each frame), Super 8 = red RUN button that latches while filming.
-  Drawn from path-traced layers (`assets/shutters/`, made by
-  `tool/render/items/shutter.js`: base, cap up/down, film lever; fixed
-  top-down camera so they stack). The cap and lever slide against the base
-  as the body tips (`BodyYaw` / `Raised` in body_swap.dart); the gallery
-  and stock buttons are `Raised` too.
+  Drawn from path-traced turntable frames (`assets/shutters/`, made by
+  `tool/render/items/shutter.js`: each whole button from -48..48 degrees
+  in 12 degree steps, plus pressed; film also has base / lever / cap layers
+  for the lever stroke). The frame follows the body's yaw while it tips
+  (`BodyYaw` in body_swap.dart), cross-faded, stretched by 1/cos(yaw).
   Quiet sounds `Sfx.shutter*`. Fire via `pressShutter(ref)` so the button
   animates for volume keys too.
 - The other camera's FILM/DIGITAL tag floats over the desk (outside the
@@ -284,8 +288,10 @@ UI
 - Gallery button: film = the latest print as a little photo on another
   print (`_PrintThumb`), digital = a review LCD (`_LcdThumb`).
 - Under the viewfinder: film bodies show the box end in a memo holder
-  (`CameraSpec.boxColor/boxInk`), digital bodies a segment-LCD panel with
-  battery and card/tape remaining.
+  (`CameraSpec.boxColor/boxInk`), digital bodies a segment-LCD panel (one
+  fixed size for every body) with the phone's real battery
+  (`core/device/battery.dart`, channel `darkroom/battery`) and card/tape
+  remaining. The camcorder OSD burns in the same battery gauge.
 - Volume buttons (Android; taken in MainActivity via `darkroom/volume` /
   `VolumeKeys` while the camera screen holds the edges; Flutter's own key
   events for them never arrived) are the shutter
@@ -319,7 +325,7 @@ UI
   Tour replays it. Camera + mic are asked by opening a CameraController
   once (the camera plugin has no request call). The name
   (`userNameProvider`) goes on the print backs' lab stamp and in Tip of the
-  Day.
+  Day; change it in Win98 Start > User Profile.
 
 ## Art
 

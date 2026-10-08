@@ -536,3 +536,39 @@ swipe is LEFT in digital mode (right still swaps to film).
   pubspec.
   → 20.1-20.7, 20.9, 20.10, 20.12-20.14: 1.3.30 · 2026-10-07 · 401a16c
   → 20.8, 20.11: 1.3.31 · 2026-10-07 · bab2c93
+
+## 21. Real 3D shutters, monitor slide, profile, battery (2026-10-08)
+
+Answers: turntable renders, no 2D/3D switch.
+
+- [~] **21.1 3D shutters:** the sliding-layer depth trick read as wrong (the
+  parts lost their places relative to each other). Now each shutter is
+  path-traced as a whole from 9 angles (-48..48 degrees,
+  `shutter_<kind>-all-a<deg>`) plus pressed; the app shows the frame for
+  the body's yaw (neighbours cross-fade) and stretches it back by
+  1/cos(yaw). Film's lever stroke uses the separate layers (body still).
+  The gallery / stock buttons are flat again.
+- [x] **21.2 Win98 monitor:** the explorer slides in from the right inside
+  an off-white plastic monitor (`ExplorerMonitor`: bezel, recessed screen,
+  power lamp, badge) with the corkboard's whoosh and knock, and slides back
+  out however it's closed (replaces the CRT power-on).
+- [x] **21.3 Change your name:** Start > User Profile.
+- [x] **21.4 LCD panel + battery:** one fixed size for every digital body
+  (fits the longest name / status); the battery gauge is the phone's own
+  charge (`darkroom/battery` channel: Android BatteryManager, iOS
+  UIDevice), and the camcorder OSD burns in the gauge as it was when the
+  take was shot (`VideoJob.batteryBars`).
+
+## 22. Version 1.4, tidier history, faster sharing (2026-10-08)
+
+- [x] **22.1 Version 1.4.0:** the batch since 1.3.25 counts as a new
+  version.
+- [x] **22.2 Revision history:** Help > About shows each version as a few
+  short bullets. Play's "What's new" now comes from `AppInfo.latest`.
+- [x] **22.3 Slow share on the corkboard:** Polaroids were framed and
+  JPEG-encoded at full size on the first share (Win98 files are shared as
+  they are). Now the board makes each Polaroid's share file in the
+  background when it opens (`warmShareExport`, one at a time, single
+  flight), and the export decodes straight at 2048 px.
+- [x] **22.4 Ship while rendering:** 1.4.0 goes out with flat (layered)
+  shutters (`_SpriteShutter.turntable = false`); the 3D frames follow.

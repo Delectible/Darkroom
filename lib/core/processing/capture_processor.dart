@@ -186,6 +186,7 @@ class CaptureProcessor {
     required DateTime startedAt,
     required Duration duration,
     List<double> zoomTrack = const [],
+    int batteryBars = 3,
   }) async {
     final id = _newId();
     final now = DateTime.now();
@@ -210,6 +211,7 @@ class CaptureProcessor {
       rotationTurns: ctx.rotationTurns,
       grain: ctx.grain,
       zoomTrack: zoomTrack,
+      batteryBars: batteryBars,
     );
     final repo = _repoFor(spec);
     await repo.insertProcessing(

@@ -23,6 +23,17 @@ import UserNotifications
     guard let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "DarkroomBackgroundTime") else {
       return
     }
+    // The phone's charge, for the digital bodies' battery gauges.
+    let battery = FlutterMethodChannel(name: "darkroom/battery", binaryMessenger: registrar.messenger())
+    battery.setMethodCallHandler { call, result in
+      guard call.method == "level" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      UIDevice.current.isBatteryMonitoringEnabled = true
+      let level = UIDevice.current.batteryLevel
+      result(level < 0 ? nil : Int((level * 100).rounded()))
+    }
     let channel = FlutterMethodChannel(name: "darkroom/background", binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { [weak self] call, result in
       switch call.method {

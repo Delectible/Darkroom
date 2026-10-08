@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,19 +33,27 @@ import 'win98_widgets.dart';
 class ExplorerScreen extends ConsumerStatefulWidget {
   const ExplorerScreen({super.key});
 
-  /// The monitor switching on: a dot of light, a bright line that opens
-  /// into the picture, then a little degauss wobble as it settles. Going
-  /// back plays it the other way (the set switching off).
-  static PageRouteBuilder<void> powerOn() => PageRouteBuilder<void>(
-    transitionDuration: const Duration(milliseconds: 820),
-    reverseTransitionDuration: const Duration(milliseconds: 520),
-    pageBuilder: (context, _, _) => const ExplorerScreen(),
-    transitionsBuilder: (context, a, _, child) => AnimatedBuilder(
-      animation: a,
-      child: child,
-      builder: (context, child) => _CrtOn(t: a.value, child: child!),
+  /// The explorer arrives on its monitor: an off-white plastic set slides
+  /// in from the right (the way the swipe went) and comes to rest against
+  /// the left edge; however the explorer is closed, it slides back out.
+  static PageRouteBuilder<void> slideIn() => PageRouteBuilder<void>(
+    transitionDuration: slideDuration,
+    reverseTransitionDuration: const Duration(milliseconds: 460),
+    pageBuilder: (context, _, _) => const ExplorerMonitor(child: ExplorerScreen()),
+    transitionsBuilder: (context, a, _, child) => SlideTransition(
+      position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
+        CurvedAnimation(parent: a, curve: const Cubic(0.3, 0.0, 0.5, 0.94), reverseCurve: Curves.easeInCubic),
+      ),
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 30, offset: Offset(-10, 0))],
+        ),
+        child: child,
+      ),
     ),
   );
+
+  static const slideDuration = Duration(milliseconds: 820);
 
   @override
   ConsumerState<ExplorerScreen> createState() => _ExplorerScreenState();
@@ -331,6 +338,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         await showTipOfTheDay(context);
       case StartAction.run:
         await _run();
+      case StartAction.profile:
+        await showUserProfile(context);
       case StartAction.shutDown:
         _shutDown = true;
         await showShutDownSequence(context);
@@ -963,54 +972,127 @@ class _TaskbarState extends State<_Taskbar> {
   }
 }
 
-/// One frame of the CRT power-on at [t] (0..1).
-class _CrtOn extends StatelessWidget {
-  const _CrtOn({required this.t, required this.child});
+/// The beige monitor round the explorer: a moulded plastic bezel with a
+/// recessed, slightly shadowed screen, a maker's badge and a green power
+/// lamp on the chin.
+class ExplorerMonitor extends StatelessWidget {
+  const ExplorerMonitor({super.key, required this.child});
 
-  final double t;
+  static const bezel = 16.0;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    if (t >= 1) return child;
-    double seg(double a, double b) => ((t - a) / (b - a)).clamp(0.0, 1.0);
-    final dot = Curves.easeOut.transform(seg(0.0, 0.12)); // a spot of light
-    final line = Curves.easeOutCubic.transform(seg(0.08, 0.32)); // spreads into a line
-    final open = Curves.easeOutCubic.transform(seg(0.3, 0.62)); // the line opens up
-    final settle = seg(0.62, 1.0);
-    // Degauss: a fading horizontal wobble and a little breathing in size.
-    final wobble = math.sin(settle * math.pi * 7) * (1 - settle) * 0.012;
-    final sx = math.max(0.012, line) * (1 + wobble);
-    final sy = math.max(0.006, open) * (1 - wobble * 0.6);
-    final glow = (1 - open) * dot; // the beam is white-hot until it opens
     return ColoredBox(
-      color: Colors.black,
-      child: Opacity(
-        opacity: dot,
-        child: Center(
-          child: Transform(
-            alignment: Alignment.center,
-            transform: Matrix4.diagonal3Values(sx, sy, 1),
-            child: Stack(
-              fit: StackFit.passthrough,
-              children: [
-                child,
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: ColoredBox(
-                      color: Color.lerp(
-                        Colors.white.withValues(alpha: glow),
-                        const Color(0x00000000),
-                        settle,
-                      )!,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+      color: const Color(0xFFD9D3C3),
+      child: CustomPaint(
+        foregroundPainter: const _BezelPainter(bezel),
+        child: Padding(
+          padding: const EdgeInsets.all(bezel),
+          child: ClipRRect(borderRadius: BorderRadius.circular(6), child: child),
         ),
       ),
     );
   }
+}
+
+class _BezelPainter extends CustomPainter {
+  const _BezelPainter(this.t);
+
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outer = Offset.zero & size;
+    final screen = RRect.fromRectAndRadius(outer.deflate(t), const Radius.circular(6));
+    // The plastic: lit from above, a touch darker toward the bottom, with
+    // a faint moulding texture.
+    final frame = Path()
+      ..fillType = PathFillType.evenOdd
+      ..addRect(outer)
+      ..addRRect(screen);
+    canvas.drawPath(
+      frame,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFEEE9DC), Color(0xFFDCD5C4), Color(0xFFC9C1AE)],
+          stops: [0, 0.5, 1],
+        ).createShader(outer),
+    );
+    // Rounded outer edge catching the light (left/top) and in shade (right/bottom).
+    canvas.drawRect(
+      outer.deflate(1),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFFBF8EF), Color(0xFFA79F8B)],
+        ).createShader(outer),
+    );
+    // The screen sits in a recess: a dark lip, a shadow cast inward.
+    canvas.drawRRect(
+      screen.inflate(3),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF8E8674), Color(0xFFF4F0E4)],
+        ).createShader(outer),
+    );
+    canvas.save();
+    canvas.clipRRect(screen);
+    canvas.drawRRect(
+      screen.inflate(6),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 10
+        ..color = const Color(0x55000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+    );
+    // A whisper of glass glare across the top-left.
+    canvas.drawRect(
+      screen.outerRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: const Alignment(0.2, 0.1),
+          colors: [Colors.white.withValues(alpha: 0.07), Colors.white.withValues(alpha: 0)],
+        ).createShader(screen.outerRect),
+    );
+    canvas.restore();
+    // Power lamp on the chin (right) and the maker's badge (left).
+    final y = size.height - t / 2;
+    final lamp = Offset(size.width - t * 2.2, y);
+    canvas.drawCircle(lamp, 3.2, Paint()..color = const Color(0xFF3C6E3C));
+    canvas.drawCircle(lamp, 2.4, Paint()..color = const Color(0xFF7CFF6B));
+    canvas.drawCircle(
+      lamp,
+      5,
+      Paint()
+        ..color = const Color(0x557CFF6B)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    final badge = TextPainter(
+      text: const TextSpan(
+        text: 'DARKROOM',
+        style: TextStyle(
+          color: Color(0xFF9C9480),
+          fontSize: 7.5,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    badge.paint(canvas, Offset(t * 1.6, y - badge.height / 2));
+  }
+
+  @override
+  bool shouldRepaint(_BezelPainter old) => old.t != t;
 }

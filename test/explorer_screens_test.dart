@@ -85,7 +85,11 @@ void main() {
         ],
         child: RepaintBoundary(
           key: boundary,
-          child: const MaterialApp(debugShowCheckedModeBanner: false, home: ExplorerScreen()),
+          // On its monitor, as it appears in the app.
+          child: const MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: ExplorerMonitor(child: ExplorerScreen()),
+          ),
         ),
       ),
     );

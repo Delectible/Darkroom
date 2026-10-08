@@ -63,6 +63,9 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
   bool _saving = false;
   final _scroll = ScrollController();
 
+  /// Prints whose share file has been queued (id:note).
+  final _warmed = <String>{};
+
   /// Swipe left to put the board away (it slides back out to the left).
   /// Like the swipe that brings it in, it doesn't follow the thumb: a clear
   /// swipe triggers it. Touches from the screen's side strips are left to
@@ -185,6 +188,16 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
     final inDarkroom = items.where((m) => !m.isDevelopedAt(now)).toList()
       ..sort((a, b) => a.readyAt.compareTo(b.readyAt));
     final unsaved = developed.where((m) => !m.isSaved).length;
+    // Polaroids need their framed share file made: do it in the background
+    // now, so holding one brings the share sheet up straight away.
+    final cold = developed.where((m) => _warmed.add('${m.id}:${m.note}')).toList();
+    if (cold.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        for (final m in cold) {
+          warmShareExport(m);
+        }
+      });
+    }
 
     // Prints that came out while the board is open are "seen" too.
     ref.listen(filmItemsProvider, (prev, next) {

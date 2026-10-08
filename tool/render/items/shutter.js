@@ -3,16 +3,31 @@
 // against the base as the body tips, for depth) and, for film, the advance
 // lever (rotated by the app as it swings).
 //
-// Item names: shutter_<kind>-<layer>[-down]
+// Item names: shutter_<kind>-<layer>[-down][-a<deg>]
 //   kind:  digital | digitalrec | film | run
-//   layer: base | cap | lever (film only)
-// All share one fixed top-down camera, so the layers line up exactly.
+//   layer: base | cap | lever (film only) | all (everything, one picture)
+//   a<deg>: seen with the body turned this far about its vertical axis
+//           (the camera swap tips it up to ~50 degrees), for the turntable
+//           frames the app picks from as the body turns.
+// All share one fixed camera distance, so the layers line up exactly.
 import { rbox, brushedMetal, plastic, cyl, decal } from '/lib/parts.js';
 
 export async function build(THREE, item) {
   const [, spec] = item.split('_');
-  const [kind, layer, state] = spec.split('-');
+  const m = spec.match(/^(\w+)-(\w+)(?:-(down))?(?:-a(-?\d+))?$/);
+  const [, kind, layer, state, deg] = m;
   const down = state === 'down';
+  const yaw = ((+deg || 0) * Math.PI) / 180;
+  if (layer === 'all') {
+    const g = new THREE.Group();
+    const parts = kind === 'film' ? ['base', 'lever', 'cap'] : ['base', 'cap'];
+    let last;
+    for (const part of parts) {
+      last = await build(THREE, `shutter_${kind}-${part}${down && part === 'cap' ? '-down' : ''}`);
+      g.add(last.object);
+    }
+    return { ...last, object: g, camera: orbit(last.span, yaw) };
+  }
   const g = new THREE.Group();
 
   const chrome = new THREE.MeshPhysicalMaterial({ color: 0xeceef0, metalness: 1, roughness: 0.1 });
@@ -117,7 +132,7 @@ export async function build(THREE, item) {
     } else {
       const red = new THREE.MeshPhysicalMaterial({ color: 0xc8231b, roughness: 0.32, clearcoat: 0.8, clearcoatRoughness: 0.25 });
       const top = down ? 3.6 : 5.4;
-      g.add(lathe([[0, top], [3.0, top - 0.08], [5.6, top - 0.35], [6.9, top - 0.9], [7.4, top - 1.6], [7.4, 2.6], [0, 2.6]], red, 128));
+      g.add(lathe([[0, top], [3.0, top - 0.08], [5.6, top - 0.35], [6.9, top - 0.9], [7.4, top - 1.6], [7.4, 2.6], [0, 2.6]].reverse(), red, 128));
       const label = decal(7, 3, (c, w, h) => {
         c.fillStyle = 'rgba(255,240,230,0.92)';
         c.font = `800 ${h * 0.8}px "Inter Display"`;
@@ -131,17 +146,24 @@ export async function build(THREE, item) {
     }
   }
 
-  // Straight down from above; the studio's key light (front-left) is turned
-  // round so it falls from the image's top-left.
-  const fov = 6;
-  const d = span / 2 / Math.tan((fov / 2) * Math.PI / 180);
   return {
     object: g,
+    span,
     floorY: 0,
     exposure: 1.0,
     fixedFrame: true,
     envRotation: 180,
     env: { ambient: 0.25 },
-    camera: { fov, position: [0, d, 0.001], target: [0, 0, 0] },
+    camera: orbit(span, yaw),
   };
+}
+
+// Straight down from above (image top = -Z, right = +X), or swung round the
+// image's vertical axis by [yaw] toward +X: the view of the button when the
+// body is turned that way. The studio's key light (front-left) is turned
+// round so it falls from the image's top-left.
+function orbit(span, yaw) {
+  const fov = 6;
+  const d = span / 2 / Math.tan((fov / 2) * Math.PI / 180);
+  return { fov, position: [d * Math.sin(yaw), d * Math.cos(yaw), 0], target: [0, 0, 0], up: [0, 0, -1] };
 }

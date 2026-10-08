@@ -16,6 +16,7 @@ import io.flutter.plugin.common.MethodChannel
 //    camera buttons (shutter / zoom); they're taken here, before Android
 //    turns them into a volume change, and passed to Dart.
 //  * darkroom/crash: Android's record of recent crashes / freezes.
+//  * darkroom/battery: the phone's battery level.
 class MainActivity : FlutterActivity() {
     private var volumeChannel: MethodChannel? = null
     private var captureVolume = false
@@ -59,6 +60,18 @@ class MainActivity : FlutterActivity() {
                             )
                         }
                         result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        // darkroom/battery: the phone's charge, for the digital bodies' battery
+        // gauges (and the camcorder's burned-in OSD).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/battery")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "level" -> {
+                        val bm = getSystemService(BATTERY_SERVICE) as android.os.BatteryManager
+                        result.success(bm.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY))
                     }
                     else -> result.notImplemented()
                 }

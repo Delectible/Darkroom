@@ -304,6 +304,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// pipeline), then re-acquires on return.
   Future<void> _push(Widget page) async {
     final cork = page is CorkboardScreen;
+    // The corkboard and the PC monitor both slide in on a whoosh and land
+    // with a soft knock.
+    final slides = cork || page is ExplorerScreen;
     final session = ref.read(cameraSessionProvider.notifier);
     if (ref.read(captureControllerProvider).isRecording) {
       await ref.read(captureControllerProvider.notifier).stopRecording();
@@ -311,20 +314,20 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     session.setScreenVisible(false);
     if (!mounted) return;
     _releaseEdges();
-    if (cork) {
+    if (slides) {
       Sfx.corkSwoosh.play();
       unawaited(Sfx.corkThud.preload());
     }
     final ModalRoute<void> route = cork
         ? CorkboardScreen.slideIn()
         : page is ExplorerScreen
-        ? ExplorerScreen.powerOn()
+        ? ExplorerScreen.slideIn()
         : MaterialPageRoute<void>(builder: (_) => page);
     final done = Navigator.of(context).push(route);
-    // The framed board lands against the edge with a soft wooden thud
-    // (started a beat early: the player takes a moment to start).
+    // It lands against the edge with a soft thud (started a beat early: the
+    // player takes a moment to start).
     final slide = route.animation;
-    if (cork && slide != null) {
+    if (slides && slide != null) {
       void landed() {
         if (slide.status == AnimationStatus.forward && slide.value >= 0.93) {
           slide.removeListener(landed);
@@ -336,7 +339,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       slide.addListener(landed);
     }
     await done;
-    if (cork) Sfx.corkSwoosh.play();
+    if (slides) Sfx.corkSwoosh.play();
     _claimEdges();
     session.setScreenVisible(true);
   }

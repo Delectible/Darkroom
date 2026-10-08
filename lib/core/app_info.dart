@@ -3,58 +3,53 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.3.31';
+  static const version = '1.4.0';
   static const build = '1998.10.05';
 
-  static const revisions = <(String, String)>[
+  /// What changed in this build, in plain words: Google Play's "What's new"
+  /// (tool/play/whats_new.py). Replace it every build.
+  static const latest =
+      'A welcome tour, Windows 98 on a beige monitor (swipe left on a digital camera), '
+      'your name under Start > User Profile, the phone\'s real battery on the digital cameras, '
+      'faster Polaroid sharing and a tidier revision history.';
+
+  /// Help > About: the main ideas of each version, a few words each.
+  static const revisions = <(String, List<String>)>[
+    (
+      '1.4',
+      [
+        'Welcome tour, with your name on your prints',
+        'Windows 98 slides in on a beige monitor',
+        'Swipe right for the corkboard, left for Windows 98',
+        'Photoreal shutter buttons',
+        'Watch prints develop up close',
+        'Sound volume slider, haptics switch, crash reports',
+        'Real phone battery on the digital cameras',
+        'Tape-style sound for Super 8 and camcorder',
+      ],
+    ),
     (
       '1.3',
-      'A welcome tour for new users (with your name on your prints), and photoreal 3D shutter buttons that keep their depth as you toss the camera. '
-          'Swipe left on a digital camera for Windows 98 (it switches on like an old monitor). A volume slider for sound effects, tap off a photo to put it down, a nicer look at prints developing, kinder messages when a shot is ruined (with Copy error report), crash reports in Help, faster Polaroid sharing, a smoother camera picker, and fixes for Super 8 sound and the sprocket hole during a camera swap. '
-          'Removed the High-resolution film switch: film always shoots in the smooth 1080p mode. '
-          'The camera no longer wiggles when you swipe right to bring in the corkboard. '
-          'Tap a print in the darkroom to watch it develop up close. Photos open over the dimmed corkboard. Much quieter sounds, a louder corkboard knock, Sound effects and Haptics switches in settings, tape-style audio for Super 8 and camcorder clips, and a Polaroid note added after saving can be saved as a new copy. '
-          'Swipe right on a film camera to bring in the corkboard (swipe left to put it away). The board now fills the screen top to bottom and lands with a proper wooden knock. Super 8 strip turns in one piece and is less grainy, a bigger film shutter release, quieter sounds, and you can grab the camera again while it springs back. '
-          'A finer, granular cork board (coffee rings and all) that no longer bounces past its ends, a slower slide-in that lands with a soft wooden thud, and the Super 8 viewfinder swings round when you turn the phone. '
-          'The corkboard slides in from the left in a wooden frame. Real Minesweeper (WINMINE), Space Rabbit Pinball rebuilt with missions and ranks, sounds for every game, and the strap hangs from its lug. '
-          'New shutters: a compact shutter key, a chrome release with a film-advance lever, and a red RUN button for Super 8. Leather strap and braided cord, and the mode tag springs out of the way during a swap. '
-          'Volume buttons really do take the picture now, quieter sounds, steadier zoom at the ends, and a pixel-art shutdown screen. '
-          'Three games in Start > Run (SOL, BRICKS, PINBALL), bigger Windows 98 menus and buttons, and a whirring zoom motor. '
-          'Volume buttons take the picture, a bigger zoom rocker, a steadier viewfinder, clicky projector keys, Windows 98 sounds and a proper Shut Down. '
-          'Projector: hold rewind or fast forward to spool, the dial seeks smoothly, and reels always start again after running out. '
-          'Viewfinder no longer upside down on some phones (e.g. Galaxy S10+). '
-          'Now on Google Play (internal testing). On iPhone, a shot finishes even if you leave right away. '
-          'Sharper box and camera art, now branded Darkroom. '
-          'The Darkroom rabbit turns up here and there, in pixels on the Start menu. '
-          'The projector has a deck: piano keys, a dial, a time-left counter and a reel label you can rename. '
-          'Super 8 reels are landscape full-gate scans with the sprocket hole, faded colour, flicker and more dirt. '
-          'Polaroid 600 retuned against real scans, with its own chemistry flaws and a textured off-white frame. '
-          'HP5 retuned against real scans: deeper blacks, grain that builds in the highlights. '
-          'Portra 400 retuned against real scans (green shadows, creamy highlights, visible grain); '
-          'developed film now picks up the odd speck of dust, hair, scratch or light leak. '
-          'Ektar 100 retuned against real scans; film grain now has real grain structure. '
-          'Toss the camera aside with your thumb to grab the other one; swipes from the screen edges stay the phone\'s. '
-          'Windows 98 uses a pixel font. '
-          'Prints keep their shape when turned over. Windows 98 fits the screen. Softer swap sound. '
-          'Swap cameras by pulling in the one peeking from the edge: the bodies slide past each other. '
-          'Film backs have a memo holder, digicams an LCD. The corkboard wall scrolls with your prints '
-          '(tap a pin to take one down, flip a print by its corner). Prints go through the trays. '
-          'Bigger Windows 98 screens with a real Media Player, zoom slider and camera info. '
-          'Camcorder tapes come off floppies in A: (mind the disk swaps) and record their '
-          'on-screen display, zoom bar included. Smooth zoom. Reels show their first frames. '
-          'Polaroid 600: square instant prints that develop in 20 seconds, with notes '
-          'written on the border. Zoom buttons on every digital camera. '
-          'Swipe anywhere in the picker; swipe the film name or box to switch stocks. '
-          'Zoomed photos pan instead of flipping. Reels replay after the end. '
-          'Smoother corkboard. Flip phone opens the right way.',
+      [
+        'Corkboard in a wooden frame, on real cork',
+        'Polaroid 600 with notes on the border',
+        'Super 8 projector with tape-deck keys',
+        'Films retuned against real scans',
+        'Toss the camera to swap film and digital',
+        'Windows 98 games, sounds and a Shut Down',
+        'Volume buttons take the picture',
+        'On Google Play',
+      ],
     ),
     (
       '1.2',
-      'Film looks rebuilt from colour LUTs with real grain and halation. Super 8 movie camera. '
-          '1999 Floppy Cam. Move to C:, Save / Save all, landscape shots, quiet notifications. '
-          'Renamed from RetroCam to Darkroom.',
+      [
+        'Film looks with real grain and halation',
+        'Super 8 movie camera and 1999 Floppy Cam',
+        'Renamed from RetroCam to Darkroom',
+      ],
     ),
-    ('1.1', 'Fixed ruined prints and stuck videos. Faster film viewfinder. New stock picker and app icon.'),
-    ('1.0', 'First roll: Film Mode with the darkroom and corkboard, Digital Mode with the SD card.'),
+    ('1.1', ['Fixed ruined prints and stuck videos', 'Faster viewfinder, new picker and icon']),
+    ('1.0', ['First roll: film darkroom and corkboard, digital SD card']),
   ];
 }

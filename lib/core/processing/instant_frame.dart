@@ -72,9 +72,20 @@ class InstantFrame {
     required String? note,
     required String outPath,
   }) async {
-    final codec = await ui.instantiateImageCodec(await File(picturePath).readAsBytes());
+    // Decoded straight at the export size: a full-resolution decode of a
+    // 12 MP shot was most of the wait.
+    final buffer = await ui.ImmutableBuffer.fromUint8List(await File(picturePath).readAsBytes());
+    final descriptor = await ui.ImageDescriptor.encoded(buffer);
+    final shortSide = math.min(descriptor.width, descriptor.height);
+    final k = math.min(1.0, maxPictureSide / shortSide);
+    final codec = await descriptor.instantiateCodec(
+      targetWidth: (descriptor.width * k).round(),
+      targetHeight: (descriptor.height * k).round(),
+    );
     final picture = (await codec.getNextFrame()).image;
     codec.dispose();
+    descriptor.dispose();
+    buffer.dispose();
     final side0 = math.min(picture.width, picture.height).toDouble();
     // A real instant print is small: 2048 px across the picture is plenty,
     // and keeps the (pure-Dart) JPEG encode to a moment.

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -15,21 +16,41 @@ Future<String?> exportPathFor(MediaItem item) async {
   final path = item.outputPath;
   if (path == null || !File(path).existsSync()) return null;
   if (item.isVideo || !CameraCatalog.byId(item.cameraId).isInstant) return path;
-  try {
-    // Framing + JPEG-encoding a full-size instant print takes seconds (the
-    // encoder is pure Dart), so each version (picture + note) is made once
-    // and reused: sharing the same print again is instant.
-    final stamp = File(path).lastModifiedSync().millisecondsSinceEpoch;
-    final key = '${item.id}_${stamp}_${(item.note ?? '').trim().hashCode.toUnsigned(32)}';
-    final dir = Directory('${Directory.systemTemp.path}/instant_export/$key');
-    final out = File('${dir.path}/${item.fileName}');
-    if (out.existsSync() && out.lengthSync() > 0) return out.path;
-    return await InstantFrame.exportJpeg(picturePath: path, note: item.note, outPath: out.path);
-  } catch (e) {
-    // Never lose the share/save over the frame: fall back to the bare picture.
-    debugPrint('Instant export failed: $e');
-    return path;
-  }
+  // Framing + JPEG-encoding an instant print takes a few seconds (the
+  // encoder is pure Dart), so each version (picture + note) is made once,
+  // ahead of time where possible (warmShareExport), and reused.
+  final stamp = File(path).lastModifiedSync().millisecondsSinceEpoch;
+  final key = '${item.id}_${stamp}_${(item.note ?? '').trim().hashCode.toUnsigned(32)}';
+  final out = File('${Directory.systemTemp.path}/instant_export/$key/${item.fileName}');
+  if (out.existsSync() && out.lengthSync() > 0) return out.path;
+  return _exporting[key] ??= () async {
+    try {
+      // Written next to the final name and moved into place, so a half-
+      // written file (the app killed mid-encode) is never picked up.
+      final part = '${out.path}.part';
+      await InstantFrame.exportJpeg(picturePath: path, note: item.note, outPath: part);
+      await File(part).rename(out.path);
+      return out.path;
+    } catch (e) {
+      // Never lose the share/save over the frame: fall back to the bare picture.
+      debugPrint('Instant export failed: $e');
+      return path;
+    } finally {
+      unawaited(Future<void>(() => _exporting.remove(key)));
+    }
+  }();
+}
+
+/// Instant-print exports being made right now (a share that arrives while
+/// one is cooking waits for it rather than starting another).
+final _exporting = <String, Future<String?>>{};
+Future<void> _warmQueue = Future.value();
+
+/// Makes [item]'s share file in the background (one at a time), so holding
+/// a print on the corkboard brings the share sheet up straight away.
+void warmShareExport(MediaItem item) {
+  if (item.isVideo || item.outputPath == null || !CameraCatalog.byId(item.cameraId).isInstant) return;
+  _warmQueue = _warmQueue.then((_) => exportPathFor(item)).then((_) {}, onError: (Object _) {});
 }
 
 /// Native share sheet (SMS, WhatsApp, Instagram Stories, AirDrop...).

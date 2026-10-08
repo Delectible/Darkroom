@@ -15,12 +15,14 @@ import '../../../../core/providers.dart';
 import '../../../../core/theme/darkroom_mark.dart';
 import '../../../../core/theme/retro_theme.dart';
 import '../../../../core/theme/surfaces.dart';
+import '../../../../core/utils/pixel_font.dart';
+import '../../../cameras/domain/camera_catalog.dart';
 import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
-import '../body_swap.dart' show Raised;
 import '../../../cameras/presentation/artwork/camera_artwork.dart';
 import '../../application/capture_controller.dart';
 import '../../application/zoom_controller.dart';
+import '../../../../core/device/battery.dart';
 import '../../../../core/device/haptics.dart';
 
 export 'shutters.dart' show ShutterButton, pressShutter;
@@ -177,21 +179,18 @@ class StockButton extends ConsumerWidget {
               colors: [Color(0xFF0B0B0B), Color(0xFF1C1C1C)],
             ),
           ),
-          child: Raised(
-            height: 8,
-            child: Upright(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 260),
-                transitionBuilder: (c, a) => FadeTransition(
-                  opacity: a,
-                  child: ScaleTransition(scale: Tween(begin: 0.8, end: 1.0).animate(a), child: c),
-                ),
-                // Flies into the picker's carousel (and back) on open/close.
-                child: Hero(
-                  key: ValueKey(spec.id),
-                  tag: 'artwork-${spec.id}',
-                  child: CameraArtwork(spec: spec),
-                ),
+          child: Upright(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              transitionBuilder: (c, a) => FadeTransition(
+                opacity: a,
+                child: ScaleTransition(scale: Tween(begin: 0.8, end: 1.0).animate(a), child: c),
+              ),
+              // Flies into the picker's carousel (and back) on open/close.
+              child: Hero(
+                key: ValueKey(spec.id),
+                tag: 'artwork-${spec.id}',
+                child: CameraArtwork(spec: spec),
               ),
             ),
           ),
@@ -314,6 +313,22 @@ class _LcdPanel extends ConsumerWidget {
   static const _lcd = Color(0xFF9FAA8C);
   static const _ink = Color(0xFF1E2619);
 
+  static const _nameDot = 1.6, _statusDot = 1.2;
+
+  /// One size for every body (fits the longest name and status), so the
+  /// panel stays put and only what's on it changes.
+  static final Size _screen = () {
+    var name = 0.0;
+    for (final s in CameraCatalog.forMode(AppMode.digital)) {
+      name = math.max(name, PixelFont.measureDots(s.name.toUpperCase()) * _nameDot + _nameDot);
+    }
+    final status = [
+      'SP  TAPE 60MIN',
+      'SD 128MB  9999 LEFT',
+    ].map((t) => PixelFont.measureDots(t) * _statusDot + _statusDot).reduce(math.max);
+    return Size(math.max(name + 6 + 16, status), (PixelFont.glyphHeight + 1) * (_nameDot + _statusDot) + 3);
+  }();
+
   /// A typical file from this body, for the "shots left" estimate.
   static int _photoBytes(CameraSpec spec) {
     final e = spec.output.maxLongEdge;
@@ -324,6 +339,7 @@ class _LcdPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final p = RetroPalette.of(context);
     final items = ref.watch(sdCardItemsProvider).value ?? const <MediaItem>[];
+    final bars = Battery.bars(ref.watch(batteryLevelProvider).value);
     final String status;
     if (spec.storage == DigitalStorage.floppy) {
       // A 60-minute tape, minus what's been shot and not yet copied off.
@@ -357,39 +373,40 @@ class _LcdPanel extends ConsumerWidget {
             colors: [Color(0xFFB0BA9C), _lcd, Color(0xFF8E997C)],
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox.fromSize(
+            size: _screen,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: PixelText(spec.name.toUpperCase(), dot: 1.6, color: _ink),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: PixelText(spec.name.toUpperCase(), dot: _nameDot, color: _ink),
+                      ),
+                    ),
+                    CustomPaint(size: const Size(16, 8), painter: _LcdBattery(bars)),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                const CustomPaint(size: Size(16, 8), painter: _LcdBattery()),
+                const SizedBox(height: 3),
+                PixelText(status, dot: _statusDot, color: _ink.withValues(alpha: 0.8)),
               ],
             ),
-            const SizedBox(height: 3),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: PixelText(status, dot: 1.2, color: _ink.withValues(alpha: 0.8)),
-            ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// The panel's battery: the phone's own charge, in three segments.
 class _LcdBattery extends CustomPainter {
-  const _LcdBattery();
+  const _LcdBattery(this.bars);
+
+  final int bars;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -400,13 +417,13 @@ class _LcdBattery extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(0, 0, 1, h), ink);
     canvas.drawRect(Rect.fromLTWH(w - 1, 0, 1, h), ink);
     canvas.drawRect(Rect.fromLTWH(w, h * 0.3, 2, h * 0.4), ink);
-    for (var i = 0; i < 3; i++) {
+    for (var i = 0; i < bars; i++) {
       canvas.drawRect(Rect.fromLTWH(2 + i * (w - 3) / 3, 2, (w - 3) / 3 - 1, h - 4), ink);
     }
   }
 
   @override
-  bool shouldRepaint(_LcdBattery old) => false;
+  bool shouldRepaint(_LcdBattery old) => old.bars != bars;
 }
 
 /// Small centred caret above the controls: tap (or swipe up anywhere) to
@@ -507,10 +524,7 @@ class GalleryButton extends ConsumerWidget {
             clipBehavior: Clip.none,
             children: [
               Positioned.fill(
-                child: Raised(
-                  height: 5,
-                  child: film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb),
-                ),
+                child: film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb),
               ),
               if (badge > 0 || newPrints > 0)
                 Positioned(

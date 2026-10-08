@@ -39,7 +39,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    for (var page = 0; page < 7; page++) {
+    for (var page = 0; page < 6; page++) {
       if (shots != null) {
         await tester.runAsync(() async {
           final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
@@ -48,7 +48,7 @@ void main() {
           await File('$shots/onboarding_$page.png').writeAsBytes(png!.buffer.asUint8List());
         });
       }
-      if (page < 6) {
+      if (page < 5) {
         await tester.tap(find.byType(FilledButton));
         await tester.pumpAndSettle();
       }

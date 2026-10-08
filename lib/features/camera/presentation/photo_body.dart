@@ -33,7 +33,7 @@ class BodyArt {
 
   BodyPart? part(AppMode mode, String name) => _parts[mode.name]?[name];
 
-  bool has(AppMode mode) => _parts[mode.name]?.isNotEmpty ?? false;
+  bool has(AppMode mode) => _parts[mode.name]?.containsKey('panel') ?? false;
 
   /// Decodes every sprite ahead of time (face-on first, then the turned
   /// frames unless [faceOnly]), so nothing pops in or janks mid-swap.
@@ -244,20 +244,33 @@ class BodySlice extends StatelessWidget {
         Widget frame(int y, double o) {
           final scale = y == 0 ? 1.0 : 0.6;
           final k = dpr * scale; // decoded px per dp
-          return Image(
-            image: bodyImage(part.asset(null, y), part.canvas.width * k),
-            width: w,
-            height: h,
-            centerSlice: Rect.fromLTRB(
-              sx * k,
-              sy * k,
-              (part.canvas.width - sx) * k,
-              (part.canvas.height - sy) * k,
+          // centerSlice works in image pixels and draws the corners one
+          // image pixel per dp: lay out at k x and scale back down.
+          return Transform.scale(
+            scale: 1 / k,
+            alignment: Alignment.topLeft,
+            child: OverflowBox(
+              alignment: Alignment.topLeft,
+              minWidth: w * k,
+              maxWidth: w * k,
+              minHeight: h * k,
+              maxHeight: h * k,
+              child: Image(
+                image: bodyImage(part.asset(null, y), part.canvas.width * k),
+                width: w * k,
+                height: h * k,
+                centerSlice: Rect.fromLTRB(
+                  sx * k,
+                  sy * k,
+                  (part.canvas.width - sx) * k,
+                  (part.canvas.height - sy) * k,
+                ),
+                filterQuality: FilterQuality.medium,
+                gaplessPlayback: true,
+                color: o < 1 ? Color.fromRGBO(255, 255, 255, o) : null,
+                colorBlendMode: BlendMode.modulate,
+              ),
             ),
-            filterQuality: FilterQuality.medium,
-            gaplessPlayback: true,
-            color: o < 1 ? Color.fromRGBO(255, 255, 255, o) : null,
-            colorBlendMode: BlendMode.modulate,
           );
         }
 

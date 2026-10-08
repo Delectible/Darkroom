@@ -466,12 +466,14 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       ExplorerPlace.myComputer => ('My Computer', PixelIcon.computer, 'My Computer'),
     };
 
+    final land = MediaQuery.sizeOf(context).aspectRatio > 1;
     return Win98Scale(
       child: Scaffold(
         backgroundColor: W98.desktop,
         body: DefaultTextStyle(
           style: W98.text,
-          child: SafeArea(
+          child: Win98Safe(
+            covered: ExplorerMonitor.bezelOf(context),
             child: Column(
               children: [
                 Expanded(
@@ -722,36 +724,38 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            child: SizedBox(
-                              height: 30,
-                              child: Win98Button(
-                                onPressed: readyHere == 0 ? null : transferAll,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    PixelIconView(onFloppy ? PixelIcon.floppy : PixelIcon.transfer),
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        onFloppy
-                                            ? (readyHere == 0
-                                                  ? 'No Disk in Drive A:'
-                                                  : 'Copy $readyHere Clip(s) to Local Disk (C:)')
-                                            : (readyHere == 0
-                                                  ? 'SD Card Empty'
-                                                  : 'Transfer $readyHere File(s) to Local Disk (C:)'),
+                          // Landscape is short: the toolbar's Transfer does the job.
+                          if (!land) const SizedBox(height: 4),
+                          if (!land)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 2),
+                              child: SizedBox(
+                                height: 30,
+                                child: Win98Button(
+                                  onPressed: readyHere == 0 ? null : transferAll,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      PixelIconView(onFloppy ? PixelIcon.floppy : PixelIcon.transfer),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          onFloppy
+                                              ? (readyHere == 0
+                                                    ? 'No Disk in Drive A:'
+                                                    : 'Copy $readyHere Clip(s) to Local Disk (C:)')
+                                              : (readyHere == 0
+                                                    ? 'SD Card Empty'
+                                                    : 'Transfer $readyHere File(s) to Local Disk (C:)'),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
                           const SizedBox(height: 3),
                           ExplorerStatusBar(
                             cells: [
@@ -1001,23 +1005,28 @@ class ExplorerMonitor extends StatelessWidget {
   const ExplorerMonitor({super.key, required this.child});
 
   static const bezel = 16.0;
+
+  /// Thinner turned to landscape, where height is short.
+  static double bezelOf(BuildContext context) => MediaQuery.sizeOf(context).aspectRatio > 1 ? 8 : bezel;
+
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
+    final bezel = bezelOf(context);
     return ColoredBox(
       color: const Color(0xFFD9D3C3),
       child: Stack(
         fit: StackFit.expand,
         children: [
           Padding(
-            padding: const EdgeInsets.all(bezel),
+            padding: EdgeInsets.all(bezel),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(6),
               child: RepaintBoundary(child: child),
             ),
           ),
-          const IgnorePointer(
+          IgnorePointer(
             child: RepaintBoundary(child: CustomPaint(painter: _BezelPainter(bezel))),
           ),
         ],

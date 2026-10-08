@@ -103,10 +103,9 @@ class FlashButton extends ConsumerWidget {
       return Semantics(
         button: true,
         label: 'Flash ${flash.name}',
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+        child: PressFeedback(
           onTap: () => unawaited(ref.read(flashProvider.notifier).cycle(mode)),
-          child: SizedBox(
+          builder: (context, _) => SizedBox(
             width: 76,
             height: 36,
             child: Stack(
@@ -206,14 +205,11 @@ class AspectButton extends ConsumerWidget {
         width: 64,
         height: 36,
         child: film
-            ? GestureDetector(
-                behavior: HitTestBehavior.opaque,
+            ? _AspectDial(
+                art: art,
+                label: aspect.label,
                 onTap: spec.aspectLocked ? null : onCycle,
-                child: Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [BodySprite(art.part(AppMode.film, 'aspect')!), label],
-                ),
+                child: label,
               )
             : PhotoKey(
                 part: art.part(AppMode.digital, 'pillwide')!,
@@ -242,6 +238,74 @@ class AspectButton extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Film's format dial: each change turns the knurled top a click (90
+/// degrees, ending where the render repeats) with a little overshoot, the
+/// old format turning away with it and the new one settling in.
+class _AspectDial extends StatefulWidget {
+  const _AspectDial({required this.art, required this.label, required this.onTap, required this.child});
+
+  final BodyArt art;
+  final String label;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  State<_AspectDial> createState() => _AspectDialState();
+}
+
+class _AspectDialState extends State<_AspectDial> with SingleTickerProviderStateMixin {
+  late final _turn = AnimationController(vsync: this, duration: const Duration(milliseconds: 380), value: 1);
+
+  @override
+  void didUpdateWidget(_AspectDial old) {
+    super.didUpdateWidget(old);
+    if (old.label != widget.label) unawaited(_turn.forward(from: 0));
+  }
+
+  @override
+  void dispose() {
+    _turn.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final top = widget.art.part(AppMode.film, 'aspecttop');
+    return PressFeedback(
+      onTap: widget.onTap,
+      builder: (context, _) => Stack(
+        alignment: Alignment.center,
+        clipBehavior: Clip.none,
+        children: [
+          BodySprite(widget.art.part(AppMode.film, 'aspect')!),
+          AnimatedBuilder(
+            animation: _turn,
+            builder: (context, child) {
+              final t = Curves.easeOutBack.transform(_turn.value);
+              return Transform.rotate(angle: (t - 1) * math.pi / 2, child: child);
+            },
+            child: Stack(
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              children: [
+                ?(top == null ? null : BodySprite(top)),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  transitionBuilder: (c, a) => FadeTransition(
+                    opacity: a,
+                    child: ScaleTransition(scale: Tween(begin: 0.7, end: 1.0).animate(a), child: c),
+                  ),
+                  child: KeyedSubtree(key: ValueKey(widget.label), child: widget.child),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1153,7 +1217,6 @@ class LensFlipButton extends ConsumerStatefulWidget {
 
 class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
   double _turns = 0;
-  bool _down = false;
 
   void _flip() {
     unawaited(Haptics.mediumImpact());
@@ -1170,59 +1233,49 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
     return Semantics(
       button: true,
       label: front ? 'Use back camera' : 'Use front camera',
-      // Opaque: the rendered knob ignores touches, so the box takes them.
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTapDown: widget.enabled ? (_) => setState(() => _down = true) : null,
-        onTapCancel: () => setState(() => _down = false),
-        onTapUp: widget.enabled
-            ? (_) {
-                setState(() => _down = false);
-                _flip();
-              }
-            : null,
-        child: Opacity(
-          opacity: widget.enabled ? 1 : 0.45,
-          child: AnimatedScale(
-            scale: _down ? 0.92 : 1,
-            duration: const Duration(milliseconds: 70),
-            child: art != null
-                ? SizedBox(
+      // Pressed on contact, opaque (the rendered knob ignores touches).
+      child: Opacity(
+        opacity: widget.enabled ? 1 : 0.45,
+        child: PressFeedback(
+          enabled: widget.enabled,
+          onTap: _flip,
+          click: false, // its own haptic
+          builder: (context, _) => art != null
+              ? SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    clipBehavior: Clip.none,
+                    children: [
+                      BodySprite(art.part(mode, 'lens')!),
+                      // only the index turns: the knob's lighting stays put
+                      AnimatedRotation(
+                        turns: _turns,
+                        duration: const Duration(milliseconds: 420),
+                        curve: Curves.easeOutBack,
+                        child: BodySprite(art.part(mode, 'lensdot')!),
+                      ),
+                    ],
+                  ),
+                )
+              : AnimatedRotation(
+                  turns: _turns,
+                  duration: const Duration(milliseconds: 420),
+                  curve: Curves.easeOutBack,
+                  child: SizedBox(
                     width: 40,
                     height: 40,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      clipBehavior: Clip.none,
-                      children: [
-                        BodySprite(art.part(mode, 'lens')!),
-                        // only the index turns: the knob's lighting stays put
-                        AnimatedRotation(
-                          turns: _turns,
-                          duration: const Duration(milliseconds: 420),
-                          curve: Curves.easeOutBack,
-                          child: BodySprite(art.part(mode, 'lensdot')!),
-                        ),
-                      ],
-                    ),
-                  )
-                : AnimatedRotation(
-                    turns: _turns,
-                    duration: const Duration(milliseconds: 420),
-                    curve: Curves.easeOutBack,
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: CustomPaint(
-                        painter: _LensFlipPainter(
-                          ring: palette.metal,
-                          ringDark: palette.metalDark,
-                          front: front,
-                          accent: palette.accent,
-                        ),
+                    child: CustomPaint(
+                      painter: _LensFlipPainter(
+                        ring: palette.metal,
+                        ringDark: palette.metalDark,
+                        front: front,
+                        accent: palette.accent,
                       ),
                     ),
                   ),
-          ),
+                ),
         ),
       ),
     );

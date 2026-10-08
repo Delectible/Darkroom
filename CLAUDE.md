@@ -118,8 +118,11 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   the swipe. The camera (home) is wrapped in `PortraitLock` so it keeps
   its portrait layout underneath. On push, heroes make the route offstage
   for a frame and its animation reads "completed": ignore that (test
-  `upright_app_test`). iOS Info.plist allows landscape for this. Win98Scale
-  lays out 1:1 in landscape (`factorFor`).
+  `upright_app_test`). iOS Info.plist allows landscape for this. Turned,
+  the system bars hide (immersiveSticky; edgeToEdge back in portrait).
+  Win98Scale lays out 1:1 in landscape (`factorFor`); `Win98Safe` keeps
+  only clear of the cutout itself at the sides; the monitor bezel is 8 dp
+  and the big Transfer bar is dropped (toolbar has Transfer).
 - The app is **portrait** everywhere else. Landscape is detected with the
   accelerometer (`lib/core/device/physical_orientation.dart`); icons rotate in
   place (`Upright` / `UprightBox`) and photos are saved upright.
@@ -352,7 +355,10 @@ UI
   lacks the denoiser). `tool/render/body/bundle.py OUT assets/body` copies
   them in (only complete bodies). The app draws them in its normal layout
   (`photo_body.dart`: `BodySprite`, `BodySlice` 9-slice, `BodyBackdrop`,
-  `PhotoKey`); turned frames cross-fade with the swap (`BodyYaw`), all
+  `PhotoKey`, all on `PressFeedback`: down on contact, held >= 110 ms,
+  click + haptic, since the body's drag makes taps resolve late); the film
+  format dial turns its top (`aspecttop`, repeats every 90 degrees) a
+  click per change; turned frames cross-fade with the swap (`BodyYaw`), all
   decoded up front (`BodyArt.precache`; `BodyArt.lateFrames` counts any
   that weren't). `_Frames` draws them: each turned render is cropped to
   its foreshortened width (cos turn) and stretched back, and two turns are

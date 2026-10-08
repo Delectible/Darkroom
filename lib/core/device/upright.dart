@@ -201,6 +201,13 @@ class _UprightAppState extends ConsumerState<UprightApp> {
     _asked = want;
     if (want != DeviceOrientation.portraitUp) UprightApp.lastLandscape = want;
     unawaited(SystemChrome.setPreferredOrientations([want]));
+    // Turned, the screens get the whole display: the status and nav bars
+    // hide (a swipe from the edge brings them back for a moment).
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(
+        want == DeviceOrientation.portraitUp ? SystemUiMode.edgeToEdge : SystemUiMode.immersiveSticky,
+      ),
+    );
   }
 
   @override

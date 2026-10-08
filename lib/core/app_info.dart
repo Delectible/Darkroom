@@ -3,16 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.5.1';
+  static const version = '1.5.2';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Fixes for the 3D cameras: no more popping shadows or black edge mid-swap, the viewfinder stays live '
-      'while the camera flips, the selfie button works, and the film lever sits under the shutter. '
-      'One "3D cameras" switch (off = performance mode). The corkboard, projector and Darkroom 98 now '
-      'really rotate to landscape.';
+      'The film format dial now turns a click when you change it, and the camera keys press down and click '
+      'however quick the tap. Darkroom 98 in landscape uses the whole screen.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

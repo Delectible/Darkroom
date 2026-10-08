@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -6,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/audio/sfx.dart';
+import '../../../core/device/haptics.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
 import 'body_swap.dart' show BodyYaw;
@@ -538,10 +541,99 @@ class _FramesPainter extends CustomPainter {
       o.canvas != canvas;
 }
 
+/// Press feedback for the body's keys and dials. The body also listens for
+/// drags (the toss), so a quick tap is only recognised as the finger lifts:
+/// the key goes down on contact instead, and stays down long enough to be
+/// seen ([minDown]) however short the tap. A confirmed tap clicks (sound +
+/// haptic) and calls [onTap].
+class PressFeedback extends StatefulWidget {
+  const PressFeedback({
+    super.key,
+    required this.onTap,
+    required this.builder,
+    this.enabled = true,
+    this.click = true,
+  });
+
+  final VoidCallback? onTap;
+  final Widget Function(BuildContext context, bool down) builder;
+  final bool enabled;
+
+  /// Plays the key click (off for parts that make their own sound).
+  final bool click;
+
+  static const minDown = Duration(milliseconds: 110);
+
+  @override
+  State<PressFeedback> createState() => _PressFeedbackState();
+}
+
+class _PressFeedbackState extends State<PressFeedback> {
+  bool _down = false;
+  DateTime _since = DateTime(0);
+  Timer? _up;
+
+  bool get _live => widget.enabled && widget.onTap != null;
+
+  void _press() {
+    if (!_live) return;
+    _up?.cancel();
+    _since = DateTime.now();
+    if (!_down) setState(() => _down = true);
+  }
+
+  void _release() {
+    if (!_down) return;
+    final left = PressFeedback.minDown - DateTime.now().difference(_since);
+    _up?.cancel();
+    if (left <= Duration.zero) {
+      setState(() => _down = false);
+    } else {
+      _up = Timer(left, () {
+        if (mounted) setState(() => _down = false);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _up?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => _press(),
+      onPointerUp: (_) => _release(),
+      onPointerCancel: (_) => _release(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapCancel: _release,
+        onTap: _live
+            ? () {
+                if (widget.click) {
+                  Sfx.keyDown.play();
+                  unawaited(Haptics.selectionClick());
+                }
+                widget.onTap!();
+              }
+            : null,
+        child: AnimatedScale(
+          scale: _down ? 0.95 : 1,
+          duration: const Duration(milliseconds: 70),
+          curve: Curves.easeOut,
+          child: widget.builder(context, _down),
+        ),
+      ),
+    );
+  }
+}
+
 /// A rendered key (rubber pill, chrome button): shows its pressed render
 /// while held and fires [onTap] on release; [child] (a printed label) sits
 /// on the key and sinks with it.
-class PhotoKey extends StatefulWidget {
+class PhotoKey extends StatelessWidget {
   const PhotoKey({super.key, required this.part, required this.onTap, this.child, this.enabled = true});
 
   final BodyPart part;
@@ -550,33 +642,19 @@ class PhotoKey extends StatefulWidget {
   final bool enabled;
 
   @override
-  State<PhotoKey> createState() => _PhotoKeyState();
-}
-
-class _PhotoKeyState extends State<PhotoKey> {
-  bool _down = false;
-
-  @override
   Widget build(BuildContext context) {
-    final label = widget.child;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: widget.enabled ? (_) => setState(() => _down = true) : null,
-      onTapCancel: () => setState(() => _down = false),
-      onTapUp: widget.enabled
-          ? (_) {
-              setState(() => _down = false);
-              widget.onTap();
-            }
-          : null,
-      child: Opacity(
-        opacity: widget.enabled ? 1 : 0.55,
-        child: Stack(
+    final label = child;
+    return Opacity(
+      opacity: enabled ? 1 : 0.55,
+      child: PressFeedback(
+        enabled: enabled,
+        onTap: onTap,
+        builder: (context, down) => Stack(
           alignment: Alignment.center,
           clipBehavior: Clip.none,
           children: [
-            BodySprite(widget.part, state: _down ? 'down' : 'up'),
-            if (label != null) Transform.translate(offset: Offset(0, _down ? 0.6 : -0.4), child: label),
+            BodySprite(part, state: down ? 'down' : 'up'),
+            if (label != null) Transform.translate(offset: Offset(0, down ? 0.8 : -0.4), child: label),
           ],
         ),
       ),

@@ -119,7 +119,7 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
         backgroundColor: W98.desktop,
         body: DefaultTextStyle(
           style: W98.text,
-          child: SafeArea(
+          child: Win98Safe(
             child: Padding(
               padding: const EdgeInsets.all(6),
               child: Win98Window(

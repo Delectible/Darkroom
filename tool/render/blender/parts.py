@@ -77,7 +77,7 @@ def f_flashtab(_):
     return g
 
 
-def f_aspect(_):
+def f_aspect(_, top_only=False):
     g = group('aspect')
     knurl(17, 8, 72, 'satin', 0.9, 0, g)
     cylinder(16.4, 1.2, 'spun', 8, 128, 0.4, g, r_top=15.6)
@@ -86,8 +86,16 @@ def f_aspect(_):
         long = i % 6 == 0
         rr = 12.8 if long else 13.3
         box(2.6 if long else 1.6, 0.35, 0.12, 'ink', (math.cos(a) * rr, math.sin(a) * rr, 9.26), a, 0, g)
-    cylinder(1.3, 0.3, 'red', 0, 24, 0, g).location.y = 23
+    if not top_only:
+        cylinder(1.3, 0.3, 'red', 0, 24, 0, g).location.y = 23
     return g
+
+
+def f_aspect_top(_):
+    # The dial alone (no index dot, no shadow): the app turns it a click
+    # over the base render when the format changes; it repeats every 90
+    # degrees (ticks, knurl), so it lands looking like the base again.
+    return f_aspect(_, top_only=True)
 
 
 def lens_knob(dark):
@@ -290,6 +298,7 @@ PARTS = {
         'flash': dict(canvas=(100, 60), yaws=YAWS, build=f_flash),
         'flashtab': dict(canvas=(36, 36), yaws=YAWS, build=f_flashtab),
         'aspect': dict(canvas=(60, 64), yaws=YAWS, build=f_aspect),
+        'aspecttop': dict(canvas=(60, 64), yaws=YAWS, noShadow=True, build=f_aspect_top),
         'lens': dict(canvas=(56, 56), yaws=YAWS, build=lens_knob(False)),
         'lensdot': dict(canvas=(40, 40), yaws=[0], noShadow=True, build=lensdot),
         'menu': dict(canvas=(48, 48), yaws=YAWS, build=f_menu, **UPDOWN),

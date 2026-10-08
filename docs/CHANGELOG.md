@@ -700,3 +700,11 @@ Answers: turntable renders, no 2D/3D switch.
   moment (turned frames were 9-sliced as if face-on; now cropped per turn).
 - [ ] **29.9 More 3D depth**: options shown (taller parts, stronger tilt,
   deeper shadows); parked for now.
+
+## 30. Landscape Win98 space, button animations (2026-10-08)
+
+- [~] **30.1 Landscape Darkroom 98** wastes space round the edges: status
+  bar, cutout margin, bezel; give the file list the room.
+- [~] **30.2 Film aspect dial** is lackluster: animate it.
+- [~] **30.3 Click animation** on the camera's keys (flash, ratio, settings
+  on digital, and any others that need it).

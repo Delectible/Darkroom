@@ -66,6 +66,25 @@ def path(j):
     return f"{args.out}/{mode}/{name}{'-' + st if st else ''}-a{yaw}.webp"
 
 
+def clean_shadow(img):
+    """The shadow catcher leaves a faint veil over the whole canvas (light the
+    part blocks from the dark studio): take what's left at the border as
+    zero, and fade the shadow out toward the canvas edge."""
+    import numpy as np
+    a = np.asarray(img).astype(np.float32) / 255
+    al = a[..., 3]
+    border = np.concatenate([al[:3].ravel(), al[-3:].ravel(), al[:, :3].ravel(), al[:, -3:].ravel()])
+    base = float(np.median(border))
+    shadow = al < 0.97
+    al2 = np.where(shadow, np.clip((al - base) / max(1e-3, 1 - base), 0, 1), al)
+    h, w = al.shape
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    edge = np.minimum(np.minimum(xx, w - 1 - xx), np.minimum(yy, h - 1 - yy))
+    fade = np.clip(edge / (0.05 * min(w, h)), 0, 1)
+    a[..., 3] = np.where(shadow, al2 * fade, al2)
+    return Image.fromarray((a * 255 + 0.5).astype('uint8'), 'RGBA')
+
+
 todo = [j for j in jobs if args.force or not os.path.exists(path(j))]
 print(f'{len(jobs)} sprites, {len(todo)} to render', flush=True)
 if args.dry:
@@ -103,6 +122,8 @@ for j in todo:
     out = path(j)
     os.makedirs(os.path.dirname(out), exist_ok=True)
     img = Image.open(tmp).convert('RGBA')
+    if not p.get('noShadow'):
+        img = clean_shadow(img)
     w = round(cw * px)
     if img.width != w:
         img = img.resize((w, round(img.height * w / img.width)), Image.LANCZOS)

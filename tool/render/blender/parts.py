@@ -26,8 +26,10 @@ def f_panel(_):
 def f_plate(h, which):
     def build(_):
         g = group('plate')
-        sign = 1 if which == 'top' else -1
-        edge = sign * (h / 2 - 20)        # the plate's inner edge, 20 dp in
+        # the plate's inner edge sits 20 dp in from the canvas edge that
+        # faces the leather (bottom of the top plate, top of the bottom one)
+        sign = 1 if which == 'top' else -1   # direction the plate runs from its edge
+        edge = -sign * (h / 2 - 20)
         length = h - 20 + 60
         cy = edge + sign * length / 2
         rbox(424, length, 3, 0.1, 1.2, 'brushed', -0.5, g, 'plate').location.y = cy
@@ -36,7 +38,7 @@ def f_plate(h, which):
         if which == 'top':
             # maker's mark in the space between the top controls
             rabbit(13, 'ink', 'brushed', 2.5, 0.08, g, (-16, edge + 28))
-            t = text('DARKROOM', 7.2, 'ink', 2.5, 0.08, 'LEFT', spacing=1.25, parent=g, loc=(-6, edge + 28))
+            text('DARKROOM', 7.2, 'ink', 2.5, 0.08, 'LEFT', spacing=1.25, parent=g, loc=(-6, edge + 28))
         else:
             text('No. 1998042  ·  MADE IN THE DARKROOM', 3.9, 'ink', 2.5, 0.08, 'CENTER', 'DejaVuSansCondensed-Bold.ttf',
                  1.15, g, (0, edge - 14))
@@ -53,7 +55,7 @@ def f_frame(_):
 
 def f_flash(_):
     g = group('flash')
-    rbox(62, 8, 1.2, 3, 0.4, 'gap', -0.9, g).location = (-4, -6, -0.9)
+    rbox(62, 8, 1.2, 3, 0.4, 'gap', -0.9, g).location = (-4, -6, -0.3)
     for t, u in (('A', -27), ('ON', -4), ('OFF', 19)):
         text(t, 5.4, 'ink', 0, 0.08, 'CENTER', 'InterDisplay-Bold.ttf', 1.05, g, (u, 9))
     pts = [((u - 0.5) * 8 + 36, (0.5 - v) * 11 - 6) for u, v in ((0.62, 0), (0.1, 0.58), (0.46, 0.58), (0.3, 1), (0.92, 0.38), (0.55, 0.38))]

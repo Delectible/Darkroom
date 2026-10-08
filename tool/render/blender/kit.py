@@ -30,15 +30,26 @@ def reset():
     scn.render.film_transparent = True
     scn.view_settings.view_transform = 'AgX'
     scn.view_settings.look = 'None'
+    scn.view_settings.exposure = 0.35
     scn.render.image_settings.file_format = 'PNG'
     scn.render.image_settings.color_mode = 'RGBA'
     scn.render.image_settings.color_depth = '16'
     world = bpy.data.worlds.new('studio')
     scn.world = world
     world.use_nodes = True
-    bg = world.node_tree.nodes['Background']
+    nt = world.node_tree
+    # Dark to the camera and to diffuse light (the leather stays deep), a
+    # soft grey studio ceiling for reflections (chrome reads as chrome).
+    bg = nt.nodes['Background']
     bg.inputs['Color'].default_value = (0.02, 0.02, 0.022, 1)
-    bg.inputs['Strength'].default_value = 1.0
+    glossy = nt.nodes.new('ShaderNodeBackground')
+    glossy.inputs['Color'].default_value = (0.2, 0.2, 0.21, 1)
+    path = nt.nodes.new('ShaderNodeLightPath')
+    mix = nt.nodes.new('ShaderNodeMixShader')
+    nt.links.new(path.outputs['Is Glossy Ray'], mix.inputs['Fac'])
+    nt.links.new(bg.outputs['Background'], mix.inputs[1])
+    nt.links.new(glossy.outputs['Background'], mix.inputs[2])
+    nt.links.new(mix.outputs['Shader'], nt.nodes['World Output'].inputs['Surface'])
     return scn
 
 
@@ -237,7 +248,7 @@ def mat(name):
             b.inputs['Thin Film Thickness'].default_value = 320
             b.inputs['Thin Film IOR'].default_value = 1.38
     elif name == 'paper':
-        m, b = _principled(name, (0.88, 0.86, 0.81), 0.0, 0.32, **{'Coat Weight': 0.6, 'Coat Roughness': 0.12})
+        m, b = _principled(name, (0.95, 0.93, 0.88), 0.0, 0.32, **{'Coat Weight': 0.6, 'Coat Roughness': 0.12})
     elif name == 'well':
         m, b = _principled(name, (0.012, 0.012, 0.013), 0.0, 0.7)
     elif name == 'ink':

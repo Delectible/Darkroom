@@ -683,20 +683,20 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 29. 1.5 on-device fixes (2026-10-08)
 
-- [x] **29.1 Film shutter**: the advance lever draws over the release
+- [x] **29.1 Film shutter** → 1.5.1 · 2026-10-08 · 89fb6be: the advance lever draws over the release
   while it's pressed (the release sinks under it).
-- [x] **29.2 Shadows pop** in and out while the body turns.
-- [x] **29.3 Black bar** at the body's edge mid-swap (panel doesn't
+- [x] **29.2 Shadows pop** → 1.5.1 · 2026-10-08 · 89fb6be in and out while the body turns.
+- [x] **29.3 Black bar** → 1.5.1 · 2026-10-08 · 89fb6be at the body's edge mid-swap (panel doesn't
   reach the side wall).
-- [x] **29.4 One switch**: 3D off = performance mode on (merge the two
+- [x] **29.4 One switch** → 1.5.1 · 2026-10-08 · 89fb6be: 3D off = performance mode on (merge the two
   settings).
-- [x] **29.5 Live viewfinder** while the body flips (when 3D is on).
-- [x] **29.6 Selfie flip button** does nothing (both bodies).
-- [x] **29.7 Landscape for real**: corkboard, projector, Darkroom 98
+- [x] **29.5 Live viewfinder** → 1.5.1 · 2026-10-08 · 89fb6be while the body flips (when 3D is on).
+- [x] **29.6 Selfie flip button** → 1.5.1 · 2026-10-08 · 89fb6be does nothing (both bodies).
+- [x] **29.7 Landscape for real** → 1.5.1 · 2026-10-08 · 89fb6be: corkboard, projector, Darkroom 98
   really rotate the phone (system bars and gestures on the right edges);
   panels slide in the way they were swiped, no jump (the jump: heroes made
   the route read "arrived" the moment it was pushed).
-- [x] **29.8 Viewfinder frame** sometimes in the wrong place / size for a
+- [x] **29.8 Viewfinder frame** → 1.5.1 · 2026-10-08 · 89fb6be sometimes in the wrong place / size for a
   moment (turned frames were 9-sliced as if face-on; now cropped per turn).
 - [ ] **29.9 More 3D depth**: options shown (taller parts, stronger tilt,
   deeper shadows); parked for now.

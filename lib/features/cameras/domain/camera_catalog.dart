@@ -6,7 +6,8 @@ import 'camera_spec.dart';
 /// the processing isolate and the background worker.
 ///
 /// Film looks live in core/processing/film/film_profile.dart (keyed by id).
-/// Stock names describe which emulsion a look is modelled on; the artwork is
+/// Stock names are our own (ids keep the emulsion each look is modelled on,
+/// for the code only); the artwork is
 /// original (no logos or trade dress).
 class CameraCatalog {
   const CameraCatalog._();
@@ -25,7 +26,7 @@ class CameraCatalog {
   static const ektar100 = CameraSpec(
     id: 'ektar100',
     mode: AppMode.film,
-    name: 'Ektar 100',
+    name: 'Vivid 100',
     subtitle: 'Punchy colour for bright days',
     badge: 'ISO 100',
     quality: CaptureQuality.high,
@@ -40,7 +41,7 @@ class CameraCatalog {
   static const portra400 = CameraSpec(
     id: 'portra400',
     mode: AppMode.film,
-    name: 'Portra 400',
+    name: 'Portrait 400',
     subtitle: 'Warm, soft tones for people',
     badge: 'ISO 400',
     quality: CaptureQuality.high,
@@ -55,7 +56,7 @@ class CameraCatalog {
   static const hp5 = CameraSpec(
     id: 'hp5plus400',
     mode: AppMode.film,
-    name: 'HP5 Plus 400',
+    name: 'Classic 400',
     subtitle: 'Gritty, classic black & white',
     badge: 'ISO 400',
     quality: CaptureQuality.high,
@@ -91,7 +92,7 @@ class CameraCatalog {
   static const polaroid600 = CameraSpec(
     id: 'polaroid600',
     mode: AppMode.film,
-    name: 'Polaroid 600',
+    name: 'Instant 600',
     subtitle: 'Instant prints you can write on',
     badge: 'ISO 640',
     quality: CaptureQuality.high,

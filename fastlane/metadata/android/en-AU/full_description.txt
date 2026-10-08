@@ -10,7 +10,7 @@ FILM MODE
 
 DIGITAL MODE
 • Four cameras: a 1999 floppy-disk camera, a 2003 CCD compact, a Y2K flip phone and a 90s camcorder with an optional tape display burned into the video.
-• Shots land on a pretend SD card, browsed in a Windows 98-style file explorer. The camcorder writes to floppy disks, so mind the disk swaps.
+• Shots land on a pretend SD card, browsed on a beige late-90s desktop. The camcorder writes to floppy disks, so mind the disk swaps.
 • Files are locked on the card until you move them to the C: drive, which also copies them to your gallery.
 • There are a few hidden things in the explorer's menus.
 

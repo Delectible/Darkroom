@@ -6,12 +6,10 @@ Gabe in a console / on a phone, C = Claude in the repo).
 
 ## 1. Polish for a first public version
 
-- [ ] **Trademark pass** (both stores can reject, and owners can complain).
-  The app uses real brand names: film stocks (Kodak Ektar / Portra, Ilford
-  HP5, Polaroid 600), "Windows 98" look and names, Minesweeper / Solitaire /
-  Space Cadet. Decide replacements (e.g. "Pro 100", "Portrait 400",
-  "Mono 400", "Instant 600", "Darkroom 98" is already ours) and keep the
-  store listing free of other companies' names. (G decides, C renames)
+- [x] **Trademark pass** (1.4.3): films are Vivid 100, Portrait 400,
+  Classic 400, Instant 600 and Super 8 (a format name); Minefield instead
+  of Minesweeper; "Darkroom 98" instead of Windows 98 in our own text and
+  the store listing. Keep new names and listing text brand-free.
 - [ ] Bug bash on the Pixel 9 Pro and the Galaxy S10+ (older GLES phone):
   every screen, every camera, film develop, save / share, Win98 copies.
   Watch Help > Crash Reports. (G tests, C fixes)

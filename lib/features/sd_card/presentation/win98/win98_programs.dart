@@ -209,7 +209,7 @@ Thanks for using Darkroom 98!
 Things you can run from Start > Run...
 
   SOL.EXE       Solitaire
-  WINMINE.EXE   Minesweeper
+  MINES.EXE     Minefield
   BRICKS.EXE    knock down the wall
   PINBALL.EXE   Space Rabbit Pinball
   RABBIT.EXE    say hello to the mascot

@@ -618,7 +618,7 @@ const _tips = [
   'The Transfer button moves everything off the card in one go.',
   'Arrange by Size to find your longest home videos.',
   'Feeling nostalgic? Try Tools > Defragment.',
-  'There is no Minesweeper. Oh wait, there is: Start > Run..., WINMINE.',
+  'Feeling lucky? Start > Run..., MINES. The first dig is always safe.',
   'Start > Run..., type RABBIT, press OK. Nothing bad will happen.',
   'Wondering what happens to your film? Run DEVELOP.BAT.',
   'PING the corkboard from Start > Run... to see how long your prints take.',

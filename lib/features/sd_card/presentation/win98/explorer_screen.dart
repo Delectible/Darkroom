@@ -368,7 +368,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         return showBricks(context);
       case 'pinball' || 'spacecadet' || 'space cadet' || 'spacerabbit':
         return showPinball(context);
-      case 'minesweeper' || 'winmine' || 'mines':
+      case 'mines' || 'minefield' || 'minesweeper' || 'winmine':
         return showMinesweeper(context);
     }
     if (!mounted) return;

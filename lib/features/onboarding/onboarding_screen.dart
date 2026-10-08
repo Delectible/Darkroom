@@ -150,7 +150,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     icon: Icons.camera_roll_outlined,
                     title: 'Film: shoot now, see later.',
                     body:
-                        'Pick a film (Portra, HP5, a Polaroid pack, even Super 8). Every shot goes into the '
+                        'Pick a film (colour, black & white, an instant pack, even Super 8). Every shot goes into the '
                         'darkroom for about five minutes, then gets pinned to your corkboard.\n\n'
                         'Nothing lands in your phone\'s gallery until you tap Save. Very old-fashioned. Very you.',
                   ),
@@ -159,7 +159,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     title: 'Digital: the year 2000 called.',
                     body:
                         'A floppy-disk camera, a CCD compact, a flip phone and a camcorder. Shots go onto a '
-                        'pretend SD card, browsed on an extremely serious Windows 98 desktop.\n\n'
+                        'pretend SD card, browsed on an extremely serious 1998 desktop.\n\n'
                         'Move them to C: to set them free. There may be games. We will deny everything.',
                   ),
                   const _Page(icon: Icons.swipe_outlined, title: 'Getting around', child: _Gestures()),
@@ -360,7 +360,7 @@ class _Gestures extends StatelessWidget {
       (Icons.swap_horiz, 'Swipe the camera sideways', 'Toss it aside for the other one: film or digital.'),
       (Icons.swipe_up_outlined, 'Swipe up', 'Pick a film or a camera.'),
       (Icons.east, 'Swipe right on film', 'Your corkboard slides in.'),
-      (Icons.west, 'Swipe left on digital', 'Windows 98 boots up. Brace yourself.'),
+      (Icons.west, 'Swipe left on digital', 'The 1998 computer boots up. Brace yourself.'),
       (Icons.volume_up_outlined, 'Volume buttons', 'Take the picture, like a real shutter.'),
       (Icons.touch_app_outlined, 'Tap a print in the darkroom', 'Watch it come up in the tray.'),
     ];

@@ -3,15 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.4.2';
+  static const version = '1.4.3';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The viewfinder keeps its last picture while the corkboard or Windows 98 slides in and out, '
-      'starting a camera swap no longer opens a panel by accident, the LCD blinks between cameras '
-      'like a real one, steadier zoom buttons, and an empty floppy says so.';
+      'Films get their own names: Vivid 100, Portrait 400, Classic 400 and Instant 600. Same looks, '
+      'same grain. The mines game is now Minefield (Start > Run..., MINES).';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -19,8 +18,8 @@ class AppInfo {
       '1.4',
       [
         'Welcome tour, with your name on your prints',
-        'Windows 98 slides in on a beige monitor',
-        'Swipe right for the corkboard, left for Windows 98',
+        'Darkroom 98 slides in on a beige monitor',
+        'Swipe right for the corkboard, left for Darkroom 98',
         'Photoreal 3D shutter buttons',
         'Watch prints develop up close',
         'Sound volume slider, haptics switch, crash reports',
@@ -32,11 +31,11 @@ class AppInfo {
       '1.3',
       [
         'Corkboard in a wooden frame, on real cork',
-        'Polaroid 600 with notes on the border',
+        'Instant film with notes on the border',
         'Super 8 projector with tape-deck keys',
         'Films retuned against real scans',
         'Toss the camera to swap film and digital',
-        'Windows 98 games, sounds and a Shut Down',
+        'Darkroom 98 games, sounds and a Shut Down',
         'Volume buttons take the picture',
         'On Google Play',
       ],

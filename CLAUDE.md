@@ -119,7 +119,11 @@ curves, hue tweaks, split toning). The same LUT drives the live GPU preview
 (`shaders/film.frag`), the CPU renderer for stills, and FFmpeg `lut3d` (.cube)
 for video. Plus a tileable grain texture, halation and exposure drift.
 
-- Stock ids: `ektar100`, `portra400`, `hp5plus400`, `polaroid600`, `super8`.
+- Stock ids: `ektar100`, `portra400`, `hp5plus400`, `polaroid600`, `super8`
+  (ids name the emulsion each look is modelled on; code only). On screen
+  they're **Vivid 100, Portrait 400, Classic 400, Instant 600, Super 8**:
+  never show real brand names (Kodak, Ilford, Polaroid, Windows,
+  Minesweeper...) in the app or the store listing (1.4.3 trademark pass).
 - Grain (`grain_field.dart`) is a Boolean model: thousands of tiny
   overlapping grains + sparse clumps, crisp (not blurred noise), dye layers
   mostly shared. Drawn at >= 1 px; finer grain is drawn fainter
@@ -252,7 +256,7 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   and Haptics (`Haptics`, use it instead of HapticFeedback). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
   pixel rabbit + tune, then the CRT collapse). Start > Run knows RABBIT,
   DEVELOP, PING, README (`win98_programs.dart`), the games SOL / BRICKS /
-  PINBALL (Space Rabbit: missions, ranks) / WINMINE (`win98/games/`, rules
+  PINBALL (Space Rabbit: missions, ranks) / MINES (Minefield, `win98/games/`, rules
   and physics tested in `win98_games_test`), each with its own sounds,
   plus DEFRAG, WINVER, drive letters; Tip of the Day hints at them.
 - Win98 touch targets: menu titles open on touch-down and touching another

@@ -8,12 +8,12 @@ import '../pixel_icons.dart';
 import '../win98_widgets.dart';
 import '../../../../../core/device/haptics.dart';
 
-/// WINMINE.EXE: Minesweeper the way it came with the machine: mine counter,
+/// MINES.EXE: Minefield, the way it came with the machine: mine counter,
 /// smiley, timer. Tap to dig, hold to plant a flag; tap a number whose
 /// flags are all placed to clear round it. The first dig is always safe.
 Future<void> showMinesweeper(BuildContext context) => showWin98Window<void>(
   context,
-  title: 'Minesweeper',
+  title: 'Minefield',
   width: 300,
   icon: const PixelIconView(PixelIcon.rabbit),
   builder: (context) => const Padding(padding: EdgeInsets.all(6), child: MinesweeperGame()),

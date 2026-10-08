@@ -8,9 +8,9 @@ Most camera apps give you the picture instantly and a hundred filters to pick fr
 
 ## Film Mode
 
-- **Five films:** Ektar 100 (clean, punchy colour), Portra 400 (soft, warm, visible grain), HP5 Plus 400 (black & white), Polaroid 600 (square instant prints in 8-shot packs) and a Super 8 movie camera.
-- Every shot goes to the **darkroom** and takes about 5 minutes to develop (Polaroids fade in over 20 seconds). You get a quiet notification when it's ready.
-- Developed prints get pinned to a **corkboard**. Each frame has real grain and the odd speck of dust or light leak, tuned against scans of the real films. You can write a note on a Polaroid's border.
+- **Five films:** Vivid 100 (clean, punchy colour), Portrait 400 (soft, warm, visible grain), Classic 400 (black & white), Instant 600 (square instant prints in 8-shot packs) and a Super 8 movie camera.
+- Every shot goes to the **darkroom** and takes about 5 minutes to develop (instant prints fade in over 20 seconds). You get a quiet notification when it's ready.
+- Developed prints get pinned to a **corkboard**. Each frame has real grain and the odd speck of dust or light leak, tuned against scans of the real films. You can write a note on an instant print's border.
 - Super 8 reels play on a **projector** with tape-deck keys, fast forward and rewind that actually spool, and a label you can rename.
 - Nothing goes to your phone's gallery until you hit **Save** (or **Save all**).
 - Grain can be made weaker or stronger per film in settings.
@@ -18,7 +18,7 @@ Most camera apps give you the picture instantly and a hundred filters to pick fr
 ## Digital Mode
 
 - **Four cameras:** a 1999 floppy-disk camera, a 2003 CCD compact, a Y2K flip phone and a 90s camcorder (video with sound and an optional tape OSD).
-- Shots are saved to a pretend **SD card** (the camcorder writes to floppy disks), browsed in a Windows 98-style file explorer.
+- Shots are saved to a pretend **SD card** (the camcorder writes to floppy disks), browsed on a beige late-90s desktop.
 - Files on the card are locked until you move them to the **C: drive**, which also copies them to your gallery.
 - There are a few hidden things in the explorer's menus.
 

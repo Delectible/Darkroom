@@ -603,3 +603,14 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **24.6 Empty floppy** says "There are no files on the floppy disk."
 - [x] **24.7 Release roadmap:** docs/RELEASE.md (Play + App Store
   checklists, incl. a trademark pass on stock / Windows names).
+  → 24.1, 24.2, 24.4-24.7: 1.4.2 · 2026-10-08 · 3f13749
+
+## 25. Our own names (2026-10-08)
+
+- [x] **25.1 Trademark pass:** films renamed after their box art: Ektar 100
+  → Vivid 100, Portra 400 → Portrait 400, HP5 Plus 400 → Classic 400,
+  Polaroid 600 → Instant 600 (ids unchanged, so saved shots keep working).
+  Super 8 stays (it's the format's name). Minesweeper → Minefield (Run
+  MINES; the old commands still work). No "Windows" in the app's own text,
+  About history or the store listing ("Darkroom 98", "late-90s desktop").
+  Solitaire, Notepad, My Computer kept (generic words).

@@ -125,8 +125,7 @@ jobs:
       - uses: actions/checkout@v4
         if: steps.sa.outputs.ok == 'true'
         with: { path: src }
-      # "What's new" = version + the newest line of AppInfo.revisions (the
-      # same words as Help > About in the app).
+      # "What's new" = version + AppInfo.latest (this build's change).
       - name: Release notes
         if: steps.sa.outputs.ok == 'true'
         run: |

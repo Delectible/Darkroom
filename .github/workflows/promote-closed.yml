@@ -1,0 +1,52 @@
+name: Promote to closed testing
+# The slow path: sends a build that's already on internal testing to the
+# closed testing track ("alpha" in the Play API), with its release notes.
+# Every push to main still goes straight to internal testing (build-apk.yml),
+# so the owner keeps getting every build; testers on the closed track only
+# get the builds promoted here. Play reviews each closed release.
+#
+# Run it from the Actions tab: "Promote to closed testing" > Run workflow.
+# Leave the build number empty for the newest internal build.
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Build number to promote (empty = newest on internal testing)'
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: play-promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: Look for the Play service account
+        run: |
+          if [ -z "$SA" ]; then echo "::error::No PLAY_SERVICE_ACCOUNT_JSON secret."; exit 1; fi
+      - run: sudo gem install fastlane --no-document --quiet
+      - name: Promote internal -> closed testing
+        env:
+          BUILD: ${{ inputs.build }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/play.json"
+          extra=()
+          if [ -n "$BUILD" ]; then extra+=("version_code:$BUILD"); fi
+          fastlane run supply \
+            package_name:com.dingo.darkroom \
+            json_key:"$RUNNER_TEMP/play.json" \
+            track:internal \
+            track_promote_to:alpha \
+            release_status:completed \
+            skip_upload_apk:true \
+            skip_upload_aab:true \
+            skip_upload_metadata:true \
+            skip_upload_changelogs:true \
+            skip_upload_images:true \
+            skip_upload_screenshots:true \
+            "${extra[@]}"

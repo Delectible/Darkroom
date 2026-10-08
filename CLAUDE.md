@@ -60,6 +60,10 @@ Read this first. It's the hand-off from the earlier development sessions
   (secret `PLAY_SERVICE_ACCOUNT_JSON`, repo variable `PLAY_RELEASE_STATUS`,
   default `completed`). Play's "What's new" = version + **`AppInfo.latest`**
   (`tool/play/whats_new.py`).
+  **Closed testing** (for other testers) is the slow path: the
+  `promote-closed.yml` workflow (Actions tab, run by hand) promotes a build
+  already on internal testing to the closed track (`alpha`), which Play
+  reviews. Internal testing stays the instant path for Gabe.
   The store listing (title, descriptions, icon, feature graphic) lives in
   `fastlane/metadata/android/en-AU/`; `play-listing.yml` publishes it when
   it changes (fastlane supply, same service account). Screenshots aren't in

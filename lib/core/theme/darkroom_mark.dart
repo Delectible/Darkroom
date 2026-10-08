@@ -65,7 +65,10 @@ class DarkroomMarkPainter extends CustomPainter {
     final s = size.height / (_y1 - _y0);
     // Room round the glyph: the split copies and round caps reach past it.
     final layer = (Offset.zero & size).inflate(size.height * 0.15);
-    canvas.saveLayer(layer, Paint());
+    // The glyph's parts overlap (ears into the head): draw them opaque and
+    // apply the colour's transparency once, to the whole mark, so the
+    // overlaps aren't darker.
+    canvas.saveLayer(layer, Paint()..color = Color.fromRGBO(0, 0, 0, color.a));
     if (rgbSplit) {
       final d = 5 * s;
       for (final (c, dx) in [
@@ -78,7 +81,7 @@ class DarkroomMarkPainter extends CustomPainter {
         canvas.restore();
       }
     } else {
-      _glyph(canvas, s, Offset.zero, color);
+      _glyph(canvas, s, Offset.zero, color.withValues(alpha: 1));
     }
     // X'd-out eyes, cut through.
     final eye = Paint()

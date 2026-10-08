@@ -451,13 +451,49 @@ def rabbit(h, material='ink', eye_material='satin', z=0.0, depth=0.08, parent=No
     s, cx, cy = h / 129, 104.5, 93.5
     P = lambda x, y: (loc[0] + (x - cx) * s, loc[1] - (y - cy) * s)
     g = group('rabbit', parent)
-    for outline in (capsule_pts(*P(80, 104), *P(70, 40), 11 * s), capsule_pts(*P(110, 100), *P(120, 48), 11 * s),
-                    capsule_pts(*P(120, 48), *P(146, 60), 11 * s), ellipse_pts(*P(94, 122), 42 * s, 36 * s)):
-        slab([outline], depth, 0, material, z, g, 'rabbit')
+    # One mark, not overlapping pieces: the parts are merged into a single
+    # mesh with a boolean union, so the ink is one uniform surface.
+    pieces = [slab([o], depth, 0, material, z, None, 'rabbit') for o in (
+        capsule_pts(*P(80, 104), *P(70, 40), 11 * s), capsule_pts(*P(110, 100), *P(120, 48), 11 * s),
+        capsule_pts(*P(120, 48), *P(146, 60), 11 * s), ellipse_pts(*P(94, 122), 42 * s, 36 * s))]
+    union(pieces, material, g, 'rabbit')
     for ex, ey in ((80, 118), (108, 118)):
-        for d in (1, -1):
-            slab([capsule_pts(*P(ex - 7, ey - 7 * d), *P(ex + 7, ey + 7 * d), 2.75 * s)], depth, 0, eye_material, z + depth * 0.5, g, 'eye')
+        eye = [slab([capsule_pts(*P(ex - 7, ey - 7 * d), *P(ex + 7, ey + 7 * d), 2.75 * s)], depth, 0, eye_material,
+                    z + depth * 0.5, None, 'eye') for d in (1, -1)]
+        union(eye, eye_material, g, 'eye')
     return g
+
+
+def union(objs, material, parent=None, name='union'):
+    """Merges [objs] (curves or meshes) into one mesh: a boolean union of
+    all of them, so overlapping parts leave no doubled surfaces."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    meshes = []
+    for o in objs:
+        me = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+        m = bpy.data.objects.new(name, me)
+        m.matrix_world = o.matrix_world.copy()
+        bpy.context.collection.objects.link(m)
+        meshes.append(m)
+        bpy.data.objects.remove(o)
+    base = meshes[0]
+    for other in meshes[1:]:
+        mod = base.modifiers.new('u', 'BOOLEAN')
+        mod.operation = 'UNION'
+        mod.solver = 'EXACT'
+        mod.object = other
+        dg = bpy.context.evaluated_depsgraph_get()
+        me = bpy.data.meshes.new_from_object(base.evaluated_get(dg))
+        base.modifiers.clear()
+        old = base.data
+        base.data = me
+        bpy.data.meshes.remove(old)
+        bpy.data.objects.remove(other)
+    base.data.materials.clear()
+    base.data.materials.append(mat(material) if isinstance(material, str) else material)
+    if parent is not None:
+        base.parent = parent
+    return base
 
 
 def screw(r, z=0.0, angle=0.0, parent=None, loc=(0, 0)):

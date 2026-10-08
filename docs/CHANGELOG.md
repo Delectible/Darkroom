@@ -620,7 +620,8 @@ Answers: turntable renders, no 2D/3D switch.
 
 - [~] **26.1 3D controls** (24.3 decided: worth it): every control (shutter,
   flash, zoom, flip, gallery) a 3D object turning with the body; body stays
-  2D. First a live three.js preview page to tune the look, then renders.
+  2D. First a live three.js preview page to tune the look
+  (`tool/preview3d/index.html`, published as an artifact), then renders.
 - [x] **26.2 3D / flat setting**: Settings + Win98 Options, asked on a new
   tour page ("How fancy?"). Today it switches the shutter's turn.
 - [x] **26.3 Debug window** (Help > Debug...): scrolling tool list with
@@ -630,3 +631,4 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **26.4 Frozen viewfinder squash**: the box fell back to 16:9 while the
   camera was closed and the still was stretched to it; it now keeps the
   last stream's shape and the still is never stretched.
+  → 26.2-26.4: 1.4.4 · 2026-10-08 · 94fd5b0

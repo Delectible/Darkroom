@@ -52,7 +52,11 @@ enum BevelStyle { raised, pressed, window, sunken, shallow }
 class Win98Scale extends StatelessWidget {
   const Win98Scale({super.key, required this.child});
 
+  /// Portrait: 1.3x so the pixel UI is easy to hit. Landscape is short
+  /// (about 410 dp), so it lays out 1:1 and gets the room back.
   static const factor = 1.3;
+
+  static double factorFor(Size s) => s.width > s.height ? 1.0 : factor;
 
   final Widget child;
 
@@ -63,6 +67,7 @@ class Win98Scale extends StatelessWidget {
       builder: (context, box) {
         final w = box.maxWidth.isFinite ? box.maxWidth : mq.size.width;
         final h = box.maxHeight.isFinite ? box.maxHeight : mq.size.height;
+        final factor = factorFor(mq.size);
         return SizedBox(
           width: w,
           height: h,
@@ -351,7 +356,10 @@ Future<void> showWin98Menu(
 }) async {
   PerfRecorder.mark('win98 menu', hold: const Duration(milliseconds: 600));
   final box = anchor.findRenderObject()! as RenderBox;
-  final topLeft = box.localToGlobal(Offset(0, box.size.height));
+  // In the navigator's own frame (the UI may be turned to landscape).
+  final frame = Navigator.of(anchor).overlay?.context.findRenderObject() as RenderBox?;
+  final topLeft = box.localToGlobal(Offset(0, box.size.height), ancestor: frame);
+  final f = Win98Scale.factorFor(MediaQuery.sizeOf(anchor));
   final picked = await showGeneralDialog<Object>(
     context: anchor,
     barrierDismissible: false,
@@ -367,8 +375,7 @@ Future<void> showWin98Menu(
               for (var i = 0; i < siblings.length; i++) {
                 final r = siblings[i].currentContext?.findRenderObject();
                 if (r is RenderBox && r.attached) {
-                  final rect = r.localToGlobal(Offset.zero) & r.size;
-                  if (rect.contains(d.globalPosition)) {
+                  if ((Offset.zero & r.size).contains(r.globalToLocal(d.globalPosition))) {
                     Navigator.of(context).pop(i);
                     return;
                   }
@@ -383,7 +390,6 @@ Future<void> showWin98Menu(
             builder: (context) {
               // Anchor is in real screen pixels; the menu lays out scaled.
               final screen = MediaQuery.sizeOf(context);
-              const f = Win98Scale.factor;
               return Stack(
                 children: [
                   Positioned(

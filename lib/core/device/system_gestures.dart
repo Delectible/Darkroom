@@ -23,7 +23,9 @@ class SystemGestureZones {
   /// Whether a touch at [global] began in the back or shade strip. [allowed]
   /// rects (e.g. where Android was asked to give the edge to us) don't count.
   static bool startsInEdge(BuildContext context, Offset global, {List<Rect> allowed = const []}) {
-    final media = MediaQuery.of(context);
+    // The physical screen's edges (the UI above may be turned to landscape;
+    // touches arrive in screen coordinates either way).
+    final media = MediaQueryData.fromView(View.of(context));
     if (allowed.any((r) => r.contains(global))) return false;
     final s = side(media);
     return global.dx < s || global.dx > media.size.width - s || global.dy < top(media);

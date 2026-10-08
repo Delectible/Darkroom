@@ -54,13 +54,14 @@ void main() {
     file('5', 'ccd2003', 'DSC00005.JPG', onC: true),
   ];
 
+  var shotTag = '';
   Future<void> shoot(WidgetTester tester, String name) async {
     if (shots == null) return;
     await tester.runAsync(() async {
       final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final image = await ro.toImage(pixelRatio: 1);
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
-      await File('$shots/explorer_$name.png').writeAsBytes(png!.buffer.asUint8List());
+      await File('$shots/explorer_$name$shotTag.png').writeAsBytes(png!.buffer.asUint8List());
     });
   }
 
@@ -70,77 +71,81 @@ void main() {
     }
   }
 
-  testWidgets('explorer: tabs, menus and dialogs fit', (tester) async {
-    tester.view.physicalSize = const Size(1280, 2856);
-    tester.view.devicePixelRatio = 3.1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          sdCardItemsProvider.overrideWith((ref) => Stream.value(items)),
-          explorerPrefsProvider.overrideWith(_Prefs.new),
-          userNameProvider.overrideWith(_Name.new),
-          initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
-          initialCameraSettingsProvider.overrideWithValue(const {}),
-        ],
-        child: RepaintBoundary(
-          key: boundary,
-          // On its monitor, as it appears in the app.
-          child: const MaterialApp(
-            debugShowCheckedModeBanner: false,
-            home: ExplorerMonitor(child: ExplorerScreen()),
+  // Portrait, and held sideways (the app turns Win98 to landscape).
+  for (final land in [false, true]) {
+    testWidgets('explorer ${land ? 'landscape' : 'portrait'}: tabs, menus and dialogs fit', (tester) async {
+      shotTag = land ? '_land' : '';
+      tester.view.physicalSize = land ? const Size(2856, 1280) : const Size(1280, 2856);
+      tester.view.devicePixelRatio = 3.1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sdCardItemsProvider.overrideWith((ref) => Stream.value(items)),
+            explorerPrefsProvider.overrideWith(_Prefs.new),
+            userNameProvider.overrideWith(_Name.new),
+            initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+            initialCameraSettingsProvider.overrideWithValue(const {}),
+          ],
+          child: RepaintBoundary(
+            key: boundary,
+            // On its monitor, as it appears in the app.
+            child: const MaterialApp(
+              debugShowCheckedModeBanner: false,
+              home: ExplorerMonitor(child: ExplorerScreen()),
+            ),
           ),
         ),
-      ),
-    );
-    await settle(tester);
+      );
+      await settle(tester);
 
-    for (final tab in ['SD Card (E:)', 'A:', 'C:', 'My Computer']) {
-      await tester.tap(find.text(tab).first);
+      for (final tab in ['SD Card (E:)', 'A:', 'C:', 'My Computer']) {
+        await tester.tap(find.text(tab).first);
+        await settle(tester);
+        await shoot(tester, 'tab_${tab.replaceAll(RegExp(r'[^A-Za-z]'), '')}');
+      }
+      for (final menu in ['File', 'Edit', 'View', 'Tools', 'Help']) {
+        await tester.tap(find.text(menu).first);
+        await settle(tester);
+        await shoot(tester, 'menu_$menu');
+        await tester.tapAt(Offset(5, land ? 380 : 900)); // dismiss
+        await settle(tester);
+      }
+      await tester.tap(find.text('Start'));
       await settle(tester);
-      await shoot(tester, 'tab_${tab.replaceAll(RegExp(r'[^A-Za-z]'), '')}');
-    }
-    for (final menu in ['File', 'Edit', 'View', 'Tools', 'Help']) {
-      await tester.tap(find.text(menu).first);
+      await shoot(tester, 'start');
+      await tester.tapAt(Offset(land ? 800 : 400, 100));
       await settle(tester);
-      await shoot(tester, 'menu_$menu');
-      await tester.tapAt(const Offset(5, 900)); // dismiss
-      await settle(tester);
-    }
-    await tester.tap(find.text('Start'));
-    await settle(tester);
-    await shoot(tester, 'start');
-    await tester.tapAt(const Offset(400, 100));
-    await settle(tester);
 
-    final ctx = tester.element(find.byType(ExplorerScreen));
-    for (final (name, open) in <(String, Future<void> Function())>[
-      (
-        'properties',
-        () => showDriveProperties(ctx, label: 'SD Card (E:)', used: 3000000, capacity: sdCardCapacityBytes),
-      ),
-      ('options', () => showExplorerOptions(ctx)),
-      ('about', () => showAboutDarkroom(ctx)),
-      ('tip', () => showTipOfTheDay(ctx)),
-      ('run', () => showRunDialog(ctx)),
-      (
-        'box',
-        () => win98Box(
-          ctx,
-          'Confirm File Delete',
-          "Are you sure you want to delete 'DSC00001.JPG'?",
-          buttons: const ['Yes', 'No'],
+      final ctx = tester.element(find.byType(ExplorerScreen));
+      for (final (name, open) in <(String, Future<void> Function())>[
+        (
+          'properties',
+          () => showDriveProperties(ctx, label: 'SD Card (E:)', used: 3000000, capacity: sdCardCapacityBytes),
         ),
-      ),
-    ]) {
-      final future = open();
-      await settle(tester);
-      await shoot(tester, 'dialog_$name');
-      Navigator.of(tester.element(find.byType(ExplorerScreen)), rootNavigator: true).pop();
-      await settle(tester);
-      await future;
-    }
-  });
+        ('options', () => showExplorerOptions(ctx)),
+        ('about', () => showAboutDarkroom(ctx)),
+        ('tip', () => showTipOfTheDay(ctx)),
+        ('run', () => showRunDialog(ctx)),
+        (
+          'box',
+          () => win98Box(
+            ctx,
+            'Confirm File Delete',
+            "Are you sure you want to delete 'DSC00001.JPG'?",
+            buttons: const ['Yes', 'No'],
+          ),
+        ),
+      ]) {
+        final future = open();
+        await settle(tester);
+        await shoot(tester, 'dialog_$name');
+        Navigator.of(tester.element(find.byType(ExplorerScreen)), rootNavigator: true).pop();
+        await settle(tester);
+        await future;
+      }
+    });
+  }
 }
 
 class _Name extends UserNameNotifier {

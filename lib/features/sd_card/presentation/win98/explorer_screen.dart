@@ -23,6 +23,7 @@ import 'games/solitaire.dart';
 import 'win98_programs.dart';
 import 'win98_shutdown.dart';
 import 'win98_widgets.dart';
+import '../../../../core/device/upright.dart';
 
 /// Digital Mode's file manager, styled after the 9x Explorer.
 ///
@@ -38,6 +39,7 @@ class ExplorerScreen extends ConsumerStatefulWidget {
   /// in from the right (the way the swipe went) and comes to rest against
   /// the left edge; however the explorer is closed, it slides back out.
   static PageRouteBuilder<void> slideIn() => PageRouteBuilder<void>(
+    settings: UprightApp.landscape,
     transitionDuration: slideDuration,
     reverseTransitionDuration: const Duration(milliseconds: 460),
     pageBuilder: (context, _, _) => const ExplorerMonitor(child: ExplorerScreen()),
@@ -191,6 +193,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
 
   Future<void> _view(List<MediaItem> items, int index) => Navigator.of(context).push(
     PageRouteBuilder<void>(
+      settings: UprightApp.landscape,
       transitionDuration: const Duration(milliseconds: 160),
       pageBuilder: (_, _, _) => Win98ViewerScreen(items: items, initialIndex: index),
       transitionsBuilder: (context, a, _, child) => Win98ZoomTransition(animation: a, child: child),

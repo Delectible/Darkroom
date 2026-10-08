@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import '../../../../core/audio/sfx.dart';
 import '../../../../core/theme/darkroom_mark.dart';
 import '../../../../core/device/haptics.dart';
+import '../../../../core/device/upright.dart';
 
 /// Start > Shut Down: the "shutting down" screen (sky, clouds and a pixel
 /// rabbit, with a shutdown tune), then the monitor switching off: the
@@ -15,6 +16,7 @@ import '../../../../core/device/haptics.dart';
 /// fades out. Tap to skip ahead.
 Future<void> showShutDownSequence(BuildContext context) => Navigator.of(context).push(
   PageRouteBuilder<void>(
+    settings: UprightApp.landscape,
     opaque: true,
     transitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (context, _, _) => const _ShutDown(),

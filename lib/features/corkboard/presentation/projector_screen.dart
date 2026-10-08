@@ -15,6 +15,7 @@ import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
 import 'reel_painter.dart';
 import '../../../core/device/haptics.dart';
+import '../../../core/device/upright.dart';
 
 /// Super 8 reels play on a home-movie projector: a warm beam on the screen,
 /// and below it the machine's deck: the reel (tap its label tape to rename
@@ -31,6 +32,7 @@ class ProjectorScreen extends ConsumerStatefulWidget {
   final int initialIndex;
 
   static Route<void> route(List<MediaItem> reels, int index) => PageRouteBuilder<void>(
+    settings: UprightApp.landscape,
     transitionDuration: const Duration(milliseconds: 420),
     reverseTransitionDuration: const Duration(milliseconds: 250),
     pageBuilder: (_, _, _) => ProjectorScreen(reels: reels, initialIndex: index < 0 ? 0 : index),
@@ -481,157 +483,167 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     final item = _item(live);
     final c = _c;
 
+    final header = Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white60),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  reelLabel(item),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFF3E3C8),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                Text(
+                  '${CameraCatalog.byId(item.cameraId).name} · ${formatDuration(item.durationMs)} · '
+                  '${MaterialLocalizations.of(context).formatMediumDate(item.capturedAt)}',
+                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          if (_ids.length > 1)
+            Text('${_index + 1} / ${_ids.length}', style: const TextStyle(color: Colors.white38)),
+        ],
+      ),
+    );
+    // The screen. Everything is on the deck's keys: no taps or swipes.
+    final screen = IgnorePointer(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(radius: 0.75, colors: [Color(0x40FFD9A0), Color(0x00000000)]),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              _SprocketStrip(run: _run, speed: _shuttle == ReelShuttle.none ? 1 : _speed),
+              Expanded(
+                child: Center(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: c == null
+                        ? Text(
+                            _error ?? 'Threading the film…',
+                            key: ValueKey(_error),
+                            style: const TextStyle(color: Colors.white38),
+                          )
+                        : _Picture(
+                            key: ValueKey(_ids[_index]),
+                            controller: c,
+                            run: _run,
+                            shuttle: _shuttle == ReelShuttle.none ? 0 : _speed,
+                          ),
+                  ),
+                ),
+              ),
+              _SprocketStrip(run: _run, speed: _shuttle == ReelShuttle.none ? 1 : _speed),
+            ],
+          ),
+        ],
+      ),
+    );
+    final deck = c == null
+        ? null
+        : ProjectorDeck(
+            playback: c,
+            item: item,
+            run: _run,
+            shuttle: _shuttle,
+            cuePos: _shuttle == ReelShuttle.none ? _scrubPos : _shuttlePos,
+            onRename: () => _rename(item),
+            onSeek: _scrub,
+            onScrub: _scrubbing,
+            onStart: _toStart,
+            onRewind: (down) => _hold(ReelShuttle.rewind, down),
+            onPlay: _togglePlay,
+            onForward: (down) => _hold(ReelShuttle.forward, down),
+            onPrev: _index > 0 ? () => _step(-1) : null,
+            onNext: _index < _ids.length - 1 ? () => _step(1) : null,
+          );
+    final actions = Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 24, 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          Builder(
+            builder: (anchor) => TextButton.icon(
+              onPressed: () => unawaited(shareMedia(anchor, item)),
+              icon: const Icon(Icons.ios_share, size: 18),
+              label: const Text('Share'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white70),
+            ),
+          ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: item.isSaved
+                ? const TextButton(
+                    key: ValueKey('s'),
+                    onPressed: null,
+                    child: Row(
+                      children: [
+                        Icon(Icons.check, size: 18, color: Color(0xFFB9E3A0)),
+                        SizedBox(width: 6),
+                        Text('Saved', style: TextStyle(color: Color(0xFFB9E3A0))),
+                      ],
+                    ),
+                  )
+                : FilledButton.icon(
+                    key: const ValueKey('u'),
+                    onPressed: _saving ? null : () => _save(item),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFF3E3C8),
+                      foregroundColor: const Color(0xFF3B2A1A),
+                    ),
+                    icon: const Icon(Icons.download, size: 18),
+                    label: Text(_saving ? 'Saving…' : 'Save'),
+                  ),
+          ),
+          TextButton.icon(
+            onPressed: () => _delete(item),
+            icon: const Icon(Icons.delete_outline, size: 18),
+            label: const Text('Throw away'),
+            style: TextButton.styleFrom(foregroundColor: Colors.white70),
+          ),
+        ],
+      ),
+    );
+
+    // Turned sideways the screen takes the left and the deck sits beside it.
+    final land = MediaQuery.sizeOf(context).aspectRatio > 1;
     return Scaffold(
       backgroundColor: const Color(0xFF070605),
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
-              child: Row(
+        child: land
+            ? Row(
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white60),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          reelLabel(item),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFFF3E3C8),
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        Text(
-                          '${CameraCatalog.byId(item.cameraId).name} · ${formatDuration(item.durationMs)} · '
-                          '${MaterialLocalizations.of(context).formatMediumDate(item.capturedAt)}',
-                          style: const TextStyle(color: Colors.white38, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_ids.length > 1)
-                    Text('${_index + 1} / ${_ids.length}', style: const TextStyle(color: Colors.white38)),
+                  Expanded(child: screen),
+                  SizedBox(width: 400, child: Column(children: [header, const Spacer(), ?deck, actions])),
+                ],
+              )
+            : Column(
+                children: [
+                  header,
+                  Expanded(child: screen),
+                  ?deck,
+                  actions,
                 ],
               ),
-            ),
-            // The screen. Everything is on the deck's keys: no taps or swipes.
-            Expanded(
-              child: IgnorePointer(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: RadialGradient(
-                            radius: 0.75,
-                            colors: [Color(0x40FFD9A0), Color(0x00000000)],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        _SprocketStrip(run: _run, speed: _shuttle == ReelShuttle.none ? 1 : _speed),
-                        Expanded(
-                          child: Center(
-                            child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 300),
-                              child: c == null
-                                  ? Text(
-                                      _error ?? 'Threading the film…',
-                                      key: ValueKey(_error),
-                                      style: const TextStyle(color: Colors.white38),
-                                    )
-                                  : _Picture(
-                                      key: ValueKey(_ids[_index]),
-                                      controller: c,
-                                      run: _run,
-                                      shuttle: _shuttle == ReelShuttle.none ? 0 : _speed,
-                                    ),
-                            ),
-                          ),
-                        ),
-                        _SprocketStrip(run: _run, speed: _shuttle == ReelShuttle.none ? 1 : _speed),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (c != null)
-              ProjectorDeck(
-                playback: c,
-                item: item,
-                run: _run,
-                shuttle: _shuttle,
-                cuePos: _shuttle == ReelShuttle.none ? _scrubPos : _shuttlePos,
-                onRename: () => _rename(item),
-                onSeek: _scrub,
-                onScrub: _scrubbing,
-                onStart: _toStart,
-                onRewind: (down) => _hold(ReelShuttle.rewind, down),
-                onPlay: _togglePlay,
-                onForward: (down) => _hold(ReelShuttle.forward, down),
-                onPrev: _index > 0 ? () => _step(-1) : null,
-                onNext: _index < _ids.length - 1 ? () => _step(1) : null,
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 4, 24, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Builder(
-                    builder: (anchor) => TextButton.icon(
-                      onPressed: () => unawaited(shareMedia(anchor, item)),
-                      icon: const Icon(Icons.ios_share, size: 18),
-                      label: const Text('Share'),
-                      style: TextButton.styleFrom(foregroundColor: Colors.white70),
-                    ),
-                  ),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    child: item.isSaved
-                        ? const TextButton(
-                            key: ValueKey('s'),
-                            onPressed: null,
-                            child: Row(
-                              children: [
-                                Icon(Icons.check, size: 18, color: Color(0xFFB9E3A0)),
-                                SizedBox(width: 6),
-                                Text('Saved', style: TextStyle(color: Color(0xFFB9E3A0))),
-                              ],
-                            ),
-                          )
-                        : FilledButton.icon(
-                            key: const ValueKey('u'),
-                            onPressed: _saving ? null : () => _save(item),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFFF3E3C8),
-                              foregroundColor: const Color(0xFF3B2A1A),
-                            ),
-                            icon: const Icon(Icons.download, size: 18),
-                            label: Text(_saving ? 'Saving…' : 'Save'),
-                          ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => _delete(item),
-                    icon: const Icon(Icons.delete_outline, size: 18),
-                    label: const Text('Throw away'),
-                    style: TextButton.styleFrom(foregroundColor: Colors.white70),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

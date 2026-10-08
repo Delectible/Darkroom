@@ -12,6 +12,7 @@ import '../../viewer/presentation/zoomable.dart';
 import '../../../core/processing/instant_frame.dart';
 import 'instant_print.dart';
 import '../../../core/device/haptics.dart';
+import '../../../core/device/upright.dart';
 
 /// Inspecting prints on a dark light-table: swipe between them, pinch to
 /// look closer, Save copies one to the phone's photo library.
@@ -23,6 +24,7 @@ class PrintViewerScreen extends ConsumerStatefulWidget {
 
   /// Held up in front of the corkboard: the board stays behind, dimmed.
   static Route<void> route(List<MediaItem> items, int index) => PageRouteBuilder<void>(
+    settings: UprightApp.landscape,
     opaque: false,
     transitionDuration: const Duration(milliseconds: 260),
     reverseTransitionDuration: const Duration(milliseconds: 200),

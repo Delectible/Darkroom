@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/diagnostics/debug_flags.dart';
+import 'core/device/upright.dart';
 import 'core/providers.dart';
 import 'core/theme/retro_theme.dart';
 import 'features/camera/application/camera_ui_state.dart';
@@ -40,6 +41,9 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       showPerformanceOverlay: ref.watch(perfOverlayProvider),
       theme: RetroPalette.film.toTheme(),
       home: const _Home(),
+      // The corkboard and Win98 turn to landscape with the phone.
+      navigatorObservers: [UprightApp.observer],
+      builder: (context, child) => UprightApp(child: child!),
     );
   }
 }

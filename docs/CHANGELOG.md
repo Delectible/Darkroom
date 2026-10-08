@@ -680,3 +680,23 @@ Answers: turntable renders, no 2D/3D switch.
   switch it off in Settings.
 - [x] **28.5 Landscape** → 1.5.0 · 2026-10-08 · f36b317 for the corkboard, print viewer, projector and
   Darkroom 98 (`UprightApp`: the whole UI turns on screens that opt in).
+
+## 29. 1.5 on-device fixes (2026-10-08)
+
+- [x] **29.1 Film shutter**: the advance lever draws over the release
+  while it's pressed (the release sinks under it).
+- [x] **29.2 Shadows pop** in and out while the body turns.
+- [x] **29.3 Black bar** at the body's edge mid-swap (panel doesn't
+  reach the side wall).
+- [x] **29.4 One switch**: 3D off = performance mode on (merge the two
+  settings).
+- [x] **29.5 Live viewfinder** while the body flips (when 3D is on).
+- [x] **29.6 Selfie flip button** does nothing (both bodies).
+- [x] **29.7 Landscape for real**: corkboard, projector, Darkroom 98
+  really rotate the phone (system bars and gestures on the right edges);
+  panels slide in the way they were swiped, no jump (the jump: heroes made
+  the route read "arrived" the moment it was pushed).
+- [x] **29.8 Viewfinder frame** sometimes in the wrong place / size for a
+  moment (turned frames were 9-sliced as if face-on; now cropped per turn).
+- [ ] **29.9 More 3D depth**: options shown (taller parts, stronger tilt,
+  deeper shadows); parked for now.

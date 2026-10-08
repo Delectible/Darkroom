@@ -673,6 +673,7 @@ class GalleryButton extends ConsumerWidget {
       button: true,
       label: film ? 'Open corkboard' : 'Open SD card',
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onOpen,
         child: SizedBox(
           width: 64,
@@ -1169,7 +1170,9 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
     return Semantics(
       button: true,
       label: front ? 'Use back camera' : 'Use front camera',
+      // Opaque: the rendered knob ignores touches, so the box takes them.
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTapDown: widget.enabled ? (_) => setState(() => _down = true) : null,
         onTapCancel: () => setState(() => _down = false),
         onTapUp: widget.enabled

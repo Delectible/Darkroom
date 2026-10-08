@@ -108,15 +108,19 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   `#ifdef IMPELLER_TARGET_OPENGLES uv.y = 1 - uv.y` (still in the dart:ui
   docs) flipped the viewfinder on GLES phones (Galaxy S10+; Pixels use
   Vulkan). The contract test forbids it.
-- **Landscape screens (1.5)**: `UprightApp` (MaterialApp.builder,
-  `core/device/upright.dart`) turns the whole UI (RotatedBox + turned
-  MediaQuery) when the top page's route has `settings:
-  UprightApp.landscape` and has finished sliding in: the corkboard, print
-  viewer, projector (deck beside the screen), Darkroom 98 and its viewer.
-  Win98Scale lays out 1:1 in landscape (`factorFor`). Tests run the
-  corkboard and explorer both ways (`corkboard_screen_test`,
-  `explorer_screens_test`).
-- The activity is **locked to portrait**. Landscape is detected with the
+- **Landscape screens (1.5.1)**: routes with `settings:
+  UprightApp.landscape` (corkboard, print viewer, projector with the deck
+  beside the screen, Darkroom 98 and its viewer) really rotate the app
+  once they've slid in and the phone is sideways (`UprightApp` in
+  `core/device/upright.dart` calls `setPreferredOrientations` with the
+  accelerometer's orientation, so it works with auto-rotate off); back to
+  portrait as they slide out, so they slide in/out in portrait, following
+  the swipe. The camera (home) is wrapped in `PortraitLock` so it keeps
+  its portrait layout underneath. On push, heroes make the route offstage
+  for a frame and its animation reads "completed": ignore that (test
+  `upright_app_test`). iOS Info.plist allows landscape for this. Win98Scale
+  lays out 1:1 in landscape (`factorFor`).
+- The app is **portrait** everywhere else. Landscape is detected with the
   accelerometer (`lib/core/device/physical_orientation.dart`); icons rotate in
   place (`Upright` / `UprightBox`) and photos are saved upright.
 
@@ -331,9 +335,14 @@ UI
   `softStroke` (core/theme/soft_shadow.dart) or gradients. Setting
   **Performance mode** (`GlobalSettings.performance`, `FilmUniforms.lite`):
   viewfinder halation off, the body swaps as one picture (`_dragFace`).
-- Setting **3D controls** (`GlobalSettings.controls3d`, on by default; the
+- Setting **3D cameras** (`GlobalSettings.controls3d`, on by default; the
   tour no longer asks): on = the photoreal bodies (below), controls turn
-  with the body; off = the classic drawn bodies, face-on controls.
+  with the body, the viewfinder stays live mid-swap (`_startMoving`: the
+  live picture runs under a still of itself retaken flat each frame, as
+  the look shader can't run under the 3D turn). Off = **performance mode**
+  (`GlobalSettings.performance` is just `!controls3d` since 1.5.1): the
+  classic drawn bodies, one frozen viewfinder still, the body swapped as
+  one picture, no halation.
 - **Photoreal bodies (1.5)**: every part (leather/aluminium panel, chrome
   plates, viewfinder frame, keys, dials, shutter, trays) is rendered in
   Blender Cycles by `tool/render/blender/` (`kit.py` materials + shapes,
@@ -344,8 +353,10 @@ UI
   them in (only complete bodies). The app draws them in its normal layout
   (`photo_body.dart`: `BodySprite`, `BodySlice` 9-slice, `BodyBackdrop`,
   `PhotoKey`); turned frames cross-fade with the swap (`BodyYaw`), all
-  decoded up front (`BodyArt.precache`). Performance mode = face-on only
-  (`BodyArt.faceOnly`). `test/photo_body_test.dart` checks every frame is
+  decoded up front (`BodyArt.precache`; `BodyArt.lateFrames` counts any
+  that weren't). `_Frames` draws them: each turned render is cropped to
+  its foreshortened width (cos turn) and stretched back, and two turns are
+  mixed additively in a layer (exact blend: no doubled shadows popping). `test/photo_body_test.dart` checks every frame is
   bundled and lays both bodies out (SHOTS saves them).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).

@@ -4,7 +4,7 @@ description: >-
   darkroom and pins them to a corkboard; Digital Mode buffers shots on a
   virtual SD card browsed through a Windows 98 explorer.
 publish_to: none
-version: 1.5.0+45
+version: 1.5.1+46
 
 environment:
   sdk: ^3.12.0

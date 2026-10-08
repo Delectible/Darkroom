@@ -40,7 +40,8 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       debugShowCheckedModeBanner: false,
       showPerformanceOverlay: ref.watch(perfOverlayProvider),
       theme: RetroPalette.film.toTheme(),
-      home: const _Home(),
+      // The camera is portrait-only, even under a screen turned to landscape.
+      home: const PortraitLock(child: _Home()),
       // The corkboard and Win98 turn to landscape with the phone.
       navigatorObservers: [UprightApp.observer],
       builder: (context, child) => UprightApp(child: child!),

@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -83,7 +84,46 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     } catch (_) {}
   }
 
-  void _dropMoving() => CameraViewport.freeze.value = null;
+  void _dropMoving() {
+    _stopMirror();
+    CameraViewport.freeze.value = null;
+  }
+
+  /// 3D on: the viewfinder stays live while the body turns. The live
+  /// picture keeps running under a still of itself, retaken flat every
+  /// frame (the look shader can't run under the turn itself, see
+  /// [_lastFrame]). Performance mode: one still.
+  bool _mirroring = false;
+
+  void _startMoving() {
+    if (ref.read(globalSettingsProvider).performance) return _snapMoving();
+    if (_mirroring) return;
+    _mirroring = true;
+    CameraViewport.liveUnder.value = true;
+    _mirrorFrame();
+  }
+
+  void _mirrorFrame() {
+    if (!_mirroring || !mounted) return;
+    try {
+      final boundary = CameraViewport.snapKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary != null && boundary.hasSize) {
+        final mode = ref.read(appModeProvider);
+        final still = boundary.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context) * 0.6);
+        final old = _lastFrame[mode];
+        _lastFrame[mode] = still;
+        CameraViewport.freeze.value = still;
+        old?.dispose();
+      }
+    } catch (_) {}
+    SchedulerBinding.instance.addPostFrameCallback((_) => _mirrorFrame());
+    SchedulerBinding.instance.scheduleFrame();
+  }
+
+  void _stopMirror() {
+    _mirroring = false;
+    CameraViewport.liveUnder.value = false;
+  }
 
   /// Performance mode: the body being dragged, as one picture (the live body
   /// under a 3D transform redraws every shadow and control each frame).
@@ -256,7 +296,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // before the swipe triggers.
     if (_raw > 0) _tossing = true;
     if (was == 0 && _raw > 0) {
-      _snapMoving();
+      _startMoving();
       _snapBody();
       unawaited(Haptics.selectionClick());
     }
@@ -301,7 +341,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (!_canSwap()) return;
     PerfRecorder.mark('camera swap', hold: const Duration(milliseconds: 1600));
     _swap.value = 0;
-    _snapMoving();
+    _startMoving();
     _snapBody();
     setState(() => _dragging = false);
     unawaited(_commitSwap(2.4));
@@ -332,7 +372,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       _outgoing?.dispose();
       _outgoing = still;
       _committed = true;
-      // The arriving body's viewfinder: as it was last time, until it lands.
+      // The arriving body's viewfinder: as it was last time, until it lands
+      // (its camera restarts for the new body).
+      _stopMirror();
       CameraViewport.freeze.value = _lastFrame[from == AppMode.film ? AppMode.digital : AppMode.film];
       // Flips the mode synchronously (the save happens after), so this
       // frame already builds the new body in the arriving slot.

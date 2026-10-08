@@ -342,11 +342,12 @@ class _SpriteShutter extends StatelessWidget {
       };
       layers = stroke
           ? [
-              at(BodySprite(part('release'), state: st), part('release')),
+              // The lever swings under the release's collar.
               at(
                 Transform.rotate(angle: lever! - leverRest, child: BodySprite(part('lever'))),
                 part('lever'),
               ),
+              at(BodySprite(part('release'), state: st), part('release')),
             ]
           : [at(BodySprite(part(name), state: st), part(name))];
     } else if (stroke || !turntable) {

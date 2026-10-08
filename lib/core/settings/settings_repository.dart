@@ -17,7 +17,6 @@ class GlobalSettings {
     this.sfxVolume = 0.5,
     this.haptics = true,
     this.controls3d = true,
-    this.performance = false,
   });
 
   final bool darkroomEnabled;
@@ -35,12 +34,13 @@ class GlobalSettings {
   /// Vibration feedback.
   final bool haptics;
 
-  /// Camera controls drawn in 3D (turning with the body); off = flat.
+  /// The photoreal 3D bodies, turning with the swap. Off = performance mode
+  /// (one switch since 1.5.1): the classic drawn bodies, no viewfinder
+  /// halation, the body swapped as one picture.
   final bool controls3d;
 
-  /// Lighter graphics for slower phones: the viewfinder skips halation and
-  /// the camera body is swapped as one picture.
-  final bool performance;
+  /// Lighter graphics for slower phones (3D off).
+  bool get performance => !controls3d;
 
   GlobalSettings copyWith({
     bool? darkroomEnabled,
@@ -50,7 +50,6 @@ class GlobalSettings {
     double? sfxVolume,
     bool? haptics,
     bool? controls3d,
-    bool? performance,
   }) => GlobalSettings(
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -59,7 +58,6 @@ class GlobalSettings {
     sfxVolume: sfxVolume ?? this.sfxVolume,
     haptics: haptics ?? this.haptics,
     controls3d: controls3d ?? this.controls3d,
-    performance: performance ?? this.performance,
   );
 }
 
@@ -101,7 +99,7 @@ class SettingsRepository {
   static const _kSfxVolume = 'global.sfxVolume';
   static const _kHaptics = 'global.haptics';
   static const _k3d = 'global.controls3d';
-  static const _kPerf = 'global.performance';
+  static const _kPerf = 'global.performance'; // before 1.5.1: its own switch
 
   Future<GlobalSettings> loadGlobal() async {
     bool read(String? v, bool fallback) => v == null ? fallback : v == '1';
@@ -117,8 +115,8 @@ class SettingsRepository {
         _ => d.sfxVolume,
       },
       haptics: read(await _db.getValue(_kHaptics), d.haptics),
-      controls3d: read(await _db.getValue(_k3d), d.controls3d),
-      performance: read(await _db.getValue(_kPerf), d.performance),
+      // Performance mode on (the old switch) meant 3D off.
+      controls3d: read(await _db.getValue(_k3d), d.controls3d) && !read(await _db.getValue(_kPerf), false),
     );
   }
 
@@ -130,7 +128,7 @@ class SettingsRepository {
     await _db.setValue(_kSfxVolume, s.sfxVolume.toStringAsFixed(3));
     await _db.setValue(_kHaptics, s.haptics ? '1' : '0');
     await _db.setValue(_k3d, s.controls3d ? '1' : '0');
-    await _db.setValue(_kPerf, s.performance ? '1' : '0');
+    await _db.setValue(_kPerf, '0');
   }
 
   Future<Map<String, CameraLocalSettings>> loadCameraSettings() async {

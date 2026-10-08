@@ -3,15 +3,16 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.5.0';
+  static const version = '1.5.1';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Photoreal cameras: the whole body and every control is now a path-traced 3D render, and it turns with '
-      'the camera when you swap. The corkboard, projector and Darkroom 98 turn to landscape with your phone. '
-      '(Settings > 3D controls off brings back the classic look.)';
+      'Fixes for the 3D cameras: no more popping shadows or black edge mid-swap, the viewfinder stays live '
+      'while the camera flips, the selfie button works, and the film lever sits under the shutter. '
+      'One "3D cameras" switch (off = performance mode). The corkboard, projector and Darkroom 98 now '
+      'really rotate to landscape.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

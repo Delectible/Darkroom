@@ -182,8 +182,10 @@ def lever(parent, angle=-LEVER_REST):
     for i in range(13):
         t = math.pi / 2 + math.pi * i / 12
         pts.append((-length + 1.2 * math.cos(t), 1.2 * math.sin(t)))
-    slab([pts], 1.4, 0.25, 'satin', 2.9, pivot, 'bar')
-    cylinder(2.0, 1.6, 'blackPaint', 3.6, 48, 0.4, pivot).location.x = -length
+    # under the collar (top 3.0), so the release sinks into the hub and the
+    # bar never shows through the pressed cap
+    slab([pts], 1.4, 0.25, 'satin', 1.1, pivot, 'bar')
+    cylinder(2.0, 1.6, 'blackPaint', 2.2, 48, 0.4, pivot).location.x = -length
     return pivot
 
 

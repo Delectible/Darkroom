@@ -40,14 +40,10 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     await _repo.saveGlobal(state);
   }
 
-  Future<void> setPerformance(bool enabled) async {
-    state = state.copyWith(performance: enabled);
-    _apply(state);
-    await _repo.saveGlobal(state);
-  }
-
+  /// 3D on, or off = performance mode (one switch).
   Future<void> setControls3d(bool enabled) async {
     state = state.copyWith(controls3d: enabled);
+    _apply(state);
     await _repo.saveGlobal(state);
   }
 

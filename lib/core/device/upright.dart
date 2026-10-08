@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'physical_orientation.dart';
@@ -86,9 +89,12 @@ Future<T?> showUprightSheet<T>(
 }
 
 /// Screens that turn to landscape with the phone (corkboard, Win98...):
-/// give their route `settings: UprightApp.landscape`. The activity stays
-/// portrait-locked; [UprightApp] turns the whole UI (dialogs and menus
-/// included) while such a screen is the top page.
+/// give their route `settings: UprightApp.landscape`. The app is portrait
+/// otherwise; while such a screen is the top page (once it has slid in) and
+/// the phone is held sideways, [UprightApp] really rotates the app, so the
+/// status bar, the back gesture and the home bar are on the right edges.
+/// It goes back to portrait as the screen slides out. The camera screen
+/// below keeps its portrait layout ([PortraitLock]).
 class UprightApp extends ConsumerStatefulWidget {
   const UprightApp({super.key, required this.child});
 
@@ -96,6 +102,9 @@ class UprightApp extends ConsumerStatefulWidget {
 
   /// Tracks the top page for [UprightApp]; add to MaterialApp's observers.
   static final observer = _UprightObserver();
+
+  /// The way the app was last turned to landscape.
+  static DeviceOrientation lastLandscape = DeviceOrientation.landscapeLeft;
 
   final Widget child;
 
@@ -123,7 +132,9 @@ class _UprightObserver extends NavigatorObserver {
       allowed.value = true;
     } else {
       void done(AnimationStatus s) {
-        if (s == AnimationStatus.completed) {
+        // While heroes are measured on push, the route is briefly
+        // offstage and its animation reads "completed": not arrived yet.
+        if (s == AnimationStatus.completed && !(top as ModalRoute).offstage) {
           a.removeStatusListener(done);
           if (_stack.isNotEmpty &&
               identical(_stack.lastWhere((r) => r is PageRoute, orElse: () => top), top)) {
@@ -168,56 +179,57 @@ class _UprightObserver extends NavigatorObserver {
 
 class _NoRoute extends Route<void> {}
 
-class _UprightAppState extends ConsumerState<UprightApp> with SingleTickerProviderStateMixin {
-  late final _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 150), value: 1);
-  int _shown = 0;
-  int _want = 0;
+class _UprightAppState extends ConsumerState<UprightApp> {
+  DeviceOrientation _asked = DeviceOrientation.portraitUp;
 
   @override
   void initState() {
     super.initState();
-    UprightApp.observer.allowed.addListener(_retarget);
+    UprightApp.observer.allowed.addListener(_apply);
   }
 
   @override
   void dispose() {
-    UprightApp.observer.allowed.removeListener(_retarget);
-    _fade.dispose();
+    UprightApp.observer.allowed.removeListener(_apply);
     super.dispose();
   }
 
-  int _target() {
-    if (!UprightApp.observer.allowed.value) return 0;
-    return switch (uprightQuarterTurns(ref.read(physicalOrientationProvider))) {
-      1 => 1,
-      3 => 3,
-      _ => 0, // upside down stays as it is
-    };
-  }
-
-  /// Fades out, swaps the layout, fades back in (a quick turn, like an OS).
-  Future<void> _retarget() async {
-    final t = _target();
-    if (t == _want) return;
-    _want = t;
-    await _fade.reverse();
-    if (!mounted) return;
-    setState(() => _shown = _want);
-    await _fade.forward();
+  void _apply() {
+    final o = ref.read(physicalOrientationProvider);
+    final want = UprightApp.observer.allowed.value && isLandscape(o) ? o : DeviceOrientation.portraitUp;
+    if (want == _asked) return;
+    _asked = want;
+    if (want != DeviceOrientation.portraitUp) UprightApp.lastLandscape = want;
+    unawaited(SystemChrome.setPreferredOrientations([want]));
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(physicalOrientationProvider, (_, _) => _retarget());
-    final q = _shown;
+    ref.listen(physicalOrientationProvider, (_, _) => _apply());
+    return widget.child;
+  }
+}
+
+/// Keeps a portrait-only screen (the camera) laid out upright while the app
+/// is turned to landscape for a screen above it: it sits turned back, as if
+/// the app were still portrait. The same widgets either way, so it keeps
+/// its state.
+class PortraitLock extends StatelessWidget {
+  const PortraitLock({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
+    final land = mq.size.width > mq.size.height;
+    final q = !land ? 0 : (UprightApp.lastLandscape == DeviceOrientation.landscapeRight ? 1 : 3);
     EdgeInsets turn(EdgeInsets e) => switch (q) {
       1 => EdgeInsets.fromLTRB(e.top, e.right, e.bottom, e.left),
       3 => EdgeInsets.fromLTRB(e.bottom, e.left, e.top, e.right),
       _ => e,
     };
-    // Same widgets whether turned or not: the navigator below keeps its state.
-    final child = RotatedBox(
+    return RotatedBox(
       quarterTurns: q,
       child: MediaQuery(
         data: q == 0
@@ -229,14 +241,7 @@ class _UprightAppState extends ConsumerState<UprightApp> with SingleTickerProvid
                 viewInsets: turn(mq.viewInsets),
                 systemGestureInsets: turn(mq.systemGestureInsets),
               ),
-        child: widget.child,
-      ),
-    );
-    return ColoredBox(
-      color: Colors.black,
-      child: FadeTransition(
-        opacity: _fade,
-        child: ScaleTransition(scale: Tween(begin: 0.97, end: 1.0).animate(_fade), child: child),
+        child: child,
       ),
     );
   }

@@ -43,6 +43,11 @@ class CameraViewport extends ConsumerWidget {
   /// slid about on its own). The rest of the body stays live.
   static final freeze = ValueNotifier<ui.Image?>(null);
 
+  /// The live picture keeps running under [freeze] (which is then a fresh
+  /// still of it every frame, taken flat: the viewfinder stays live while
+  /// the body turns).
+  static final liveUnder = ValueNotifier<bool>(false);
+
   /// The stream's aspect ratio last time a camera was open: while it's
   /// closed (behind a panel, mid-swap) the box keeps its shape, so the still
   /// over it isn't squashed.
@@ -128,9 +133,9 @@ class CameraViewport extends ConsumerWidget {
                                 // Under a held still (swap, panel, picker) the live
                                 // picture isn't drawn at all: its look shader is the
                                 // most expensive thing on screen.
-                                ValueListenableBuilder<ui.Image?>(
-                                  valueListenable: freeze,
-                                  builder: (context, still, _) => still != null
+                                ListenableBuilder(
+                                  listenable: Listenable.merge([freeze, liveUnder]),
+                                  builder: (context, _) => freeze.value != null && !liveUnder.value
                                       ? const SizedBox.expand()
                                       : session.isReady
                                       ? _FocusablePreview(

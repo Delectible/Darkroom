@@ -148,6 +148,33 @@ void main() {
     }
   });
 
+  testWidgets('the rendered selfie-flip knob takes taps', (tester) async {
+    final art = await tester.runAsync(BodyArt.load);
+    if (art == null || !art.has(AppMode.digital)) return markTestSkipped('no body art bundled');
+    final c = ProviderContainer(
+      overrides: [
+        initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+        bodyArtProvider.overrideWith((ref) async => art),
+        appModeProvider.overrideWith(() => _Mode(AppMode.digital)),
+        lensProvider.overrideWith(_Lens.new),
+      ],
+    );
+    addTearDown(c.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: const MaterialApp(
+          home: Scaffold(body: Center(child: LensFlipButton(enabled: true))),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(c.read(photoBodyProvider(AppMode.digital)), isNotNull);
+    await tester.tap(find.byType(LensFlipButton));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(c.read(lensProvider), CameraLensDirection.front);
+  });
+
   for (final mode in AppMode.values) {
     {
       testWidgets('${mode.name} body through a swap', (tester) async {
@@ -249,21 +276,11 @@ void main() {
 
         // Turn through a swap and back a frame at a time: every frame it
         // needs is already decoded (nothing pops in or stalls mid-swap).
-        final cache = PaintingBinding.instance.imageCache;
+        BodyArt.lateFrames = 0;
         for (var d = 0.0; d <= 48; d += 1.5) {
           yaw.value = d;
           await tester.pump(const Duration(milliseconds: 16));
-          final waiting = <String>[];
-          for (final e in find.byType(Image).evaluate()) {
-            final img = (e.widget as Image).image;
-            if (img is! ResizeImage || img.imageProvider is! AssetImage) continue;
-            final name = (img.imageProvider as AssetImage).assetName;
-            if (!name.startsWith(BodyArt.root)) continue;
-            final key = await img.obtainKey(createLocalImageConfiguration(e));
-            final st = cache.statusForKey(key);
-            if (st.pending || !st.keepAlive) waiting.add(name);
-          }
-          expect(waiting, isEmpty, reason: '${mode.name} at $d degrees');
+          expect(BodyArt.lateFrames, 0, reason: '${mode.name} at $d degrees');
           if (shots != null && const [0.0, 9.0, 27.0, 45.0].contains(d)) {
             await tester.runAsync(() async {
               final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;

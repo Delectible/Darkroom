@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,6 +27,10 @@ class BodyArt {
   /// Performance mode: parts stay face-on while the body turns (no turned
   /// frames decoded or drawn; the swap moves the body as one picture).
   static bool faceOnly = false;
+
+  /// Frames that weren't decoded yet when drawn (they pop in a frame late);
+  /// tests check a swap never needs one.
+  static int lateFrames = 0;
 
   /// Pixels per dp the sprites were saved at.
   final double px;
@@ -178,8 +183,7 @@ ImageProvider bodyImage(String asset, double widthPx) =>
 
 /// One part's sprite, centred on this widget and drawn at its canvas size
 /// (it overflows the widget's box by its margins). Follows the body's turn
-/// while swapping, cross-fading between the rendered turns and stretched
-/// back by 1 / cos(turn) (the body's own transform foreshortens it again).
+/// while swapping (see [_Frames]).
 class BodySprite extends StatelessWidget {
   const BodySprite(this.part, {super.key, this.state, this.opacity = 1});
 
@@ -190,34 +194,20 @@ class BodySprite extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final yaw = BodyArt.faceOnly ? 0.0 : BodyYaw.of(context);
-    final deg = yaw * 180 / math.pi;
-    final (lo, hi, f) = part.bracket(deg);
-    // Alpha goes into the image paint (an Opacity would cost a layer each).
-    Widget frame(int y, double o) => Image(
-      image: bodyImage(part.asset(state, y), part.canvas.width * dpr * (y == 0 ? 1 : 0.6)),
-      width: part.canvas.width,
-      height: part.canvas.height,
-      fit: BoxFit.fill,
-      filterQuality: FilterQuality.medium,
-      gaplessPlayback: true,
-      color: o < 1 ? Color.fromRGBO(255, 255, 255, o) : null,
-      colorBlendMode: BlendMode.modulate,
-    );
-    Widget img = Stack(children: [frame(lo, opacity), if (f > 0.02) frame(hi, opacity * f)]);
-    if (yaw != 0) {
-      img = Transform(
-        alignment: Alignment.center,
-        transform: Matrix4.diagonal3Values(1 / math.cos(yaw).clamp(0.5, 1.0), 1, 1),
-        child: img,
-      );
-    }
     return OverflowBox(
       minWidth: part.canvas.width,
       maxWidth: part.canvas.width,
       minHeight: part.canvas.height,
       maxHeight: part.canvas.height,
-      child: IgnorePointer(child: img),
+      child: IgnorePointer(
+        child: _Frames.turned(
+          context,
+          part,
+          state: state,
+          decodeWidth: (y) => part.canvas.width * dpr * (y == 0 ? 1 : 0.6),
+          opacity: opacity,
+        ),
+      ),
     );
   }
 }
@@ -233,53 +223,25 @@ class BodySlice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final yaw = BodyArt.faceOnly ? 0.0 : BodyYaw.of(context);
-    final (lo, hi, f) = part.bracket(yaw * 180 / math.pi);
     final box = part.box ?? part.canvas;
     final mx = (part.canvas.width - box.width) / 2, my = (part.canvas.height - box.height) / 2;
     final sx = part.sliceX ?? part.slice ?? 0, sy = part.sliceX != null ? 0.0 : part.slice ?? 0;
     return LayoutBuilder(
       builder: (context, c) {
         final w = c.maxWidth + 2 * mx, h = c.maxHeight + 2 * my;
-        Widget frame(int y, double o) {
-          final scale = y == 0 ? 1.0 : 0.6;
-          final k = dpr * scale; // decoded px per dp
-          // centerSlice works in image pixels and draws the corners one
-          // image pixel per dp: lay out at k x and scale back down.
-          return Transform.scale(
-            scale: 1 / k,
-            alignment: Alignment.topLeft,
-            child: OverflowBox(
-              alignment: Alignment.topLeft,
-              minWidth: w * k,
-              maxWidth: w * k,
-              minHeight: h * k,
-              maxHeight: h * k,
-              child: Image(
-                image: bodyImage(part.asset(null, y), part.canvas.width * k),
-                width: w * k,
-                height: h * k,
-                centerSlice: Rect.fromLTRB(
-                  sx * k,
-                  sy * k,
-                  (part.canvas.width - sx) * k,
-                  (part.canvas.height - sy) * k,
-                ),
-                filterQuality: FilterQuality.medium,
-                gaplessPlayback: true,
-                color: o < 1 ? Color.fromRGBO(255, 255, 255, o) : null,
-                colorBlendMode: BlendMode.modulate,
-              ),
-            ),
-          );
-        }
-
         return OverflowBox(
           minWidth: w,
           maxWidth: w,
           minHeight: h,
           maxHeight: h,
-          child: IgnorePointer(child: Stack(children: [frame(lo, 1), if (f > 0.02) frame(hi, f)])),
+          child: IgnorePointer(
+            child: _Frames.turned(
+              context,
+              part,
+              decodeWidth: (y) => part.canvas.width * dpr * (y == 0 ? 1 : 0.6),
+              slice: Size(sx, sy),
+            ),
+          ),
         );
       },
     );
@@ -306,37 +268,26 @@ class BodyBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final yaw = BodyArt.faceOnly ? 0.0 : BodyYaw.of(context);
-    final deg = yaw * 180 / math.pi;
     final panel = art.part(mode, 'panel')!;
     return LayoutBuilder(
       builder: (context, c) {
         final w = c.maxWidth, h = c.maxHeight;
         final k = w / panel.canvas.width; // panels are drawn to the screen's width
-        Widget layer(BodyPart p, Alignment align, double height) {
-          final (lo, hi, f) = p.bracket(deg);
-          Widget img(int y, double o) => Image(
-            image: bodyImage(p.asset(null, y), w * dpr * (y == 0 ? 1 : 0.6)),
-            width: w,
-            height: p.canvas.height * k,
-            fit: BoxFit.fill,
-            filterQuality: FilterQuality.medium,
-            gaplessPlayback: true,
-            color: o < 1 ? Color.fromRGBO(255, 255, 255, o) : null,
-            colorBlendMode: BlendMode.modulate,
-          );
-          return SizedBox(
-            width: w,
-            height: height,
-            child: ClipRect(
-              child: OverflowBox(
-                alignment: align,
-                maxHeight: double.infinity,
-                child: Stack(children: [img(lo, 1), if (f > 0.02) img(hi, f)]),
+        Widget layer(BodyPart p, Alignment align, double height) => SizedBox(
+          width: w,
+          height: height,
+          child: ClipRect(
+            child: OverflowBox(
+              alignment: align,
+              maxHeight: double.infinity,
+              child: SizedBox(
+                width: w,
+                height: p.canvas.height * k,
+                child: _Frames.turned(context, p, decodeWidth: (y) => w * dpr * (y == 0 ? 1 : 0.6)),
               ),
             ),
-          );
-        }
+          ),
+        );
 
         final plateTop = art.part(mode, 'plate-top'), plateBot = art.part(mode, 'plate-bot');
         return Stack(
@@ -361,6 +312,230 @@ class BodyBackdrop extends StatelessWidget {
       },
     );
   }
+}
+
+/// Draws one part at the body's current turn ([BodyYaw]) into this widget's
+/// size, from the two rendered turns either side of it.
+///
+/// Each render shows the part foreshortened by its own turn (a flat panel
+/// fills only cos(turn) of the canvas, centred): it's cropped to that and
+/// stretched back to face-on width, and the body's own transform
+/// foreshortens it again, so the edges always meet the body's. The two
+/// frames are mixed in a layer as (1 - f) A + f B (additive), an exact
+/// blend: an opaque part stays opaque and its shadow doesn't double up and
+/// snap back at each rendered turn.
+class _Frames extends StatefulWidget {
+  const _Frames({
+    required this.lo,
+    required this.hi,
+    required this.loDeg,
+    required this.hiDeg,
+    required this.f,
+    required this.canvas,
+    this.slice,
+    this.opacity = 1,
+  });
+
+  factory _Frames.turned(
+    BuildContext context,
+    BodyPart part, {
+    String? state,
+    required double Function(int yaw) decodeWidth,
+    Size? slice,
+    double opacity = 1,
+  }) {
+    final yaw = BodyArt.faceOnly ? 0.0 : BodyYaw.of(context);
+    final (lo, hi, f) = part.bracket(yaw * 180 / math.pi);
+    return _Frames(
+      lo: bodyImage(part.asset(state, lo), decodeWidth(lo)),
+      hi: f > 0.02 ? bodyImage(part.asset(state, hi), decodeWidth(hi)) : null,
+      loDeg: lo.toDouble(),
+      hiDeg: hi.toDouble(),
+      f: f,
+      canvas: part.canvas,
+      slice: slice,
+      opacity: opacity,
+    );
+  }
+
+  final ImageProvider lo;
+  final ImageProvider? hi;
+  final double loDeg;
+  final double hiDeg;
+  final double f;
+  final Size canvas;
+
+  /// 9-slice insets in dp from the canvas edges (x, y); null: plain.
+  final Size? slice;
+  final double opacity;
+
+  @override
+  State<_Frames> createState() => _FramesState();
+}
+
+/// One frame's image, kept until its replacement has decoded (gapless).
+class _Slot {
+  ImageStream? stream;
+  ImageStreamListener? listener;
+  ImageInfo? info;
+  double deg = 0;
+
+  void dispose() {
+    if (listener != null) stream?.removeListener(listener!);
+    info?.dispose();
+  }
+}
+
+class _FramesState extends State<_Frames> {
+  final _lo = _Slot(), _hi = _Slot();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(_Frames old) {
+    super.didUpdateWidget(old);
+    _resolve();
+  }
+
+  void _resolve() {
+    _watch(_lo, widget.lo, widget.loDeg);
+    final hi = widget.hi;
+    if (hi != null) _watch(_hi, hi, widget.hiDeg);
+  }
+
+  void _watch(_Slot slot, ImageProvider provider, double deg) {
+    final stream = provider.resolve(createLocalImageConfiguration(context));
+    if (slot.stream?.key == stream.key) return;
+    if (slot.listener != null) slot.stream?.removeListener(slot.listener!);
+    slot.stream = stream;
+    slot.listener = ImageStreamListener((info, _) {
+      if (!mounted) return info.dispose();
+      setState(() {
+        slot.info?.dispose();
+        slot.info = info;
+        slot.deg = deg;
+      });
+    });
+    final before = slot.info;
+    stream.addListener(slot.listener!);
+    if (identical(slot.info, before)) BodyArt.lateFrames++; // not decoded yet
+  }
+
+  @override
+  void dispose() {
+    _lo.dispose();
+    _hi.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final w = widget;
+    final mix = w.hi != null && _hi.info != null && _hi.deg == w.hiDeg && _lo.deg == w.loDeg;
+    return CustomPaint(
+      size: Size.infinite,
+      painter: _FramesPainter(
+        lo: _lo.info?.image,
+        loDeg: _lo.deg,
+        hi: mix ? _hi.info?.image : null,
+        hiDeg: _hi.deg,
+        f: mix ? w.f : 0,
+        canvas: w.canvas,
+        slice: w.slice,
+        opacity: w.opacity,
+      ),
+    );
+  }
+}
+
+class _FramesPainter extends CustomPainter {
+  _FramesPainter({
+    required this.lo,
+    required this.loDeg,
+    required this.hi,
+    required this.hiDeg,
+    required this.f,
+    required this.canvas,
+    required this.slice,
+    required this.opacity,
+  });
+
+  final ui.Image? lo;
+  final double loDeg;
+  final ui.Image? hi;
+  final double hiDeg;
+  final double f;
+  final Size canvas;
+  final Size? slice;
+  final double opacity;
+
+  void _frame(Canvas c, ui.Image img, double deg, Size size, Paint paint) {
+    final cos = math.cos(deg * math.pi / 180);
+    final kx = img.width / canvas.width, ky = img.height / canvas.height;
+    final g = canvas.width * (1 - cos) / 2; // empty canvas either side of the turned part
+    final s = slice;
+    if (s == null) {
+      c.drawImageRect(
+        img,
+        Rect.fromLTRB(g * kx, 0, (canvas.width - g) * kx, img.height.toDouble()),
+        Offset.zero & size,
+        paint,
+      );
+      return;
+    }
+    final sx = s.width, sy = s.height;
+    final xs = [g, g + sx * cos, canvas.width - g - sx * cos, canvas.width - g];
+    final ys = [0.0, sy, canvas.height - sy, canvas.height];
+    final dx = [0.0, sx, size.width - sx, size.width];
+    final dy = [0.0, sy, size.height - sy, size.height];
+    for (var i = 0; i < 3; i++) {
+      for (var j = 0; j < 3; j++) {
+        if (xs[i + 1] <= xs[i] || ys[j + 1] <= ys[j] || dx[i + 1] <= dx[i] || dy[j + 1] <= dy[j]) continue;
+        c.drawImageRect(
+          img,
+          Rect.fromLTRB(xs[i] * kx, ys[j] * ky, xs[i + 1] * kx, ys[j + 1] * ky),
+          Rect.fromLTRB(dx[i], dy[j], dx[i + 1], dy[j + 1]),
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  void paint(Canvas c, Size size) {
+    final a = lo, b = hi;
+    if (a == null) return;
+    Paint paint(double alpha) => Paint()
+      ..filterQuality = FilterQuality.medium
+      ..color = Color.fromRGBO(0, 0, 0, alpha);
+    if (b == null || f <= 0.02) {
+      _frame(c, a, loDeg, size, paint(opacity));
+      return;
+    }
+    if (f >= 0.98) {
+      _frame(c, b, hiDeg, size, paint(opacity));
+      return;
+    }
+    c.saveLayer(Offset.zero & size, Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
+    _frame(c, a, loDeg, size, paint(1 - f));
+    _frame(c, b, hiDeg, size, paint(f)..blendMode = BlendMode.plus);
+    c.restore();
+  }
+
+  @override
+  bool shouldRepaint(_FramesPainter o) =>
+      o.lo != lo ||
+      o.hi != hi ||
+      o.f != f ||
+      o.loDeg != loDeg ||
+      o.hiDeg != hiDeg ||
+      o.opacity != opacity ||
+      o.slice != slice ||
+      o.canvas != canvas;
 }
 
 /// A rendered key (rubber pill, chrome button): shows its pressed render

@@ -43,6 +43,7 @@ jobs:
             track:internal \
             track_promote_to:alpha \
             release_status:completed \
+            deactivate_on_promote:false \
             skip_upload_apk:true \
             skip_upload_aab:true \
             skip_upload_metadata:true \

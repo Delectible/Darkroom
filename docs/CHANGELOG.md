@@ -723,12 +723,14 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 33. 3D bodies don't convince (2026-10-09)
 
-- [~] **33.1 Whole-body renders**: per-part sprites look flat, oblong and
+- [x] **33.1 Whole-body renders**: per-part sprites look flat, oblong and
   soft mid-swap. Decided: render each camera as one object through a
   perspective camera (`tool/render/blender/whole_body.py`), face-on and
   every 3 degrees of the turn; controls baked in while turning (viewfinder
   stays live); taller phones trim the middle (inside the viewfinder);
-  up to ~25 MB. Prototype frames sent for a look check first.
+  up to ~25 MB. Prototype frames sent for a look check first. → 1.6.0 ·
+  2026-10-09 (3.8 MB of art)
+
 ## 34. Landscape polish (2026-10-09)
 
 - [x] **34.1 No pop**: panels started portrait and popped into landscape.

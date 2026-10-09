@@ -19,7 +19,8 @@ Gabe in a console / on a phone, C = Claude in the repo).
   text doesn't break the Win98 dialogs. (C)
 - [~] 3D bodies (1.5, 2026-10-08: the whole body and every control
   rendered in Blender; 3D on by default, Settings switch for the classic
-  look). Shipped to internal testing; G checks it on the Pixel and S10+.
+  look); 1.6 renders each camera whole, turned every 3 degrees for the
+  swap. Shipped to internal testing; G checks it on the Pixel and S10+.
 - [~] Landscape for the corkboard, projector and Darkroom 98 (1.5). (G checks)
 - [ ] Store screenshots: 4-8 phone shots (1080x1920 or larger) of the best
   moments: viewfinder, darkroom, corkboard, projector, Win98, picker. (C

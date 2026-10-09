@@ -761,8 +761,9 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 37. Real-time 3D cameras (2026-10-09)
 
-- [~] **37.1 Live 3D bodies**: the pre-rendered swap loses every label and
+- [x] **37.1 Live 3D bodies**: the pre-rendered swap loses every label and
   blurs between frames. Decided: real-time 3D with Flutter Scene (Flutter
   GPU): the Blender models exported to glTF with baked lighting, the
   controls moving on the model, labels / LCD / viewfinder as live widgets
   on the face. Phones without Flutter GPU get the classic drawn bodies.
+  → 1.6.2 · 2026-10-09 · 1dd11d0

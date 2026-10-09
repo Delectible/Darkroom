@@ -14,7 +14,7 @@ import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
 import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
 
-/// The 3D cameras (1.7): each body is a real 3D model (made in Blender by
+/// The 3D cameras (1.6): each body is a real 3D model (made in Blender by
 /// tool/render/blender/export_glb.py: the path-traced materials baked into
 /// textures, every moving piece its own node) drawn live with Flutter Scene,
 /// lit by the renders' studio. Labels, the LCD, the gallery thumbnail and

@@ -19,7 +19,7 @@ Gabe in a console / on a phone, C = Claude in the repo).
   text doesn't break the Win98 dialogs. (C)
 - [~] 3D bodies (1.5, 2026-10-08: the whole body and every control
   rendered in Blender; 3D on by default, Settings switch for the classic
-  look); 1.6 renders each camera whole; 1.7 draws them as live 3D models
+  look); 1.6 draws each camera as a live 3D model
   (Flutter Scene). Shipped to internal testing; G checks it on the Pixel,
   S10+ and iPhone (phones without Flutter GPU get the classic bodies).
 - [~] Landscape for the corkboard, projector and Darkroom 98 (1.5). (G checks)

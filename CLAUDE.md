@@ -360,7 +360,7 @@ UI
   (`GlobalSettings.performance` is just `!controls3d` since 1.5.1): the
   classic drawn bodies, one frozen viewfinder still, the body swapped as
   one picture, no halation.
-- **Live 3D bodies (1.7, Flutter Scene)**: each camera is a real 3D model
+- **Live 3D bodies (1.6.2, Flutter Scene)**: each camera is a real 3D model
   drawn live (`flutter_scene` on Flutter GPU; enabled in the Android
   manifest meta-data `EnableFlutterGPU` and iOS Info.plist
   `FLTEnableFlutterGPU`). Made in Blender by

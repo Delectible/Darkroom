@@ -3,7 +3,7 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.7.0';
+  static const version = '1.6.2';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
@@ -14,8 +14,7 @@ class AppInfo {
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
-    ('1.7', ['Live 3D camera bodies: labels stay on as they turn']),
-    ('1.6', ['Whole-camera 3D renders that turn when you swap', 'Film photos at full camera resolution']),
+    ('1.6', ['Live 3D cameras: labels stay on as they turn', 'Film photos at full camera resolution']),
     (
       '1.5',
       [

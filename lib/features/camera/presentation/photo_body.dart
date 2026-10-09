@@ -27,7 +27,7 @@ import 'whole_body.dart';
 class BodyArt {
   BodyArt._(this.px, this._parts, {this.whole});
 
-  /// Since 1.7 the bodies are live 3D models ([WholeArt]): the controls'
+  /// Since 1.6 the bodies are live 3D models ([WholeArt]): the controls'
   /// parts draw nothing themselves; the moving ones move their piece of the
   /// model ([LivePart]), the rest are just part of it.
   final WholeArt? whole;

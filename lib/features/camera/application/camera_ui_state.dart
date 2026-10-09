@@ -166,12 +166,13 @@ final lensProvider = NotifierProvider<LensNotifier, CameraLensDirection>(LensNot
 
 /// Maps the pure-Dart capture class onto the plugin preset.
 ///
-/// The camera plugin uses one preset for both the live preview and the
-/// capture, so this is also the preview stream size. 1080p keeps the shader
-/// preview smooth (a 4K option was dropped in 1.3.29: heavier viewfinder,
-/// no visible gain once the film look is on).
+/// The camera plugin uses one preset for the live preview and the capture.
+/// Film stills take `max`: on Android, CameraX gives the still the full
+/// sensor and keeps the preview at preview size (it can't stream full-res
+/// alongside a full-res still); iOS streams its highest format. Digital
+/// bodies stay small (their look is a small sensor).
 ResolutionPreset presetFor(CaptureQuality q) => switch (q) {
-  CaptureQuality.high => ResolutionPreset.veryHigh,
+  CaptureQuality.high => ResolutionPreset.max,
   CaptureQuality.standard => ResolutionPreset.veryHigh,
   CaptureQuality.low => ResolutionPreset.medium,
 };

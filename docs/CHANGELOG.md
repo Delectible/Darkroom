@@ -751,3 +751,10 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **35.3 Slow textures**: the launch screen stays up until the camera
   art is decoded; the art stays in memory (`ArtCache`), so swapping bodies
   never reloads it. → 1.5.5 · 2026-10-09 · 7ff9f8d
+
+## 36. Full-resolution film (2026-10-09)
+
+- [~] **36.1 Film stills at the camera's highest resolution** for the
+  aspect (was a 1080p stream). Preset `max` for film stills; output caps
+  8192 (35mm) / 3072 (instant). Grain scales with the frame. Digital
+  bodies unchanged.

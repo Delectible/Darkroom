@@ -3,18 +3,18 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.0';
+  static const version = '1.6.1';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'All-new 3D cameras: each body is now rendered whole, as one real object, with proper depth, light and '
-      'shadow; when you swap, the whole camera turns. (Settings > 3D cameras off for the classic look.)';
+      'Film photos are taken at the full resolution of your phone\'s camera (they were 1080p before), with the '
+      'grain drawn to match, so prints hold up when you zoom in.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
-    ('1.6', ['Whole-camera 3D renders that turn when you swap']),
+    ('1.6', ['Whole-camera 3D renders that turn when you swap', 'Film photos at full camera resolution']),
     (
       '1.5',
       [

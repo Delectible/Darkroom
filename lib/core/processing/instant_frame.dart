@@ -62,7 +62,7 @@ class InstantFrame {
     return tp;
   }
 
-  static const maxPictureSide = 2048.0;
+  static const maxPictureSide = 3072.0;
 
   /// Renders the framed print (picture + border + note) to a JPEG at
   /// [outPath]. Runs the drawing on the UI isolate (needs the font engine)
@@ -87,8 +87,8 @@ class InstantFrame {
     descriptor.dispose();
     buffer.dispose();
     final side0 = math.min(picture.width, picture.height).toDouble();
-    // A real instant print is small: 2048 px across the picture is plenty,
-    // and keeps the (pure-Dart) JPEG encode to a moment.
+    // The camera's full square (a 12 MP sensor's short side), capped so the
+    // (pure-Dart) JPEG encode stays quick.
     final s = math.min(side0, maxPictureSide);
     final w = (s * (1 + 2 * side)).round(), h = (s * (1 + top + bottom)).round();
 

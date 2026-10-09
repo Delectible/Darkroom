@@ -149,6 +149,10 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   they're **Vivid 100, Portrait 400, Classic 400, Instant 600, Super 8**:
   never show real brand names (Kodak, Ilford, Polaroid, Windows,
   Minesweeper...) in the app or the store listing (1.4.3 trademark pass).
+- Film stills capture at the sensor's full resolution (`CaptureQuality.high`
+  = `ResolutionPreset.max`; CameraX keeps the preview preview-sized),
+  output capped at 8192 (35mm) / 3072 (instant); ~4x the processing of the
+  old 1080p stream (runs in the isolate while the print develops).
 - Grain (`grain_field.dart`) is a Boolean model: thousands of tiny
   overlapping grains + sparse clumps, crisp (not blurred noise), dye layers
   mostly shared. Drawn at >= 1 px; finer grain is drawn fainter

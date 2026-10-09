@@ -715,8 +715,8 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 32. Film print viewer gestures (2026-10-09)
 
-- [~] **32.1 Pinch vs swipe**: zooming tends to start a swipe to the next
+- [x] **32.1 Pinch vs swipe** → 1.5.3 · 2026-10-09 · 788320c: zooming tends to start a swipe to the next
   print; make paging less eager, zoom win.
-- [~] **32.2 Double tap** zooms in, again zooms back out; double tap and
+- [x] **32.2 Double tap** → 1.5.3 · 2026-10-09 · 788320c zooms in, again zooms back out; double tap and
   slide zooms gradually.
-- [~] **32.3 Swipe up or down** puts the print back (closes the viewer).
+- [x] **32.3 Swipe up or down** → 1.5.3 · 2026-10-09 · 788320c puts the print back (closes the viewer).

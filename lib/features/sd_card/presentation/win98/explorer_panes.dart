@@ -261,7 +261,7 @@ class _Label extends StatelessWidget {
         maxLines: maxLines,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
-        style: W98.text.copyWith(color: selected ? Colors.white : Colors.black),
+        style: W98.text.copyWith(color: selected ? W98.selectInk : W98.windowInk),
       ),
     );
   }
@@ -286,7 +286,7 @@ class _LargeIcon extends StatelessWidget {
           height: 72,
           child: Win98Bevel(
             style: BevelStyle.sunken,
-            color: Colors.white,
+            color: W98.window,
             padding: const EdgeInsets.all(3),
             child: Stack(
               fit: StackFit.expand,
@@ -357,7 +357,7 @@ class ExplorerFolderTree extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: dim
                         ? W98.disabledText
-                        : W98.text.copyWith(color: selected ? Colors.white : Colors.black),
+                        : W98.text.copyWith(color: selected ? W98.selectInk : W98.windowInk),
                   ),
                 ),
               ),
@@ -369,7 +369,7 @@ class ExplorerFolderTree extends StatelessWidget {
 
     return Win98Bevel(
       style: BevelStyle.sunken,
-      color: Colors.white,
+      color: W98.window,
       padding: const EdgeInsets.all(2),
       child: ListView(
         children: [
@@ -509,7 +509,7 @@ class ExplorerAddressBar extends StatelessWidget {
           Expanded(
             child: Win98Bevel(
               style: BevelStyle.sunken,
-              color: Colors.white,
+              color: W98.window,
               padding: const EdgeInsets.fromLTRB(4, 3, 2, 3),
               child: Row(
                 children: [

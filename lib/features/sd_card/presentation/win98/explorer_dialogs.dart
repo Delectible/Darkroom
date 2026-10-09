@@ -10,7 +10,7 @@ import '../../../../core/audio/sfx.dart';
 import '../../../../core/app_info.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../camera/application/camera_log.dart';
-import '../../../camera/application/camera_ui_state.dart' show userNameProvider;
+import '../../../camera/application/camera_ui_state.dart' show userNameProvider, win98ThemeProvider;
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../viewer/presentation/media_actions.dart';
@@ -181,13 +181,13 @@ Future<void> showDriveProperties(
               Text(label.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9 ]'), ''), style: W98.text),
             ],
           ),
-          const Divider(color: W98.shadow, height: 16),
+          Divider(color: W98.shadow, height: 16),
           Text('Type:          ${capacity == 0 ? 'Local Disk' : 'Removable Disk'}'),
           const Text('File system:  FAT'),
-          const Divider(color: W98.shadow, height: 16),
+          Divider(color: W98.shadow, height: 16),
           _legend(const Color(0xFF0000FF), 'Used space:', used),
           _legend(const Color(0xFFFF00FF), 'Free space:', math.max(0, capacity - used)),
-          const Divider(color: W98.shadow, height: 16),
+          Divider(color: W98.shadow, height: 16),
           Text('Capacity:        ${capacity == 0 ? formatBytes(used) : formatBytes(capacity)}'),
           const SizedBox(height: 10),
           SizedBox(height: 90, child: CustomPaint(painter: _PiePainter(capacity == 0 ? 1 : used / capacity))),
@@ -299,14 +299,16 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Win98TabStrip(
-            tabs: const [Win98Tab('Cameras'), Win98Tab('General')],
+            tabs: const [Win98Tab('Cameras'), Win98Tab('General'), Win98Tab('Themes')],
             selected: _tab,
             onSelect: (i) => setState(() => _tab = i),
           ),
           Win98Bevel(
             style: BevelStyle.window,
             padding: const EdgeInsets.all(8),
-            child: _tab == 0
+            child: _tab == 2
+                ? _themes()
+                : _tab == 0
                 ? Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -412,6 +414,75 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
       ),
     );
   }
+
+  /// The colour schemes, each with a little swatch of its desktop, window
+  /// and title bar; picking one recolours everything straight away.
+  Widget _themes() {
+    final current = W98.scheme.name;
+    return Win98GroupBox(
+      label: 'Scheme',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final scheme in Win98Scheme.all)
+            Row(
+              children: [
+                Expanded(
+                  child: Win98Radio(
+                    selected: scheme.name == current,
+                    label: scheme.name,
+                    onTap: () {
+                      unawaited(ref.read(win98ThemeProvider.notifier).set(scheme.name));
+                      W98.apply(scheme);
+                    },
+                  ),
+                ),
+                _Swatch(scheme),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A scheme in miniature: its desktop with a window on it.
+class _Swatch extends StatelessWidget {
+  const _Swatch(this.scheme);
+
+  final Win98Scheme scheme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 20,
+      margin: const EdgeInsets.only(right: 4),
+      padding: const EdgeInsets.fromLTRB(6, 3, 6, 3),
+      decoration: BoxDecoration(
+        color: scheme.desktop,
+        border: Border.all(color: W98.shadow),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: scheme.face,
+          border: Border.all(color: scheme.dark, width: 0.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              height: 4,
+              decoration: BoxDecoration(gradient: LinearGradient(colors: [scheme.title, scheme.titleEnd])),
+            ),
+            Expanded(
+              child: Container(margin: const EdgeInsets.all(1.5), color: scheme.window),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -449,14 +520,14 @@ Future<void> showAboutDarkroom(BuildContext context) => showWin98Window<void>(
         ),
         const SizedBox(height: 10),
         const Text('This product is licensed to:\n    You'),
-        const Divider(color: W98.shadow, height: 18),
+        Divider(color: W98.shadow, height: 18),
         Text('Revision history', style: W98.text.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
         ConstrainedBox(
           constraints: const BoxConstraints(maxHeight: 170),
           child: Win98Bevel(
             style: BevelStyle.sunken,
-            color: Colors.white,
+            color: W98.window,
             padding: const EdgeInsets.all(6),
             child: SingleChildScrollView(
               child: Column(
@@ -475,7 +546,7 @@ Future<void> showAboutDarkroom(BuildContext context) => showWin98Window<void>(
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('-  ', style: W98.text),
+                                  Text('-  ', style: W98.text),
                                   Expanded(child: Text(n, style: W98.text)),
                                 ],
                               ),
@@ -524,7 +595,7 @@ Future<void> showCameraLog(BuildContext context) {
             constraints: const BoxConstraints(maxHeight: 300),
             child: Win98Bevel(
               style: BevelStyle.sunken,
-              color: Colors.white,
+              color: W98.window,
               padding: const EdgeInsets.all(6),
               child: SingleChildScrollView(
                 reverse: true,
@@ -574,7 +645,7 @@ Future<void> showCrashReports(BuildContext context) {
                 constraints: const BoxConstraints(maxHeight: 300),
                 child: Win98Bevel(
                   style: BevelStyle.sunken,
-                  color: Colors.white,
+                  color: W98.window,
                   padding: const EdgeInsets.all(6),
                   child: SingleChildScrollView(child: Text(text, style: W98.text.copyWith(fontSize: 11))),
                 ),
@@ -773,7 +844,7 @@ class _DefragState extends State<_Defrag> {
             aspectRatio: _cols / _rows,
             child: Win98Bevel(
               style: BevelStyle.sunken,
-              color: Colors.white,
+              color: W98.window,
               padding: const EdgeInsets.all(2),
               child: GridView.builder(
                 physics: const NeverScrollableScrollPhysics(),
@@ -846,7 +917,7 @@ Future<StartAction?> showStartMenu(BuildContext context) {
                     children: [
                       Container(
                         width: 24,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           gradient: LinearGradient(
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
@@ -892,7 +963,7 @@ Future<StartAction?> showStartMenu(BuildContext context) {
                             _startItem(context, PixelIcon.views, 'Settings', StartAction.options),
                             _startItem(context, PixelIcon.question, 'Help', StartAction.help),
                             _startItem(context, PixelIcon.upFolder, 'Run...', StartAction.run),
-                            const Divider(height: 6, color: W98.shadow),
+                            Divider(height: 6, color: W98.shadow),
                             _startItem(context, PixelIcon.rabbit, 'User Profile...', StartAction.profile),
                             _startItem(context, PixelIcon.computer, 'Shut Down...', StartAction.shutDown),
                           ],
@@ -960,7 +1031,7 @@ Future<void> showUserProfile(BuildContext context) async {
               Expanded(
                 child: Win98Bevel(
                   style: BevelStyle.sunken,
-                  color: Colors.white,
+                  color: W98.window,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: TextField(
                     controller: ctrl,
@@ -968,7 +1039,7 @@ Future<void> showUserProfile(BuildContext context) async {
                     maxLength: 24,
                     textCapitalization: TextCapitalization.words,
                     style: W98.text,
-                    cursorColor: Colors.black,
+                    cursorColor: W98.windowInk,
                     decoration: const InputDecoration(
                       isDense: true,
                       border: InputBorder.none,
@@ -1036,13 +1107,13 @@ Future<String?> showRunDialog(BuildContext context) {
               Expanded(
                 child: Win98Bevel(
                   style: BevelStyle.sunken,
-                  color: Colors.white,
+                  color: W98.window,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: TextField(
                     controller: ctrl,
                     autofocus: true,
                     style: W98.text,
-                    cursorColor: Colors.black,
+                    cursorColor: W98.windowInk,
                     decoration: const InputDecoration(isDense: true, border: InputBorder.none),
                     onSubmitted: (v) => Navigator.of(context).pop(v),
                   ),

@@ -835,3 +835,11 @@ Answers: turntable renders, no 2D/3D switch.
   icons and labels kept following the phone; with the phone's auto-rotate
   off they now stay put (photos still save the right way up).
   → 1.6.4 · 2026-10-09 · 8c092da
+
+## 40. Win98 themes (2026-10-09)
+
+- [x] **40.1 Colour themes**: View > Options > Themes picks a scheme
+  (Standard, Night, Rainy Day, Desert, Spruce, Lilac, Pumpkin); it
+  applies at once and is remembered.
+- [x] **40.2 Desktop back**: the teal desktop shows round the window again
+  (since 1.5.5 the window filled the monitor and the bezel read as white).

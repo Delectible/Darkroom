@@ -7,38 +7,255 @@ import 'package:flutter/material.dart';
 import '../../../../core/audio/sfx.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
 
-/// Classic 9x-era system palette.
+/// A 9x appearance scheme: the colours of 3D objects, windows, selection,
+/// title bars and the desktop (View > Options > Themes).
+class Win98Scheme {
+  const Win98Scheme({
+    required this.name,
+    required this.face,
+    required this.light,
+    required this.hilight,
+    required this.shadow,
+    required this.dark,
+    required this.ink,
+    required this.window,
+    required this.windowInk,
+    required this.select,
+    required this.selectInk,
+    required this.title,
+    required this.titleEnd,
+    required this.titleInk,
+    required this.inactiveTitle,
+    required this.inactiveTitleEnd,
+    required this.grayInk,
+    required this.desktop,
+  });
+
+  final String name;
+
+  /// 3D objects (buttons, bars, dialogs) and their bevel rings.
+  final Color face, light, hilight, shadow, dark;
+
+  /// Text on 3D objects.
+  final Color ink;
+
+  /// Inside windows: lists, fields; and their text.
+  final Color window, windowInk;
+
+  /// Selected items and menu highlights.
+  final Color select, selectInk;
+  final Color title, titleEnd, titleInk, inactiveTitle, inactiveTitleEnd;
+
+  /// Disabled text.
+  final Color grayInk;
+  final Color desktop;
+
+  static const standard = Win98Scheme(
+    name: 'Standard',
+    face: Color(0xFFC0C0C0),
+    light: Color(0xFFDFDFDF),
+    hilight: Color(0xFFFFFFFF),
+    shadow: Color(0xFF808080),
+    dark: Color(0xFF0A0A0A),
+    ink: Color(0xFF000000),
+    window: Color(0xFFFFFFFF),
+    windowInk: Color(0xFF000000),
+    select: Color(0xFF000080),
+    selectInk: Color(0xFFFFFFFF),
+    title: Color(0xFF000080),
+    titleEnd: Color(0xFF1084D0),
+    titleInk: Color(0xFFFFFFFF),
+    inactiveTitle: Color(0xFF808080),
+    inactiveTitleEnd: Color(0xFFB5B5B5),
+    grayInk: Color(0xFF808080),
+    desktop: Color(0xFF008080),
+  );
+
+  static const all = [
+    standard,
+    Win98Scheme(
+      name: 'Night',
+      face: Color(0xFF2E2F36),
+      light: Color(0xFF3B3C44),
+      hilight: Color(0xFF5A5C66),
+      shadow: Color(0xFF1A1B20),
+      dark: Color(0xFF050506),
+      ink: Color(0xFFE4E4E8),
+      window: Color(0xFF1C1D22),
+      windowInk: Color(0xFFE4E4E8),
+      select: Color(0xFF3F5FA8),
+      selectInk: Color(0xFFFFFFFF),
+      title: Color(0xFF1B2440),
+      titleEnd: Color(0xFF3F5FA8),
+      titleInk: Color(0xFFEDEFF6),
+      inactiveTitle: Color(0xFF2A2B31),
+      inactiveTitleEnd: Color(0xFF43444C),
+      grayInk: Color(0xFF7C7E88),
+      desktop: Color(0xFF0D1626),
+    ),
+    Win98Scheme(
+      name: 'Rainy Day',
+      face: Color(0xFF8BA0B5),
+      light: Color(0xFFA9BACB),
+      hilight: Color(0xFFD7E1EB),
+      shadow: Color(0xFF55687C),
+      dark: Color(0xFF1A2430),
+      ink: Color(0xFF000000),
+      window: Color(0xFFFFFFFF),
+      windowInk: Color(0xFF000000),
+      select: Color(0xFF4F6D8C),
+      selectInk: Color(0xFFFFFFFF),
+      title: Color(0xFF4F6D8C),
+      titleEnd: Color(0xFF9DB6CE),
+      titleInk: Color(0xFFFFFFFF),
+      inactiveTitle: Color(0xFF7E8A96),
+      inactiveTitleEnd: Color(0xFFB7C0C9),
+      grayInk: Color(0xFF55687C),
+      desktop: Color(0xFF3A5068),
+    ),
+    Win98Scheme(
+      name: 'Desert',
+      face: Color(0xFFD5CCBB),
+      light: Color(0xFFE6DFD2),
+      hilight: Color(0xFFFAF6EE),
+      shadow: Color(0xFFA29475),
+      dark: Color(0xFF3B3324),
+      ink: Color(0xFF000000),
+      window: Color(0xFFFFFBF2),
+      windowInk: Color(0xFF000000),
+      select: Color(0xFF008080),
+      selectInk: Color(0xFFFFFFFF),
+      title: Color(0xFF008080),
+      titleEnd: Color(0xFF4DB3B3),
+      titleInk: Color(0xFFFFFFFF),
+      inactiveTitle: Color(0xFFA29475),
+      inactiveTitleEnd: Color(0xFFCBBFA6),
+      grayInk: Color(0xFFA29475),
+      desktop: Color(0xFFA28D68),
+    ),
+    Win98Scheme(
+      name: 'Spruce',
+      face: Color(0xFFA2C8A9),
+      light: Color(0xFFBDD9C2),
+      hilight: Color(0xFFE3F0E5),
+      shadow: Color(0xFF5E8566),
+      dark: Color(0xFF15281A),
+      ink: Color(0xFF000000),
+      window: Color(0xFFFFFFFF),
+      windowInk: Color(0xFF000000),
+      select: Color(0xFF2F5E3A),
+      selectInk: Color(0xFFFFFFFF),
+      title: Color(0xFF2F5E3A),
+      titleEnd: Color(0xFF6FA57A),
+      titleInk: Color(0xFFFFFFFF),
+      inactiveTitle: Color(0xFF6E8873),
+      inactiveTitleEnd: Color(0xFFA9BEAD),
+      grayInk: Color(0xFF5E8566),
+      desktop: Color(0xFF24452C),
+    ),
+    Win98Scheme(
+      name: 'Lilac',
+      face: Color(0xFFC3B4D9),
+      light: Color(0xFFD7CCE7),
+      hilight: Color(0xFFF1ECF8),
+      shadow: Color(0xFF7D6A9C),
+      dark: Color(0xFF241A33),
+      ink: Color(0xFF000000),
+      window: Color(0xFFFFFFFF),
+      windowInk: Color(0xFF000000),
+      select: Color(0xFF5B4689),
+      selectInk: Color(0xFFFFFFFF),
+      title: Color(0xFF5B4689),
+      titleEnd: Color(0xFFA48BD0),
+      titleInk: Color(0xFFFFFFFF),
+      inactiveTitle: Color(0xFF8A8098),
+      inactiveTitleEnd: Color(0xFFC0B8CC),
+      grayInk: Color(0xFF7D6A9C),
+      desktop: Color(0xFF574A78),
+    ),
+    Win98Scheme(
+      name: 'Pumpkin',
+      face: Color(0xFFDDB87A),
+      light: Color(0xFFEACE9E),
+      hilight: Color(0xFFFBEFD6),
+      shadow: Color(0xFFA2793A),
+      dark: Color(0xFF3A260A),
+      ink: Color(0xFF000000),
+      window: Color(0xFFFFFDF6),
+      windowInk: Color(0xFF000000),
+      select: Color(0xFF7A2E0E),
+      selectInk: Color(0xFFFFFFFF),
+      title: Color(0xFF7A2E0E),
+      titleEnd: Color(0xFFD0702A),
+      titleInk: Color(0xFFFFFFFF),
+      inactiveTitle: Color(0xFF9C8460),
+      inactiveTitleEnd: Color(0xFFC9B48F),
+      grayInk: Color(0xFFA2793A),
+      desktop: Color(0xFF3B2A1A),
+    ),
+  ];
+
+  static Win98Scheme byName(String? name) => all.firstWhere((s) => s.name == name, orElse: () => standard);
+}
+
+/// The system palette, from the current [Win98Scheme] ([W98.scheme]).
 class W98 {
   const W98._();
 
-  static const face = Color(0xFFC0C0C0);
-  static const light = Color(0xFFDFDFDF);
-  static const white = Color(0xFFFFFFFF);
-  static const shadow = Color(0xFF808080);
-  static const dark = Color(0xFF0A0A0A);
-  static const navy = Color(0xFF000080);
-  static const titleEnd = Color(0xFF1084D0);
-  static const desktop = Color(0xFF008080);
-  static const inactiveTitle = Color(0xFF808080);
-  static const inactiveTitleEnd = Color(0xFFB5B5B5);
+  /// The scheme in use; set through [W98.apply] so open screens repaint.
+  static Win98Scheme scheme = Win98Scheme.standard;
 
-  static const text = TextStyle(
+  /// Switches scheme and restyles everything on screen: every element
+  /// rebuilds and repaints once (const widgets and painters included, and
+  /// the colours screens hand down from above their [Win98Scale]).
+  static void apply(Win98Scheme s) {
+    if (identical(s, scheme)) return;
+    scheme = s;
+    void visit(Element e) {
+      e.markNeedsBuild();
+      if (e is RenderObjectElement) e.renderObject.markNeedsPaint();
+      e.visitChildren(visit);
+    }
+
+    WidgetsBinding.instance.rootElement?.visitChildren(visit);
+  }
+
+  static Color get face => scheme.face;
+  static Color get light => scheme.light;
+
+  /// The bevel's bright ring (white in the standard scheme).
+  static Color get white => scheme.hilight;
+  static Color get shadow => scheme.shadow;
+  static Color get dark => scheme.dark;
+  static Color get navy => scheme.select;
+  static Color get titleEnd => scheme.titleEnd;
+  static Color get desktop => scheme.desktop;
+  static Color get inactiveTitle => scheme.inactiveTitle;
+  static Color get inactiveTitleEnd => scheme.inactiveTitleEnd;
+
+  /// Text on 3D objects, inside windows, selected.
+  static Color get ink => scheme.ink;
+  static Color get window => scheme.window;
+  static Color get windowInk => scheme.windowInk;
+  static Color get selectInk => scheme.selectInk;
+
+  static TextStyle get text => TextStyle(
     fontFamily: 'W98',
     fontSize: 12,
-    color: Colors.black,
+    color: scheme.ink,
     fontWeight: FontWeight.w400,
     height: 1.2,
     letterSpacing: 0,
     decoration: TextDecoration.none,
   );
 
-  static const disabledText = TextStyle(
+  static TextStyle get disabledText => TextStyle(
     fontFamily: 'W98',
     fontSize: 12,
-    color: shadow,
+    color: scheme.grayInk,
     height: 1.2,
     decoration: TextDecoration.none,
-    shadows: [Shadow(color: white, offset: Offset(1, 1))],
+    shadows: [Shadow(color: scheme.hilight, offset: const Offset(1, 1))],
   );
 }
 
@@ -168,13 +385,15 @@ class Win98Bevel extends StatelessWidget {
     super.key,
     required this.child,
     this.style = BevelStyle.raised,
-    this.color = W98.face,
+    this.color,
     this.padding = const EdgeInsets.all(2),
   });
 
   final Widget child;
   final BevelStyle style;
-  final Color color;
+
+  /// Fill; the scheme's face colour by default.
+  final Color? color;
   final EdgeInsets padding;
 
   @override
@@ -182,7 +401,7 @@ class Win98Bevel extends StatelessWidget {
     return CustomPaint(
       foregroundPainter: _BevelPainter(style),
       child: ColoredBox(
-        color: color,
+        color: color ?? W98.face,
         child: Padding(padding: padding, child: child),
       ),
     );
@@ -302,7 +521,7 @@ class Win98TitleBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 3),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: active ? const [W98.navy, W98.titleEnd] : const [W98.inactiveTitle, W98.inactiveTitleEnd],
+          colors: active ? [W98.scheme.title, W98.titleEnd] : [W98.inactiveTitle, W98.inactiveTitleEnd],
         ),
       ),
       child: Row(
@@ -313,7 +532,7 @@ class Win98TitleBar extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: W98.text.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+              style: W98.text.copyWith(color: W98.scheme.titleInk, fontWeight: FontWeight.w700),
             ),
           ),
           const Win98CaptionButton(glyph: '_'),
@@ -474,8 +693,8 @@ class _MenuPanelState extends State<_MenuPanel> {
               children: [
                 for (var i = 0; i < widget.items.length; i++)
                   if (widget.items[i].separator)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 3, horizontal: 1),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 1),
                       child: Column(
                         children: [
                           Divider(height: 1, thickness: 1, color: W98.shadow),
@@ -501,14 +720,14 @@ class _MenuPanelState extends State<_MenuPanel> {
                                   ? Center(
                                       child: Win98GlyphView(
                                         Win98Glyph.check,
-                                        color: _hot == i ? Colors.white : Colors.black,
+                                        color: _hot == i ? W98.selectInk : W98.ink,
                                       ),
                                     )
                                   : widget.items[i].checked
                                   ? Text(
                                       '•',
                                       style: W98.text.copyWith(
-                                        color: _hot == i ? Colors.white : Colors.black,
+                                        color: _hot == i ? W98.selectInk : W98.ink,
                                         fontWeight: FontWeight.w900,
                                       ),
                                     )
@@ -518,7 +737,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                               widget.items[i].label,
                               style: widget.items[i].onSelected == null
                                   ? W98.disabledText
-                                  : W98.text.copyWith(color: _hot == i ? Colors.white : Colors.black),
+                                  : W98.text.copyWith(color: _hot == i ? W98.selectInk : W98.ink),
                             ),
                           ],
                         ),
@@ -910,7 +1129,7 @@ class _ArrowPainter extends CustomPainter {
             ..moveTo(0, 0)
             ..lineTo(size.width, 0)
             ..lineTo(size.width / 2, size.height));
-    canvas.drawPath(path..close(), Paint()..color = Colors.black);
+    canvas.drawPath(path..close(), Paint()..color = W98.ink);
   }
 
   @override
@@ -923,9 +1142,11 @@ class _DitherPainter extends CustomPainter {
   const _DitherPainter();
 
   static ui.Image? _tile;
+  static Win98Scheme? _tileScheme;
 
   static ui.Image _pattern() {
-    if (_tile != null) return _tile!;
+    if (_tile != null && identical(_tileScheme, W98.scheme)) return _tile!;
+    _tileScheme = W98.scheme;
     final r = ui.PictureRecorder();
     final c = Canvas(r);
     c.drawRect(const Rect.fromLTWH(0, 0, 2, 2), Paint()..color = W98.white);
@@ -1060,7 +1281,7 @@ class Win98Checkbox extends StatelessWidget {
               height: 13,
               child: Win98Bevel(
                 style: BevelStyle.sunken,
-                color: enabled ? Colors.white : W98.face,
+                color: enabled ? W98.window : W98.face,
                 padding: EdgeInsets.zero,
                 child: value
                     ? const Center(child: Win98GlyphView(Win98Glyph.check, dot: 1.2))
@@ -1113,7 +1334,7 @@ class _RadioPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.width / 2;
-    canvas.drawCircle(c, r, Paint()..color = Colors.white);
+    canvas.drawCircle(c, r, Paint()..color = W98.window);
     final arc = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
@@ -1123,7 +1344,7 @@ class _RadioPainter extends CustomPainter {
     final inner = Rect.fromCircle(center: c, radius: r - 1.5);
     canvas.drawArc(inner, math.pi * 0.75, math.pi, false, arc..color = W98.dark);
     canvas.drawArc(inner, -math.pi * 0.25, math.pi, false, arc..color = W98.light);
-    if (selected) canvas.drawCircle(c, 2, Paint()..color = Colors.black);
+    if (selected) canvas.drawCircle(c, 2, Paint()..color = W98.windowInk);
   }
 
   @override
@@ -1149,7 +1370,7 @@ class Win98GroupBox extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
             decoration: BoxDecoration(
               border: Border.all(color: W98.shadow),
-              boxShadow: const [BoxShadow(color: W98.white, offset: Offset(1, 1))],
+              boxShadow: [BoxShadow(color: W98.white, offset: const Offset(1, 1))],
               color: W98.face,
             ),
             child: child,
@@ -1287,13 +1508,17 @@ class Win98Slider extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 // Groove.
-                const Positioned(
+                Positioned(
                   left: thumbW / 2,
                   right: thumbW / 2,
                   top: 8,
                   child: SizedBox(
                     height: 4,
-                    child: Win98Bevel(style: BevelStyle.sunken, color: W98.light, child: SizedBox.expand()),
+                    child: Win98Bevel(
+                      style: BevelStyle.sunken,
+                      color: W98.light,
+                      child: const SizedBox.expand(),
+                    ),
                   ),
                 ),
                 // Ticks.
@@ -1385,18 +1610,20 @@ enum Win98Glyph {
 
 /// Draws a [Win98Glyph] as crisp pixels, [dot] logical px per bitmap pixel.
 class Win98GlyphView extends StatelessWidget {
-  const Win98GlyphView(this.glyph, {super.key, this.dot = 1.4, this.color = W98.dark});
+  const Win98GlyphView(this.glyph, {super.key, this.dot = 1.4, this.color});
 
   final Win98Glyph glyph;
   final double dot;
-  final Color color;
+
+  /// The scheme's dark ink by default.
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final w = glyph.rows.fold<int>(0, (m, r) => math.max(m, r.length));
     return CustomPaint(
       size: Size(w * dot, glyph.rows.length * dot),
-      painter: _GlyphPainter(glyph, dot, color),
+      painter: _GlyphPainter(glyph, dot, color ?? W98.dark),
     );
   }
 }

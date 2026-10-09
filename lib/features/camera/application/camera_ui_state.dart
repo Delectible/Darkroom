@@ -30,6 +30,9 @@ class PrefKeys {
   /// The digital body's finish (the live 3D model's skins).
   static const bodyFinish = 'ui.body.finish';
 
+  /// The Win98 colour scheme's name (View > Options > Themes).
+  static const win98Theme = 'ui.win98.theme';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -44,6 +47,7 @@ class PrefKeys {
     onboarded,
     userName,
     bodyFinish,
+    win98Theme,
   };
 }
 
@@ -82,6 +86,19 @@ class BodyFinishNotifier extends Notifier<String?> {
 }
 
 final bodyFinishProvider = NotifierProvider<BodyFinishNotifier, String?>(BodyFinishNotifier.new);
+
+/// The Win98 colour scheme's name (null: Standard).
+class Win98ThemeNotifier extends Notifier<String?> {
+  @override
+  String? build() => ref.read(sharedPrefsProvider).getString(PrefKeys.win98Theme);
+
+  Future<void> set(String name) async {
+    state = name;
+    await ref.read(sharedPrefsProvider).setString(PrefKeys.win98Theme, name);
+  }
+}
+
+final win98ThemeProvider = NotifierProvider<Win98ThemeNotifier, String?>(Win98ThemeNotifier.new);
 
 class AppModeNotifier extends Notifier<AppMode> {
   @override

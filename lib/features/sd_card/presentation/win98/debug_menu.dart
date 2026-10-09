@@ -287,7 +287,7 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
                             Expanded(
                               child: Text(
                                 t.name,
-                                style: W98.text.copyWith(color: picked ? W98.white : Colors.black),
+                                style: W98.text.copyWith(color: picked ? W98.selectInk : W98.windowInk),
                               ),
                             ),
                             if (state != null)

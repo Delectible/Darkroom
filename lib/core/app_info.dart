@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.4';
+  static const version = '1.6.5';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Turning the phone on the corkboard or Win98 now fades smoothly, the print viewer puts its buttons '
-      'on the side in landscape, and with auto-rotate off nothing on screen turns.';
+      'Windows themes: pick a colour scheme in View > Options > Themes, including a Night one. '
+      'The teal desktop is back round the window.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -22,6 +22,7 @@ class AppInfo {
         'Swinging straps, shake to clear the board',
         'Photoreal Super 8 reels',
         'Smooth fade when the phone turns',
+        'Win98 colour themes, Night mode',
       ],
     ),
     (

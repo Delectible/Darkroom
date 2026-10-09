@@ -11,6 +11,7 @@ import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
+import '../../../camera/application/camera_ui_state.dart' show win98ThemeProvider;
 import '../../../onboarding/onboarding_screen.dart';
 import 'debug_menu.dart';
 import 'explorer_dialogs.dart';
@@ -95,6 +96,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   @override
   void initState() {
     super.initState();
+    // The saved colour scheme (View > Options > Themes), before anything draws.
+    W98.scheme = Win98Scheme.byName(ref.read(win98ThemeProvider));
     for (final s in Sfx.windows98) {
       unawaited(s.preload());
     }
@@ -505,8 +508,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
               children: [
                 Expanded(
                   child: Padding(
-                    // maximized: no desktop round it
-                    padding: EdgeInsets.zero,
+                    // a little of the desktop round the window
+                    padding: land
+                        ? const EdgeInsets.fromLTRB(5, 4, 5, 3)
+                        : const EdgeInsets.fromLTRB(6, 6, 6, 4),
                     child: Win98Window(
                       title: title,
                       icon: PixelIconView(pathIcon),
@@ -701,7 +706,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                   Expanded(
                                     child: Win98Bevel(
                                       style: BevelStyle.sunken,
-                                      color: Colors.white,
+                                      color: W98.window,
                                       padding: const EdgeInsets.all(2),
                                       child: AnimatedSwitcher(
                                         duration: const Duration(milliseconds: 120),
@@ -894,7 +899,7 @@ class _Toolbar extends ConsumerWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: W98.white),
           bottom: BorderSide(color: W98.shadow),

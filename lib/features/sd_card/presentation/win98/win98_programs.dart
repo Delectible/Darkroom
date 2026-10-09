@@ -183,7 +183,7 @@ Future<void> showNotepad(BuildContext context, {required String file, required S
               constraints: const BoxConstraints(maxHeight: 260),
               child: Win98Bevel(
                 style: BevelStyle.sunken,
-                color: Colors.white,
+                color: W98.window,
                 padding: const EdgeInsets.all(6),
                 child: SingleChildScrollView(child: Text(text, style: W98.text.copyWith(fontSize: 12))),
               ),

@@ -129,8 +129,8 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   `darkroom/rotation`, Android setting + changes); iOS (null) asks for
   portrait + landscape and lets the system turn within its lock. iOS
   Info.plist allows landscape. Turned, the system bars hide
-  (immersiveSticky; edgeToEdge back in portrait). Win98: maximized
-  window; the monitor bezel (`ExplorerMonitor.bezelOf`) takes the system
+  (immersiveSticky; edgeToEdge back in portrait). Win98: the window
+  sits on a strip of desktop; the monitor bezel (`ExplorerMonitor.bezelOf`) takes the system
   insets (status bar, gesture strip; landscape 24 dp sides for the cutout
   and the rounded corners, 4 dp top/bottom; `Win98Safe` the same for
   screens without the monitor), `Win98Scale.factorFor` keeps 420 dp of height (short phones
@@ -285,6 +285,14 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   battery, the clock, and the zoom bar exactly as it moved
   (`CamcorderOsd` in `video_plan.dart`; the take's zoom track rides on the
   VideoJob).
+- Win98 colours come from the current `Win98Scheme` (`W98.scheme`; `W98.*`
+  are getters, so they can't go in `const` expressions). View > Options >
+  Themes picks one (`win98ThemeProvider`, `PrefKeys.win98Theme`; the
+  explorer applies the saved one in initState); `W98.apply` restyles the
+  whole tree at once. Use `W98.window` / `W98.windowInk` for list and field
+  backgrounds/text, `W98.navy` / `W98.selectInk` for selection, never
+  `Colors.white` / `Colors.black`. `win98_themes_test` renders every scheme.
+  The window sits on a strip of desktop (6 dp portrait, 4-5 landscape).
 - Win98 screens and dialogs render through `Win98Scale` (1.3x, uniform), in
   the pixel font family `W98` (DotGothic16; it lacks □ ▲ ▶ ✓, so use
   `Win98Glyph` for those). The

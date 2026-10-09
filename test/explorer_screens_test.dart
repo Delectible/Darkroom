@@ -8,7 +8,7 @@ import 'package:darkroom/features/sd_card/application/sd_card_controller.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_screen.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart'
-    show UserNameNotifier, userNameProvider;
+    show UserNameNotifier, Win98ThemeNotifier, userNameProvider, win98ThemeProvider;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -95,6 +95,7 @@ void main() {
             sdCardItemsProvider.overrideWith((ref) => Stream.value(items)),
             explorerPrefsProvider.overrideWith(_Prefs.new),
             userNameProvider.overrideWith(_Name.new),
+            win98ThemeProvider.overrideWith(_Theme.new),
             initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
             initialCameraSettingsProvider.overrideWithValue(const {}),
           ],
@@ -157,6 +158,11 @@ void main() {
       }
     });
   }
+}
+
+class _Theme extends Win98ThemeNotifier {
+  @override
+  String? build() => null;
 }
 
 class _Name extends UserNameNotifier {

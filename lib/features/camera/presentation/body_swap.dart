@@ -816,108 +816,89 @@ class BodyStandIn extends StatelessWidget {
 }
 
 extension on SwapBody {
-  /// Whole-body renders: at rest the live face (drawn from the rest render
-  /// and its layers); moving, the rendered turn for the body's tilt, slid,
-  /// tipped and scaled in 2D, with the viewfinder's still laid onto its
-  /// screen in the renders' perspective and the strap from the rendered
-  /// lug. The live face stays mounted (clipped away), so its camera and
-  /// state carry on.
+  /// The live 3D body: the model drawn posed (at rest, or slid, tipped and
+  /// turned by the swap), and over it the face's widgets (labels, LCD,
+  /// viewfinder) turned with it in the same perspective, the strap hanging
+  /// from the model's lug. The face keeps its place in the tree either way,
+  /// so the camera and its state carry on.
   Widget _renderedBody(BuildContext context, RenderedBody r, Size size, bool moving) {
-    if (!moving) return face;
+    final live = r.body.live;
+    if (live == null) return face;
     final fit = DesignFit(r.art, size);
-    final deg = pose.tilt * 180 / math.pi;
     final pivot = fit.pivot;
+    // The pose in screen space (dp, y down, z into the screen).
+    final m = moving
+        ? (Matrix4.translationValues(pivot.dx + pose.dx, pivot.dy + pose.dy, 0)
+            ..rotateZ(pose.roll)
+            ..scaleByDouble(pose.scale, pose.scale, pose.scale, 1)
+            ..rotateY(capSide * pose.tilt)
+            ..translateByDouble(-pivot.dx, -pivot.dy, 0, 1))
+        : Matrix4.identity();
     final flat = Matrix4.identity()
       ..translateByDouble(pivot.dx + pose.dx, pivot.dy + pose.dy, 0, 1)
       ..rotateZ(pose.roll)
       ..scaleByDouble(pose.scale, pose.scale, 1, 1)
       ..translateByDouble(-pivot.dx, -pivot.dy, 0, 1);
-    // The screen in the renders' perspective (camera dist design dp away).
-    // (a true product: setEntry after a translate would centre the
-    // perspective on the screen's corner, not on the pivot)
-    final turned = Matrix4.translationValues(pivot.dx, pivot.dy, 0)
-      ..multiply(Matrix4.identity()..setEntry(3, 2, 1 / (r.art.dist * fit.s)))
-      ..multiply(Matrix4.rotationY(capSide * pose.tilt))
-      ..multiply(Matrix4.translationValues(-pivot.dx, -pivot.dy, 0));
-    final screen = fit.rect(r.body.layout.screen);
-    final (lo, hi, f) = r.body.bracket(deg);
-    final lug = fit.point(Offset.lerp(lo.lug, hi.lug, f)!);
+    live.showShutter(r.shutter != 'shutter');
+    final camera = fit.camera;
     final film = mode == AppMode.film;
     final p = RetroPalette.forMode(mode);
     final geo = SwapGeometry(size.width);
+    final lug = live.lugAt(m, camera, fit.s);
     return Stack(
       clipBehavior: Clip.none,
       fit: StackFit.expand,
       children: [
-        // The live UI, kept running but not shown.
-        ClipRect(clipper: const _NoArea(), child: face),
-        Transform(
-          transform: flat,
-          child: Stack(
-            clipBehavior: Clip.none,
-            fit: StackFit.expand,
-            children: [
-              // Shadow on the desk.
-              Positioned(
-                left: capSide > 0 ? 0 : -geo.cap,
-                width: size.width + geo.cap,
-                top: 0,
-                height: size.height,
-                child: SoftShadow(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  blurRadius: 34,
-                  offset: Offset(-capSide * 6.0, 22),
-                  radius: 30,
-                ),
-              ),
-              WholeTurn(art: r.art, body: r.body, deg: deg, shutter: r.shutter),
-              Transform(
-                transform: turned,
-                child: Stack(
-                  children: [
-                    Positioned.fromRect(
-                      rect: screen,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(film ? 6 : 3),
-                        child: r.viewfinder,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                left: lug.dx - 90,
-                width: 180,
-                top: lug.dy + _lugSlot * fit.s,
-                height: size.height,
-                child: IgnorePointer(
-                  child: CustomPaint(
-                    painter: _StrapPainter(
-                      film: film,
-                      side: capSide,
-                      swing: pose.swing,
-                      color: film ? const Color(0xFF3A2416) : const Color(0xFF17181B),
-                      stitch: p.bodyHighlight,
-                    ),
+        if (moving)
+          // Shadow on the desk.
+          Transform(
+            transform: flat,
+            child: Stack(
+              clipBehavior: Clip.none,
+              fit: StackFit.expand,
+              children: [
+                Positioned(
+                  left: capSide > 0 ? 0 : -geo.cap,
+                  width: size.width + geo.cap,
+                  top: 0,
+                  height: size.height,
+                  child: SoftShadow(
+                    color: Colors.black.withValues(alpha: 0.7),
+                    blurRadius: 34,
+                    offset: Offset(-capSide * 6.0, 22),
+                    radius: 30,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+        LiveBodyView(key: const ValueKey('model'), body: live, fit: fit, pose: m),
+        Transform(
+          key: const ValueKey('face'),
+          transform: moving ? (camera.clone()..multiply(m)) : Matrix4.identity(),
+          child: BodyYaw(yaw: capSide * pose.tilt, child: face),
         ),
+        if (moving)
+          Positioned(
+            left: lug.dx - 90,
+            width: 180,
+            top: lug.dy + _lugSlot * fit.s,
+            height: size.height,
+            child: IgnorePointer(
+              child: CustomPaint(
+                painter: _StrapPainter(
+                  film: film,
+                  side: capSide,
+                  swing: pose.swing,
+                  color: film ? const Color(0xFF3A2416) : const Color(0xFF17181B),
+                  stitch: p.bodyHighlight,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
-}
-
-class _NoArea extends CustomClipper<Rect> {
-  const _NoArea();
-
-  @override
-  Rect getClip(Size size) => Rect.zero;
-
-  @override
-  bool shouldReclip(_NoArea old) => false;
 }
 
 /// What a whole-body swap needs for each body.

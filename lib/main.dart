@@ -83,8 +83,8 @@ Future<void> main() async {
   }());
 
   final launchPayload = await notifications.launchPayload();
-  // The launch screen stays up until the camera bodies' art is decoded (and
-  // kept: ArtCache), so the camera never comes up half drawn.
+  // The launch screen stays up until the 3D camera bodies have loaded, so
+  // the camera never comes up half drawn.
   if (global.controls3d) await _warmBodies(container);
   runApp(UncontrolledProviderScope(container: container, child: const DarkroomApp()));
   if (launchPayload != null) {
@@ -94,13 +94,9 @@ Future<void> main() async {
 
 Future<void> _warmBodies(ProviderContainer container) async {
   try {
-    final view = WidgetsBinding.instance.platformDispatcher.implicitView;
-    if (view == null || view.physicalSize.isEmpty) return; // warmed by the camera screen instead
-    final dpr = view.devicePixelRatio;
-    final width = view.physicalSize.shortestSide / dpr; // the camera is portrait
-    final art = await container.read(wholeArtProvider.future);
-    await art?.warm(dpr, width, turned: false).timeout(const Duration(seconds: 6));
+    // The 3D models and their studio: loaded once, kept for the session.
+    await container.read(wholeArtProvider.future).timeout(const Duration(seconds: 8));
   } catch (_) {
-    // too slow or failed: the camera screen carries on decoding
+    // too slow: the camera comes up with the classic body until they land
   }
 }

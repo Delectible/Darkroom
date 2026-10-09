@@ -27,10 +27,9 @@ import 'whole_body.dart';
 class BodyArt {
   BodyArt._(this.px, this._parts, {this.whole});
 
-  /// Since 1.6 the bodies are rendered whole ([WholeArt]): the controls'
-  /// moving parts are its layers, offset from each control's centre; what
-  /// never moves is baked into the rest picture, so those parts draw
-  /// nothing here ([BodyPart.layers] empty).
+  /// Since 1.7 the bodies are live 3D models ([WholeArt]): the controls'
+  /// parts draw nothing themselves; the moving ones move their piece of the
+  /// model ([LivePart]), the rest are just part of it.
   final WholeArt? whole;
 
   static const _wholeParts = {
@@ -43,6 +42,10 @@ class BodyArt {
       'rec', 'frame',
     ],
   };
+
+  /// The layout part each control part sits on (its rest place).
+  static String anchorOf(String part) => _layerAt[part] ?? part;
+
   static const _layerAt = {
     'aspecttop': 'aspect',
     'release': 'shutter',
@@ -51,23 +54,24 @@ class BodyArt {
     'rec': 'shutter',
   };
 
+  /// States of the parts that have them (pressed keys, the rocker).
+  static const _wholeStates = {
+    'menu': ['up', 'down'],
+    'pill': ['up', 'down'],
+    'pillwide': ['up', 'down'],
+    'pillsmall': ['up', 'down'], //
+    'shutter': ['up', 'down'], 'release': ['up', 'down'], 'run': ['up', 'down'], 'rec': ['up', 'down'],
+    'rocker': ['mid', 'w', 't'],
+  };
+
   factory BodyArt.fromWhole(WholeArt w) {
-    final parts = <String, Map<String, BodyPart>>{};
-    for (final MapEntry(key: mode, value: body) in w.bodies.entries) {
-      final at = body.layout.parts;
-      parts[mode.name] = {
-        for (final name in _wholeParts[mode]!)
-          name: BodyPart.whole(mode.name, name, {
-            for (final MapEntry(key: k, value: v) in body.layers.entries)
-              if (k == name || k.startsWith('$name-'))
-                (k == name ? '' : k.substring(name.length + 1)): ArtRect(
-                  v.path,
-                  v.rect.shift(-(at[_layerAt[name] ?? name] ?? Offset.zero)),
-                  v.px,
-                ),
-          }),
-      };
-    }
+    final parts = <String, Map<String, BodyPart>>{
+      for (final mode in w.bodies.keys)
+        mode.name: {
+          for (final name in _wholeParts[mode]!)
+            name: BodyPart.whole(mode.name, name, _wholeStates[name] ?? const []),
+        },
+    };
     return BodyArt._(1, parts, whole: w);
   }
 
@@ -102,8 +106,7 @@ class BodyArt {
   /// the face-on sprites, then the turned frames unless [faceOnly] or
   /// [turned] is false.
   Future<void> warm(double dpr, double width, {ImageConfiguration? config, bool turned = true}) async {
-    final w = whole;
-    if (w != null) return w.warm(dpr, width, config: config, turned: turned && !faceOnly);
+    if (whole != null) return; // the models load with the art
     final cfg = config ?? ImageConfiguration(devicePixelRatio: dpr);
     final face = <ImageProvider>[], frames = <ImageProvider>[];
     for (final parts in _parts.values) {
@@ -157,13 +160,10 @@ class BodyPart {
     this.edge = 0,
   }) : layers = null;
 
-  BodyPart.whole(this.mode, this.name, Map<String, ArtRect> this.layers)
-    : canvas = Size.zero,
+  BodyPart.whole(this.mode, this.name, this.states)
+    : layers = const {},
+      canvas = Size.zero,
       yaws = const [0],
-      states = [
-        for (final k in layers.keys)
-          if (k.isNotEmpty) k,
-      ],
       yaw0States = const [],
       px = 1,
       slice = null,
@@ -193,9 +193,9 @@ class BodyPart {
   final String mode;
   final String name;
 
-  /// Whole-body art: this part's layer per state ('' when it has none),
-  /// rects relative to the control's centre; empty = baked into the body.
-  final Map<String, ArtRect>? layers;
+  /// Non-null for the live 3D bodies: the part is the model's (it draws
+  /// nothing here; see [LivePart]).
+  final Map<String, Object>? layers;
 
   /// The sprite's whole canvas in dp: the part's box plus margins for its
   /// shadow and for parallax when turned.
@@ -271,17 +271,10 @@ class BodySprite extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
-    final layers = part.layers;
-    if (layers != null) {
-      final l = layers[state ?? ''] ?? layers[part.states.firstOrNull ?? ''] ?? layers.values.firstOrNull;
-      if (l == null) return const SizedBox.shrink();
-      final k = dpr * WholeScale.of(context);
-      // Centred on this widget: the layer sits at its offset from the centre.
-      return CustomSingleChildLayout(
-        delegate: _AtCentre(l.rect),
-        child: IgnorePointer(
-          child: ArtImages(providers: [l.image(k)], painter: (imgs) => _Plain(imgs[0], opacity)),
-        ),
+    if (part.layers != null) {
+      // The model's piece: moved where this sprite would be.
+      return Center(
+        child: LivePart(name: part.name, state: state ?? part.states.firstOrNull),
       );
     }
     return OverflowBox(
@@ -759,51 +752,7 @@ TextStyle photoLabel({required bool onMetal}) => TextStyle(
   letterSpacing: 0.6,
 );
 
-/// Lays its child out at [rect], relative to its own centre.
-class _AtCentre extends SingleChildLayoutDelegate {
-  _AtCentre(this.rect);
-
-  final Rect rect;
-
-  @override
-  Size getSize(BoxConstraints constraints) => constraints.constrain(Size.zero);
-
-  @override
-  BoxConstraints getConstraintsForChild(BoxConstraints constraints) => BoxConstraints.tight(rect.size);
-
-  @override
-  Offset getPositionForChild(Size size, Size childSize) =>
-      Offset(size.width / 2 + rect.left, size.height / 2 + rect.top);
-
-  @override
-  bool shouldRelayout(_AtCentre old) => old.rect != rect;
-}
-
-class _Plain extends CustomPainter {
-  _Plain(this.img, this.opacity);
-
-  final ui.Image? img;
-  final double opacity;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final i = img;
-    if (i == null) return;
-    canvas.drawImageRect(
-      i,
-      Offset.zero & Size(i.width.toDouble(), i.height.toDouble()),
-      Offset.zero & size,
-      Paint()
-        ..filterQuality = FilterQuality.medium
-        ..color = Color.fromRGBO(0, 0, 0, opacity),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_Plain o) => o.img != img || o.opacity != opacity;
-}
-
-/// Screen dp per design dp for the whole-body face (images decode at it).
+/// Screen dp per design dp for the 3D face.
 class WholeScale extends InheritedWidget {
   const WholeScale({super.key, required this.scale, required super.child});
 

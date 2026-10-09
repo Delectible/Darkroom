@@ -1,191 +1,147 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_scene/scene.dart' as fs;
+import 'package:vector_math/vector_math.dart' as vm;
+import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
 
 import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
-import 'art_cache.dart';
 
-/// The photoreal cameras (1.6): each body rendered whole in Blender
-/// (tool/render/blender/whole_body.py) through one perspective camera,
-/// face-on (`rest`, without its moving parts), each moving part alone in
-/// each state with the shadow it casts (`layers`), and the whole body
-/// turned every few degrees for the swap (`turns`, the shutters on their own
-/// so Super 8 / camcorder can swap theirs in).
+/// The 3D cameras (1.7): each body is a real 3D model (made in Blender by
+/// tool/render/blender/export_glb.py: the path-traced materials baked into
+/// textures, every moving piece its own node) drawn live with Flutter Scene,
+/// lit by the renders' studio. Labels, the LCD, the gallery thumbnail and
+/// the live viewfinder are the app's own widgets laid on its face; the
+/// controls' moving parts (keys, dial, lever, flash tab, rocker, shutter)
+/// move on the model (see [LivePart]).
 ///
-/// Everything sits in one design space, 412 x 968 dp: the face is laid out
-/// from the same numbers (manifest `layout`) and scaled to the screen's
-/// width. Phones less tall than that lose a band out of the middle of the
-/// viewfinder ([DesignFit]), which the live picture covers.
+/// Everything sits in one design space, 412 x 968 dp, scaled to the
+/// screen's width. Phones less tall than that lose a band out of the middle
+/// of the viewfinder ([DesignFit]); the model's middle piece squeezes (or
+/// stretches) to match ([LiveBody.fit]).
 class WholeArt {
-  WholeArt._(this.design, this.cutY, this.dist, this.bodies);
+  WholeArt._(this.design, this.cutY, this.dist, this.band, this.bodies);
 
-  static const root = 'assets/body3';
+  static const root = 'assets/body3d';
 
   final Size design;
 
-  /// Design y the image is split at for shorter phones (in the viewfinder).
+  /// Design y the face is squeezed / stretched at (inside the viewfinder).
   final double cutY;
 
   /// Camera distance from the face, design dp.
   final double dist;
+
+  /// Half-height of the model's stretchable middle piece, design dp.
+  final double band;
   final Map<AppMode, WholeBody> bodies;
 
-  /// Frames that weren't decoded yet when drawn (tests: a swap needs none).
-  static int lateFrames = 0;
-
-  /// Turn frames are decoded as rendered (sharp when a turn is held mid-
-  /// drag); all of them stay decoded, ~250 MB for both bodies. Lower this
-  /// (e.g. 1.2) to trade sharpness for memory.
-  static const double? turnPx = null;
-
-  static Future<WholeArt?> load() async {
+  /// The layout and, with [scenes] (needs Flutter GPU: not in tests or on
+  /// phones without it, which get the classic bodies), the models.
+  static Future<WholeArt?> load({bool scenes = true}) async {
     try {
       final j = jsonDecode(await rootBundle.loadString('$root/manifest.json')) as Map<String, dynamic>;
       final d = j['design'] as Map<String, dynamic>;
+      final design = Size((d['w'] as num).toDouble(), (d['h'] as num).toDouble());
+      final studio = j['studio'] as Map<String, dynamic>;
+      fs.EnvironmentMap? env;
+      if (scenes) {
+        await fs.Scene.initializeStaticResources();
+        env = await fs.EnvironmentMap.fromEquirectImageAsset(
+          assetPath: '$root/studio.hdr',
+          maxWidth: 1024,
+          diffuseSphericalHarmonics: [
+            for (final c in studio['diffuseSH'] as List<dynamic>)
+              vm.Vector3(
+                ((c as List<dynamic>)[0] as num).toDouble(),
+                (c[1] as num).toDouble(),
+                (c[2] as num).toDouble(),
+              ),
+          ],
+        );
+      }
       final bodies = <AppMode, WholeBody>{};
       for (final mode in AppMode.values) {
         final b = j[mode.name] as Map<String, dynamic>?;
         final lay = (j['layout'] as Map<String, dynamic>?)?[mode.name] as Map<String, dynamic>?;
-        if (b == null || lay == null || b['rest'] == null || b['turns'] == null) continue;
-        bodies[mode] = WholeBody._fromJson(b, lay);
+        if (b == null || lay == null) continue;
+        final lug = (b['lug'] as List<dynamic>).cast<num>();
+        final body = WholeBody._(
+          layout: WholeLayout._fromJson(lay),
+          alt: b['alt'] as String,
+          press: {
+            for (final MapEntry(key: k, value: v) in (b['press'] as Map<String, dynamic>).entries)
+              k: (v as num).toDouble(),
+          },
+          lug: vm.Vector3(lug[0].toDouble(), lug[1].toDouble(), lug[2].toDouble()),
+        );
+        if (scenes) {
+          final node = await fs.loadScene('$root/${b['scene']}');
+          body.live = LiveBody._(
+            node,
+            body,
+            env!,
+            exposure: (studio['exposure'] as num).toDouble(),
+            design: design,
+            cutY: (d['cutY'] as num).toDouble(),
+            dist: (d['dist'] as num).toDouble(),
+            band: (d['band'] as num).toDouble(),
+          );
+          // Compile its shaders now (behind the launch screen), not on the
+          // first frame it's seen.
+          try {
+            await body.live!.scene.warmUp([
+              fs.RenderView(
+                camera: fs.PerspectiveCamera(
+                  position: vm.Vector3(0, 0, -(d['dist'] as num).toDouble()),
+                  target: vm.Vector3.zero(),
+                ),
+              ),
+            ]);
+          } catch (_) {}
+        }
+        bodies[mode] = body;
       }
       if (bodies.isEmpty) return null;
       return WholeArt._(
-        Size((d['w'] as num).toDouble(), (d['h'] as num).toDouble()),
+        design,
         (d['cutY'] as num).toDouble(),
         (d['dist'] as num).toDouble(),
+        (d['band'] as num).toDouble(),
         bodies,
       );
-    } catch (_) {
-      return null; // not bundled: the classic bodies
+    } catch (e, s) {
+      // Not bundled, or no Flutter GPU here: the classic bodies.
+      debugPrint('3D bodies unavailable: $e\n$s');
+      return null;
     }
   }
-
-  /// Decodes what a swap and the face need, rest and layers first, and
-  /// keeps it for the session ([ArtCache]).
-  Future<void> precache(BuildContext context) => warm(
-    MediaQuery.devicePixelRatioOf(context),
-    MediaQuery.sizeOf(context).width,
-    config: createLocalImageConfiguration(context),
-  );
-
-  /// [precache] without a context (at launch, behind the launch screen);
-  /// the turned frames too unless [turned] is false.
-  Future<void> warm(double dpr, double width, {ImageConfiguration? config, bool turned = true}) async {
-    final cfg = config ?? ImageConfiguration(devicePixelRatio: dpr);
-    final s = width / design.width;
-    final first = <ImageProvider>[], then = <ImageProvider>[];
-    for (final b in bodies.values) {
-      first.add(b.rest.image(s * dpr));
-      for (final l in b.layers.values) {
-        first.add(l.image(s * dpr));
-      }
-      for (final t in b.turns) {
-        then.add(t.body.image(turnPx));
-        for (final sh in t.shutters.values) {
-          then.add(sh.image(turnPx));
-        }
-      }
-    }
-    await ArtCache.pinAll(first, cfg);
-    if (turned) await ArtCache.pinAll(then, cfg);
-  }
-}
-
-/// One image of the art: its file and where it goes, in design dp.
-class ArtRect {
-  ArtRect(this.path, this.rect, this.px);
-
-  factory ArtRect.fromJson(Map<String, dynamic> j) {
-    final r = (j['rect'] as List<dynamic>).cast<num>();
-    return ArtRect(
-      '${WholeArt.root}/${j['path']}',
-      Rect.fromLTWH(r[0].toDouble(), r[1].toDouble(), r[2].toDouble(), r[3].toDouble()),
-      (j['px'] as num?)?.toDouble() ?? 1,
-    );
-  }
-
-  final String path;
-  final Rect rect;
-
-  /// Pixels per design dp in the file.
-  final double px;
-
-  /// Decoded at [pxPerDp] (screen pixels per design dp), or as stored.
-  ImageProvider image(double? pxPerDp) {
-    final asset = AssetImage(path);
-    if (pxPerDp == null || pxPerDp >= px * 0.95) return asset;
-    return ResizeImage(asset, width: (rect.width * pxPerDp).round(), policy: ResizeImagePolicy.fit);
-  }
-}
-
-class TurnFrame {
-  TurnFrame(this.yaw, this.body, this.shutters, this.lug);
-
-  final int yaw;
-  final ArtRect body;
-
-  /// Each shutter (film release, Super 8 RUN, digital key, camcorder REC)
-  /// turned with the body, drawn over [body].
-  final Map<String, ArtRect> shutters;
-
-  /// The strap lug, design dp.
-  final Offset lug;
 }
 
 class WholeBody {
-  WholeBody._(this.rest, this.layers, this.turns, this.layout);
+  WholeBody._({required this.layout, required this.alt, required this.press, required this.lug});
 
-  factory WholeBody._fromJson(Map<String, dynamic> j, Map<String, dynamic> lay) {
-    final turns = <TurnFrame>[];
-    for (final MapEntry(key: yaw, value: t) in (j['turns'] as Map<String, dynamic>).entries) {
-      final t2 = t as Map<String, dynamic>;
-      final lug = (t2['lug'] as List<dynamic>?)?.cast<num>() ?? const [0, 0];
-      turns.add(
-        TurnFrame(int.parse(yaw), ArtRect.fromJson(t2), {
-          for (final MapEntry(key: k, value: v)
-              in ((t2['shutters'] as Map<String, dynamic>?) ?? const {}).entries)
-            k: ArtRect.fromJson(v as Map<String, dynamic>),
-        }, Offset(lug[0].toDouble(), lug[1].toDouble())),
-      );
-    }
-    turns.sort((a, b) => a.yaw.compareTo(b.yaw));
-    return WholeBody._(
-      ArtRect.fromJson(j['rest'] as Map<String, dynamic>),
-      {
-        for (final MapEntry(key: k, value: v) in ((j['layers'] as Map<String, dynamic>?) ?? const {}).entries)
-          k: ArtRect.fromJson(v as Map<String, dynamic>),
-      },
-      turns,
-      WholeLayout._fromJson(lay),
-    );
-  }
-
-  final ArtRect rest;
-  final Map<String, ArtRect> layers;
-  final List<TurnFrame> turns;
   final WholeLayout layout;
 
-  ArtRect? layer(String name, [String? state]) =>
-      layers[state == null ? name : '$name-$state'] ?? layers[name];
+  /// The other shutter on this body (Super 8 RUN / camcorder REC).
+  final String alt;
 
-  /// The two rendered turns either side of [deg] and how far between.
-  (TurnFrame, TurnFrame, double) bracket(double deg) {
-    final d = deg.abs().clamp(0.0, turns.last.yaw.toDouble());
-    var i = 0;
-    while (i + 1 < turns.length && turns[i + 1].yaw <= d) {
-      i++;
-    }
-    final lo = turns[i], hi = turns[math.min(i + 1, turns.length - 1)];
-    final f = hi.yaw == lo.yaw ? 0.0 : (d - lo.yaw) / (hi.yaw - lo.yaw);
-    return (lo, hi, f);
-  }
+  /// How far each pressed piece travels, in its own units.
+  final Map<String, double> press;
+
+  /// The strap lug, model space (x right, y up, z toward the viewer; the
+  /// face's centre at the origin).
+  final vm.Vector3 lug;
+
+  /// The model, drawn live (null without Flutter GPU, e.g. in tests).
+  LiveBody? live;
 }
 
 /// Where things are on the face, design dp.
@@ -237,11 +193,23 @@ class DesignFit {
 
   /// The screen point the body turns about (the cut, mid-width).
   Offset get pivot => Offset(art.design.width / 2 * s, art.cutY * s);
+
+  /// The screen's centre, where the camera looks.
+  Offset get centre => Offset(art.design.width / 2 * s, (art.design.height - trim) / 2 * s);
+
+  /// Screen space (dp; x right, y down, z into the screen) seen through the
+  /// models' camera: perspective about the screen's centre from [WholeArt.dist].
+  Matrix4 get camera {
+    final c = centre;
+    return Matrix4.translationValues(c.dx, c.dy, 0)
+      ..multiply(Matrix4.identity()..setEntry(3, 2, 1 / (art.dist * s)))
+      ..multiply(Matrix4.translationValues(-c.dx, -c.dy, 0));
+  }
 }
 
 final wholeArtProvider = FutureProvider<WholeArt?>((ref) => WholeArt.load());
 
-/// The whole-body art for [mode] when 3D is on and it's bundled.
+/// The 3D body for [mode] when 3D is on and it can be drawn here.
 final wholeBodyProvider = Provider.family<WholeBody?, AppMode>((ref, mode) {
   final art = ref.watch(wholeArtProvider).value;
   final body = art?.bodies[mode];
@@ -249,349 +217,319 @@ final wholeBodyProvider = Provider.family<WholeBody?, AppMode>((ref, mode) {
   return ref.watch(globalSettingsProvider.select((s) => s.controls3d)) ? body : null;
 });
 
-// ------------------------------------------------------------------ drawing
+// ------------------------------------------------------------------ live
 
-/// Resolves [providers] to images and keeps each until its replacement has
-/// decoded (gapless); [paint] gets what's ready (null where nothing yet).
-class ArtImages extends StatefulWidget {
-  const ArtImages({super.key, required this.providers, required this.painter, this.size = Size.infinite});
+/// One body's model in its own scene: fitted to the phone, posed (the swap)
+/// and with its moving pieces where the controls put them.
+///
+/// Model space is the export's: x right, y up, z toward the viewer, 1 =
+/// one design dp, the face's centre at the origin. Flutter Scene's build-
+/// time import turns glTF's z round (its view space is left-handed), so in
+/// the scene the face looks down -z and the camera sits on that side.
+class LiveBody extends ChangeNotifier {
+  LiveBody._(
+    this.node,
+    this.body,
+    fs.EnvironmentMap env, {
+    required double exposure,
+    required this.design,
+    required this.cutY,
+    required this.dist,
+    required this.band,
+  }) {
+    scene
+      ..environment = env
+      // the studio map is made with x mirrored, the scene has z turned
+      // round: half a turn about y between them
+      ..environmentTransform = vm.Matrix3.rotationY(math.pi)
+      ..exposure = exposure
+      ..toneMapping = fs.ToneMappingMode.agx;
+    scene.add(node);
+    void index(fs.Node n) {
+      _nodes[n.name] = n;
+      _rest[n] = n.localTransform.clone();
+      for (final c in n.children) {
+        index(c);
+      }
+    }
 
-  final List<ImageProvider?> providers;
-  final CustomPainter Function(List<ui.Image?> images) painter;
-  final Size size;
+    index(node);
+    showShutter(false);
+  }
 
-  @override
-  State<ArtImages> createState() => _ArtImagesState();
-}
+  /// Model to scene: z turned round.
+  static v64.Vector3 _scene(vm.Vector3 v) => v64.Vector3(v.x, v.y, -v.z);
 
-class _Slot {
-  ImageStream? stream;
-  ImageStreamListener? listener;
-  ImageInfo? info;
+  final fs.Node node;
+  final WholeBody body;
+  final fs.Scene scene = fs.Scene();
+  final Size design;
+  final double cutY;
+  final double dist;
+  final double band;
+  final Map<String, fs.Node> _nodes = {};
+  final Map<fs.Node, vm.Matrix4> _rest = {};
 
-  void dispose() {
-    if (listener != null) stream?.removeListener(listener!);
-    info?.dispose();
+  double _trim = 0;
+  bool? _alt;
+
+  /// The controls' parts that move a piece of the model, and how.
+  static const _moving = {
+    'flashtab': ('mv.flashtab.slide', null),
+    'aspecttop': ('mv.aspect.turn', null),
+    'lensdot': ('mv.lensdot.turn', null),
+    'menu': ('mv.menu.press', 'menu'),
+    'pill': ('mv.pill.press', 'pill'),
+    'pillwide': ('mv.pillwide.press', 'pillwide'),
+    'pillsmall': ('mv.pillsmall.press', 'pillsmall'),
+    'release': ('mv.shutter.press', 'shutter'),
+    'lever': ('mv.shutter.lever', null),
+    'shutter': ('mv.shutter.press', 'shutter'),
+    'run': ('mv.shutteralt.press', 'shutteralt'),
+    'rec': ('mv.shutteralt.press', 'shutteralt'),
+    'rocker': ('mv.rocker.rock', null),
+  };
+
+  /// The body's other shutter (Super 8 RUN, camcorder REC) instead of its
+  /// usual one.
+  void showShutter(bool alt) {
+    if (alt == _alt) return;
+    final first = _alt == null;
+    _alt = alt;
+    _nodes['part.shutter']?.visible = !alt;
+    _nodes['part.shutteralt']?.visible = alt;
+    if (!first) _changed();
+  }
+
+  /// Squeezes (stretches) the middle piece by [trim] design dp, moving
+  /// everything below it up (down) to match [DesignFit].
+  void fit(double trim) {
+    if (trim == _trim) return;
+    _trim = trim;
+    final k = math.max(0.04, (2 * band - trim) / (2 * band));
+    final mid = _nodes['body.mid'];
+    if (mid != null) {
+      mid.localTransform = vm.Matrix4.translationValues(0, trim / 2, 0)
+        ..multiply(_rest[mid]!)
+        ..scaleByDouble(1, k, 1, 1);
+    }
+    final root = _nodes['body'];
+    for (final c in root?.children ?? const <fs.Node>[]) {
+      final rest = _rest[c]!;
+      if (c.name == 'body.bot' || (c.name.startsWith('part.') && rest.getTranslation().y < 0)) {
+        c.localTransform = vm.Matrix4.translationValues(0, trim, 0)..multiply(rest);
+      }
+    }
+  }
+
+  /// Scene space (y up, z away from the viewer) to screen space (dp; y
+  /// down, z into the screen), for [s] screen dp per design dp.
+  Matrix4 _toScreen(double s) =>
+      Matrix4.diagonal3Values(s, -s, s)..setTranslationRaw(design.width / 2 * s, design.height / 2 * s, 0);
+
+  /// Places the body by [screen]: a transform in screen space (dp, about
+  /// whatever it likes; identity = at rest) for a screen [s] dp per design dp.
+  void pose(Matrix4 screen, double s) {
+    final a = _toScreen(s);
+    final m = Matrix4.inverted(a)
+      ..multiply(screen)
+      ..multiply(a);
+    node.localTransform = vm.Matrix4.fromList(m.storage)..multiply(_rest[node]!);
+  }
+
+  /// Where the strap lug is on screen, the body posed by [screenPose] and
+  /// seen through [camera] (see [DesignFit.camera]).
+  Offset lugAt(Matrix4 screenPose, Matrix4 camera, double s) {
+    final p =
+        (camera.clone()
+              ..multiply(screenPose)
+              ..multiply(_toScreen(s)))
+            .perspectiveTransform(_scene(body.lug));
+    return Offset(p.x, p.y);
+  }
+
+  /// A control's part moved: slid by ([dx], [dy]) and turned by [angle]
+  /// (screen sense, radians) from its rest place, in [state] (pressed,
+  /// rocked). Repaints on the next frame.
+  void setPart(String name, {double dx = 0, double dy = 0, double angle = 0, String? state}) {
+    final entry = _moving[name];
+    if (entry == null) return;
+    final n = _nodes[entry.$1];
+    if (n == null) return;
+    final travel = entry.$2 == null ? 0.0 : (body.press[entry.$2] ?? 0);
+    final m = _rest[n]!.clone()
+      // Screen y is down; pressed is into the body (+z in the scene); seen
+      // from -z, a turn clockwise on screen is a turn about +z.
+      ..translateByDouble(dx, -dy, state == 'down' ? travel : 0, 1)
+      ..rotateZ(angle);
+    // the rocker tips about its own y (turned round with z: so the angle)
+    if (state == 'w' || state == 't') m.rotateY(state == 'w' ? 0.035 : -0.035);
+    if (m == n.localTransform) return;
+    n.localTransform = m;
+    _changed();
+  }
+
+  bool _pending = false;
+
+  void _changed() {
+    if (_pending) return;
+    _pending = true;
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      _pending = false;
+      notifyListeners();
+    });
+    SchedulerBinding.instance.scheduleFrame();
   }
 }
 
-class _ArtImagesState extends State<ArtImages> {
-  final _slots = <_Slot>[];
+/// The model drawn over the whole of this widget's box (a phone's screen):
+/// fitted by [fit], posed by [pose] (screen space, null = at rest). Paints
+/// only when something changes (no ticker).
+class LiveBodyView extends StatefulWidget {
+  const LiveBodyView({super.key, required this.body, required this.fit, this.pose});
+
+  final LiveBody body;
+  final DesignFit fit;
+  final Matrix4? pose;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _resolve();
+  State<LiveBodyView> createState() => _LiveBodyViewState();
+}
+
+class _LiveBodyViewState extends State<LiveBodyView> {
+  int _version = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.body.addListener(_repaint);
   }
 
   @override
-  void didUpdateWidget(ArtImages old) {
+  void didUpdateWidget(LiveBodyView old) {
     super.didUpdateWidget(old);
-    _resolve();
-  }
-
-  void _resolve() {
-    while (_slots.length < widget.providers.length) {
-      _slots.add(_Slot());
-    }
-    final config = createLocalImageConfiguration(context);
-    for (var i = 0; i < widget.providers.length; i++) {
-      final p = widget.providers[i];
-      if (p == null) continue;
-      final slot = _slots[i];
-      final stream = p.resolve(config);
-      if (slot.stream?.key == stream.key) continue;
-      if (slot.listener != null) slot.stream?.removeListener(slot.listener!);
-      slot.stream = stream;
-      slot.listener = ImageStreamListener((info, _) {
-        if (!mounted) return info.dispose();
-        setState(() {
-          slot.info?.dispose();
-          slot.info = info;
-        });
-      });
-      final before = slot.info;
-      stream.addListener(slot.listener!);
-      if (identical(slot.info, before)) WholeArt.lateFrames++;
+    if (old.body != widget.body) {
+      old.body.removeListener(_repaint);
+      widget.body.addListener(_repaint);
     }
   }
 
   @override
   void dispose() {
-    for (final s in _slots) {
-      s.dispose();
-    }
+    widget.body.removeListener(_repaint);
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-    size: widget.size,
-    painter: widget.painter([
-      for (var i = 0; i < widget.providers.length; i++)
-        widget.providers[i] == null ? null : _slots.elementAtOrNull(i)?.info?.image,
-    ]),
-  );
-}
-
-final _paint = Paint()..filterQuality = FilterQuality.medium;
-
-/// Draws [img] (art covering design rect [r]) onto the screen through [fit]:
-/// the part above the cut as is, the part below moved up by the trim (or a
-/// band stretched across the cut on taller phones).
-void drawFitted(Canvas c, ui.Image img, Rect r, DesignFit fit, Paint paint) {
-  final ky = img.height / r.height;
-  final cut = fit.art.cutY;
-  Rect src(double y0, double y1) =>
-      Rect.fromLTRB(0, (y0 - r.top) * ky, img.width.toDouble(), (y1 - r.top) * ky);
-  Rect dst(double y0, double y1) =>
-      Rect.fromLTRB(r.left * fit.s, fit.y(y0), r.right * fit.s, y1 <= cut ? y1 * fit.s : fit.y(y1));
-  if (r.bottom <= cut || r.top >= cut + math.max(0, fit.trim)) {
-    // wholly above the cut, or wholly below the band taken out
-    final top = r.top <= cut ? r.top * fit.s : fit.y(r.top);
-    final bottom = r.bottom <= cut ? r.bottom * fit.s : fit.y(r.bottom);
-    c.drawImageRect(
-      img,
-      src(r.top, r.bottom),
-      Rect.fromLTRB(r.left * fit.s, top, r.right * fit.s, bottom),
-      paint,
-    );
-    return;
+  void _repaint() {
+    if (mounted) setState(() => _version++);
   }
-  // above the cut
-  c.drawImageRect(
-    img,
-    src(r.top, cut),
-    Rect.fromLTRB(r.left * fit.s, r.top * fit.s, r.right * fit.s, cut * fit.s),
-    paint,
-  );
-  if (fit.trim >= 0) {
-    final from = math.min(cut + fit.trim, r.bottom);
-    c.drawImageRect(img, src(from, r.bottom), dst(from, r.bottom), paint);
-  } else {
-    // taller phone: a thin band at the cut stretched over the extra height
-    final band = 2.0;
-    c.drawImageRect(
-      img,
-      src(cut, cut + band),
-      Rect.fromLTRB(r.left * fit.s, cut * fit.s, r.right * fit.s, (cut - fit.trim + band) * fit.s),
-      paint,
-    );
-    c.drawImageRect(img, src(cut + band, r.bottom), dst(cut + band, r.bottom), paint);
-  }
-}
-
-/// [a] and [b] mixed as (1 - f) a + f b in a layer: exact, so an opaque body
-/// stays opaque and its shadows don't double up between turns.
-void drawMixed(
-  Canvas c,
-  Rect bounds,
-  double f,
-  double opacity,
-  void Function(Paint) a,
-  void Function(Paint)? b,
-) {
-  Paint p(double alpha) => Paint()
-    ..filterQuality = FilterQuality.medium
-    ..color = Color.fromRGBO(0, 0, 0, alpha);
-  if (b == null || f <= 0.02) return a(p(opacity));
-  if (f >= 0.98) return b(p(opacity));
-  c.saveLayer(bounds, Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
-  a(p(1 - f));
-  b(p(f)..blendMode = BlendMode.plus);
-  c.restore();
-}
-
-/// The resting body, face-on, fitted to the screen (moving parts and the
-/// live picture go on top).
-class WholeRest extends StatelessWidget {
-  const WholeRest({super.key, required this.art, required this.body});
-
-  final WholeArt art;
-  final WholeBody body;
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.sizeOf(context);
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final fit = DesignFit(art, size);
-    return ArtImages(
-      providers: [body.rest.image(fit.s * dpr)],
-      painter: (imgs) => RestPainter(imgs[0], body.rest.rect, fit),
+    final fit = widget.fit;
+    final body = widget.body
+      ..fit(fit.trim)
+      ..pose(widget.pose ?? Matrix4.identity(), fit.s);
+    final visibleH = fit.art.design.height - fit.trim;
+    // A fresh camera each build is what makes the (unticked) view repaint.
+    final camera = fs.PerspectiveCamera(
+      fovRadiansY: 2 * math.atan(visibleH / 2 / fit.art.dist),
+      position: vm.Vector3(0, fit.trim / 2, -fit.art.dist),
+      target: vm.Vector3(0, fit.trim / 2, 0),
+      fovNear: fit.art.dist * 0.3,
+      fovFar: fit.art.dist * 3,
     );
-  }
-}
-
-class RestPainter extends CustomPainter {
-  RestPainter(this.img, this.rect, this.fit);
-
-  final ui.Image? img;
-  final Rect rect;
-  final DesignFit fit;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final i = img;
-    if (i != null) drawFitted(canvas, i, rect, fit, _paint);
-  }
-
-  @override
-  bool shouldRepaint(RestPainter o) => o.img != img || o.fit.s != fit.s || o.fit.trim != fit.trim;
-}
-
-/// One moving part's layer, at its place on the fitted face. Positioned in
-/// a Stack the size of the screen. [turn] spins it about [pivot] (design dp),
-/// [shift] slides it (design dp).
-class WholeLayer extends StatelessWidget {
-  const WholeLayer({
-    super.key,
-    required this.fit,
-    required this.layer,
-    this.turn = 0,
-    this.pivot,
-    this.shift = Offset.zero,
-    this.opacity = 1,
-  });
-
-  final DesignFit fit;
-  final ArtRect layer;
-  final double turn;
-  final Offset? pivot;
-  final Offset shift;
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final r = fit.rect(layer.rect.shift(shift));
-    Widget img = ArtImages(
-      providers: [layer.image(fit.s * dpr)],
-      size: r.size,
-      painter: (imgs) => _LayerPainter(imgs[0], opacity),
-    );
-    if (turn != 0) {
-      final p = pivot ?? layer.rect.center;
-      img = Transform.rotate(
-        angle: turn,
-        alignment: Alignment(
-          (p.dx - layer.rect.left) / layer.rect.width * 2 - 1,
-          (p.dy - layer.rect.top) / layer.rect.height * 2 - 1,
-        ),
-        child: img,
-      );
-    }
-    return Positioned.fromRect(
-      rect: r,
-      child: IgnorePointer(child: img),
-    );
-  }
-}
-
-class _LayerPainter extends CustomPainter {
-  _LayerPainter(this.img, this.opacity);
-
-  final ui.Image? img;
-  final double opacity;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final i = img;
-    if (i == null) return;
-    canvas.drawImageRect(
-      i,
-      Offset.zero & Size(i.width.toDouble(), i.height.toDouble()),
-      Offset.zero & size,
-      Paint()
-        ..filterQuality = FilterQuality.medium
-        ..color = Color.fromRGBO(0, 0, 0, opacity),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_LayerPainter o) => o.img != img || o.opacity != opacity;
-}
-
-/// The body turned [deg] degrees mid-swap: the two nearest rendered turns
-/// mixed, with [shutter]'s turned layer over them; fitted like the rest.
-class WholeTurn extends StatelessWidget {
-  const WholeTurn({super.key, required this.art, required this.body, required this.deg, this.shutter});
-
-  final WholeArt art;
-  final WholeBody body;
-  final double deg;
-  final String? shutter;
-
-  @override
-  Widget build(BuildContext context) {
-    final fit = DesignFit(art, MediaQuery.sizeOf(context));
-    final (lo, hi, f) = body.bracket(deg);
-    final mix = f > 0.02 && hi != lo;
-    final shLo = shutter == null ? null : lo.shutters[shutter];
-    final shHi = shutter == null || !mix ? null : hi.shutters[shutter];
-    return ArtImages(
-      providers: [
-        lo.body.image(WholeArt.turnPx),
-        mix ? hi.body.image(WholeArt.turnPx) : null,
-        shLo?.image(WholeArt.turnPx),
-        shHi?.image(WholeArt.turnPx),
-      ],
-      painter: (imgs) => _TurnPainter(
-        fit: fit,
-        lo: imgs[0],
-        hi: imgs[1],
-        shLo: imgs[2],
-        shHi: imgs[3],
-        loRect: lo.body.rect,
-        hiRect: hi.body.rect,
-        shLoRect: shLo?.rect,
-        shHiRect: shHi?.rect,
-        f: f,
+    return IgnorePointer(
+      child: KeyedSubtree(
+        key: ValueKey(body),
+        child: fs.SceneView(body.scene, camera: camera, autoTick: false),
       ),
     );
   }
 }
 
-class _TurnPainter extends CustomPainter {
-  _TurnPainter({
-    required this.fit,
-    required this.lo,
-    required this.hi,
-    required this.shLo,
-    required this.shHi,
-    required this.loRect,
-    required this.hiRect,
-    required this.shLoRect,
-    required this.shHiRect,
-    required this.f,
-  });
+/// The face's layer of widgets (design dp, trimmed like [DesignFit]):
+/// [LivePart]s report their place relative to it.
+class LiveFace extends InheritedWidget {
+  const LiveFace({super.key, required this.body, required this.rest, required super.child});
 
-  final DesignFit fit;
-  final ui.Image? lo, hi, shLo, shHi;
-  final Rect loRect, hiRect;
-  final Rect? shLoRect, shHiRect;
-  final double f;
+  final LiveBody body;
+
+  /// Where a part sits at rest, in the face's coordinates.
+  final Offset Function(String part) rest;
+
+  static LiveFace? of(BuildContext context) => context.getInheritedWidgetOfExactType<LiveFace>();
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final a = lo, b = hi;
-    if (a == null) return;
-    final bounds = fit.rect(loRect.expandToInclude(hiRect)).inflate(2);
-    void frame(ui.Image body, Rect r, ui.Image? sh, Rect? sr, Paint p) {
-      drawFitted(canvas, body, r, fit, p);
-      if (sh != null && sr != null) drawFitted(canvas, sh, sr, fit, p);
-    }
+  bool updateShouldNotify(LiveFace old) => old.body != body;
+}
 
-    drawMixed(
-      canvas,
-      bounds,
-      f,
-      1,
-      (p) => frame(a, loRect, shLo, shLoRect, p),
-      b == null ? null : (p) => frame(b, hiRect, shHi, shHiRect, p),
-    );
+/// Marks the face's coordinate space for [LivePart].
+class LiveFaceRoot extends SingleChildRenderObjectWidget {
+  const LiveFaceRoot({super.key, super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderFaceRoot();
+}
+
+class _RenderFaceRoot extends RenderProxyBox {}
+
+/// Stands in for a control's moving part when the body is the live model:
+/// draws nothing, and tells the model where the part is now (the
+/// control's own slides, turns and presses, read off its transform) and in
+/// what [state].
+class LivePart extends LeafRenderObjectWidget {
+  const LivePart({super.key, required this.name, this.state});
+
+  final String name;
+  final String? state;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderLivePart(name, state, LiveFace.of(context));
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) =>
+      (renderObject as _RenderLivePart)
+        ..name = name
+        ..state = state
+        ..face = LiveFace.of(context);
+}
+
+class _RenderLivePart extends RenderBox {
+  _RenderLivePart(this._name, this._state, this.face);
+
+  String _name;
+  String? _state;
+  LiveFace? face;
+
+  set name(String v) {
+    if (v == _name) return;
+    _name = v;
+    markNeedsPaint();
+  }
+
+  set state(String? v) {
+    if (v == _state) return;
+    _state = v;
+    markNeedsPaint();
   }
 
   @override
-  bool shouldRepaint(_TurnPainter o) =>
-      o.lo != lo || o.hi != hi || o.shLo != shLo || o.shHi != shHi || o.f != f || o.fit.trim != fit.trim;
+  void performLayout() => size = constraints.smallest;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final f = face;
+    if (f == null) return;
+    RenderObject? root = parent;
+    while (root != null && root is! _RenderFaceRoot) {
+      root = root.parent;
+    }
+    if (root == null) return;
+    final m = getTransformTo(root);
+    final at = MatrixUtils.transformPoint(m, size.center(Offset.zero));
+    final rest = f.rest(_name);
+    final angle = math.atan2(m.entry(1, 0), m.entry(0, 0));
+    f.body.setPart(_name, dx: at.dx - rest.dx, dy: at.dy - rest.dy, angle: angle, state: _state);
+  }
 }

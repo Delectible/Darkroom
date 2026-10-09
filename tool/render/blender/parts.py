@@ -16,6 +16,14 @@ PANEL_YAWS = [0, 16, 32, 48]
 LEVER_REST = 0.18  # radians, clockwise on screen
 
 
+def moving(g, how):
+    """Marks [g] as a piece that moves on the live model (export_glb.py):
+    'press' (pushed in), 'turn' (rotates about its origin), 'slide',
+    'rock', 'lever'."""
+    g['mv'] = how
+    return g
+
+
 # ------------------------------------------------------------------ film
 def _swatch():
     g = group('swatch')
@@ -70,7 +78,7 @@ def f_flash(_):
 
 
 def f_flashtab(_):
-    g = group('tab')
+    g = moving(group('tab'), 'slide')
     rbox(15, 12, 5.5, 1.6, 1.2, 'polished', 0, g)
     for i in range(-2, 3):
         rbox(1.1, 10, 0.9, 0.4, 0.3, 'satin', 5.2, g).location.x = i * 2.5
@@ -79,13 +87,14 @@ def f_flashtab(_):
 
 def f_aspect(_, top_only=False):
     g = group('aspect')
-    knurl(17, 8, 72, 'satin', 0.9, 0, g)
-    cylinder(16.4, 1.2, 'spun', 8, 128, 0.4, g, r_top=15.6)
+    dial = moving(group('dial', g), 'turn')
+    knurl(17, 8, 72, 'satin', 0.9, 0, dial)
+    cylinder(16.4, 1.2, 'spun', 8, 128, 0.4, dial, r_top=15.6)
     for i in range(24):
         a = i / 24 * math.tau
         long = i % 6 == 0
         rr = 12.8 if long else 13.3
-        box(2.6 if long else 1.6, 0.35, 0.12, 'ink', (math.cos(a) * rr, math.sin(a) * rr, 9.26), a, 0, g)
+        box(2.6 if long else 1.6, 0.35, 0.12, 'ink', (math.cos(a) * rr, math.sin(a) * rr, 9.26), a, 0, dial)
     if not top_only:
         cylinder(1.3, 0.3, 'red', 0, 24, 0, g).location.y = 23
     return g
@@ -114,7 +123,7 @@ def lens_knob(dark):
 
 
 def lensdot(_):
-    g = group('dot')
+    g = moving(group('dot'), 'turn')
     cylinder(1.4, 0.3, 'red', 9.85, 32, 0, g).location.y = 12.6
     return g
 
@@ -124,10 +133,11 @@ def f_menu(state):
     cylinder(14, 2.2, 'satin', 0, 128, 0.4, g)
     cylinder(11.6, 0.4, 'gap', 1.9, 64, 0, g)
     lift = -1.4 if state == 'down' else 0
-    cylinder(11, 4.2, 'spun', 2.2 + lift, 128, 0.6, g, r_top=10.4)
+    press = moving(group('press', g), 'press')
+    cylinder(11, 4.2, 'spun', 2.2 + lift, 128, 0.6, press, r_top=10.4)
     for yy, kx in ((3.2, 1.6), (0, -1.8), (-3.2, 0.8)):
-        box(10, 0.9, 0.12, 'ink', (0, yy, 6.45 + lift), 0, 0, g)
-        cylinder(1.3, 0.14, 'ink', 6.42 + lift, 24, 0, g).location = (kx, yy, 6.42 + lift)
+        box(10, 0.9, 0.12, 'ink', (0, yy, 6.45 + lift), 0, 0, press)
+        cylinder(1.3, 0.14, 'ink', 6.42 + lift, 24, 0, press).location = (kx, yy, 6.42 + lift)
     return g
 
 
@@ -170,15 +180,16 @@ def film_release(state, with_lever=True, cap=True):
             prof.append((r, top - 0.12 * ((r - 1.4) / 4.2) ** 2 - (int(r * 2) % 2) * 0.03))
             r += 0.5
         prof += [(6.0, top - 0.35), (6.2, top - 0.8), (6.2, 2.4), (0, 2.4)]
-        lathe(prof, 'polished', 128, g, 'cap')
-        cylinder(1.0, 0.6, 'gap', top - 0.45, 48, 0, g)
+        press = moving(group('press', g), 'press')
+        lathe(prof, 'polished', 128, press, 'cap')
+        cylinder(1.0, 0.6, 'gap', top - 0.45, 48, 0, press)
     if with_lever:
         lever(g)
     return g
 
 
 def lever(parent, angle=-LEVER_REST):
-    pivot = group('lever', parent)
+    pivot = moving(group('lever', parent), 'lever')
     pivot.rotation_euler.z = angle
     length = 15.7
     pts = capsule_pts(0, 0, -length, 0, 2.7)
@@ -221,8 +232,9 @@ def f_run(state):
     knurl(10.9, 2.6, 36, 'blackPaint', 0.7, 0.2, g)
     cylinder(8.0, 0.4, 'gap', 2.5, 96, 0, g)
     top = 3.6 if state == 'down' else 5.4
-    lathe([(0, top), (3.0, top - 0.08), (5.6, top - 0.35), (6.9, top - 0.9), (7.4, top - 1.6), (7.4, 2.6), (0, 2.6)], 'redGloss', 128, g, 'cap')
-    text('RUN', 2.4, 'whiteInk', top - 0.02, 0.06, 'CENTER', 'InterDisplay-Bold.ttf', 1.0, g)
+    press = moving(group('press', g), 'press')
+    lathe([(0, top), (3.0, top - 0.08), (5.6, top - 0.35), (6.9, top - 0.9), (7.4, top - 1.6), (7.4, 2.6), (0, 2.6)], 'redGloss', 128, press, 'cap')
+    text('RUN', 2.4, 'whiteInk', top - 0.02, 0.06, 'CENTER', 'InterDisplay-Bold.ttf', 1.0, press)
     return g
 
 
@@ -234,9 +246,10 @@ def digital_key(rec):
         rbox(26, 22, 2.2, 1.0, 0.4, 'alu', 0, g)
         rbox(20.4, 16.4, 1.0, 0.8, 0.2, 'gap', 1.2, g)
         base = 2.2 if state == 'down' else 3.2
-        rbox(18.6, 14.6, 3.2, 1.5, 0.8, 'satin', base - 1.0, g)
+        press = moving(group('press', g), 'press')
+        rbox(18.6, 14.6, 3.2, 1.5, 0.8, 'satin', base - 1.0, press)
         if rec:
-            cylinder(2.6, 0.25, 'red', base + 2.2, 64, 0, g)
+            cylinder(2.6, 0.25, 'red', base + 2.2, 64, 0, press)
         return g
     return build
 
@@ -260,7 +273,7 @@ def pill(w, h):
         g = group('pill')
         rbox(w + 4, h + 4, 0.6, (h + 4) / 2, 0.1, 'gap', -0.4, g)
         ring(w + 8, h + 8, (h + 8) / 2, w + 3, h + 3, (h + 3) / 2, 0.8, 0.3, 'aluDark', 0, g)
-        rbox(w, h, 4.2, h / 2, 1.4, 'rubber', 0.2 if state == 'down' else 1.1, g)
+        rbox(w, h, 4.2, h / 2, 1.4, 'rubber', 0.2 if state == 'down' else 1.1, moving(group('press', g), 'press'))
         return g
     return build
 
@@ -278,7 +291,7 @@ def d_rocker(state):
     g = group('rocker')
     ring(108, 48, 24, 102, 42, 21, 0.8, 0.3, 'aluDark', 0, g)
     rbox(102, 42, 0.6, 21, 0.1, 'gap', -0.4, g)
-    key = group('key', g)
+    key = moving(group('key', g), 'rock')
     rbox(100, 40, 4.2, 20, 1.4, 'rubber', 0.8, key)
     box(1, 26, 0.6, 'gap', (0, 0, 5.0), 0, 0, key)
     for t, x in (('W', -25), ('T', 25)):

@@ -758,3 +758,11 @@ Answers: turntable renders, no 2D/3D switch.
   aspect (was a 1080p stream). Preset `max` for film stills; output caps
   8192 (35mm) / 3072 (instant). Grain scales with the frame. Digital
   bodies unchanged. → 1.6.1 · 2026-10-09 · bd6919c
+
+## 37. Real-time 3D cameras (2026-10-09)
+
+- [~] **37.1 Live 3D bodies**: the pre-rendered swap loses every label and
+  blurs between frames. Decided: real-time 3D with Flutter Scene (Flutter
+  GPU): the Blender models exported to glTF with baked lighting, the
+  controls moving on the model, labels / LCD / viewfinder as live widgets
+  on the face. Phones without Flutter GPU get the classic drawn bodies.

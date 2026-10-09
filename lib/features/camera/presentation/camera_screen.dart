@@ -175,19 +175,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     unawaited(Sfx.cameraSwap.preload());
     unawaited(Sfx.zoomMotor.preload());
     VolumeKeys.listen(_volume);
-    // 3D switched on (or performance mode off) later: decode the sprites then.
-    ref.listenManual(globalSettingsProvider.select((s) => (s.controls3d, s.performance)), (prev, next) async {
-      if (!next.$1) return;
-      final art = await ref.read(wholeArtProvider.future);
-      if (art != null && mounted) unawaited(art.precache(context));
-    });
+    // (The 3D bodies load behind the launch screen: main.dart.)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // The photoreal bodies: the face-on art was decoded behind the launch
-      // screen (main.dart); now the turned frames, kept for the session.
-      final art = await ref.read(wholeArtProvider.future);
-      if (art != null && mounted && ref.read(globalSettingsProvider).controls3d) {
-        unawaited(art.precache(context));
-      }
       // Paint the corkboard's cork while nothing is happening, so its first
       // slide-in doesn't have to.
       Future<void>.delayed(const Duration(seconds: 2), () async {
@@ -612,8 +601,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                     builder: (context, child) {
                       final moving = _committing || _swap.isAnimating || _swap.value != 0;
                       final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
-                      Widget picture(ui.Image? image, AppMode m) =>
-                          image == null ? BodyStandIn(mode: m) : RawImage(image: image, fit: BoxFit.fill);
+                      Widget picture(ui.Image? image, AppMode m) => image == null
+                          // 3D: the model is the body; only its labels are missing.
+                          ? (whole != null ? const SizedBox.shrink() : BodyStandIn(mode: m))
+                          : RawImage(image: image, fit: BoxFit.fill);
                       // 3D: the bodies are drawn from the whole-body renders as they
                       // move; each viewfinder a still (live: retaken every frame).
                       final rendered = wholeArt == null || whole == null
@@ -678,7 +669,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                             );
                     },
                     child: RepaintBoundary(
-                      key: _bodyKey,
+                      // 3D: the snapshots are of the face's widgets only (the
+                      // model is drawn under them, posed).
+                      key: whole != null ? null : _bodyKey,
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
@@ -694,6 +687,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                                 onOpenSelector: _openSelector,
                                 onOpenGallery: _openGallery,
                                 processing: const ProcessingSpinner(),
+                                overlayKey: _bodyKey,
                               ),
                             )
                           else ...[

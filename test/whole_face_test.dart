@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
@@ -12,7 +11,6 @@ import 'package:darkroom/core/theme/retro_theme.dart';
 import 'package:darkroom/core/device/battery.dart';
 import 'package:darkroom/features/camera/application/camera_session_controller.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
-import 'package:darkroom/features/camera/presentation/body_swap.dart';
 import 'package:darkroom/features/camera/presentation/whole_body.dart';
 import 'package:darkroom/features/camera/presentation/whole_face.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
@@ -56,10 +54,10 @@ class _Session extends CameraSessionController {
   CameraSessionState build() => const CameraSessionState(hasFrontCamera: true);
 }
 
-/// The camera face drawn from the whole-body renders (assets/body3) at the
-/// sizes of real phones: everything fits (no overflow), the viewfinder and
-/// the controls sit where the render put them on every height (the middle
-/// trims), and a swap frame draws. `SHOTS=dir` saves them.
+/// The camera face of the 3D bodies (assets/body3d; the model itself needs
+/// Flutter GPU, so a dark stand-in here) at the sizes of real phones:
+/// everything fits (no overflow) and the viewfinder fills the frame's
+/// screen on every height (the middle trims). `SHOTS=dir` saves them.
 void main() {
   final shots = Platform.environment['SHOTS'];
   final boundary = GlobalKey();
@@ -109,7 +107,7 @@ void main() {
   for (final mode in AppMode.values) {
     for (final MapEntry(key: phone, value: size) in phones.entries) {
       testWidgets('${mode.name} face on $phone', (tester) async {
-        final art = await tester.runAsync(WholeArt.load);
+        final art = await tester.runAsync(() => WholeArt.load(scenes: false));
         final body = art?.bodies[mode];
         if (art == null || body == null) return markTestSkipped('no whole-body art bundled');
         tester.view.physicalSize = size * 3;
@@ -129,7 +127,6 @@ void main() {
             art,
           ),
         );
-        await tester.runAsync(() => art.precache(tester.element(find.byType(WholeFace))));
         await tester.pump(const Duration(milliseconds: 300));
         expect(tester.takeException(), isNull);
         // The viewfinder fills the frame's screen whatever the height.
@@ -138,37 +135,5 @@ void main() {
         await shoot(tester, 'whole_${mode.name}_$phone');
       });
     }
-
-    testWidgets('${mode.name} mid-swap draws its turn', (tester) async {
-      final art = await tester.runAsync(WholeArt.load);
-      final body = art?.bodies[mode];
-      if (art == null || body == null) return markTestSkipped('no whole-body art bundled');
-      tester.view.physicalSize = const Size(412, 915) * 3;
-      tester.view.devicePixelRatio = 3;
-      addTearDown(tester.view.reset);
-      final yaw = body.turns.last.yaw * math.pi / 180;
-      await tester.pumpWidget(
-        app(
-          mode,
-          SwapBody(
-            mode: mode,
-            face: const SizedBox.expand(),
-            capSide: mode == AppMode.film ? 1 : -1,
-            pose: BodyPose(dx: 0, dy: 0, tilt: yaw, roll: 0, scale: 0.92, swing: 0.4),
-            rendered: RenderedBody(
-              art: art,
-              body: body,
-              shutter: 'shutter',
-              viewfinder: const ColoredBox(color: Color(0xFF6A8CAF)),
-            ),
-          ),
-          art,
-        ),
-      );
-      await tester.runAsync(() => art.precache(tester.element(find.byType(SwapBody))));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(tester.takeException(), isNull);
-      await shoot(tester, 'whole_${mode.name}_swap');
-    });
   }
 }

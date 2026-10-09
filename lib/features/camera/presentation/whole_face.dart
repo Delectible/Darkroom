@@ -15,12 +15,12 @@ import 'viewport.dart';
 import 'whole_body.dart';
 import 'widgets/camera_controls.dart';
 
-/// The camera's face drawn from the whole-body renders: the resting body
-/// fitted to the screen (scaled to its width, a band taken out of the middle
-/// of the viewfinder on less tall phones), the live viewfinder in its frame,
-/// and every control at the place it was rendered. The controls are the
-/// usual widgets; their moving parts draw the body's layers (see
-/// [BodyArt.fromWhole]). Laid out in design dp, scaled to the screen.
+/// The camera's face on the live 3D body: the model fitted to the screen
+/// (scaled to its width, its middle squeezed or stretched inside the
+/// viewfinder to the phone's height), the live viewfinder in its frame, and
+/// every control at its place on the model. The controls are the usual
+/// widgets; their moving parts move the model's ([LivePart]). Laid out in
+/// design dp, scaled to the screen.
 class WholeFace extends ConsumerWidget {
   const WholeFace({
     super.key,
@@ -31,6 +31,7 @@ class WholeFace extends ConsumerWidget {
     required this.onOpenSelector,
     required this.onOpenGallery,
     this.processing,
+    this.overlayKey,
   });
 
   final WholeArt art;
@@ -42,6 +43,10 @@ class WholeFace extends ConsumerWidget {
 
   /// The spinner shown while shots are processing (see [ProcessingSpinner]).
   final Widget? processing;
+
+  /// On the layer of widgets over the model (labels, LCD, viewfinder): a
+  /// picture of it is laid on the model when it's the other camera.
+  final GlobalKey? overlayKey;
 
   /// The shutter widget's hub (where the render's release sits) relative to
   /// its centre, per kind (see ShutterButton: 104 x 86, face box and hub).
@@ -77,7 +82,8 @@ class WholeFace extends ConsumerWidget {
             ? Rect.fromLTRB(label.left + 8, label.top + 7, label.right - 8, label.bottom - 7)
             : label;
         final shutterAt = part('shutter') - shutterHub(spec);
-        return ClipRect(
+        final live = body.live?..showShutter(spec.recordsVideo);
+        Widget overlay = ClipRect(
           child: OverflowBox(
             alignment: Alignment.topLeft,
             minWidth: design.width,
@@ -89,86 +95,86 @@ class WholeFace extends ConsumerWidget {
               alignment: Alignment.topLeft,
               child: WholeScale(
                 scale: s,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned.fill(
-                      child: _Rest(art: art, body: body, fit: fit, scale: s),
-                    ),
-                    // The live picture in the rendered frame's screen.
-                    Positioned.fromRect(
-                      rect: screen,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(film ? 6 : 3),
-                        child: const CameraViewport(),
+                child: LiveFaceRoot(
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // The live picture in the rendered frame's screen.
+                      Positioned.fromRect(
+                        rect: screen,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(film ? 6 : 3),
+                          child: const CameraViewport(),
+                        ),
                       ),
-                    ),
-                    at(
-                      Offset(art.design.width / 2, (lay.frame.bottom + lay.label.top) / 2),
-                      const Size(80, 16),
-                      FittedBox(child: PickerCaret(onOpen: onOpenSelector)),
-                    ),
-                    // Top controls.
-                    at(part(film ? 'flash' : 'pill'), const Size(76, 36), const FlashButton()),
-                    at(
-                      part(film ? 'aspect' : 'pillwide'),
-                      const Size(64, 36),
-                      AspectButton(
-                        onCycle: () =>
-                            unawaited(ref.read(cameraSettingsProvider.notifier).cycleAspect(spec.id)),
+                      at(
+                        Offset(art.design.width / 2, (lay.frame.bottom + lay.label.top) / 2),
+                        const Size(80, 16),
+                        FittedBox(child: PickerCaret(onOpen: onOpenSelector)),
                       ),
-                    ),
-                    if (session.hasFrontCamera)
-                      at(part('lens'), const Size(40, 40), LensFlipButton(enabled: !recording)),
-                    at(
-                      part(film ? 'menu' : 'pillsmall'),
-                      const Size(44, 36),
-                      _Settings(mode: mode, onTap: onSettings),
-                    ),
-                    if (processing != null)
-                      at(Offset(part('lens').dx - 40, part('lens').dy), const Size(24, 24), processing!),
-                    // Under the viewfinder: the box end in the memo holder /
-                    // the LCD, and the zoom rocker.
-                    Positioned.fromRect(
-                      rect: card,
-                      child: StockLabel(onOpen: onOpenSelector),
-                    ),
-                    // (the widget is the rocker with its ZOOM caption under it)
-                    if (!film)
-                      at(part('rocker') + const Offset(0, 10), const Size(100, 60), const ZoomRocker()),
-                    // Bottom row.
-                    at(
-                      part(film ? 'print' : 'review'),
-                      const Size(64, 64),
-                      GalleryButton(onOpen: onOpenGallery),
-                    ),
-                    at(shutterAt, const Size(104, 86), const ShutterButton()),
-                    at(part('tray'), const Size(64, 64), StockButton(onOpen: onOpenSelector)),
-                  ],
+                      // Top controls.
+                      at(part(film ? 'flash' : 'pill'), const Size(76, 36), const FlashButton()),
+                      at(
+                        part(film ? 'aspect' : 'pillwide'),
+                        const Size(64, 36),
+                        AspectButton(
+                          onCycle: () =>
+                              unawaited(ref.read(cameraSettingsProvider.notifier).cycleAspect(spec.id)),
+                        ),
+                      ),
+                      if (session.hasFrontCamera)
+                        at(part('lens'), const Size(40, 40), LensFlipButton(enabled: !recording)),
+                      at(
+                        part(film ? 'menu' : 'pillsmall'),
+                        const Size(44, 36),
+                        _Settings(mode: mode, onTap: onSettings),
+                      ),
+                      if (processing != null)
+                        at(Offset(part('lens').dx - 40, part('lens').dy), const Size(24, 24), processing!),
+                      // Under the viewfinder: the box end in the memo holder /
+                      // the LCD, and the zoom rocker.
+                      Positioned.fromRect(
+                        rect: card,
+                        child: StockLabel(onOpen: onOpenSelector),
+                      ),
+                      // (the widget is the rocker with its ZOOM caption under it)
+                      if (!film)
+                        at(part('rocker') + const Offset(0, 10), const Size(100, 60), const ZoomRocker()),
+                      // Bottom row.
+                      at(
+                        part(film ? 'print' : 'review'),
+                        const Size(64, 64),
+                        GalleryButton(onOpen: onOpenGallery),
+                      ),
+                      at(shutterAt, const Size(104, 86), const ShutterButton()),
+                      at(part('tray'), const Size(64, 64), StockButton(onOpen: onOpenSelector)),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         );
+        if (live != null) {
+          overlay = LiveFace(
+            body: live,
+            rest: (name) {
+              final p = lay.parts[BodyArt.anchorOf(name)] ?? Offset.zero;
+              return Offset(p.dx, fit.y(p.dy));
+            },
+            child: overlay,
+          );
+        }
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            // The model is drawn behind this by the swap stage (SwapBody),
+            // posed; without it (no Flutter GPU, tests), a dark body.
+            if (live == null) const ColoredBox(color: Color(0xFF16171A)),
+            RepaintBoundary(key: overlayKey, child: overlay),
+          ],
+        );
       },
-    );
-  }
-}
-
-class _Rest extends StatelessWidget {
-  const _Rest({required this.art, required this.body, required this.fit, required this.scale});
-
-  final WholeArt art;
-  final WholeBody body;
-  final DesignFit fit;
-  final double scale;
-
-  @override
-  Widget build(BuildContext context) {
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    return ArtImages(
-      providers: [body.rest.image(scale * dpr)],
-      painter: (imgs) => RestPainter(imgs[0], body.rest.rect, fit),
     );
   }
 }

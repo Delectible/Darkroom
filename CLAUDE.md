@@ -360,37 +360,43 @@ UI
   (`GlobalSettings.performance` is just `!controls3d` since 1.5.1): the
   classic drawn bodies, one frozen viewfinder still, the body swapped as
   one picture, no halation.
-- **Photoreal bodies (1.6, whole-body renders)**: each camera is modelled
-  whole in Blender (`tool/render/blender/whole_body.py`, part builders in
-  `parts.py`, materials/shapes in `kit.py`) on one design layout (412 x 968
-  dp, `LAYOUT` there; the app reads it from the manifest) and seen through
-  one perspective camera (`DIST` 1400 dp above the face centre). Jobs:
-  `rest` (face-on, without the moving parts), `layers` (each moving part
-  alone in each state, with the shadow it casts, cropped: flash tab, dial,
-  lens dot, menu / keys, rocker, shutters), `turns` (the whole body every 3
-  degrees for the swap, cropped, plus each shutter turned with it, and the
-  strap lug's position). Resumable; a full render takes several hours
-  (`--draft` for a quick look; `whole_mock.py` composites like the app).
-  `bundle_whole.py OUT assets/body3` copies them in.
-  App: `whole_body.dart` (`WholeArt`, `DesignFit`: scaled to the screen's
-  width, phones less tall than the design lose a band out of the middle of
-  the viewfinder at `cutY`, taller ones stretch a thin band there;
-  `WholeTurn` mixes the two nearest turns additively), `whole_face.dart`
-  (the face at rest: rest render, live viewfinder in the frame's screen,
-  every control at its design position). The controls are the usual
-  widgets: `BodyArt.fromWhole` (photo_body.dart) gives them parts whose
-  sprites are the layers offset from the control's centre; parts baked into
-  the rest picture draw nothing. Mid-swap `SwapBody` draws the rendered
-  turn (2D slide / roll / scale), lays the viewfinder still onto the
-  frame's screen with the renders' perspective (a true matrix product
-  about the pivot), hangs the strap from the rendered lug and keeps the
-  live face mounted but clipped away (so the mirror still keeps updating).
-  Controls are in their default state while turning (agreed). All images
-  are decoded up front and pinned for the session (`ArtCache`: live
-  images the cache can't evict; rest + layers behind the launch screen in
-  main.dart `_warmBodies`, turns right after; `WholeArt.precache`; `WholeArt.lateFrames` counts
-  any that weren't). Tests: `whole_face_test` (phone sizes, SHOTS),
-  `photo_body_test` (bundled, 3D off = classic, taps, swap needs no decode).
+- **Live 3D bodies (1.7, Flutter Scene)**: each camera is a real 3D model
+  drawn live (`flutter_scene` on Flutter GPU; enabled in the Android
+  manifest meta-data `EnableFlutterGPU` and iOS Info.plist
+  `FLTEnableFlutterGPU`). Made in Blender by
+  `tool/render/blender/export_glb.py` from the same build as the renders
+  (`whole_body.py` LAYOUT, `parts.py`, `kit.py`): the procedural Cycles
+  materials baked into two atlases (static body / moving pieces: base
+  colour x AO, metal-rough, normal), every moving piece its own node
+  (`parts.py` `moving()`: `mv.<part>.<press|turn|slide|rock|lever>`), each
+  placed part `part.<name>` (Super 8 RUN / camcorder REC = `part.shutteralt`),
+  the static body cut into `body.top` / `body.mid` / `body.bot` (the middle
+  piece, inside the viewfinder, squeezes or stretches to the phone's
+  height). `--env` writes the studio (`studio.hdr`, the renders' soft boxes,
+  plus a separate diffuse SH like the renders' dark world).
+  `bundle_live.py OUT assets/body3d` copies them in with `manifest.json`.
+  `hook/build.dart` turns the .glb files into Flutter Scene packages at
+  build time (`flutter_scene_generated/`, not committed; textures GPU-
+  compressed). App: `whole_body.dart` (`WholeArt.load`: manifest, studio,
+  models (`scenes: false` = layout only, for tests); `LiveBody`: one scene
+  per body, `fit` (middle piece), `pose` (a screen-space Matrix4, the same
+  one the face's widgets are drawn under with `DesignFit.camera`),
+  `setPart`; `LiveBodyView`: an unticked SceneView, repaints only on change).
+  The build-time importer turns glTF's z round: the face looks down -z,
+  the camera sits at -dist. `whole_face.dart` lays the usual control widgets
+  on the face (design dp); their parts are `LivePart`s (photo_body.dart
+  `BodySprite`), which draw nothing and report their transform (slides,
+  turns, presses read off the control's own animation) to the model.
+  `SwapBody` (body_swap.dart) always draws the model under the face (same
+  tree at rest and mid-swap, so nothing remounts); mid-swap the face is
+  drawn under `camera x pose`, the strap from the projected lug. Snapshots
+  for the other camera (`_lastLook`) are of the face's widgets only
+  (`WholeFace.overlayKey`). Loaded (and shaders warmed) behind the launch
+  screen (main.dart `_warmBodies`). No Flutter GPU (old phones, tests): the
+  classic drawn bodies. Desktop check without a phone:
+  `tool/live3d/preview.dart` (see its header; Linux + software Vulkan/GL
+  under Xvfb). Tests: `whole_face_test` (layout on phone sizes),
+  `photo_body_test` (bundled, 3D off = classic, taps).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
 - Camera session: "inactive" does NOT close the camera (Android sends it on

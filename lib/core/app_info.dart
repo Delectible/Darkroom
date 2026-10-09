@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.5.3';
+  static const version = '1.5.4';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Easier zooming on prints: pinch always zooms (no more slipping to the next print), double tap to zoom '
-      'in and out, double tap and slide to zoom gradually, and swipe up or down to put the print away.';
+      'Turning to landscape is smooth now: the corkboard, projector and Darkroom 98 slide in already sideways, no '
+      'jump. Nothing turns if auto-rotate is off. Darkroom 98 in landscape fills the screen.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

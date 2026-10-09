@@ -720,3 +720,13 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **32.2 Double tap** → 1.5.3 · 2026-10-09 · 788320c zooms in, again zooms back out; double tap and
   slide zooms gradually.
 - [x] **32.3 Swipe up or down** → 1.5.3 · 2026-10-09 · 788320c puts the print back (closes the viewer).
+
+## 34. Landscape polish (2026-10-09)
+
+- [x] **34.1 No pop**: panels started portrait and popped into landscape.
+  Now laid out landscape from the start of the slide (`UprightPage`),
+  Android cuts to the real rotation (JUMPCUT). → 1.5.4 · 2026-10-09
+- [x] **34.2 Respect auto-rotate**: off = nothing turns (Android reads the
+  setting, `darkroom/rotation`; iOS keeps to its own lock). → 1.5.4 · 2026-10-09
+- [x] **34.3 Win98 borders**: maximized window, thin bezel, cutout margin
+  capped, scaled for short phones; checked on four phone sizes. → 1.5.4 · 2026-10-09

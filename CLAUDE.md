@@ -377,7 +377,8 @@ UI
   `bundle_live.py OUT assets/body3d` copies them in with `manifest.json`.
   `hook/build.dart` turns the .glb files into Flutter Scene packages at
   build time (`flutter_scene_generated/`, not committed; textures GPU-
-  compressed). App: `whole_body.dart` (`WholeArt.load`: manifest, studio,
+  compressed; ~25 MB in the app for both bodies, adds ~4 min to a
+  build). App: `whole_body.dart` (`WholeArt.load`: manifest, studio,
   models (`scenes: false` = layout only, for tests); `LiveBody`: one scene
   per body, `fit` (middle piece), `pose` (a screen-space Matrix4, the same
   one the face's widgets are drawn under with `DesignFit.camera`),

@@ -754,7 +754,7 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 36. Full-resolution film (2026-10-09)
 
-- [~] **36.1 Film stills at the camera's highest resolution** for the
+- [x] **36.1 Film stills at the camera's highest resolution** for the
   aspect (was a 1080p stream). Preset `max` for film stills; output caps
   8192 (35mm) / 3072 (instant). Grain scales with the frame. Digital
-  bodies unchanged.
+  bodies unchanged. → 1.6.1 · 2026-10-09 · bd6919c

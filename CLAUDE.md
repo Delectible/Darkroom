@@ -118,11 +118,21 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   the swipe. The camera (home) is wrapped in `PortraitLock` so it keeps
   its portrait layout underneath. On push, heroes make the route offstage
   for a frame and its animation reads "completed": ignore that (test
-  `upright_app_test`). iOS Info.plist allows landscape for this. Turned,
-  the system bars hide (immersiveSticky; edgeToEdge back in portrait).
-  Win98Scale lays out 1:1 in landscape (`factorFor`); `Win98Safe` keeps
-  only clear of the cutout itself at the sides; the monitor bezel is 8 dp
-  and the big Transfer bar is dropped (toolbar has Transfer).
+  `upright_app_test`). No pop: each landscape page is wrapped in
+  `UprightPage`, which lays it out turned (RotatedBox) while the app is
+  still portrait and the phone is sideways, so it slides in already
+  landscape; MainActivity sets ROTATION_ANIMATION_JUMPCUT so the real
+  rotation is invisible. Only with auto-rotate on (`AutoRotate`, channel
+  `darkroom/rotation`, Android setting + changes); iOS (null) asks for
+  portrait + landscape and lets the system turn within its lock. iOS
+  Info.plist allows landscape. Turned, the system bars hide
+  (immersiveSticky; edgeToEdge back in portrait). Win98: maximized
+  window; the monitor bezel (`ExplorerMonitor.bezelOf`) takes the system
+  insets (status bar, gesture strip; landscape 24 dp sides for the cutout
+  and the rounded corners, 4 dp top/bottom; `Win98Safe` the same for
+  screens without the monitor), `Win98Scale.factorFor` keeps 420 dp of height (short phones
+  scale down); the big Transfer bar is dropped. `explorer_screens_test`
+  runs portrait + four landscape phones.
 - The app is **portrait** everywhere else. Landscape is detected with the
   accelerometer (`lib/core/device/physical_orientation.dart`); icons rotate in
   place (`Upright` / `UprightBox`) and photos are saved upright.
@@ -372,7 +382,9 @@ UI
   about the pivot), hangs the strap from the rendered lug and keeps the
   live face mounted but clipped away (so the mirror still keeps updating).
   Controls are in their default state while turning (agreed). All images
-  are decoded up front (`WholeArt.precache`; `WholeArt.lateFrames` counts
+  are decoded up front and pinned for the session (`ArtCache`: live
+  images the cache can't evict; rest + layers behind the launch screen in
+  main.dart `_warmBodies`, turns right after; `WholeArt.precache`; `WholeArt.lateFrames` counts
   any that weren't). Tests: `whole_face_test` (phone sizes, SHOTS),
   `photo_body_test` (bundled, 3D off = classic, taps, swap needs no decode).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).

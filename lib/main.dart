@@ -18,6 +18,7 @@ import 'core/paths/app_paths.dart';
 import 'core/providers.dart';
 import 'core/settings/settings_repository.dart';
 import 'features/camera/application/camera_ui_state.dart';
+import 'features/camera/presentation/whole_body.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,8 +83,24 @@ Future<void> main() async {
   }());
 
   final launchPayload = await notifications.launchPayload();
+  // The launch screen stays up until the camera bodies' art is decoded (and
+  // kept: ArtCache), so the camera never comes up half drawn.
+  if (global.controls3d) await _warmBodies(container);
   runApp(UncontrolledProviderScope(container: container, child: const DarkroomApp()));
   if (launchPayload != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => route(launchPayload));
+  }
+}
+
+Future<void> _warmBodies(ProviderContainer container) async {
+  try {
+    final view = WidgetsBinding.instance.platformDispatcher.implicitView;
+    if (view == null || view.physicalSize.isEmpty) return; // warmed by the camera screen instead
+    final dpr = view.devicePixelRatio;
+    final width = view.physicalSize.shortestSide / dpr; // the camera is portrait
+    final art = await container.read(wholeArtProvider.future);
+    await art?.warm(dpr, width, turned: false).timeout(const Duration(seconds: 6));
+  } catch (_) {
+    // too slow or failed: the camera screen carries on decoding
   }
 }

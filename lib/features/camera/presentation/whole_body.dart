@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
+import 'art_cache.dart';
 
 /// The photoreal cameras (1.6): each body rendered whole in Blender
 /// (tool/render/blender/whole_body.py) through one perspective camera,
@@ -66,11 +67,19 @@ class WholeArt {
     }
   }
 
-  /// Decodes what a swap and the face need, rest and layers first.
-  Future<void> precache(BuildContext context) async {
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final s = MediaQuery.sizeOf(context).width / design.width;
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 400 << 20;
+  /// Decodes what a swap and the face need, rest and layers first, and
+  /// keeps it for the session ([ArtCache]).
+  Future<void> precache(BuildContext context) => warm(
+    MediaQuery.devicePixelRatioOf(context),
+    MediaQuery.sizeOf(context).width,
+    config: createLocalImageConfiguration(context),
+  );
+
+  /// [precache] without a context (at launch, behind the launch screen);
+  /// the turned frames too unless [turned] is false.
+  Future<void> warm(double dpr, double width, {ImageConfiguration? config, bool turned = true}) async {
+    final cfg = config ?? ImageConfiguration(devicePixelRatio: dpr);
+    final s = width / design.width;
     final first = <ImageProvider>[], then = <ImageProvider>[];
     for (final b in bodies.values) {
       first.add(b.rest.image(s * dpr));
@@ -84,10 +93,8 @@ class WholeArt {
         }
       }
     }
-    for (final p in [...first, ...then]) {
-      if (!context.mounted) return;
-      await precacheImage(p, context);
-    }
+    await ArtCache.pinAll(first, cfg);
+    if (turned) await ArtCache.pinAll(then, cfg);
   }
 }
 

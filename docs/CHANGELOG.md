@@ -743,9 +743,9 @@ Answers: turntable renders, no 2D/3D switch.
 
 - [x] **35.1 Win98 window size**: portrait gap under the status bar, a
   strip down the side in landscape. The monitor's bezel now takes the
-  status bar / gesture strip / cutout; the window fills its screen.
+  status bar / gesture strip / cutout; the window fills its screen. → 1.5.5 · 2026-10-09 · 7ff9f8d
 - [x] **35.2 Close button in the corner**: landscape keeps 24 dp of bezel
-  at the sides, clear of the phone's rounded corners.
+  at the sides, clear of the phone's rounded corners. → 1.5.5 · 2026-10-09 · 7ff9f8d
 - [x] **35.3 Slow textures**: the launch screen stays up until the camera
   art is decoded; the art stays in memory (`ArtCache`), so swapping bodies
-  never reloads it.
+  never reloads it. → 1.5.5 · 2026-10-09 · 7ff9f8d

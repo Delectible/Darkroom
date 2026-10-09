@@ -384,6 +384,12 @@ UI
 - On the camera screen, swiping sideways on the stock name or the film box
   steps to the next/previous stock without opening the carousel.
 - Zoomed-in photos pan; swiping to the next photo only works at normal zoom.
+  The film print viewer uses `PhotoPager` (`viewer/presentation/zoomable.dart`,
+  raw pointer handling, PageView physics off): a swipe needs 24 dp clearly
+  sideways, a second finger always turns it into a pinch, double tap zooms
+  2.5x / back out, double tap + slide zooms gradually (down = in), a swipe
+  up or down puts the print away, a single tap (after 300 ms) off the print
+  closes it. Tested in `photo_pager_test`.
 
 ## First run
 

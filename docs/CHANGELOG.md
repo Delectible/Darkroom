@@ -712,3 +712,11 @@ Answers: turntable renders, no 2D/3D switch.
 ## 31. Closed testing (2026-10-08)
 
 - [x] **31.1 Promote 1.5.2 to closed testing.** → build 73 promoted · 2026-10-08
+
+## 32. Film print viewer gestures (2026-10-09)
+
+- [~] **32.1 Pinch vs swipe**: zooming tends to start a swipe to the next
+  print; make paging less eager, zoom win.
+- [~] **32.2 Double tap** zooms in, again zooms back out; double tap and
+  slide zooms gradually.
+- [~] **32.3 Swipe up or down** puts the print back (closes the viewer).

@@ -46,6 +46,7 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
   late final List<String> _ids = widget.items.map((m) => m.id).toList();
   late int _index = widget.initialIndex.clamp(0, _ids.length - 1);
   late final PageController _pages = PageController(initialPage: _index);
+  final _printKeys = <String, GlobalKey>{};
   bool _saving = false;
 
   @override
@@ -223,15 +224,23 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                   ),
                 ),
                 Expanded(
-                  child: ZoomPageView(
+                  child: PhotoPager(
                     controller: _pages,
                     itemCount: items.length,
                     onPageChanged: (i) => setState(() => _index = i),
-                    itemBuilder: (context, i, onZoom) => _Print(
+                    // A tap off the print (on the dimmed board) puts it down;
+                    // so does a swipe up or down.
+                    onTap: (at) {
+                      final box =
+                          _printKeys[items[_index].id]?.currentContext?.findRenderObject() as RenderBox?;
+                      final on = box != null && (Offset.zero & box.size).contains(box.globalToLocal(at));
+                      if (!on) unawaited(Navigator.of(context).maybePop());
+                    },
+                    onDismiss: () => Navigator.of(context).maybePop(),
+                    itemBuilder: (context, i) => _Print(
+                      printKey: _printKeys.putIfAbsent(items[i].id, GlobalKey.new),
                       item: items[i],
-                      onZoomChanged: onZoom,
                       onWrite: () => _writeNote(items[i]),
-                      onDismiss: () => Navigator.of(context).maybePop(),
                     ),
                   ),
                 ),
@@ -253,29 +262,17 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
 }
 
 class _Print extends StatelessWidget {
-  const _Print({
-    required this.item,
-    required this.onZoomChanged,
-    required this.onWrite,
-    required this.onDismiss,
-  });
+  const _Print({required this.printKey, required this.item, required this.onWrite});
 
+  /// On the print itself (taps off it put it down: see [PhotoPager.onTap]).
+  final GlobalKey printKey;
   final MediaItem item;
-  final ValueChanged<bool> onZoomChanged;
   final VoidCallback onWrite;
 
-  /// A tap off the print (on the dimmed board) puts it down.
-  final VoidCallback onDismiss;
-
-  /// Taps on the print itself are kept; taps around it dismiss.
-  Widget _held(Widget print) => GestureDetector(
-    behavior: HitTestBehavior.opaque,
-    onTap: onDismiss,
-    child: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: GestureDetector(onTap: () {}, child: print),
-      ),
+  Widget _held(Widget print) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(22),
+      child: KeyedSubtree(key: printKey, child: print),
     ),
   );
 
@@ -283,45 +280,39 @@ class _Print extends StatelessWidget {
   Widget build(BuildContext context) {
     final path = item.outputPath;
     if (CameraCatalog.byId(item.cameraId).isInstant) {
-      return Zoomable(
-        onZoomChanged: onZoomChanged,
-        child: _held(
-          InstantPrint(
-            note: item.note,
-            onNoteTap: onWrite,
-            picture: path == null
-                ? const ColoredBox(color: Colors.black12)
-                : Image.file(
-                    File(path),
-                    fit: BoxFit.cover,
-                    filterQuality: FilterQuality.medium,
-                    gaplessPlayback: true,
-                  ),
-          ),
+      return _held(
+        InstantPrint(
+          note: item.note,
+          onNoteTap: onWrite,
+          picture: path == null
+              ? const ColoredBox(color: Colors.black12)
+              : Image.file(
+                  File(path),
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.medium,
+                  gaplessPlayback: true,
+                ),
         ),
       );
     }
     final aspect = (item.width ?? 3) / (item.height ?? 2);
-    return Zoomable(
-      onZoomChanged: onZoomChanged,
-      child: _held(
-        AspectRatio(
-          aspectRatio: aspect,
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              color: Color(0xFFFBF8F1),
-              boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, 12))],
-            ),
-            child: path == null
-                ? const ColoredBox(color: Colors.black12)
-                : Image.file(
-                    File(path),
-                    fit: BoxFit.cover,
-                    filterQuality: FilterQuality.medium,
-                    gaplessPlayback: true,
-                  ),
+    return _held(
+      AspectRatio(
+        aspectRatio: aspect,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: const BoxDecoration(
+            color: Color(0xFFFBF8F1),
+            boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, 12))],
           ),
+          child: path == null
+              ? const ColoredBox(color: Colors.black12)
+              : Image.file(
+                  File(path),
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.medium,
+                  gaplessPlayback: true,
+                ),
         ),
       ),
     );

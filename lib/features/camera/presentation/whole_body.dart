@@ -38,6 +38,11 @@ class WholeArt {
   /// Frames that weren't decoded yet when drawn (tests: a swap needs none).
   static int lateFrames = 0;
 
+  /// Turn frames are decoded as rendered (sharp when a turn is held mid-
+  /// drag); all of them stay decoded, ~250 MB for both bodies. Lower this
+  /// (e.g. 1.2) to trade sharpness for memory.
+  static const double? turnPx = null;
+
   static Future<WholeArt?> load() async {
     try {
       final j = jsonDecode(await rootBundle.loadString('$root/manifest.json')) as Map<String, dynamic>;
@@ -73,9 +78,9 @@ class WholeArt {
         first.add(l.image(s * dpr));
       }
       for (final t in b.turns) {
-        then.add(t.body.image(null));
+        then.add(t.body.image(turnPx));
         for (final sh in t.shutters.values) {
-          then.add(sh.image(null));
+          then.add(sh.image(turnPx));
         }
       }
     }
@@ -518,10 +523,10 @@ class WholeTurn extends StatelessWidget {
     final shHi = shutter == null || !mix ? null : hi.shutters[shutter];
     return ArtImages(
       providers: [
-        lo.body.image(null),
-        mix ? hi.body.image(null) : null,
-        shLo?.image(null),
-        shHi?.image(null),
+        lo.body.image(WholeArt.turnPx),
+        mix ? hi.body.image(WholeArt.turnPx) : null,
+        shLo?.image(WholeArt.turnPx),
+        shHi?.image(WholeArt.turnPx),
       ],
       painter: (imgs) => _TurnPainter(
         fit: fit,

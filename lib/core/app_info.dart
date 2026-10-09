@@ -3,17 +3,18 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.5.3';
+  static const version = '1.6.0';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Easier zooming on prints: pinch always zooms (no more slipping to the next print), double tap to zoom '
-      'in and out, double tap and slide to zoom gradually, and swipe up or down to put the print away.';
+      'All-new 3D cameras: each body is now rendered whole, as one real object, with proper depth, light and '
+      'shadow; when you swap, the whole camera turns. (Settings > 3D cameras off for the classic look.)';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
+    ('1.6', ['Whole-camera 3D renders that turn when you swap']),
     (
       '1.5',
       [

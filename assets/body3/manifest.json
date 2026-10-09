@@ -1,0 +1,352 @@
+{
+ "design": {
+  "w": 412.0,
+  "h": 968.0,
+  "cutY": 484.0,
+  "dist": 1400.0,
+  "cap": 82.4,
+  "thick": 57.68000000000001
+ },
+ "layout": {
+  "film": {
+   "frame": [
+    14.0,
+    126.0,
+    398.0,
+    732.0
+   ],
+   "screenInset": 9.0,
+   "memo": [
+    20.0,
+    748.0,
+    392.0,
+    796.0
+   ],
+   "plateTop": 120.0,
+   "plateBottom": 914.0,
+   "parts": {
+    "flash": [
+     50.0,
+     84.0
+    ],
+    "flashtab": [
+     23.0,
+     90.0
+    ],
+    "aspect": [
+     128.0,
+     84.0
+    ],
+    "lens": [
+     328.0,
+     84.0
+    ],
+    "lensdot": [
+     328.0,
+     84.0
+    ],
+    "menu": [
+     378.0,
+     84.0
+    ],
+    "print": [
+     56.0,
+     860.0
+    ],
+    "shutter": [
+     214.0,
+     860.0
+    ],
+    "tray": [
+     356.0,
+     860.0
+    ]
+   },
+   "lug": "right"
+  },
+  "digital": {
+   "frame": [
+    14.0,
+    126.0,
+    398.0,
+    732.0
+   ],
+   "screenInset": 12.0,
+   "lcd": [
+    20.0,
+    747.0,
+    238.0,
+    797.0
+   ],
+   "parts": {
+    "pill": [
+     50.0,
+     84.0
+    ],
+    "pillwide": [
+     128.0,
+     84.0
+    ],
+    "lens": [
+     328.0,
+     84.0
+    ],
+    "lensdot": [
+     328.0,
+     84.0
+    ],
+    "pillsmall": [
+     378.0,
+     84.0
+    ],
+    "rocker": [
+     330.0,
+     772.0
+    ],
+    "review": [
+     56.0,
+     860.0
+    ],
+    "shutter": [
+     206.0,
+     860.0
+    ],
+    "tray": [
+     356.0,
+     860.0
+    ]
+   },
+   "lug": "left"
+  }
+ },
+ "film": {
+  "rest": {
+   "path": "film/rest.webp",
+   "rect": [
+    0,
+    0,
+    412.0,
+    968.0
+   ]
+  },
+  "layers": {
+   "flashtab": {
+    "path": "film/layer-flashtab.webp",
+    "rect": [
+     -3,
+     63,
+     58,
+     59
+    ],
+    "px": 0.9482758620689655
+   },
+   "aspect": {
+    "path": "film/layer-aspect.webp",
+    "rect": [
+     93,
+     43,
+     77,
+     84
+    ],
+    "px": 1.0
+   },
+   "aspecttop": {
+    "path": "film/layer-aspecttop.webp",
+    "rect": [
+     105,
+     56,
+     45,
+     49
+    ],
+    "px": 1.0
+   },
+   "lensdot": {
+    "path": "film/layer-lensdot.webp",
+    "rect": [
+     324,
+     57,
+     12,
+     12
+    ],
+    "px": 1.0
+   },
+   "menu-up": {
+    "path": "film/layer-menu-up.webp",
+    "rect": [
+     348,
+     51,
+     69,
+     73
+    ],
+    "px": 0.927536231884058
+   },
+   "menu-down": {
+    "path": "film/layer-menu-down.webp",
+    "rect": [
+     348,
+     52,
+     69,
+     72
+    ],
+    "px": 0.927536231884058
+   },
+   "shutter-up": {
+    "path": "film/layer-shutter-up.webp",
+    "rect": [
+     135,
+     812,
+     135,
+     114
+    ],
+    "px": 1.0
+   },
+   "shutter-down": {
+    "path": "film/layer-shutter-down.webp",
+    "rect": [
+     135,
+     812,
+     135,
+     114
+    ],
+    "px": 1.0
+   },
+   "release-up": {
+    "path": "film/layer-release-up.webp",
+    "rect": [
+     166,
+     812,
+     104,
+     114
+    ],
+    "px": 1.0
+   },
+   "release-down": {
+    "path": "film/layer-release-down.webp",
+    "rect": [
+     166,
+     812,
+     104,
+     114
+    ],
+    "px": 1.0
+   },
+   "lever": {
+    "path": "film/layer-lever.webp",
+    "rect": [
+     147,
+     837,
+     84,
+     46
+    ],
+    "px": 1.0
+   },
+   "run-up": {
+    "path": "film/layer-run-up.webp",
+    "rect": [
+     157,
+     804,
+     122,
+     132
+    ],
+    "px": 1.0
+   },
+   "run-down": {
+    "path": "film/layer-run-down.webp",
+    "rect": [
+     157,
+     804,
+     122,
+     132
+    ],
+    "px": 1.0
+   }
+  },
+  "turns": {
+   "30": {
+    "path": "film/turn-a30.webp",
+    "rect": [
+     -20.079999999999984,
+     -88.20000000000005,
+     533.0,
+     1143.0
+    ],
+    "px": 1.0,
+    "lug": [
+     496.166139755249,
+     210.27043361663817
+    ],
+    "shutters": {
+     "shutter": {
+      "path": "film/turn-shutter-a30.webp",
+      "rect": [
+       128,
+       812,
+       135,
+       116
+      ],
+      "px": 0.9925925925925926
+     },
+     "run": {
+      "path": "film/turn-run-a30.webp",
+      "rect": [
+       148,
+       802,
+       122,
+       138
+      ],
+      "px": 0.9918032786885246
+     }
+    }
+   }
+  }
+ },
+ "digital": {
+  "rest": {
+   "path": "digital/rest.webp",
+   "rect": [
+    0,
+    0,
+    412.0,
+    968.0
+   ]
+  },
+  "turns": {
+   "30": {
+    "path": "digital/turn-a30.webp",
+    "rect": [
+     -101.07999999999998,
+     -77.20000000000005,
+     532.0,
+     1122.0
+    ],
+    "px": 1.0,
+    "lug": [
+     -84.16615522623061,
+     210.27043361663817
+    ],
+    "shutters": {
+     "shutter": {
+      "path": "digital/turn-shutter-a30.webp",
+      "rect": [
+       155,
+       805,
+       123,
+       126
+      ],
+      "px": 0.991869918699187
+     },
+     "rec": {
+      "path": "digital/turn-rec-a30.webp",
+      "rect": [
+       155,
+       805,
+       123,
+       126
+      ],
+      "px": 0.991869918699187
+     }
+    }
+   }
+  }
+ }
+}

@@ -346,24 +346,35 @@ UI
   (`GlobalSettings.performance` is just `!controls3d` since 1.5.1): the
   classic drawn bodies, one frozen viewfinder still, the body swapped as
   one picture, no halation.
-- **Photoreal bodies (1.5)**: every part (leather/aluminium panel, chrome
-  plates, viewfinder frame, keys, dials, shutter, trays) is rendered in
-  Blender Cycles by `tool/render/blender/` (`kit.py` materials + shapes,
-  `parts.py` the parts with the app's dp canvases, `render_body.py`
-  resumable, `mockup.py` lays them out like a Pixel). Needs the pip `bpy`
-  module (`/opt/bpyenv/venv` in Claude's container; Ubuntu's apt Blender
-  lacks the denoiser). `tool/render/body/bundle.py OUT assets/body` copies
-  them in (only complete bodies). The app draws them in its normal layout
-  (`photo_body.dart`: `BodySprite`, `BodySlice` 9-slice, `BodyBackdrop`,
-  `PhotoKey`, all on `PressFeedback`: down on contact, held >= 110 ms,
-  click + haptic, since the body's drag makes taps resolve late); the film
-  format dial turns its top (`aspecttop`, repeats every 90 degrees) a
-  click per change; turned frames cross-fade with the swap (`BodyYaw`), all
-  decoded up front (`BodyArt.precache`; `BodyArt.lateFrames` counts any
-  that weren't). `_Frames` draws them: each turned render is cropped to
-  its foreshortened width (cos turn) and stretched back, and two turns are
-  mixed additively in a layer (exact blend: no doubled shadows popping). `test/photo_body_test.dart` checks every frame is
-  bundled and lays both bodies out (SHOTS saves them).
+- **Photoreal bodies (1.6, whole-body renders)**: each camera is modelled
+  whole in Blender (`tool/render/blender/whole_body.py`, part builders in
+  `parts.py`, materials/shapes in `kit.py`) on one design layout (412 x 968
+  dp, `LAYOUT` there; the app reads it from the manifest) and seen through
+  one perspective camera (`DIST` 1400 dp above the face centre). Jobs:
+  `rest` (face-on, without the moving parts), `layers` (each moving part
+  alone in each state, with the shadow it casts, cropped: flash tab, dial,
+  lens dot, menu / keys, rocker, shutters), `turns` (the whole body every 3
+  degrees for the swap, cropped, plus each shutter turned with it, and the
+  strap lug's position). Resumable; a full render takes several hours
+  (`--draft` for a quick look; `whole_mock.py` composites like the app).
+  `bundle_whole.py OUT assets/body3` copies them in.
+  App: `whole_body.dart` (`WholeArt`, `DesignFit`: scaled to the screen's
+  width, phones less tall than the design lose a band out of the middle of
+  the viewfinder at `cutY`, taller ones stretch a thin band there;
+  `WholeTurn` mixes the two nearest turns additively), `whole_face.dart`
+  (the face at rest: rest render, live viewfinder in the frame's screen,
+  every control at its design position). The controls are the usual
+  widgets: `BodyArt.fromWhole` (photo_body.dart) gives them parts whose
+  sprites are the layers offset from the control's centre; parts baked into
+  the rest picture draw nothing. Mid-swap `SwapBody` draws the rendered
+  turn (2D slide / roll / scale), lays the viewfinder still onto the
+  frame's screen with the renders' perspective (a true matrix product
+  about the pivot), hangs the strap from the rendered lug and keeps the
+  live face mounted but clipped away (so the mirror still keeps updating).
+  Controls are in their default state while turning (agreed). All images
+  are decoded up front (`WholeArt.precache`; `WholeArt.lateFrames` counts
+  any that weren't). Tests: `whole_face_test` (phone sizes, SHOTS),
+  `photo_body_test` (bundled, 3D off = classic, taps, swap needs no decode).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
 - Camera session: "inactive" does NOT close the camera (Android sends it on

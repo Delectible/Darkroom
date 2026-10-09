@@ -720,3 +720,12 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **32.2 Double tap** → 1.5.3 · 2026-10-09 · 788320c zooms in, again zooms back out; double tap and
   slide zooms gradually.
 - [x] **32.3 Swipe up or down** → 1.5.3 · 2026-10-09 · 788320c puts the print back (closes the viewer).
+
+## 33. 3D bodies don't convince (2026-10-09)
+
+- [~] **33.1 Whole-body renders**: per-part sprites look flat, oblong and
+  soft mid-swap. Decided: render each camera as one object through a
+  perspective camera (`tool/render/blender/whole_body.py`), face-on and
+  every 3 degrees of the turn; controls baked in while turning (viewfinder
+  stays live); taller phones trim the middle (inside the viewfinder);
+  up to ~25 MB. Prototype frames sent for a look check first.

@@ -841,5 +841,7 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **40.1 Colour themes**: View > Options > Themes picks a scheme
   (Standard, Night, Rainy Day, Desert, Spruce, Lilac, Pumpkin); it
   applies at once and is remembered.
+  → 1.6.5 · 2026-10-09 · 4b94dad
 - [x] **40.2 Desktop back**: the teal desktop shows round the window again
   (since 1.5.5 the window filled the monitor and the bezel read as white).
+  → 1.6.5 · 2026-10-09 · 4b94dad

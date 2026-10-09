@@ -124,14 +124,17 @@ void main() {
     addTearDown(tester.view.reset);
     final key = GlobalKey();
     await tester.pumpWidget(
-      RepaintBoundary(
-        key: key,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          home: Builder(
-            builder: (context) => Scaffold(
-              body: Center(
-                child: TextButton(onPressed: () => showShutDownSequence(context), child: const Text('go')),
+      ProviderScope(
+        overrides: [physicalOrientationProvider.overrideWith(_Held.new)],
+        child: RepaintBoundary(
+          key: key,
+          child: MaterialApp(
+            debugShowCheckedModeBanner: false,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: TextButton(onPressed: () => showShutDownSequence(context), child: const Text('go')),
+                ),
               ),
             ),
           ),

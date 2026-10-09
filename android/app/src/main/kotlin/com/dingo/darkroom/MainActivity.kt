@@ -1,8 +1,14 @@
 package com.dingo.darkroom
 
+import android.database.ContentObserver
 import android.graphics.Rect
 import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.provider.Settings
 import android.view.KeyEvent
+import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -17,9 +23,31 @@ import io.flutter.plugin.common.MethodChannel
 //    turns them into a volume change, and passed to Dart.
 //  * darkroom/crash: Android's record of recent crashes / freezes.
 //  * darkroom/battery: the phone's battery level.
+//  * darkroom/rotation: whether the phone's auto-rotate is on (and when it
+//    changes): the landscape screens only turn when it is.
 class MainActivity : FlutterActivity() {
     private var volumeChannel: MethodChannel? = null
     private var captureVolume = false
+    private var rotationChannel: MethodChannel? = null
+    private var rotationObserver: ContentObserver? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // The app turns its own screens (they already look landscape when
+        // Android rotates): cut straight to the new orientation instead of
+        // Android's rotate animation.
+        window.attributes = window.attributes.also {
+            it.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_JUMPCUT
+        }
+    }
+
+    override fun onDestroy() {
+        rotationObserver?.let { contentResolver.unregisterContentObserver(it) }
+        super.onDestroy()
+    }
+
+    private fun autoRotate(): Boolean =
+        Settings.System.getInt(contentResolver, Settings.System.ACCELEROMETER_ROTATION, 0) == 1
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val code = event.keyCode
@@ -45,6 +73,23 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        }
+        rotationChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/rotation").also {
+            it.setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "autoRotate" -> result.success(autoRotate())
+                    else -> result.notImplemented()
+                }
+            }
+        }
+        rotationObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                rotationChannel?.invokeMethod("autoRotate", autoRotate())
+            }
+        }.also {
+            contentResolver.registerContentObserver(
+                Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION), false, it,
+            )
         }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/gestures")
             .setMethodCallHandler { call, result ->

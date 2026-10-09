@@ -28,7 +28,9 @@ class PrintViewerScreen extends ConsumerStatefulWidget {
     opaque: false,
     transitionDuration: const Duration(milliseconds: 260),
     reverseTransitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (_, _, _) => PrintViewerScreen(items: items, initialIndex: index < 0 ? 0 : index),
+    pageBuilder: (_, _, _) => UprightPage(
+      child: PrintViewerScreen(items: items, initialIndex: index < 0 ? 0 : index),
+    ),
     transitionsBuilder: (context, a, _, child) => FadeTransition(
       opacity: a,
       child: ScaleTransition(

@@ -71,12 +71,23 @@ void main() {
     }
   }
 
-  // Portrait, and held sideways (the app turns Win98 to landscape).
-  for (final land in [false, true]) {
-    testWidgets('explorer ${land ? 'landscape' : 'portrait'}: tabs, menus and dialogs fit', (tester) async {
-      shotTag = land ? '_land' : '';
-      tester.view.physicalSize = land ? const Size(2856, 1280) : const Size(1280, 2856);
-      tester.view.devicePixelRatio = 3.1;
+  // Portrait, and held sideways (the app turns Win98 to landscape) on a few
+  // phones, with the insets they report (a punch hole / notch at a side).
+  for (final (tag, size, dpr, pad) in [
+    ('', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75)),
+    ('_land', const Size(2856, 1280), 3.1, const FakeViewPadding(left: 150)),
+    ('_land_s10', const Size(2280, 1080), 2.625, const FakeViewPadding(left: 105)),
+    ('_land_iphone', const Size(2556, 1179), 3.0, const FakeViewPadding(left: 177, right: 177, bottom: 63)),
+    ('_land_small', const Size(1480, 720), 2.0, const FakeViewPadding(left: 60)),
+  ]) {
+    final land = tag.isNotEmpty;
+    testWidgets('explorer ${land ? 'landscape $tag' : 'portrait'}: tabs, menus and dialogs fit', (
+      tester,
+    ) async {
+      shotTag = tag;
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = dpr;
+      tester.view.padding = pad;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         ProviderScope(

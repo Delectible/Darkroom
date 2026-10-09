@@ -42,7 +42,7 @@ class ExplorerScreen extends ConsumerStatefulWidget {
     settings: UprightApp.landscape,
     transitionDuration: slideDuration,
     reverseTransitionDuration: const Duration(milliseconds: 460),
-    pageBuilder: (context, _, _) => const ExplorerMonitor(child: ExplorerScreen()),
+    pageBuilder: (context, _, _) => const UprightPage(child: ExplorerMonitor(child: ExplorerScreen())),
     transitionsBuilder: (context, a, _, child) => SlideTransition(
       position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
         CurvedAnimation(parent: a, curve: const Cubic(0.3, 0.0, 0.5, 0.94), reverseCurve: Curves.easeInCubic),
@@ -195,7 +195,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     PageRouteBuilder<void>(
       settings: UprightApp.landscape,
       transitionDuration: const Duration(milliseconds: 160),
-      pageBuilder: (_, _, _) => Win98ViewerScreen(items: items, initialIndex: index),
+      pageBuilder: (_, _, _) => UprightPage(
+        child: Win98ViewerScreen(items: items, initialIndex: index),
+      ),
       transitionsBuilder: (context, a, _, child) => Win98ZoomTransition(animation: a, child: child),
     ),
   );
@@ -478,7 +480,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
               children: [
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+                    // turned to landscape, maximized: no desktop round it
+                    padding: land ? EdgeInsets.zero : const EdgeInsets.fromLTRB(6, 6, 6, 4),
                     child: Win98Window(
                       title: title,
                       icon: PixelIconView(pathIcon),
@@ -1007,7 +1010,7 @@ class ExplorerMonitor extends StatelessWidget {
   static const bezel = 16.0;
 
   /// Thinner turned to landscape, where height is short.
-  static double bezelOf(BuildContext context) => MediaQuery.sizeOf(context).aspectRatio > 1 ? 8 : bezel;
+  static double bezelOf(BuildContext context) => MediaQuery.sizeOf(context).aspectRatio > 1 ? 4 : bezel;
 
   final Widget child;
 

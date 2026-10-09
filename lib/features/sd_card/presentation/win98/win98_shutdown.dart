@@ -19,7 +19,7 @@ Future<void> showShutDownSequence(BuildContext context) => Navigator.of(context)
     settings: UprightApp.landscape,
     opaque: true,
     transitionDuration: const Duration(milliseconds: 250),
-    pageBuilder: (context, _, _) => const _ShutDown(),
+    pageBuilder: (context, _, _) => const UprightPage(child: _ShutDown()),
     transitionsBuilder: (context, a, _, child) => FadeTransition(opacity: a, child: child),
   ),
 );

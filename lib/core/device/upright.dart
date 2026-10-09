@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -179,34 +180,56 @@ class _UprightObserver extends NavigatorObserver {
 
 class _NoRoute extends Route<void> {}
 
-class _UprightAppState extends ConsumerState<UprightApp> {
-  DeviceOrientation _asked = DeviceOrientation.portraitUp;
+class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObserver {
+  List<DeviceOrientation> _asked = const [DeviceOrientation.portraitUp];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     UprightApp.observer.allowed.addListener(_apply);
+    AutoRotate.value.addListener(_apply);
+    unawaited(AutoRotate.refresh());
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     UprightApp.observer.allowed.removeListener(_apply);
+    AutoRotate.value.removeListener(_apply);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(AutoRotate.refresh());
   }
 
   void _apply() {
     final o = ref.read(physicalOrientationProvider);
-    final want = UprightApp.observer.allowed.value && isLandscape(o) ? o : DeviceOrientation.portraitUp;
-    if (want == _asked) return;
+    final auto = AutoRotate.value.value;
+    final List<DeviceOrientation> want;
+    if (!UprightApp.observer.allowed.value || auto == false) {
+      want = const [DeviceOrientation.portraitUp];
+    } else if (auto == null) {
+      // iOS: the system turns it (and keeps to the rotation lock).
+      want = const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ];
+    } else {
+      want = [isLandscape(o) ? o : DeviceOrientation.portraitUp];
+    }
+    if (listEquals(want, _asked)) return;
     _asked = want;
-    if (want != DeviceOrientation.portraitUp) UprightApp.lastLandscape = want;
-    unawaited(SystemChrome.setPreferredOrientations([want]));
+    if (want.length == 1 && want.first != DeviceOrientation.portraitUp) UprightApp.lastLandscape = want.first;
+    unawaited(SystemChrome.setPreferredOrientations(want));
     // Turned, the screens get the whole display: the status and nav bars
     // hide (a swipe from the edge brings them back for a moment).
+    final turned = want.length > 1 || want.first != DeviceOrientation.portraitUp;
     unawaited(
-      SystemChrome.setEnabledSystemUIMode(
-        want == DeviceOrientation.portraitUp ? SystemUiMode.edgeToEdge : SystemUiMode.immersiveSticky,
-      ),
+      SystemChrome.setEnabledSystemUIMode(turned ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge),
     );
   }
 
@@ -214,6 +237,77 @@ class _UprightAppState extends ConsumerState<UprightApp> {
   Widget build(BuildContext context) {
     ref.listen(physicalOrientationProvider, (_, _) => _apply());
     return widget.child;
+  }
+}
+
+/// Whether the phone's auto-rotate is on (Android, `darkroom/rotation`);
+/// null where the system keeps that to itself (iOS turns the app, within
+/// its rotation lock, on its own).
+class AutoRotate {
+  AutoRotate._();
+
+  static const _channel = MethodChannel('darkroom/rotation');
+  static final value = ValueNotifier<bool?>(null);
+  static bool _listening = false;
+
+  static Future<void> refresh() async {
+    if (!_listening) {
+      _listening = true;
+      _channel.setMethodCallHandler((call) async {
+        if (call.method == 'autoRotate') value.value = call.arguments == true;
+      });
+    }
+    try {
+      value.value = await _channel.invokeMethod<bool>('autoRotate');
+    } catch (_) {
+      value.value = null; // no channel (iOS, tests)
+    }
+  }
+}
+
+/// A screen that turns to landscape (its route has [UprightApp.landscape]).
+/// It slides in while the app is still portrait, then Android cuts straight
+/// to landscape (no rotate animation, see MainActivity): so it doesn't pop,
+/// it lays itself out in landscape, turned, from the start whenever the
+/// phone is held sideways (and auto-rotate is on), and again as it slides
+/// out. The same widgets either way, so it keeps its state.
+class UprightPage extends ConsumerWidget {
+  const UprightPage({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final o = ref.watch(physicalOrientationProvider);
+    return ValueListenableBuilder<bool?>(
+      valueListenable: AutoRotate.value,
+      builder: (context, auto, _) {
+        final mq = MediaQuery.of(context);
+        final portraitNow = mq.size.height >= mq.size.width;
+        final q = auto == true && portraitNow && isLandscape(o) ? uprightQuarterTurns(o) : 0;
+        EdgeInsets turn(EdgeInsets e) => switch (q) {
+          1 => EdgeInsets.fromLTRB(e.top, e.right, e.bottom, e.left),
+          3 => EdgeInsets.fromLTRB(e.bottom, e.left, e.top, e.right),
+          _ => e,
+        };
+        return RotatedBox(
+          quarterTurns: q,
+          child: MediaQuery(
+            data: q == 0
+                ? mq
+                : mq.copyWith(
+                    size: mq.size.flipped,
+                    // as it will be, turned: no status / nav bars
+                    padding: turn(mq.padding.copyWith(top: 0, bottom: 0)),
+                    viewPadding: turn(mq.viewPadding.copyWith(top: 0, bottom: 0)),
+                    viewInsets: turn(mq.viewInsets),
+                    systemGestureInsets: turn(mq.systemGestureInsets),
+                  ),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 }
 

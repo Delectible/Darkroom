@@ -175,18 +175,19 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       final art = await ref.read(bodyArtProvider.future);
       if (art != null && mounted) unawaited(art.precache(context));
     });
-    // Paint the corkboard's cork while nothing is happening, so its first
-    // slide-in doesn't have to.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // The photoreal bodies: the face-on art was decoded behind the launch
+      // screen (main.dart); now the turned frames, kept for the session.
+      final art = await ref.read(bodyArtProvider.future);
+      if (art != null && mounted && ref.read(globalSettingsProvider).controls3d) {
+        unawaited(art.precache(context));
+      }
+      // Paint the corkboard's cork while nothing is happening, so its first
+      // slide-in doesn't have to.
       Future<void>.delayed(const Duration(seconds: 2), () async {
         if (!mounted) return;
         final programs = await ref.read(shaderProgramsProvider.future);
         if (mounted) CorkTiles.warm(programs.cork, MediaQuery.sizeOf(context));
-        // The photoreal bodies: every sprite decoded before it's needed.
-        final art = await ref.read(bodyArtProvider.future);
-        if (art != null && mounted && ref.read(globalSettingsProvider).controls3d) {
-          unawaited(art.precache(context));
-        }
       });
     });
   }

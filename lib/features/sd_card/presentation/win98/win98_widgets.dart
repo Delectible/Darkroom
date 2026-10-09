@@ -50,43 +50,29 @@ enum BevelStyle { raised, pressed, window, sunken, shallow }
 /// out on a smaller virtual screen and is scaled up to fill the real one
 /// (text and pixel art stay sharp; hit testing follows the scale).
 /// SafeArea for the Win98 screens. Upright it's the usual one; turned to
-/// landscape the status bar is hidden and the sides only keep clear of the
-/// camera cutout itself (a whole status-bar-wide strip down the side wasted
-/// a tenth of the screen), less [covered] (a bezel already round it).
+/// landscape the status bar is hidden and both sides keep [side] clear: past
+/// a punch-hole camera, and so a window's close button isn't lost in the
+/// phone's rounded corner (the reported cutout can be a whole
+/// status-bar-wide strip, a tenth of the screen). Less [covered] (a bezel
+/// already round it).
 class Win98Safe extends StatelessWidget {
   const Win98Safe({super.key, required this.child, this.covered = 0});
 
   final Widget child;
   final double covered;
 
-  /// Landscape: at most this much is kept clear at a side for a camera
-  /// cutout the system doesn't describe (a punch hole's width, roughly).
-  static const maxSide = 18.0;
+  static const side = 24.0;
 
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     if (mq.size.width <= mq.size.height) return SafeArea(child: child);
-    var left = 0.0, right = 0.0;
-    final cutouts = mq.displayFeatures.where((f) => f.type == ui.DisplayFeatureType.cutout).toList();
-    if (cutouts.isEmpty) {
-      // Android reports a punch-hole camera as a status-bar-tall inset down
-      // the whole side; the hole itself is a few dp across.
-      left = math.min(mq.padding.left, maxSide);
-      right = math.min(mq.padding.right, maxSide);
-    }
-    for (final f in cutouts) {
-      if (f.bounds.center.dx < mq.size.width / 2) {
-        left = math.max(left, f.bounds.right);
-      } else {
-        right = math.max(right, mq.size.width - f.bounds.left);
-      }
-    }
+    final x = math.max(0.0, side - covered);
     return SafeArea(
       left: false,
       right: false,
       child: Padding(
-        padding: EdgeInsets.only(left: math.max(0, left - covered), right: math.max(0, right - covered)),
+        padding: EdgeInsets.symmetric(horizontal: x),
         child: child,
       ),
     );

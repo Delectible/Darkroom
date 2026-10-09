@@ -126,9 +126,11 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   `darkroom/rotation`, Android setting + changes); iOS (null) asks for
   portrait + landscape and lets the system turn within its lock. iOS
   Info.plist allows landscape. Turned, the system bars hide
-  (immersiveSticky; edgeToEdge back in portrait). Win98 in landscape:
-  maximized window, 4 dp bezel, `Win98Safe` keeps at most 18 dp clear for
-  a cutout, `Win98Scale.factorFor` keeps 420 dp of height (short phones
+  (immersiveSticky; edgeToEdge back in portrait). Win98: maximized
+  window; the monitor bezel (`ExplorerMonitor.bezelOf`) takes the system
+  insets (status bar, gesture strip; landscape 24 dp sides for the cutout
+  and the rounded corners, 4 dp top/bottom; `Win98Safe` the same for
+  screens without the monitor), `Win98Scale.factorFor` keeps 420 dp of height (short phones
   scale down); the big Transfer bar is dropped. `explorer_screens_test`
   runs portrait + four landscape phones.
 - The app is **portrait** everywhere else. Landscape is detected with the
@@ -367,7 +369,9 @@ UI
   click + haptic, since the body's drag makes taps resolve late); the film
   format dial turns its top (`aspecttop`, repeats every 90 degrees) a
   click per change; turned frames cross-fade with the swap (`BodyYaw`), all
-  decoded up front (`BodyArt.precache`; `BodyArt.lateFrames` counts any
+  decoded up front and pinned for the session (`ArtCache`: live images
+  the cache can't evict; face-on art behind the launch screen in
+  main.dart `_warmBodies`, turned frames right after; `BodyArt.precache`; `BodyArt.lateFrames` counts any
   that weren't). `_Frames` draws them: each turned render is cropped to
   its foreshortened width (cos turn) and stretched back, and two turns are
   mixed additively in a layer (exact blend: no doubled shadows popping). `test/photo_body_test.dart` checks every frame is

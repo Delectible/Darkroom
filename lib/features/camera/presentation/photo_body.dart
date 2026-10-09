@@ -11,6 +11,7 @@ import '../../../core/audio/sfx.dart';
 import '../../../core/device/haptics.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
+import 'art_cache.dart';
 import 'body_swap.dart' show BodyYaw;
 
 /// The photoreal camera bodies: every part path-traced on its own
@@ -43,14 +44,20 @@ class BodyArt {
 
   bool has(AppMode mode) => _parts[mode.name]?.containsKey('panel') ?? false;
 
-  /// Decodes every sprite ahead of time (face-on first, then the turned
-  /// frames unless [faceOnly]), so nothing pops in or janks mid-swap.
-  Future<void> precache(BuildContext context) async {
-    final dpr = MediaQuery.devicePixelRatioOf(context);
-    final width = MediaQuery.sizeOf(context).width;
-    // Big enough for every frame of both bodies (default is 100 MB).
-    PaintingBinding.instance.imageCache.maximumSizeBytes = 260 << 20;
-    final face = <ImageProvider>[], turned = <ImageProvider>[];
+  /// Decodes every sprite ahead of time and keeps it ([ArtCache]), so
+  /// nothing pops in or janks mid-swap, ever.
+  Future<void> precache(BuildContext context) => warm(
+    MediaQuery.devicePixelRatioOf(context),
+    MediaQuery.sizeOf(context).width,
+    config: createLocalImageConfiguration(context),
+  );
+
+  /// [precache] without a context (at launch, behind the splash screen):
+  /// the face-on sprites, then the turned frames unless [faceOnly] or
+  /// [turned] is false.
+  Future<void> warm(double dpr, double width, {ImageConfiguration? config, bool turned = true}) async {
+    final cfg = config ?? ImageConfiguration(devicePixelRatio: dpr);
+    final face = <ImageProvider>[], frames = <ImageProvider>[];
     for (final parts in _parts.values) {
       for (final p in parts.values) {
         final panel = p.name == 'panel' || p.name.startsWith('plate');
@@ -59,19 +66,13 @@ class BodyArt {
           face.add(bodyImage(p.asset(st, 0), w * dpr));
         }
         for (final y in p.yaws.where((y) => y != 0)) {
-          turned.add(bodyImage(p.asset(null, y), w * dpr * 0.6));
+          frames.add(bodyImage(p.asset(null, y), w * dpr * 0.6));
         }
       }
     }
-    for (final i in face) {
-      if (!context.mounted) return;
-      await precacheImage(i, context);
-    }
-    if (faceOnly) return;
-    for (final i in turned) {
-      if (!context.mounted) return;
-      await precacheImage(i, context);
-    }
+    await ArtCache.pinAll(face, cfg);
+    if (faceOnly || !turned) return;
+    await ArtCache.pinAll(frames, cfg);
   }
 
   static Future<BodyArt?> load() async {

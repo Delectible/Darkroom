@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.5.4';
+  static const version = '1.5.5';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Turning to landscape is smooth now: the corkboard, projector and Darkroom 98 slide in already sideways, no '
-      'jump. Nothing turns if auto-rotate is off. Darkroom 98 in landscape fills the screen.';
+      'The camera comes up fully drawn: the 3D bodies load behind the launch screen and stay loaded, so '
+      'swapping never redraws them. Darkroom 98 fills the screen, with the close button clear of the corners.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

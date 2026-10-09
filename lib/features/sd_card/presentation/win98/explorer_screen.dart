@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -474,14 +475,14 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         backgroundColor: W98.desktop,
         body: DefaultTextStyle(
           style: W98.text,
-          child: Win98Safe(
-            covered: ExplorerMonitor.bezelOf(context),
+          // (on its monitor, whose bezel keeps clear of the system's insets)
+          child: SafeArea(
             child: Column(
               children: [
                 Expanded(
                   child: Padding(
-                    // turned to landscape, maximized: no desktop round it
-                    padding: land ? EdgeInsets.zero : const EdgeInsets.fromLTRB(6, 6, 6, 4),
+                    // maximized: no desktop round it
+                    padding: EdgeInsets.zero,
                     child: Win98Window(
                       title: title,
                       icon: PixelIconView(pathIcon),
@@ -1003,50 +1004,75 @@ class _TaskbarState extends State<_Taskbar> {
 
 /// The beige monitor round the explorer: a moulded plastic bezel with a
 /// recessed, slightly shadowed screen, a maker's badge and a green power
-/// lamp on the chin.
+/// lamp on the chin. The bezel takes up the system's insets (status bar,
+/// gesture strip, a camera cutout at the side), so the screen inside is all
+/// Windows; turned to landscape its sides are wide enough to keep the
+/// window's corners (the close button) off the phone's rounded corners.
 class ExplorerMonitor extends StatelessWidget {
   const ExplorerMonitor({super.key, required this.child});
 
-  static const bezel = 16.0;
+  static const bezel = 12.0;
 
-  /// Thinner turned to landscape, where height is short.
-  static double bezelOf(BuildContext context) => MediaQuery.sizeOf(context).aspectRatio > 1 ? 4 : bezel;
+  static EdgeInsets bezelOf(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    if (mq.size.aspectRatio > 1) return const EdgeInsets.symmetric(horizontal: 24, vertical: 4);
+    return EdgeInsets.fromLTRB(
+      bezel,
+      math.max(bezel, mq.padding.top + 4),
+      bezel,
+      math.max(bezel + 4, mq.padding.bottom + 4),
+    );
+  }
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final bezel = bezelOf(context);
-    return ColoredBox(
-      color: const Color(0xFFD9D3C3),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(bezel),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: RepaintBoundary(child: child),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      // dark status-bar icons on the beige plastic
+      value: SystemUiOverlayStyle.dark,
+      child: ColoredBox(
+        color: const Color(0xFFD9D3C3),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Padding(
+              padding: bezel,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: RepaintBoundary(
+                  // the insets are the monitor's; inside it is all screen
+                  child: MediaQuery.removePadding(
+                    context: context,
+                    removeTop: true,
+                    removeBottom: true,
+                    removeLeft: true,
+                    removeRight: true,
+                    child: child,
+                  ),
+                ),
+              ),
             ),
-          ),
-          IgnorePointer(
-            child: RepaintBoundary(child: CustomPaint(painter: _BezelPainter(bezel))),
-          ),
-        ],
+            IgnorePointer(
+              child: RepaintBoundary(child: CustomPaint(painter: _BezelPainter(bezel))),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _BezelPainter extends CustomPainter {
-  const _BezelPainter(this.t);
+  const _BezelPainter(this.insets);
 
-  final double t;
+  final EdgeInsets insets;
 
   @override
   void paint(Canvas canvas, Size size) {
     final outer = Offset.zero & size;
-    final screen = RRect.fromRectAndRadius(outer.deflate(t), const Radius.circular(6));
+    final screen = RRect.fromRectAndRadius(insets.deflateRect(outer), const Radius.circular(6));
     // The plastic: lit from above, a touch darker toward the bottom, with
     // a faint moulding texture.
     final frame = Path()
@@ -1116,8 +1142,9 @@ class _BezelPainter extends CustomPainter {
     );
     canvas.restore();
     // Power lamp on the chin (right) and the maker's badge (left).
+    final t = insets.bottom;
     final y = size.height - t / 2;
-    final lamp = Offset(size.width - t * 2.2, y);
+    final lamp = Offset(size.width - math.max(insets.right, 12) - 14, y);
     canvas.drawCircle(lamp, 3.2, Paint()..color = const Color(0xFF3C6E3C));
     canvas.drawCircle(lamp, 2.4, Paint()..color = const Color(0xFF7CFF6B));
     canvas.drawCircle(
@@ -1140,9 +1167,9 @@ class _BezelPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    badge.paint(canvas, Offset(t * 1.6, y - badge.height / 2));
+    badge.paint(canvas, Offset(math.max(insets.left, 12) + 8, y - badge.height / 2));
   }
 
   @override
-  bool shouldRepaint(_BezelPainter old) => old.t != t;
+  bool shouldRepaint(_BezelPainter old) => old.insets != insets;
 }

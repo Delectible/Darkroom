@@ -730,3 +730,14 @@ Answers: turntable renders, no 2D/3D switch.
   setting, `darkroom/rotation`; iOS keeps to its own lock). → 1.5.4 · 2026-10-09
 - [x] **34.3 Win98 borders**: maximized window, thin bezel, cutout margin
   capped, scaled for short phones; checked on four phone sizes. → 1.5.4 · 2026-10-09
+
+## 35. Win98 size, loading (2026-10-09)
+
+- [x] **35.1 Win98 window size**: portrait gap under the status bar, a
+  strip down the side in landscape. The monitor's bezel now takes the
+  status bar / gesture strip / cutout; the window fills its screen.
+- [x] **35.2 Close button in the corner**: landscape keeps 24 dp of bezel
+  at the sides, clear of the phone's rounded corners.
+- [x] **35.3 Slow textures**: the launch screen stays up until the camera
+  art is decoded; the art stays in memory (`ArtCache`), so swapping bodies
+  never reloads it.

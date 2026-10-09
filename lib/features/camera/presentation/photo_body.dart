@@ -12,6 +12,7 @@ import '../../../core/device/haptics.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
 import 'body_swap.dart' show BodyYaw;
+import 'whole_body.dart';
 
 /// The photoreal camera bodies: every part path-traced on its own
 /// (tool/render/items/body.js, rendered by tool/render/body/render_queue.py)
@@ -23,7 +24,51 @@ import 'body_swap.dart' show BodyYaw;
 ///
 /// Assets: `assets/body/manifest.json` and `assets/body/<mode>/<part>[-<state>]-a<deg>.webp`.
 class BodyArt {
-  BodyArt._(this.px, this._parts);
+  BodyArt._(this.px, this._parts, {this.whole});
+
+  /// Since 1.6 the bodies are rendered whole ([WholeArt]): the controls'
+  /// moving parts are its layers, offset from each control's centre; what
+  /// never moves is baked into the rest picture, so those parts draw
+  /// nothing here ([BodyPart.layers] empty).
+  final WholeArt? whole;
+
+  static const _wholeParts = {
+    AppMode.film: [
+      'flash', 'flashtab', 'aspect', 'aspecttop', 'lens', 'lensdot', 'menu', 'memo', 'print', 'tray', //
+      'shutter', 'release', 'lever', 'run', 'frame',
+    ],
+    AppMode.digital: [
+      'pill', 'pillwide', 'pillsmall', 'lens', 'lensdot', 'lcd', 'review', 'rocker', 'tray', 'shutter', //
+      'rec', 'frame',
+    ],
+  };
+  static const _layerAt = {
+    'aspecttop': 'aspect',
+    'release': 'shutter',
+    'lever': 'shutter',
+    'run': 'shutter',
+    'rec': 'shutter',
+  };
+
+  factory BodyArt.fromWhole(WholeArt w) {
+    final parts = <String, Map<String, BodyPart>>{};
+    for (final MapEntry(key: mode, value: body) in w.bodies.entries) {
+      final at = body.layout.parts;
+      parts[mode.name] = {
+        for (final name in _wholeParts[mode]!)
+          name: BodyPart.whole(mode.name, name, {
+            for (final MapEntry(key: k, value: v) in body.layers.entries)
+              if (k == name || k.startsWith('$name-'))
+                (k == name ? '' : k.substring(name.length + 1)): ArtRect(
+                  v.path,
+                  v.rect.shift(-(at[_layerAt[name] ?? name] ?? Offset.zero)),
+                  v.px,
+                ),
+          }),
+      };
+    }
+    return BodyArt._(1, parts, whole: w);
+  }
 
   static const root = 'assets/body';
 
@@ -41,11 +86,14 @@ class BodyArt {
 
   BodyPart? part(AppMode mode, String name) => _parts[mode.name]?[name];
 
-  bool has(AppMode mode) => _parts[mode.name]?.containsKey('panel') ?? false;
+  bool has(AppMode mode) =>
+      whole?.bodies.containsKey(mode) ?? (_parts[mode.name]?.containsKey('panel') ?? false);
 
   /// Decodes every sprite ahead of time (face-on first, then the turned
   /// frames unless [faceOnly]), so nothing pops in or janks mid-swap.
   Future<void> precache(BuildContext context) async {
+    final w = whole;
+    if (w != null) return w.precache(context);
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final width = MediaQuery.sizeOf(context).width;
     // Big enough for every frame of both bodies (default is 100 MB).
@@ -75,6 +123,8 @@ class BodyArt {
   }
 
   static Future<BodyArt?> load() async {
+    final w = await WholeArt.load();
+    if (w != null) return BodyArt.fromWhole(w);
     try {
       final json = jsonDecode(await rootBundle.loadString('$root/manifest.json')) as Map<String, dynamic>;
       final parts = <String, Map<String, BodyPart>>{};
@@ -104,7 +154,21 @@ class BodyPart {
     this.sliceX,
     this.box,
     this.edge = 0,
-  });
+  }) : layers = null;
+
+  BodyPart.whole(this.mode, this.name, Map<String, ArtRect> this.layers)
+    : canvas = Size.zero,
+      yaws = const [0],
+      states = [
+        for (final k in layers.keys)
+          if (k.isNotEmpty) k,
+      ],
+      yaw0States = const [],
+      px = 1,
+      slice = null,
+      sliceX = null,
+      box = null,
+      edge = 0;
 
   factory BodyPart.fromJson(String mode, String name, Map<String, dynamic> j, double px) {
     List<T> list<T>(Object? v) => (v as List<dynamic>? ?? const []).cast<T>();
@@ -127,6 +191,10 @@ class BodyPart {
 
   final String mode;
   final String name;
+
+  /// Whole-body art: this part's layer per state ('' when it has none),
+  /// rects relative to the control's centre; empty = baked into the body.
+  final Map<String, ArtRect>? layers;
 
   /// The sprite's whole canvas in dp: the part's box plus margins for its
   /// shadow and for parallax when turned.
@@ -169,12 +237,17 @@ class BodyPart {
   }
 }
 
-final bodyArtProvider = FutureProvider<BodyArt?>((ref) => BodyArt.load());
+/// The controls' art: the whole-body renders' moving parts (in step with
+/// [wholeArtProvider], so the face and its controls arrive together).
+final bodyArtProvider = Provider<BodyArt?>((ref) {
+  final w = ref.watch(wholeArtProvider).value;
+  return w == null ? null : BodyArt.fromWhole(w);
+});
 
 /// The art for [mode] when the photoreal bodies are switched on (setting
 /// "3D controls") and bundled; null draws the classic bodies.
 final photoBodyProvider = Provider.family<BodyArt?, AppMode>((ref, mode) {
-  final art = ref.watch(bodyArtProvider).value;
+  final art = ref.watch(bodyArtProvider);
   if (art == null || !art.has(mode)) return null; // (settings untouched: tests run without them)
   return ref.watch(globalSettingsProvider.select((s) => s.controls3d)) ? art : null;
 });
@@ -197,6 +270,19 @@ class BodySprite extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dpr = MediaQuery.devicePixelRatioOf(context);
+    final layers = part.layers;
+    if (layers != null) {
+      final l = layers[state ?? ''] ?? layers[part.states.firstOrNull ?? ''] ?? layers.values.firstOrNull;
+      if (l == null) return const SizedBox.shrink();
+      final k = dpr * WholeScale.of(context);
+      // Centred on this widget: the layer sits at its offset from the centre.
+      return CustomSingleChildLayout(
+        delegate: _AtCentre(l.rect),
+        child: IgnorePointer(
+          child: ArtImages(providers: [l.image(k)], painter: (imgs) => _Plain(imgs[0], opacity)),
+        ),
+      );
+    }
     return OverflowBox(
       minWidth: part.canvas.width,
       maxWidth: part.canvas.width,
@@ -225,6 +311,7 @@ class BodySlice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (part.layers != null) return const SizedBox.shrink(); // baked into the whole body
     final dpr = MediaQuery.devicePixelRatioOf(context);
     final box = part.box ?? part.canvas;
     final mx = (part.canvas.width - box.width) / 2, my = (part.canvas.height - box.height) / 2;
@@ -670,3 +757,60 @@ TextStyle photoLabel({required bool onMetal}) => TextStyle(
   fontWeight: FontWeight.w800,
   letterSpacing: 0.6,
 );
+
+/// Lays its child out at [rect], relative to its own centre.
+class _AtCentre extends SingleChildLayoutDelegate {
+  _AtCentre(this.rect);
+
+  final Rect rect;
+
+  @override
+  Size getSize(BoxConstraints constraints) => constraints.constrain(Size.zero);
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) => BoxConstraints.tight(rect.size);
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      Offset(size.width / 2 + rect.left, size.height / 2 + rect.top);
+
+  @override
+  bool shouldRelayout(_AtCentre old) => old.rect != rect;
+}
+
+class _Plain extends CustomPainter {
+  _Plain(this.img, this.opacity);
+
+  final ui.Image? img;
+  final double opacity;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final i = img;
+    if (i == null) return;
+    canvas.drawImageRect(
+      i,
+      Offset.zero & Size(i.width.toDouble(), i.height.toDouble()),
+      Offset.zero & size,
+      Paint()
+        ..filterQuality = FilterQuality.medium
+        ..color = Color.fromRGBO(0, 0, 0, opacity),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Plain o) => o.img != img || o.opacity != opacity;
+}
+
+/// Screen dp per design dp for the whole-body face (images decode at it).
+class WholeScale extends InheritedWidget {
+  const WholeScale({super.key, required this.scale, required super.child});
+
+  final double scale;
+
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<WholeScale>()?.scale ?? 1;
+
+  @override
+  bool updateShouldNotify(WholeScale old) => old.scale != scale;
+}

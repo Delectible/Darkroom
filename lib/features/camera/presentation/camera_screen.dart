@@ -15,6 +15,7 @@ import '../../../core/device/upright.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
+import '../../cameras/domain/camera_catalog.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../cameras/presentation/stock_selector_screen.dart';
 import '../../../core/shaders/shader_library.dart';
@@ -30,6 +31,8 @@ import '../application/zoom_controller.dart';
 import 'body_swap.dart';
 import 'photo_body.dart';
 import 'viewport.dart';
+import 'whole_body.dart';
+import 'whole_face.dart';
 import 'widgets/camera_controls.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
@@ -83,6 +86,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       old?.dispose();
     } catch (_) {}
   }
+
+  static Widget _still(ui.Image? image) =>
+      image == null ? const ColoredBox(color: Color(0xFF0C0B0A)) : RawImage(image: image, fit: BoxFit.cover);
 
   void _dropMoving() {
     _stopMirror();
@@ -172,7 +178,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // 3D switched on (or performance mode off) later: decode the sprites then.
     ref.listenManual(globalSettingsProvider.select((s) => (s.controls3d, s.performance)), (prev, next) async {
       if (!next.$1) return;
-      final art = await ref.read(bodyArtProvider.future);
+      final art = await ref.read(wholeArtProvider.future);
       if (art != null && mounted) unawaited(art.precache(context));
     });
     // Paint the corkboard's cork while nothing is happening, so its first
@@ -183,7 +189,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
         final programs = await ref.read(shaderProgramsProvider.future);
         if (mounted) CorkTiles.warm(programs.cork, MediaQuery.sizeOf(context));
         // The photoreal bodies: every sprite decoded before it's needed.
-        final art = await ref.read(bodyArtProvider.future);
+        final art = await ref.read(wholeArtProvider.future);
         if (art != null && mounted && ref.read(globalSettingsProvider).controls3d) {
           unawaited(art.precache(context));
         }
@@ -549,6 +555,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     });
 
     final mode = ref.watch(appModeProvider);
+    final wholeArt = ref.watch(wholeArtProvider).value;
+    final whole = ref.watch(wholeBodyProvider(mode));
+    Future<void> settings() async {
+      _releaseEdges();
+      await showSettingsSheet(context);
+      _claimEdges();
+    }
+
     final palette = RetroPalette.forMode(mode);
     final screenSize = MediaQuery.sizeOf(context);
     if (_excludedFor != screenSize && !_selectorOpen && ModalRoute.of(context)?.isCurrent != false) {
@@ -599,6 +613,24 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                       final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
                       Widget picture(ui.Image? image, AppMode m) =>
                           image == null ? BodyStandIn(mode: m) : RawImage(image: image, fit: BoxFit.fill);
+                      // 3D: the bodies are drawn from the whole-body renders as they
+                      // move; each viewfinder a still (live: retaken every frame).
+                      final rendered = wholeArt == null || whole == null
+                          ? null
+                          : RenderedSwap(
+                              art: wholeArt,
+                              shutter: (m) {
+                                final spec = CameraCatalog.byId(ref.read(selectedCameraProvider)[m]!);
+                                if (!spec.recordsVideo) return 'shutter';
+                                return m == AppMode.film ? 'run' : 'rec';
+                              },
+                              viewfinder: (m, live) => live
+                                  ? ValueListenableBuilder<ui.Image?>(
+                                      valueListenable: CameraViewport.freeze,
+                                      builder: (context, still, _) => _still(still ?? _lastFrame[m]),
+                                    )
+                                  : _still(_lastFrame[m]),
+                            );
 
                       if (!moving) {
                         return SwapStage(
@@ -609,6 +641,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                           arriving: null,
                           arrivingMode: other,
                           liveArriving: false,
+                          rendered: rendered,
                         );
                       }
                       // After the commit, `mode` is already the arriving body.
@@ -621,6 +654,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                               arriving: child,
                               arrivingMode: mode,
                               liveArriving: true,
+                              rendered: rendered,
                             )
                           : SwapStage(
                               progress: _swap.value,
@@ -639,6 +673,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                               arriving: picture(_lastLook[other], other),
                               arrivingMode: other,
                               liveArriving: false,
+                              rendered: rendered,
                             );
                     },
                     child: RepaintBoundary(
@@ -646,74 +681,84 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          // Leatherette or brushed metal; the texture tile is rendered
-                          // once per body. No cross-fade: the new body slides in whole.
-                          Positioned.fill(
-                            child: switch (ref.watch(photoBodyProvider(mode))) {
-                              // The rendered surface: chrome plates reach just
-                              // below the top controls and just under the bottom row.
-                              final art? => BodyBackdrop(
+                          if (whole != null)
+                            // The whole-body render with the controls on it.
+                            Positioned.fill(
+                              child: WholeFace(
                                 key: ValueKey(mode),
-                                art: art,
+                                art: wholeArt!,
+                                body: whole,
                                 mode: mode,
-                                top: MediaQuery.paddingOf(context).top + 58,
-                                bottom: MediaQuery.paddingOf(context).bottom + 12,
+                                onSettings: settings,
+                                onOpenSelector: _openSelector,
+                                onOpenGallery: _openGallery,
+                                processing: const ProcessingSpinner(),
                               ),
-                              null => SurfaceTexture(
-                                key: ValueKey(mode),
-                                leather: mode == AppMode.film,
-                                base: mode == AppMode.film ? palette.body : palette.bodyHighlight,
-                                light: palette.bodyHighlight,
-                                dark: palette.bodyShadow,
-                              ),
-                            },
-                          ),
-                          SafeArea(
-                            child: Column(
-                              children: [
-                                _TopBar(
-                                  onSettings: () async {
-                                    _releaseEdges();
-                                    await showSettingsSheet(context);
-                                    _claimEdges();
-                                  },
+                            )
+                          else ...[
+                            // Leatherette or brushed metal; the texture tile is rendered
+                            // once per body. No cross-fade: the new body slides in whole.
+                            Positioned.fill(
+                              child: switch (ref.watch(photoBodyProvider(mode))) {
+                                // The rendered surface: chrome plates reach just
+                                // below the top controls and just under the bottom row.
+                                final art? => BodyBackdrop(
+                                  key: ValueKey(mode),
+                                  art: art,
+                                  mode: mode,
+                                  top: MediaQuery.paddingOf(context).top + 58,
+                                  bottom: MediaQuery.paddingOf(context).bottom + 12,
                                 ),
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-                                    child: _ViewportBezel(mode: mode, child: const CameraViewport()),
-                                  ),
+                                null => SurfaceTexture(
+                                  key: ValueKey(mode),
+                                  leather: mode == AppMode.film,
+                                  base: mode == AppMode.film ? palette.body : palette.bodyHighlight,
+                                  light: palette.bodyHighlight,
+                                  dark: palette.bodyShadow,
                                 ),
-                                PickerCaret(onOpen: _openSelector),
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                                  child: Row(
-                                    children: [
-                                      Expanded(child: StockLabel(onOpen: _openSelector)),
-                                      // Every digital body has the same W|T rocker, so
-                                      // nothing pops in or out when switching bodies.
-                                      // Film bodies have no zoom at all.
-                                      if (mode == AppMode.digital) ...[
-                                        const SizedBox(width: 12),
-                                        const ZoomRocker(),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      GalleryButton(onOpen: _openGallery),
-                                      const ShutterButton(),
-                                      StockButton(onOpen: _openSelector),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                              },
                             ),
-                          ),
+                            SafeArea(
+                              child: Column(
+                                children: [
+                                  _TopBar(onSettings: settings),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+                                      child: _ViewportBezel(mode: mode, child: const CameraViewport()),
+                                    ),
+                                  ),
+                                  PickerCaret(onOpen: _openSelector),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: StockLabel(onOpen: _openSelector)),
+                                        // Every digital body has the same W|T rocker, so
+                                        // nothing pops in or out when switching bodies.
+                                        // Film bodies have no zoom at all.
+                                        if (mode == AppMode.digital) ...[
+                                          const SizedBox(width: 12),
+                                          const ZoomRocker(),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        GalleryButton(onOpen: _openGallery),
+                                        const ShutterButton(),
+                                        StockButton(onOpen: _openSelector),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

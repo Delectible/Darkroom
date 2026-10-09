@@ -74,7 +74,7 @@ void main() {
     Widget button(AppMode mode, List<MediaItem> items) => ProviderScope(
       overrides: [
         // The classic drawn buttons (the photoreal ones: photo_body_test).
-        bodyArtProvider.overrideWith((ref) async => null),
+        bodyArtProvider.overrideWithValue(null),
         appModeProvider.overrideWith(() => _Mode(mode)),
         physicalOrientationProvider.overrideWith(_Held.new),
         filmItemsProvider.overrideWith((ref) => Stream.value(items)),

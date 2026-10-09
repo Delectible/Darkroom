@@ -64,6 +64,9 @@ flutter:
     - assets/body/
     - assets/body/film/
     - assets/body/digital/
+    - assets/body3/
+    - assets/body3/film/
+    - assets/body3/digital/
   fonts:
     # Handwriting on instant prints (SIL OFL 1.1, see assets/fonts/OFL.txt).
     - family: Caveat

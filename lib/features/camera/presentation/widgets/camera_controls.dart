@@ -478,6 +478,15 @@ class _MemoHolder extends StatelessWidget {
       ),
     );
     final clip = art?.part(AppMode.film, 'memo');
+    if (clip?.layers != null) {
+      // Whole-body render: the card fills the rendered holder's opening.
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.fill,
+          child: SizedBox(width: 356, child: card),
+        ),
+      );
+    }
     if (clip != null) {
       return Stack(
         children: [
@@ -603,6 +612,7 @@ class _LcdPanel extends ConsumerWidget {
       ),
     );
     final bezel = art?.part(AppMode.digital, 'lcd');
+    if (bezel?.layers != null) return screen; // fills the rendered bezel's window
     if (bezel != null) {
       return Stack(
         children: [
@@ -804,6 +814,30 @@ class _PhotoPrints extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (print.layers != null) {
+      // Whole-body render: the print lies flat on the body, baked in; the
+      // latest picture goes in its border.
+      return Center(
+        child: Transform.translate(
+          offset: const Offset(0, -3),
+          child: SizedBox(
+            width: 50,
+            height: 54,
+            child: ClipRect(
+              child: Upright(
+                child: _thumbImage(
+                  thumb,
+                  const ColoredBox(
+                    color: Color(0xFFD9D2C3),
+                    child: Center(child: Icon(Icons.push_pin, size: 18, color: Color(0xFF9B8F7A))),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     // The print sprite is a 58 x 70 dp sheet; the picture sits in its
     // border like a lab print (wider at the bottom).
     Widget sheet(Widget picture) => Stack(

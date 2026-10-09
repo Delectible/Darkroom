@@ -7,6 +7,7 @@ import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../../core/theme/soft_shadow.dart';
+import 'whole_body.dart';
 
 /// Film <-> Digital as two physical cameras on a desk.
 ///
@@ -26,7 +27,11 @@ class SwapStage extends StatelessWidget {
     required this.arriving,
     required this.arrivingMode,
     required this.liveArriving,
+    this.rendered,
   });
+
+  /// Whole-body renders (3D on): moving bodies are drawn from them.
+  final RenderedSwap? rendered;
 
   /// 0 = leaving body in hand, 1 = arriving body in hand (may overshoot).
   final double progress;
@@ -56,7 +61,16 @@ class SwapStage extends StatelessWidget {
     if (arriving == null) {
       return Stack(
         fit: StackFit.expand,
-        children: [SwapBody(key: liveKey, mode: leavingMode, face: leaving, capSide: 0, pose: BodyPose.rest)],
+        children: [
+          SwapBody(
+            key: liveKey,
+            mode: leavingMode,
+            face: leaving,
+            capSide: 0,
+            pose: BodyPose.rest,
+            rendered: rendered?.forBody(leavingMode, live: true),
+          ),
+        ],
       );
     }
     // Leaving: tossed aside, the end that trails behind comes into view.
@@ -88,6 +102,7 @@ class SwapStage extends StatelessWidget {
           face: leaving,
           capSide: -dir,
           pose: leave,
+          rendered: rendered?.forBody(leavingMode, live: !liveArriving),
         ),
         SwapBody(
           key: liveArriving ? liveKey : null,
@@ -95,6 +110,7 @@ class SwapStage extends StatelessWidget {
           face: arriving,
           capSide: dir,
           pose: come,
+          rendered: rendered?.forBody(arrivingMode, live: liveArriving),
         ),
       ],
     );
@@ -175,6 +191,7 @@ class SwapBody extends StatelessWidget {
     required this.face,
     required this.capSide,
     required this.pose,
+    this.rendered,
   });
 
   final AppMode mode;
@@ -182,12 +199,17 @@ class SwapBody extends StatelessWidget {
   final int capSide;
   final BodyPose pose;
 
+  /// Drawn from the whole-body renders while moving.
+  final RenderedBody? rendered;
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final w = size.width, h = size.height;
     final geo = SwapGeometry(w);
     final moving = capSide != 0;
+    final rendered = this.rendered;
+    if (rendered != null) return _renderedBody(context, rendered, size, moving);
     // About the screen centre (Flutter flattens each Transform to 2D, so
     // anything out of the body's plane gets its own full matrix).
     final m = Matrix4.identity()
@@ -790,5 +812,145 @@ class BodyStandIn extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+extension on SwapBody {
+  /// Whole-body renders: at rest the live face (drawn from the rest render
+  /// and its layers); moving, the rendered turn for the body's tilt, slid,
+  /// tipped and scaled in 2D, with the viewfinder's still laid onto its
+  /// screen in the renders' perspective and the strap from the rendered
+  /// lug. The live face stays mounted (clipped away), so its camera and
+  /// state carry on.
+  Widget _renderedBody(BuildContext context, RenderedBody r, Size size, bool moving) {
+    if (!moving) return face;
+    final fit = DesignFit(r.art, size);
+    final deg = pose.tilt * 180 / math.pi;
+    final pivot = fit.pivot;
+    final flat = Matrix4.identity()
+      ..translateByDouble(pivot.dx + pose.dx, pivot.dy + pose.dy, 0, 1)
+      ..rotateZ(pose.roll)
+      ..scaleByDouble(pose.scale, pose.scale, 1, 1)
+      ..translateByDouble(-pivot.dx, -pivot.dy, 0, 1);
+    // The screen in the renders' perspective (camera dist design dp away).
+    // (a true product: setEntry after a translate would centre the
+    // perspective on the screen's corner, not on the pivot)
+    final turned = Matrix4.translationValues(pivot.dx, pivot.dy, 0)
+      ..multiply(Matrix4.identity()..setEntry(3, 2, 1 / (r.art.dist * fit.s)))
+      ..multiply(Matrix4.rotationY(capSide * pose.tilt))
+      ..multiply(Matrix4.translationValues(-pivot.dx, -pivot.dy, 0));
+    final screen = fit.rect(r.body.layout.screen);
+    final (lo, hi, f) = r.body.bracket(deg);
+    final lug = fit.point(Offset.lerp(lo.lug, hi.lug, f)!);
+    final film = mode == AppMode.film;
+    final p = RetroPalette.forMode(mode);
+    final geo = SwapGeometry(size.width);
+    return Stack(
+      clipBehavior: Clip.none,
+      fit: StackFit.expand,
+      children: [
+        // The live UI, kept running but not shown.
+        ClipRect(clipper: const _NoArea(), child: face),
+        Transform(
+          transform: flat,
+          child: Stack(
+            clipBehavior: Clip.none,
+            fit: StackFit.expand,
+            children: [
+              // Shadow on the desk.
+              Positioned(
+                left: capSide > 0 ? 0 : -geo.cap,
+                width: size.width + geo.cap,
+                top: 0,
+                height: size.height,
+                child: SoftShadow(
+                  color: Colors.black.withValues(alpha: 0.7),
+                  blurRadius: 34,
+                  offset: Offset(-capSide * 6.0, 22),
+                  radius: 30,
+                ),
+              ),
+              WholeTurn(art: r.art, body: r.body, deg: deg, shutter: r.shutter),
+              Transform(
+                transform: turned,
+                child: Stack(
+                  children: [
+                    Positioned.fromRect(
+                      rect: screen,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(film ? 6 : 3),
+                        child: r.viewfinder,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                left: lug.dx - 90,
+                width: 180,
+                top: lug.dy + _lugSlot * fit.s,
+                height: size.height,
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: _StrapPainter(
+                      film: film,
+                      side: capSide,
+                      swing: pose.swing,
+                      color: film ? const Color(0xFF3A2416) : const Color(0xFF17181B),
+                      stitch: p.bodyHighlight,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoArea extends CustomClipper<Rect> {
+  const _NoArea();
+
+  @override
+  Rect getClip(Size size) => Rect.zero;
+
+  @override
+  bool shouldReclip(_NoArea old) => false;
+}
+
+/// What a whole-body swap needs for each body.
+class RenderedBody {
+  const RenderedBody({
+    required this.art,
+    required this.body,
+    required this.shutter,
+    required this.viewfinder,
+  });
+
+  final WholeArt art;
+  final WholeBody body;
+
+  /// Which shutter the body has on now (film release, Super 8 RUN, key, REC).
+  final String shutter;
+
+  /// The viewfinder's picture while it moves (a still: live, or as it was).
+  final Widget viewfinder;
+}
+
+/// Builds [RenderedBody] for either body; [live] is the slot holding the
+/// live camera UI.
+class RenderedSwap {
+  const RenderedSwap({required this.art, required this.shutter, required this.viewfinder});
+
+  final WholeArt art;
+  final String Function(AppMode mode) shutter;
+  final Widget Function(AppMode mode, bool live) viewfinder;
+
+  RenderedBody? forBody(AppMode mode, {required bool live}) {
+    final body = art.bodies[mode];
+    if (body == null) return null;
+    return RenderedBody(art: art, body: body, shutter: shutter(mode), viewfinder: viewfinder(mode, live));
   }
 }

@@ -137,7 +137,8 @@ class WholeBody {
       final lug = (t2['lug'] as List<dynamic>?)?.cast<num>() ?? const [0, 0];
       turns.add(
         TurnFrame(int.parse(yaw), ArtRect.fromJson(t2), {
-          for (final MapEntry(key: k, value: v) in ((t2['shutters'] as Map<String, dynamic>?) ?? const {}).entries)
+          for (final MapEntry(key: k, value: v)
+              in ((t2['shutters'] as Map<String, dynamic>?) ?? const {}).entries)
             k: ArtRect.fromJson(v as Map<String, dynamic>),
         }, Offset(lug[0].toDouble(), lug[1].toDouble())),
       );
@@ -146,7 +147,7 @@ class WholeBody {
     return WholeBody._(
       ArtRect.fromJson(j['rest'] as Map<String, dynamic>),
       {
-        for (final MapEntry(key: k, value: v) in (j['layers'] as Map<String, dynamic>).entries)
+        for (final MapEntry(key: k, value: v) in ((j['layers'] as Map<String, dynamic>?) ?? const {}).entries)
           k: ArtRect.fromJson(v as Map<String, dynamic>),
       },
       turns,
@@ -159,7 +160,8 @@ class WholeBody {
   final List<TurnFrame> turns;
   final WholeLayout layout;
 
-  ArtRect? layer(String name, [String? state]) => layers[state == null ? name : '$name-$state'] ?? layers[name];
+  ArtRect? layer(String name, [String? state]) =>
+      layers[state == null ? name : '$name-$state'] ?? layers[name];
 
   /// The two rendered turns either side of [deg] and how far between.
   (TurnFrame, TurnFrame, double) bracket(double deg) {
@@ -184,15 +186,10 @@ class WholeLayout {
       return Rect.fromLTRB(l[0].toDouble(), l[1].toDouble(), l[2].toDouble(), l[3].toDouble());
     }
 
-    return WholeLayout._(
-      r(j['frame']),
-      (j['screenInset'] as num).toDouble(),
-      r(j['memo'] ?? j['lcd']),
-      {
-        for (final MapEntry(key: k, value: v) in (j['parts'] as Map<String, dynamic>).entries)
-          k: Offset(((v as List<dynamic>)[0] as num).toDouble(), (v[1] as num).toDouble()),
-      },
-    );
+    return WholeLayout._(r(j['frame']), (j['screenInset'] as num).toDouble(), r(j['memo'] ?? j['lcd']), {
+      for (final MapEntry(key: k, value: v) in (j['parts'] as Map<String, dynamic>).entries)
+        k: Offset(((v as List<dynamic>)[0] as num).toDouble(), (v[1] as num).toDouble()),
+    });
   }
 
   /// The viewfinder's frame; the live picture fills it less [screenInset].
@@ -331,20 +328,31 @@ final _paint = Paint()..filterQuality = FilterQuality.medium;
 /// the part above the cut as is, the part below moved up by the trim (or a
 /// band stretched across the cut on taller phones).
 void drawFitted(Canvas c, ui.Image img, Rect r, DesignFit fit, Paint paint) {
-  final kx = img.width / r.width, ky = img.height / r.height;
+  final ky = img.height / r.height;
   final cut = fit.art.cutY;
-  Rect src(double y0, double y1) => Rect.fromLTRB(0, (y0 - r.top) * ky, img.width.toDouble(), (y1 - r.top) * ky);
+  Rect src(double y0, double y1) =>
+      Rect.fromLTRB(0, (y0 - r.top) * ky, img.width.toDouble(), (y1 - r.top) * ky);
   Rect dst(double y0, double y1) =>
       Rect.fromLTRB(r.left * fit.s, fit.y(y0), r.right * fit.s, y1 <= cut ? y1 * fit.s : fit.y(y1));
   if (r.bottom <= cut || r.top >= cut + math.max(0, fit.trim)) {
     // wholly above the cut, or wholly below the band taken out
     final top = r.top <= cut ? r.top * fit.s : fit.y(r.top);
     final bottom = r.bottom <= cut ? r.bottom * fit.s : fit.y(r.bottom);
-    c.drawImageRect(img, src(r.top, r.bottom), Rect.fromLTRB(r.left * fit.s, top, r.right * fit.s, bottom), paint);
+    c.drawImageRect(
+      img,
+      src(r.top, r.bottom),
+      Rect.fromLTRB(r.left * fit.s, top, r.right * fit.s, bottom),
+      paint,
+    );
     return;
   }
   // above the cut
-  c.drawImageRect(img, src(r.top, cut), Rect.fromLTRB(r.left * fit.s, r.top * fit.s, r.right * fit.s, cut * fit.s), paint);
+  c.drawImageRect(
+    img,
+    src(r.top, cut),
+    Rect.fromLTRB(r.left * fit.s, r.top * fit.s, r.right * fit.s, cut * fit.s),
+    paint,
+  );
   if (fit.trim >= 0) {
     final from = math.min(cut + fit.trim, r.bottom);
     c.drawImageRect(img, src(from, r.bottom), dst(from, r.bottom), paint);
@@ -363,7 +371,14 @@ void drawFitted(Canvas c, ui.Image img, Rect r, DesignFit fit, Paint paint) {
 
 /// [a] and [b] mixed as (1 - f) a + f b in a layer: exact, so an opaque body
 /// stays opaque and its shadows don't double up between turns.
-void drawMixed(Canvas c, Rect bounds, double f, double opacity, void Function(Paint) a, void Function(Paint)? b) {
+void drawMixed(
+  Canvas c,
+  Rect bounds,
+  double f,
+  double opacity,
+  void Function(Paint) a,
+  void Function(Paint)? b,
+) {
   Paint p(double alpha) => Paint()
     ..filterQuality = FilterQuality.medium
     ..color = Color.fromRGBO(0, 0, 0, alpha);
@@ -390,13 +405,13 @@ class WholeRest extends StatelessWidget {
     final fit = DesignFit(art, size);
     return ArtImages(
       providers: [body.rest.image(fit.s * dpr)],
-      painter: (imgs) => _RestPainter(imgs[0], body.rest.rect, fit),
+      painter: (imgs) => RestPainter(imgs[0], body.rest.rect, fit),
     );
   }
 }
 
-class _RestPainter extends CustomPainter {
-  _RestPainter(this.img, this.rect, this.fit);
+class RestPainter extends CustomPainter {
+  RestPainter(this.img, this.rect, this.fit);
 
   final ui.Image? img;
   final Rect rect;
@@ -409,7 +424,7 @@ class _RestPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RestPainter o) => o.img != img || o.fit.s != fit.s || o.fit.trim != fit.trim;
+  bool shouldRepaint(RestPainter o) => o.img != img || o.fit.s != fit.s || o.fit.trim != fit.trim;
 }
 
 /// One moving part's layer, at its place on the fitted face. Positioned in
@@ -453,7 +468,10 @@ class WholeLayer extends StatelessWidget {
         child: img,
       );
     }
-    return Positioned.fromRect(rect: r, child: IgnorePointer(child: img));
+    return Positioned.fromRect(
+      rect: r,
+      child: IgnorePointer(child: img),
+    );
   }
 }
 

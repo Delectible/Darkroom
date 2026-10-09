@@ -7,6 +7,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'physical_orientation.dart';
 
+/// How the UI should treat the phone's orientation: the way it's held, but
+/// always portrait while the phone's auto-rotate is off (Android), so
+/// nothing on screen turns with it. The pictures themselves still follow
+/// [physicalOrientationProvider] (saved upright, like the system camera).
+final uprightOrientationProvider = Provider<DeviceOrientation>((ref) {
+  final o = ref.watch(physicalOrientationProvider);
+  return ref.watch(_autoRotateProvider) == false ? DeviceOrientation.portraitUp : o;
+});
+
+final _autoRotateProvider = NotifierProvider<_AutoRotateNotifier, bool?>(_AutoRotateNotifier.new);
+
+class _AutoRotateNotifier extends Notifier<bool?> {
+  @override
+  bool? build() {
+    void changed() => state = AutoRotate.value.value;
+    AutoRotate.value.addListener(changed);
+    ref.onDispose(() => AutoRotate.value.removeListener(changed));
+    return AutoRotate.value.value;
+  }
+}
+
 /// Keeps [child] upright for the user while the (portrait-locked) layout
 /// stays put: turn the phone sideways and icons rotate in place, like the
 /// system camera's.
@@ -18,7 +39,7 @@ class Upright extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final o = ref.watch(physicalOrientationProvider);
+    final o = ref.watch(uprightOrientationProvider);
     return AnimatedRotation(
       turns: uprightTurns(o),
       duration: duration,
@@ -37,7 +58,7 @@ class UprightBox extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final q = uprightQuarterTurns(ref.watch(physicalOrientationProvider));
+    final q = uprightQuarterTurns(ref.watch(uprightOrientationProvider));
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 260),
       child: RotatedBox(key: ValueKey(q), quarterTurns: q, child: child),
@@ -54,7 +75,7 @@ Future<T?> showUprightSheet<T>(
   Color? backgroundColor,
   double maxWidth = 560,
 }) {
-  final turns = uprightQuarterTurns(ProviderScope.containerOf(context).read(physicalOrientationProvider));
+  final turns = uprightQuarterTurns(ProviderScope.containerOf(context).read(uprightOrientationProvider));
   const shape = RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16)));
   if (turns.isEven) {
     return showModalBottomSheet<T>(
@@ -106,6 +127,14 @@ class UprightApp extends ConsumerStatefulWidget {
 
   /// The way the app was last turned to landscape.
   static DeviceOrientation lastLandscape = DeviceOrientation.landscapeLeft;
+
+  /// While a landscape page fades out before the app turns: the
+  /// orientation it keeps its layout for ([UprightPage]); null otherwise.
+  static final held = ValueNotifier<DeviceOrientation?>(null);
+
+  /// The landscape pages' opacity: turning the phone while one is up fades
+  /// it out, turns the app, and fades it back in (no resize glitch).
+  static final veil = ValueNotifier<double>(1);
 
   final Widget child;
 
@@ -183,6 +212,10 @@ class _NoRoute extends Route<void> {}
 class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObserver {
   List<DeviceOrientation> _asked = const [DeviceOrientation.portraitUp];
 
+  /// A fade-turn-fade in progress ([_turn]).
+  bool _turning = false;
+  Timer? _settle;
+
   @override
   void initState() {
     super.initState();
@@ -197,6 +230,7 @@ class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObse
     WidgetsBinding.instance.removeObserver(this);
     UprightApp.observer.allowed.removeListener(_apply);
     AutoRotate.value.removeListener(_apply);
+    _settle?.cancel();
     super.dispose();
   }
 
@@ -205,7 +239,26 @@ class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObse
     if (state == AppLifecycleState.resumed) unawaited(AutoRotate.refresh());
   }
 
-  void _apply() {
+  @override
+  void didChangeMetrics() {
+    // The app has turned: fade back in once the size stops changing.
+    if (!_turning) return;
+    _settle?.cancel();
+    _settle = Timer(const Duration(milliseconds: 90), _reveal);
+  }
+
+  void _reveal() {
+    _settle?.cancel();
+    UprightApp.veil.value = 1;
+    _turning = false;
+    // Turned again meanwhile?
+    _apply(turned: true);
+  }
+
+  /// [turned]: the phone has just turned (else a page arrived or left, or
+  /// auto-rotate changed).
+  void _apply({bool turned = false}) {
+    if (_turning) return;
     final o = ref.read(physicalOrientationProvider);
     final auto = AutoRotate.value.value;
     final List<DeviceOrientation> want;
@@ -222,6 +275,28 @@ class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObse
       want = [isLandscape(o) ? o : DeviceOrientation.portraitUp];
     }
     if (listEquals(want, _asked)) return;
+    // A landscape page is up and the phone turned under it: it keeps its
+    // layout while it fades out, then the app turns and it fades back in
+    // (didChangeMetrics). Arriving already laid out turned, it just cuts.
+    final from = _asked.length == 1 ? _asked.first : DeviceOrientation.portraitUp;
+    if (turned && UprightApp.observer.allowed.value && auto == true && isLandscape(from) != isLandscape(o)) {
+      _turning = true;
+      UprightApp.held.value = from;
+      UprightApp.veil.value = 0;
+      Timer(UprightPage.fade, () {
+        if (!mounted) return;
+        UprightApp.held.value = null;
+        _commit(want);
+        // No metrics change (already that way round): don't stay dark.
+        _settle?.cancel();
+        _settle = Timer(const Duration(milliseconds: 600), _reveal);
+      });
+      return;
+    }
+    _commit(want);
+  }
+
+  void _commit(List<DeviceOrientation> want) {
     _asked = want;
     if (want.length == 1 && want.first != DeviceOrientation.portraitUp) UprightApp.lastLandscape = want.first;
     unawaited(SystemChrome.setPreferredOrientations(want));
@@ -235,7 +310,7 @@ class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(physicalOrientationProvider, (_, _) => _apply());
+    ref.listen(physicalOrientationProvider, (_, _) => _apply(turned: true));
     return widget.child;
   }
 }
@@ -276,37 +351,52 @@ class UprightPage extends ConsumerWidget {
 
   final Widget child;
 
+  /// How long the page takes to fade out (and back in) as the phone turns.
+  static const fade = Duration(milliseconds: 150);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final o = ref.watch(physicalOrientationProvider);
-    return ValueListenableBuilder<bool?>(
-      valueListenable: AutoRotate.value,
-      builder: (context, auto, _) {
-        final mq = MediaQuery.of(context);
-        final portraitNow = mq.size.height >= mq.size.width;
-        final q = auto == true && portraitNow && isLandscape(o) ? uprightQuarterTurns(o) : 0;
-        EdgeInsets turn(EdgeInsets e) => switch (q) {
-          1 => EdgeInsets.fromLTRB(e.top, e.right, e.bottom, e.left),
-          3 => EdgeInsets.fromLTRB(e.bottom, e.left, e.top, e.right),
-          _ => e,
-        };
-        return RotatedBox(
-          quarterTurns: q,
-          child: MediaQuery(
-            data: q == 0
-                ? mq
-                : mq.copyWith(
-                    size: mq.size.flipped,
-                    // as it will be, turned: no status / nav bars
-                    padding: turn(mq.padding.copyWith(top: 0, bottom: 0)),
-                    viewPadding: turn(mq.viewPadding.copyWith(top: 0, bottom: 0)),
-                    viewInsets: turn(mq.viewInsets),
-                    systemGestureInsets: turn(mq.systemGestureInsets),
-                  ),
-            child: child,
-          ),
-        );
-      },
+    final physical = ref.watch(physicalOrientationProvider);
+    return ValueListenableBuilder<double>(
+      valueListenable: UprightApp.veil,
+      builder: (context, veil, child) => AnimatedOpacity(
+        opacity: veil,
+        duration: veil == 0 ? fade : fade * 1.6,
+        curve: Curves.easeOut,
+        child: child,
+      ),
+      child: ListenableBuilder(
+        listenable: Listenable.merge([AutoRotate.value, UprightApp.held]),
+        builder: (context, _) {
+          final o = UprightApp.held.value ?? physical;
+          final mq = MediaQuery.of(context);
+          final portraitNow = mq.size.height >= mq.size.width;
+          final q = AutoRotate.value.value == true && portraitNow && isLandscape(o)
+              ? uprightQuarterTurns(o)
+              : 0;
+          EdgeInsets turn(EdgeInsets e) => switch (q) {
+            1 => EdgeInsets.fromLTRB(e.top, e.right, e.bottom, e.left),
+            3 => EdgeInsets.fromLTRB(e.bottom, e.left, e.top, e.right),
+            _ => e,
+          };
+          return RotatedBox(
+            quarterTurns: q,
+            child: MediaQuery(
+              data: q == 0
+                  ? mq
+                  : mq.copyWith(
+                      size: mq.size.flipped,
+                      // as it will be, turned: no status / nav bars
+                      padding: turn(mq.padding.copyWith(top: 0, bottom: 0)),
+                      viewPadding: turn(mq.viewPadding.copyWith(top: 0, bottom: 0)),
+                      viewInsets: turn(mq.viewInsets),
+                      systemGestureInsets: turn(mq.systemGestureInsets),
+                    ),
+              child: child,
+            ),
+          );
+        },
+      ),
     );
   }
 }

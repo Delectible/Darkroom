@@ -182,6 +182,19 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     if (items.isEmpty) return const SizedBox.shrink();
     final item = items[_index];
     final spec = CameraCatalog.byId(item.cameraId);
+    // Sideways the buttons stand in a column on the right, so the print
+    // gets the height.
+    final mq = MediaQuery.of(context);
+    final landscape = mq.size.width > mq.size.height;
+    final actions = _ActionBar(
+      vertical: landscape,
+      onWrite: spec.isInstant ? () => _writeNote(item) : null,
+      saved: item.isSaved,
+      saving: _saving,
+      onSave: () => _save(item),
+      onDelete: () => _delete(item),
+      onShare: (anchor) => shareMedia(anchor, item),
+    );
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -196,64 +209,69 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
             ),
           ),
           SafeArea(
-            child: Column(
+            child: Row(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 12, 0),
-                  child: Row(
+                Expanded(
+                  child: Column(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 4, 12, 0),
+                        child: Row(
                           children: [
-                            Text(
-                              item.fileName,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.fileName,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+                                  ),
+                                  Text(
+                                    '${spec.name} · ${MaterialLocalizations.of(context).formatMediumDate(item.capturedAt)}',
+                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                  ),
+                                ],
+                              ),
                             ),
                             Text(
-                              '${spec.name} · ${MaterialLocalizations.of(context).formatMediumDate(item.capturedAt)}',
-                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                              '${_index + 1} / ${items.length}',
+                              style: const TextStyle(color: Colors.white54),
                             ),
                           ],
                         ),
                       ),
-                      Text('${_index + 1} / ${items.length}', style: const TextStyle(color: Colors.white54)),
+                      Expanded(
+                        child: PhotoPager(
+                          controller: _pages,
+                          itemCount: items.length,
+                          onPageChanged: (i) => setState(() => _index = i),
+                          // A tap off the print (on the dimmed board) puts it down;
+                          // so does a swipe up or down.
+                          onTap: (at) {
+                            final box =
+                                _printKeys[items[_index].id]?.currentContext?.findRenderObject()
+                                    as RenderBox?;
+                            final on =
+                                box != null && (Offset.zero & box.size).contains(box.globalToLocal(at));
+                            if (!on) unawaited(Navigator.of(context).maybePop());
+                          },
+                          onDismiss: () => Navigator.of(context).maybePop(),
+                          itemBuilder: (context, i) => _Print(
+                            printKey: _printKeys.putIfAbsent(items[i].id, GlobalKey.new),
+                            item: items[i],
+                            onWrite: () => _writeNote(items[i]),
+                          ),
+                        ),
+                      ),
+                      if (!landscape) actions,
                     ],
                   ),
                 ),
-                Expanded(
-                  child: PhotoPager(
-                    controller: _pages,
-                    itemCount: items.length,
-                    onPageChanged: (i) => setState(() => _index = i),
-                    // A tap off the print (on the dimmed board) puts it down;
-                    // so does a swipe up or down.
-                    onTap: (at) {
-                      final box =
-                          _printKeys[items[_index].id]?.currentContext?.findRenderObject() as RenderBox?;
-                      final on = box != null && (Offset.zero & box.size).contains(box.globalToLocal(at));
-                      if (!on) unawaited(Navigator.of(context).maybePop());
-                    },
-                    onDismiss: () => Navigator.of(context).maybePop(),
-                    itemBuilder: (context, i) => _Print(
-                      printKey: _printKeys.putIfAbsent(items[i].id, GlobalKey.new),
-                      item: items[i],
-                      onWrite: () => _writeNote(items[i]),
-                    ),
-                  ),
-                ),
-                _ActionBar(
-                  onWrite: spec.isInstant ? () => _writeNote(item) : null,
-                  saved: item.isSaved,
-                  saving: _saving,
-                  onSave: () => _save(item),
-                  onDelete: () => _delete(item),
-                  onShare: (anchor) => shareMedia(anchor, item),
-                ),
+                if (landscape) actions,
               ],
             ),
           ),
@@ -323,6 +341,7 @@ class _Print extends StatelessWidget {
 
 class _ActionBar extends StatelessWidget {
   const _ActionBar({
+    this.vertical = false,
     this.onWrite,
     required this.saved,
     required this.saving,
@@ -331,6 +350,8 @@ class _ActionBar extends StatelessWidget {
     required this.onShare,
   });
 
+  /// A column down the right edge (landscape) instead of a row.
+  final bool vertical;
   final VoidCallback? onWrite;
   final bool saved;
   final bool saving;
@@ -341,8 +362,9 @@ class _ActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
-      child: Row(
+      padding: vertical ? const EdgeInsets.fromLTRB(4, 12, 16, 12) : const EdgeInsets.fromLTRB(16, 4, 16, 14),
+      child: Flex(
+        direction: vertical ? Axis.vertical : Axis.horizontal,
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           Builder(

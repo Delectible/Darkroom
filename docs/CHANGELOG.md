@@ -772,34 +772,63 @@ Answers: turntable renders, no 2D/3D switch.
 
 - [x] **38.1 Film shutter** doesn't push in (the rotating part spins), and
   the release isn't centred in its mechanism.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.2 Labels on the button tops**: film ratio label, digital flash /
   ratio / settings labels are drawn at the button's base, so they slide off
   at an angle.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.3 Film stock label** back to about half the body's width.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.4 Three stray dots** above the film menu button.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.5 Digital LCD** has a black section at its right end.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.6 Camcorder REC LED** misaligned, doesn't look real.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.7 Zoom rocker** rocks further.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.8 Setting rename**: "3D cameras" -> "Fancy graphics", "Enhances
   graphics for immersive experience. Doesn't affect photos. Will affect
   morale."
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.9 Toggle contrast**: orange on dark grey.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.10 Lanyard physics**: a curvy rope that swings with swaps and
   sways with the phone's motion.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.11 Shake to clear**: shake the phone on the corkboard to drop
   every unsaved print (they unpin and fall, the rest reshuffle, screen
   shakes + vibration); a paper note in the corner says "shake to clear".
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.12 Win98**: Defragment is for the hard disk (not the SD card);
   add Format for the floppy in the same menu.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.13 Super 8 reels on the board**: keep the reel, make it
   photoreal: a real Super 8 spool (round holes), resting on two pins from
   underneath, a Polaroid-style print of the first frame taped on its front
   with the file name.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.14 Digital body finishes**: all four (silver + grip, gunmetal,
   champagne, two-tone) in the app, switched in the Debug menu for now
   (later: unlocked by playing the mini games).
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.15 Super 8 RUN** text is tiny: bigger, to fill the button.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.16 Shutter LED** pops up from nothing: give it an off state.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.17 Video <-> photo shutter** switch: the buttons jump and
   teleport; make it smooth.
+  → 1.6.3 · 2026-10-09 · 2d5b443
 - [x] **38.18 Push pins**: traditional push pins, rendered like the spool.
+  → 1.6.3 · 2026-10-09 · 2d5b443
+
+## 39. Turning the phone (2026-10-09)
+
+- [x] **39.1 Fade on turn**: turning the phone while the corkboard or Win98
+  is up glitched as it resized; now the page fades out, the app turns,
+  and it fades back in.
+- [x] **39.2 Print viewer in landscape**: the buttons stand in a column on
+  the right so the print gets the room.
+- [x] **39.3 Auto-rotate off = nothing turns**: the carousel, the turning
+  icons and labels kept following the phone; with the phone's auto-rotate
+  off they now stay put (photos still save the right way up).

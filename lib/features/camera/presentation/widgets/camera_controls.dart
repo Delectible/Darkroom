@@ -83,7 +83,7 @@ class FlashButton extends ConsumerWidget {
     final flash = ref.watch(activeFlashProvider);
     // Held sideways the content rotates in place: only the icon (it says
     // auto / on / off by itself) fits upright inside the fixed-size key.
-    final sideways = uprightQuarterTurns(ref.watch(physicalOrientationProvider)).isOdd;
+    final sideways = uprightQuarterTurns(ref.watch(uprightOrientationProvider)).isOdd;
     final icon = AnimatedSwitcher(
       duration: const Duration(milliseconds: 160),
       transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
@@ -185,7 +185,7 @@ class AspectButton extends ConsumerWidget {
     final spec = ref.watch(activeSpecProvider);
     final local = ref.watch(activeCameraSettingsProvider);
     final aspect = spec.aspectLocked ? spec.defaultAspect : local.aspect;
-    final sideways = uprightQuarterTurns(ref.watch(physicalOrientationProvider)).isOdd;
+    final sideways = uprightQuarterTurns(ref.watch(uprightOrientationProvider)).isOdd;
     final art = ref.watch(photoBodyProvider(spec.mode));
     if (art != null) {
       final film = spec.mode == AppMode.film;

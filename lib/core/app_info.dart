@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.3';
+  static const version = '1.6.4';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Polish for the 3D cameras: buttons press properly with their labels on top, swinging straps, '
-      'new finishes, a realistic Super 8 reel on the board, and shake the phone to clear unsaved prints.';
+      'Turning the phone on the corkboard or Win98 now fades smoothly, the print viewer puts its buttons '
+      'on the side in landscape, and with auto-rotate off nothing on screen turns.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -21,6 +21,7 @@ class AppInfo {
         'Film photos at full camera resolution',
         'Swinging straps, shake to clear the board',
         'Photoreal Super 8 reels',
+        'Smooth fade when the phone turns',
       ],
     ),
     (

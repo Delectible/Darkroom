@@ -21,7 +21,7 @@ import '../../../core/device/haptics.dart';
 Future<void> showStockSelector(BuildContext context, AppMode mode) {
   // It rises from the bottom as the user holds the phone: held sideways
   // (the activity stays portrait) that's one of the screen's long edges.
-  final turns = uprightQuarterTurns(ProviderScope.containerOf(context).read(physicalOrientationProvider));
+  final turns = uprightQuarterTurns(ProviderScope.containerOf(context).read(uprightOrientationProvider));
   final from = switch (turns) {
     1 => const Offset(-1, 0),
     2 => const Offset(0, -1),
@@ -265,7 +265,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
         : ref.watch(cameraSettingsProvider)[spec!.id]?.grain ?? GrainStrength.normal;
     // Held sideways the hero flight from the camera screen would be worked
     // out in the unrotated frame (it flew sideways, then snapped): skip it.
-    final upright = uprightQuarterTurns(ref.watch(physicalOrientationProvider)).isEven;
+    final upright = uprightQuarterTurns(ref.watch(uprightOrientationProvider)).isEven;
 
     return Material(
       color: _bg,

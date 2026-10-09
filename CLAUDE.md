@@ -122,7 +122,10 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   `UprightPage`, which lays it out turned (RotatedBox) while the app is
   still portrait and the phone is sideways, so it slides in already
   landscape; MainActivity sets ROTATION_ANIMATION_JUMPCUT so the real
-  rotation is invisible. Only with auto-rotate on (`AutoRotate`, channel
+  rotation is invisible. Turning the phone while such a page is up fades
+  it out (`UprightApp.veil`; it keeps its layout via `UprightApp.held`),
+  turns the app, and fades it back in once the size settles
+  (`didChangeMetrics`). Only with auto-rotate on (`AutoRotate`, channel
   `darkroom/rotation`, Android setting + changes); iOS (null) asks for
   portrait + landscape and lets the system turn within its lock. iOS
   Info.plist allows landscape. Turned, the system bars hide
@@ -135,7 +138,11 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   runs portrait + four landscape phones.
 - The app is **portrait** everywhere else. Landscape is detected with the
   accelerometer (`lib/core/device/physical_orientation.dart`); icons rotate in
-  place (`Upright` / `UprightBox`) and photos are saved upright.
+  place (`Upright` / `UprightBox`) and photos are saved upright. UI reads
+  `uprightOrientationProvider` (always portrait while Android's auto-rotate
+  is off, so nothing turns); only capture and the Super 8 framing read
+  `physicalOrientationProvider`. The print viewer puts its buttons in a
+  column on the right in landscape.
 
 ## Film engine (`lib/core/processing/film/`)
 

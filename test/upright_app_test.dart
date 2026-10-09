@@ -12,6 +12,13 @@ class _Held extends PhysicalOrientationNotifier {
   DeviceOrientation build() => DeviceOrientation.landscapeLeft;
 }
 
+class _Turnable extends PhysicalOrientationNotifier {
+  @override
+  DeviceOrientation build() => DeviceOrientation.portraitUp;
+
+  void turn(DeviceOrientation o) => state = o;
+}
+
 /// Landscape screens turn the app with the phone, only when auto-rotate is
 /// on: laid out in landscape from the moment they start sliding in (no pop
 /// when Android then turns), really rotated once they've arrived, back to
@@ -40,9 +47,9 @@ void main() {
   Size? cameraSaw, boardSaw;
   final nav = GlobalKey<NavigatorState>();
 
-  Future<void> pumpApp(WidgetTester tester) => tester.pumpWidget(
+  Future<void> pumpApp(WidgetTester tester, {bool turnable = false}) => tester.pumpWidget(
     ProviderScope(
-      overrides: [physicalOrientationProvider.overrideWith(_Held.new)],
+      overrides: [physicalOrientationProvider.overrideWith(turnable ? _Turnable.new : _Held.new)],
       child: MaterialApp(
         navigatorKey: nav,
         navigatorObservers: [UprightApp.observer],
@@ -90,6 +97,10 @@ void main() {
     expect(boardSaw!.width, greaterThan(boardSaw!.height), reason: 'already laid out in landscape');
     await tester.pumpAndSettle();
     expect(asked.last, ['DeviceOrientation.landscapeLeft']);
+    expect(
+      ProviderScope.containerOf(nav.currentContext!).read(uprightOrientationProvider),
+      DeviceOrientation.landscapeLeft,
+    );
 
     // The phone really turned: the camera underneath still lays out upright,
     // the board is landscape without being turned again.
@@ -104,6 +115,33 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('turning the phone on a page: fades out, turns, fades back in', (tester) async {
+    final asked = await setUp(tester, true);
+    await pumpApp(tester, turnable: true);
+    pushBoard();
+    await tester.pumpAndSettle();
+    expect(boardSaw!.height, greaterThan(boardSaw!.width));
+
+    final phone =
+        ProviderScope.containerOf(nav.currentContext!).read(physicalOrientationProvider.notifier)
+            as _Turnable;
+    phone.turn(DeviceOrientation.landscapeLeft);
+    await tester.pump();
+    expect(UprightApp.veil.value, 0, reason: 'fading out');
+    expect(boardSaw!.height, greaterThan(boardSaw!.width), reason: 'keeps its layout while it fades');
+    expect(asked.where((a) => a.contains('DeviceOrientation.landscapeLeft')), isEmpty);
+
+    await tester.pump(UprightPage.fade);
+    expect(asked.last, ['DeviceOrientation.landscapeLeft'], reason: 'turns once faded out');
+    tester.view.physicalSize = const Size(2745, 1236);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(UprightApp.veil.value, 1, reason: 'fades back in once turned');
+    expect(boardSaw!.width, greaterThan(boardSaw!.height));
+    nav.currentState!.pop();
+    await tester.pumpAndSettle();
+  });
+
   testWidgets('auto-rotate off: nothing turns', (tester) async {
     final asked = await setUp(tester, false);
     await pumpApp(tester);
@@ -111,6 +149,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(asked.where((a) => a.contains('DeviceOrientation.landscapeLeft')), isEmpty);
     expect(boardSaw!.height, greaterThan(boardSaw!.width), reason: 'stays portrait');
+    expect(
+      ProviderScope.containerOf(nav.currentContext!).read(uprightOrientationProvider),
+      DeviceOrientation.portraitUp,
+      reason: 'icons, labels, the carousel stay put too',
+    );
     nav.currentState!.pop();
     await tester.pumpAndSettle();
   });

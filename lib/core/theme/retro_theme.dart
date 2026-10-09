@@ -104,10 +104,16 @@ class RetroPalette extends ThemeExtension<RetroPalette> {
         error: danger,
       ),
       textTheme: base.textTheme.apply(bodyColor: text, displayColor: text),
+      // High contrast on any screen: orange when on, dark grey when off.
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStatePropertyAll(metal),
+        thumbColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? const Color(0xFFFFF4EA) : const Color(0xFF9A9A9E),
+        ),
         trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? accent : metalDark,
+          (s) => s.contains(WidgetState.selected) ? const Color(0xFFFF7A1A) : const Color(0xFF2A2A2D),
+        ),
+        trackOutlineColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? const Color(0xFFFF7A1A) : const Color(0xFF5A5A5E),
         ),
       ),
       extensions: [this],

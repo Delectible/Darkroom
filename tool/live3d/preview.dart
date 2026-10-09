@@ -69,6 +69,11 @@ class _Name extends UserNameNotifier {
   String? build() => null;
 }
 
+class _Finish extends BodyFinishNotifier {
+  @override
+  String? build() => Platform.environment['FINISH'];
+}
+
 class _Session extends CameraSessionController {
   @override
   CameraSessionState build() => const CameraSessionState(hasFrontCamera: true);
@@ -97,6 +102,7 @@ Future<void> main() async {
         lensProvider.overrideWith(_Lens.new),
         userNameProvider.overrideWith(_Name.new),
         flashProvider.overrideWith(_Flash.new),
+        bodyFinishProvider.overrideWith(_Finish.new),
         cameraSessionProvider.overrideWith(_Session.new),
         filmItemsProvider.overrideWith((ref) => Stream.value(const <MediaItem>[])),
         sdCardItemsProvider.overrideWith((ref) => Stream.value(const <MediaItem>[])),

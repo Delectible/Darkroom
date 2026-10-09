@@ -51,7 +51,7 @@ FRAME = (14.0, 126.0, 398.0, H - 236)
 LAYOUT = {
     'film': {
         'frame': FRAME, 'screenInset': 9.0,
-        'memo': (20.0, LABEL_Y - 24, 392.0, LABEL_Y + 24),
+        'memo': (20.0, LABEL_Y - 24, 236.0, LABEL_Y + 24),
         'plateTop': 120.0, 'plateBottom': H - 54,
         'parts': {
             'flash': (50.0, TOP_Y), 'flashtab': (23.0, TOP_Y + 6), 'aspect': (128.0, TOP_Y),

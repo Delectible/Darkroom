@@ -215,7 +215,7 @@ Things you can run from Start > Run...
   RABBIT.EXE    say hello to the mascot
   DEVELOP.BAT   how your film is made
   PING          how long until your prints?
-  DEFRAG        tidy up the SD card
+  DEFRAG        tidy up the hard disk
   WINVER        version information
   A:  C:  E:    jump to a drive
 

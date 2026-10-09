@@ -137,7 +137,7 @@ def f_menu(state):
     cylinder(11, 4.2, 'spun', 2.2 + lift, 128, 0.6, press, r_top=10.4)
     for yy, kx in ((3.2, 1.6), (0, -1.8), (-3.2, 0.8)):
         box(10, 0.9, 0.12, 'ink', (0, yy, 6.45 + lift), 0, 0, press)
-        cylinder(1.3, 0.14, 'ink', 6.42 + lift, 24, 0, press).location = (kx, yy, 6.42 + lift)
+        cylinder(1.3, 0.14, 'ink', 6.42 + lift, 24, 0, press).location = (kx, yy, 0)
     return g
 
 
@@ -234,7 +234,7 @@ def f_run(state):
     top = 3.6 if state == 'down' else 5.4
     press = moving(group('press', g), 'press')
     lathe([(0, top), (3.0, top - 0.08), (5.6, top - 0.35), (6.9, top - 0.9), (7.4, top - 1.6), (7.4, 2.6), (0, 2.6)], 'redGloss', 128, press, 'cap')
-    text('RUN', 2.4, 'whiteInk', top - 0.02, 0.06, 'CENTER', 'InterDisplay-Bold.ttf', 1.0, press)
+    text('RUN', 3.7, 'whiteInk', top - 0.02, 0.06, 'CENTER', 'InterDisplay-Bold.ttf', 1.0, press)
     return g
 
 
@@ -249,7 +249,11 @@ def digital_key(rec):
         press = moving(group('press', g), 'press')
         rbox(18.6, 14.6, 3.2, 1.5, 0.8, 'satin', base - 1.0, press)
         if rec:
-            cylinder(2.6, 0.25, 'red', base + 2.2, 64, 0, press)
+            # a recording lamp: a chrome bezel and a domed red lens
+            cylinder(3.0, 0.3, 'polished', base + 2.2, 64, 0.1, press)
+            R, h = 2.5, 0.75
+            lathe([(R * i / 12, base + 2.5 + h * (1 - (i / 12) ** 2)) for i in range(13)] + [(R, base + 2.5), (0, base + 2.5)],
+                  'ledRed', 64, press, 'lens')
         return g
     return build
 

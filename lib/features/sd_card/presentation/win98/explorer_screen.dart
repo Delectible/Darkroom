@@ -350,6 +350,30 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     }
   }
 
+  Future<void> _formatFloppy() async {
+    final a = ref.read(floppyFilesProvider).where((m) => m.status != MediaStatus.processing).toList();
+    final r = await _box(
+      'Format 3½ Floppy (A:)',
+      a.isEmpty
+          ? 'Formatting will erase the disk in drive A:.\n\nTo format the disk, click OK. To quit, click Cancel.'
+          : 'WARNING: Formatting will ERASE ALL ${a.length} clip(s) on the floppy disk that have not been '
+                'copied to C:.\n\nTo format the disk, click OK. To quit, click Cancel.',
+      icon: Win98MessageIcon.warning,
+      buttons: const ['OK', 'Cancel'],
+    );
+    if (r != 0) return;
+    final repo = ref.read(sdCardRepositoryProvider);
+    for (final m in a) {
+      await deleteMedia(repo, m);
+    }
+    if (mounted) {
+      await _box(
+        'Format Results',
+        'Format complete.\n\n1,457,664 bytes total disk space\n1,457,664 bytes available on disk',
+      );
+    }
+  }
+
   Future<void> _start() async {
     final a = await showStartMenu(context);
     if (!mounted || a == null) return;
@@ -400,7 +424,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     if (!mounted) return;
     switch (cmd) {
       case 'defrag' || 'defrag.exe':
-        await showDefragmenter(context, files: ref.read(sdCardFilesProvider).length);
+        await showDefragmenter(context, files: ref.read(cDriveFilesProvider).length);
       case 'winver' || 'about':
         await showAboutDarkroom(context);
       case 'c:' || 'c:\\' || 'explorer':
@@ -595,11 +619,14 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                 Win98MenuItem('Options...', onSelected: () => showExplorerOptions(context)),
                               ],
                               'Tools': () => [
+                                // (only a hard disk gets defragmented)
                                 Win98MenuItem(
-                                  'Defragment SD Card...',
-                                  onSelected: () => showDefragmenter(context, files: sdFiles.length),
+                                  'Defragment Local Disk (C:)...',
+                                  onSelected: () =>
+                                      showDefragmenter(context, files: ref.read(cDriveFilesProvider).length),
                                 ),
                                 Win98MenuItem('Format SD Card...', onSelected: _formatCard),
+                                Win98MenuItem('Format 3½ Floppy (A:)...', onSelected: _formatFloppy),
                                 const Win98MenuItem.separator(),
                                 Win98MenuItem('Run...', onSelected: _run),
                               ],

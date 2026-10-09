@@ -43,6 +43,16 @@ class BodyArt {
     ],
   };
 
+  /// How high a part's top stands off the face, design dp (the model's
+  /// heights, parts.py x whole_body.HEIGHTS, film's plate under its top row).
+  static double topOf(String part, {bool down = false}) => switch (part) {
+    'pill' || 'pillwide' || 'pillsmall' => (down ? 0.2 + 4.2 : 1.1 + 4.2) * 2.6,
+    'aspect' || 'aspecttop' => 0.8 + 9.2 * 2.6,
+    // the camcorder key's lamp lens (the key x 96/30, up)
+    'rec' => (3.2 + 2.5 + 0.75) * 96 / 30 * 2.6,
+    _ => 0,
+  };
+
   /// The layout part each control part sits on (its rest place).
   static String anchorOf(String part) => _layerAt[part] ?? part;
 
@@ -735,7 +745,14 @@ class PhotoKey extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             BodySprite(part, state: down ? 'down' : 'up'),
-            if (label != null) Transform.translate(offset: Offset(0, down ? 0.8 : -0.4), child: label),
+            if (label != null)
+              part.layers != null
+                  // the live model: printed on the key's top, which sinks
+                  ? OnTop(
+                      height: BodyArt.topOf(part.name, down: down),
+                      child: Transform.scale(scale: down ? 0.93 : 1, child: label),
+                    )
+                  : Transform.translate(offset: Offset(0, down ? 0.8 : -0.4), child: label),
           ],
         ),
       ),
@@ -751,6 +768,24 @@ TextStyle photoLabel({required bool onMetal}) => TextStyle(
   fontWeight: FontWeight.w800,
   letterSpacing: 0.6,
 );
+
+/// Lifts [child] [height] design dp off the face, toward the viewer: a
+/// label printed on top of a key or dial, so it stays on it as the body
+/// turns (the face is drawn in perspective; see SwapBody).
+class OnTop extends StatelessWidget {
+  const OnTop({super.key, required this.height, required this.child});
+
+  final double height;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Transform(
+    // (screen z runs into the screen; the face's widgets are in design dp,
+    // scaled to the screen in x and y only)
+    transform: Matrix4.translationValues(0, 0, -height * WholeScale.of(context)),
+    child: child,
+  );
+}
 
 /// Screen dp per design dp for the 3D face.
 class WholeScale extends InheritedWidget {

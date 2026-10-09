@@ -302,8 +302,48 @@ def join(objs, name, parent, material):
 
 BAND = 120.0  # dp each side of cutY: the stretch band (inside the viewfinder)
 
+# The digital body's finishes: its skin (in three bands down the face:
+# above the viewfinder, beside it, below it) and its shell. Each is baked
+# into its own small atlas; the app shows one (`finish.<name>.*`).
+FINISH_Y = (120.0, 742.0)
+FINISHES = {
+    'silver': ('alu', 'alu', 'alu', 'aluDark'),
+    'grip': ('alu', 'alu', 'grip', 'aluDark'),
+    'gunmetal': ('gunAlu', 'gunAlu', 'gunAlu', 'gunDark'),
+    'champagne': ('champAlu', 'champAlu', 'champAlu', 'champDark'),
+    'twotone': ('alu', 'blueAnod', 'blueAnod', 'blueDark'),
+}
 
-def split_band(body, root):
+
+def split_y(obj, ys):
+    """Copies of [obj] cut across at each design y in [ys] (top first)."""
+    import bmesh
+    planes = [WB.H / 2 - y for y in ys]  # model y, descending
+    out = []
+    for i in range(len(planes) + 1):
+        o = obj.copy()
+        o.data = obj.data.copy()
+        o.name = f'{obj.name}.r{i}'
+        bpy.context.collection.objects.link(o)
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        mw = obj.matrix_world
+        inv = mw.inverted()
+        for j, py in enumerate(planes):
+            # plane in the object's own space
+            co = inv @ __import__('mathutils').Vector((0, py, 0))
+            no = (inv.to_3x3().transposed().inverted() @ __import__('mathutils').Vector((0, 1, 0))).normalized()
+            geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
+            above = j < i  # keep below planes before this region, above those after
+            bmesh.ops.bisect_plane(bm, geom=geom, plane_co=co, plane_no=no, clear_outer=above, clear_inner=not above)
+        bm.to_mesh(o.data)
+        bm.free()
+        out.append(o)
+    bpy.data.objects.remove(obj)
+    return out
+
+
+def split_band(body, root, prefix='body'):
     """Cuts the static body into body.top / body.mid / body.bot at
     cutY -/+ BAND: the app stretches or squeezes body.mid (origin at cutY)
     to the phone's height and moves the top and bottom pieces with it."""
@@ -313,7 +353,7 @@ def split_band(body, root):
     for name, keep in (('top', 1), ('mid', 0), ('bot', -1)):
         o = body.copy()
         o.data = body.data.copy()
-        o.name = f'body.{name}'
+        o.name = f'{prefix}.{name}'
         bpy.context.collection.objects.link(o)
         bm = bmesh.new()
         bm.from_mesh(o.data)
@@ -347,7 +387,13 @@ def export(mode, out, size, draft):
     bpy.context.view_layer.update()
 
     meshes = [o for o in all_objects(root) if o.type == 'MESH']
-    static = [o for o in meshes if owner(o) is None]
+    finish = []
+    if mode == 'digital':
+        skin = next(o for o in meshes if o.name.startswith('skin'))
+        shell = next(o for o in meshes if o.name.startswith('shell'))
+        finish = [*split_y(skin, FINISH_Y), shell]
+        meshes = [o for o in all_objects(root) if o.type == 'MESH']
+    static = [o for o in meshes if owner(o) is None and o not in finish]
     moving = [o for o in meshes if owner(o) is not None]
     tmp = os.path.join(out, f'.{mode}')
     os.makedirs(tmp, exist_ok=True)
@@ -355,6 +401,8 @@ def export(mode, out, size, draft):
     drop_backs(meshes)
     unwrap(static)
     unwrap(moving)
+    if finish:
+        unwrap(finish)
     def under(name):
         return [o for o in meshes if part_name(o) == name]
     alt_objs, main_objs = under('shutteralt'), under('shutter')
@@ -364,6 +412,14 @@ def export(mode, out, size, draft):
     print(f'{mode}: body baked', flush=True)
     part_files = bake_atlas(moving, f'{mode}-parts', size // 2, tmp, draft, passes(moving))
     print(f'{mode}: parts baked', flush=True)
+    finish_mats = {}
+    for key, mats in FINISHES.items() if finish else ():
+        for o, m in zip(finish, mats):
+            o.data.materials.clear()
+            o.data.materials.append(kit.mat(m))
+        files = bake_atlas(finish, f'{mode}-finish-{key}', size // 2, tmp, draft, passes(finish))
+        finish_mats[key] = atlas_material(f'{mode}-finish-{key}', files)
+        print(f'{mode}: finish {key} baked', flush=True)
     body_mat = atlas_material(f'{mode}-body', body_files)
     part_mat = atlas_material(f'{mode}-parts', part_files)
 
@@ -376,6 +432,16 @@ def export(mode, out, size, draft):
         g.name = name
         join(objs, name + '.mesh', g, part_mat)
     split_band(join(static, 'body.mesh', root, body_mat), root)
+    for key, mat in finish_mats.items():
+        copies = []
+        for o in finish:
+            c = o.copy()
+            c.data = o.data.copy()
+            bpy.context.collection.objects.link(c)
+            copies.append(c)
+        split_band(join(copies, f'finish.{key}.mesh', root, mat), root, f'finish.{key}')
+    for o in finish:
+        bpy.data.objects.remove(o)
     for o in all_objects(root):
         if o.name.startswith('at-'):
             o.name = 'part.' + o.name[3:].split('.')[0]
@@ -397,6 +463,7 @@ def export(mode, out, size, draft):
         'design': [WB.W, WB.H], 'cutY': WB.CUT_Y, 'dist': WB.DIST, 'heights': WB.HEIGHTS,
         'layout': lay, 'press': {**PRESS, **press}, 'alt': alt, 'band': BAND,
         'lug': list(lug.matrix_world.translation),
+        'finishes': list(finish_mats),
     }
     with open(os.path.join(out, f'{mode}.json'), 'w') as f:
         json.dump(meta, f, indent=1)

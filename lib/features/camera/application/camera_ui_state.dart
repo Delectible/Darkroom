@@ -27,6 +27,9 @@ class PrefKeys {
   static const onboarded = 'user.onboarded';
   static const userName = 'user.name';
 
+  /// The digital body's finish (the live 3D model's skins).
+  static const bodyFinish = 'ui.body.finish';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -40,6 +43,7 @@ class PrefKeys {
     explorerTree,
     onboarded,
     userName,
+    bodyFinish,
   };
 }
 
@@ -64,6 +68,20 @@ class UserNameNotifier extends Notifier<String?> {
 }
 
 final userNameProvider = NotifierProvider<UserNameNotifier, String?>(UserNameNotifier.new);
+
+/// The digital body's finish (null: the plain silver). Picked in the Debug
+/// menu for now.
+class BodyFinishNotifier extends Notifier<String?> {
+  @override
+  String? build() => ref.read(sharedPrefsProvider).getString(PrefKeys.bodyFinish);
+
+  Future<void> set(String name) async {
+    state = name;
+    await ref.read(sharedPrefsProvider).setString(PrefKeys.bodyFinish, name);
+  }
+}
+
+final bodyFinishProvider = NotifierProvider<BodyFinishNotifier, String?>(BodyFinishNotifier.new);
 
 class AppModeNotifier extends Notifier<AppMode> {
   @override

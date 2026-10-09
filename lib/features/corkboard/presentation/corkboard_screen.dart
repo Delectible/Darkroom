@@ -21,8 +21,10 @@ import 'print_viewer.dart';
 import 'projector_screen.dart';
 import 'reel_painter.dart';
 import '../../../core/device/haptics.dart';
+import '../../../core/device/shake.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
 import '../../../core/device/upright.dart';
+import '../../../core/processing/instant_frame.dart' show InstantFrame;
 
 /// Film gallery: developed prints and Super 8 reels pinned to a cork board,
 /// with the darkroom (still developing) in a red safelight strip on top.
@@ -62,7 +64,7 @@ class CorkboardScreen extends ConsumerStatefulWidget {
   ConsumerState<CorkboardScreen> createState() => _CorkboardScreenState();
 }
 
-class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
+class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with SingleTickerProviderStateMixin {
   bool _saving = false;
   late final _scroll = ScrollController()
     ..addListener(() => PerfRecorder.mark('corkboard scroll', hold: const Duration(milliseconds: 150)));
@@ -92,13 +94,15 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
   @override
   void dispose() {
     _scroll.dispose();
+    _shaker.stop();
+    _shake.dispose();
     super.dispose();
   }
 
   /// Pin-in animations only play as the board opens and for prints that come
   /// out of the darkroom while it is open. Prints scrolled into view appear
   /// at once (they used to fade in late, leaving blank gaps).
-  final DateTime _openedAt = DateTime.now();
+  DateTime _openedAt = DateTime.now();
 
   bool _animatePin(MediaItem m, int index) =>
       m.readyAt.isAfter(_openedAt) ||
@@ -109,6 +113,62 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
     super.initState();
     // Looking at the board clears "new print" badges and the notification.
     Future.microtask(() => ref.read(darkroomEngineProvider).markSeen());
+    _shaker.start();
+  }
+
+  /// Shake the phone: every print and reel that hasn't been saved comes off
+  /// the board (after asking). The board judders, they unpin and fall, and
+  /// the rest pin themselves back up in their new places.
+  late final _shaker = ShakeDetector(() => unawaited(_shakeOff()));
+  late final _shake = AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
+  List<MediaItem> _developed = const [];
+  bool _asking = false;
+
+  Future<void> _shakeOff() async {
+    if (_asking || !mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    final off = _developed.where((m) => !m.isSaved && !_falling.contains(m.id)).toList();
+    unawaited(Haptics.mediumImpact());
+    if (off.isEmpty) {
+      unawaited(_shake.forward(from: 0));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Nothing shook loose: everything on the board is saved.')));
+      return;
+    }
+    _asking = true;
+    final reels = off.where((m) => m.isVideo).length;
+    final prints = off.length - reels;
+    final what = [
+      if (prints > 0) '$prints ${prints == 1 ? 'print' : 'prints'}',
+      if (reels > 0) '$reels ${reels == 1 ? 'reel' : 'reels'}',
+    ].join(' and ');
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Shake off the unsaved ones?'),
+        content: Text("$what haven't been saved to your photo library. They'll fall off the board for good."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep them')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Shake them off')),
+        ],
+      ),
+    );
+    _asking = false;
+    if (ok != true || !mounted) return;
+    unawaited(_shake.forward(from: 0));
+    for (var i = 0; i < 4; i++) {
+      Future<void>.delayed(Duration(milliseconds: 130 * i), () => Haptics.heavyImpact());
+    }
+    final rnd = math.Random();
+    for (final m in off) {
+      Future<void>.delayed(Duration(milliseconds: 120 + rnd.nextInt(380)), () {
+        if (mounted) setState(() => _falling.add(m.id));
+      });
+    }
+    // Once they're down, the rest pin themselves up again in their new places.
+    Future<void>.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _openedAt = DateTime.now());
+    });
   }
 
   Future<void> _saveAll(List<MediaItem> developed) async {
@@ -193,6 +253,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
     final inDarkroom = items.where((m) => !m.isDevelopedAt(now)).toList()
       ..sort((a, b) => a.readyAt.compareTo(b.readyAt));
     final unsaved = developed.where((m) => !m.isSaved).length;
+    _developed = developed;
     // Polaroids need their framed share file made: do it in the background
     // now, so holding one brings the share sheet up straight away.
     final cold = developed.where((m) => _warmed.add('${m.id}:${m.note}')).toList();
@@ -232,97 +293,118 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> {
           child: Padding(
             padding: const EdgeInsets.all(_WoodFrame.width),
             child: ClipRect(
-              child: Stack(
-                children: [
-                  Positioned.fill(child: _CorkWall(scroll: _scroll)),
-                  // The prints are pinned to the cork: no bounce or stretch
-                  // past the ends, or they'd slide off the wall. They scroll
-                  // right up to the frame, under the status bar and the home
-                  // bar, rather than vanishing a strip short of the edges.
-                  Padding(
-                    padding: EdgeInsets.only(left: leftInset, right: rightInset),
-                    child: ScrollConfiguration(
-                      behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
-                      child: CustomScrollView(
-                        controller: _scroll,
-                        physics: const ClampingScrollPhysics(),
-                        // Build (and decode) prints well before they scroll into view.
-                        scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
-                        slivers: [
-                          SliverToBoxAdapter(child: SizedBox(height: topInset)),
-                          SliverToBoxAdapter(
-                            child: _Header(
-                              onBack: () => Navigator.of(context).pop(),
-                              unsaved: unsaved,
-                              total: developed.length,
-                              saving: _saving,
-                              onSaveAll: () => _saveAll(developed),
-                            ),
-                          ),
-                          if (inDarkroom.isNotEmpty)
+              // (judders when shaken: see _shakeOff)
+              child: AnimatedBuilder(
+                animation: _shake,
+                builder: (context, child) {
+                  final t = _shake.value;
+                  final dx = _shake.isAnimating ? math.sin(t * math.pi * 9) * 14 * (1 - t) : 0.0;
+                  return Transform.translate(offset: Offset(dx, 0), child: child);
+                },
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: _CorkWall(scroll: _scroll)),
+                    // The prints are pinned to the cork: no bounce or stretch
+                    // past the ends, or they'd slide off the wall. They scroll
+                    // right up to the frame, under the status bar and the home
+                    // bar, rather than vanishing a strip short of the edges.
+                    Padding(
+                      padding: EdgeInsets.only(left: leftInset, right: rightInset),
+                      child: ScrollConfiguration(
+                        behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
+                        child: CustomScrollView(
+                          controller: _scroll,
+                          physics: const ClampingScrollPhysics(),
+                          // Build (and decode) prints well before they scroll into view.
+                          scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
+                          slivers: [
+                            SliverToBoxAdapter(child: SizedBox(height: topInset)),
                             SliverToBoxAdapter(
-                              child: _DarkroomStrip(items: inDarkroom, now: now),
-                            ),
-                          if (developed.isEmpty)
-                            const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
-                          else
-                            SliverPadding(
-                              padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
-                              sliver: SliverGrid(
-                                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                  maxCrossAxisExtent: 220,
-                                  mainAxisSpacing: 26,
-                                  crossAxisSpacing: 22,
-                                  childAspectRatio: 0.78,
-                                ),
-                                delegate: SliverChildBuilderDelegate(childCount: developed.length, (
-                                  context,
-                                  i,
-                                ) {
-                                  final m = developed[i];
-                                  void open() => _open(context, developed, m);
-                                  void unpin() => _unpin(m);
-                                  final falling = _falling.contains(m.id);
-                                  final pinned = m.isVideo
-                                      ? PinnedReel(item: m, onOpen: open, onPinTap: unpin, showPin: !falling)
-                                      : CameraCatalog.byId(m.cameraId).isInstant
-                                      ? PinnedInstant(
-                                          item: m,
-                                          onOpen: open,
-                                          onPinTap: unpin,
-                                          showPin: !falling,
-                                        )
-                                      : PinnedPrint(
-                                          item: m,
-                                          onOpen: open,
-                                          onPinTap: unpin,
-                                          showPin: !falling,
-                                        );
-                                  final child = _Falling(
-                                    falling: falling,
-                                    pinColor:
-                                        _pinColors[math.Random(m.id.hashCode).nextInt(_pinColors.length)],
-                                    pinAt: m.isVideo ? Alignment.center : Alignment.topCenter,
-                                    onFallen: () => _discard(m),
-                                    child: pinned,
-                                  );
-                                  if (!_animatePin(m, i)) {
-                                    return KeyedSubtree(key: ValueKey(m.id), child: child);
-                                  }
-                                  return _PinIn(
-                                    key: ValueKey(m.id),
-                                    delay: Duration(milliseconds: 40 * math.min(i, 8)),
-                                    child: child,
-                                  );
-                                }),
+                              child: _Header(
+                                onBack: () => Navigator.of(context).pop(),
+                                unsaved: unsaved,
+                                total: developed.length,
+                                saving: _saving,
+                                onSaveAll: () => _saveAll(developed),
                               ),
                             ),
-                          SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
-                        ],
+                            if (inDarkroom.isNotEmpty)
+                              SliverToBoxAdapter(
+                                child: _DarkroomStrip(items: inDarkroom, now: now),
+                              ),
+                            if (developed.isEmpty)
+                              const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
+                            else
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
+                                sliver: SliverGrid(
+                                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 220,
+                                    mainAxisSpacing: 26,
+                                    crossAxisSpacing: 22,
+                                    childAspectRatio: 0.78,
+                                  ),
+                                  delegate: SliverChildBuilderDelegate(childCount: developed.length, (
+                                    context,
+                                    i,
+                                  ) {
+                                    final m = developed[i];
+                                    void open() => _open(context, developed, m);
+                                    void unpin() => _unpin(m);
+                                    final falling = _falling.contains(m.id);
+                                    final pinned = m.isVideo
+                                        ? PinnedReel(
+                                            item: m,
+                                            onOpen: open,
+                                            onPinTap: unpin,
+                                            showPin: !falling,
+                                          )
+                                        : CameraCatalog.byId(m.cameraId).isInstant
+                                        ? PinnedInstant(
+                                            item: m,
+                                            onOpen: open,
+                                            onPinTap: unpin,
+                                            showPin: !falling,
+                                          )
+                                        : PinnedPrint(
+                                            item: m,
+                                            onOpen: open,
+                                            onPinTap: unpin,
+                                            showPin: !falling,
+                                          );
+                                    final child = _Falling(
+                                      falling: falling,
+                                      pinColor:
+                                          _pinColors[math.Random(m.id.hashCode).nextInt(_pinColors.length)],
+                                      pinAt: m.isVideo ? const Alignment(0.04, -0.45) : Alignment.topCenter,
+                                      onFallen: () => _discard(m),
+                                      child: pinned,
+                                    );
+                                    if (!_animatePin(m, i)) {
+                                      return KeyedSubtree(key: ValueKey(m.id), child: child);
+                                    }
+                                    return _PinIn(
+                                      key: ValueKey(m.id),
+                                      delay: Duration(milliseconds: 40 * math.min(i, 8)),
+                                      child: child,
+                                    );
+                                  }),
+                                ),
+                              ),
+                            SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    // A note tucked in the corner of the frame: the shake.
+                    if (developed.isNotEmpty)
+                      Positioned(
+                        right: 10 + rightInset,
+                        bottom: 10 + bottomInset,
+                        child: const IgnorePointer(child: _ShakeNote()),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -936,44 +1018,43 @@ class PinnedReel extends StatelessWidget {
               builder: (context, box) {
                 final size = box.biggest;
                 final thumb = item.thumbPath;
+                // The spool render: reel radius 100 of a 240 canvas, centred.
+                final s = size.width, r = s * 100 / 240;
+                final cardW = s * 0.42;
                 return Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // The tail of film left hanging from behind the reel,
-                    // its frames showing how the clip opens.
-                    if (thumb != null)
-                      Positioned(
-                        left: size.width * 0.64,
-                        top: size.height * 0.62,
-                        width: size.width * 0.26,
-                        child: Transform.rotate(
-                          angle: -0.18 + angle * 0.15,
-                          alignment: Alignment.topCenter,
-                          child: FilmTail(
-                            frames: 3,
-                            frame: Image.file(
-                              File(thumb),
-                              fit: BoxFit.cover,
-                              cacheWidth: 160,
-                              gaplessPlayback: true,
-                              errorBuilder: (_, _, _) => const ColoredBox(color: Color(0xFF3A2A20)),
-                            ),
-                          ),
-                        ),
-                      ),
                     Positioned.fill(
-                      child: CustomPaint(
-                        painter: ReelPainter(
-                          rotation: angle,
-                          label: reelLabel(item),
-                          duration: formatDuration(item.durationMs),
-                          saved: item.isSaved,
+                      child: Transform.rotate(
+                        angle: angle,
+                        child: Image.asset(
+                          'assets/corkboard/reel.webp',
+                          cacheWidth: 480,
+                          filterQuality: FilterQuality.medium,
                         ),
                       ),
                     ),
+                    // It rests on two pins under the rim.
+                    for (final side in const [-1.0, 1.0])
+                      Positioned(
+                        left: s / 2 + side * r * 0.62 - 13,
+                        top: s / 2 + r * 0.8 + 1,
+                        child: _Pin(color: pin, visible: showPin, onTap: onPinTap),
+                      ),
+                    // An instant photo of the first frame pinned on the front.
                     Positioned(
-                      left: size.width / 2 - 13,
-                      top: size.height / 2 - 10,
+                      left: s * 0.52 - cardW / 2,
+                      top: s * 0.27,
+                      width: cardW,
+                      child: Transform.rotate(
+                        angle: angle * 0.4 + 0.08,
+                        alignment: Alignment.topCenter,
+                        child: _ReelCard(item: item, thumb: thumb),
+                      ),
+                    ),
+                    Positioned(
+                      left: s * 0.52 - 13,
+                      top: s * 0.27 - 4,
                       child: _Pin(color: pin, visible: showPin, onTap: onPinTap),
                     ),
                   ],
@@ -987,85 +1068,104 @@ class PinnedReel extends StatelessWidget {
   }
 }
 
-/// A plastic push pin: a wide flange with a domed grip on top, a glint of
-/// steel needle where it enters the cork, and a soft shadow cast down-right.
-class PinPainter extends CustomPainter {
-  PinPainter(this.color);
+/// The little instant photo on a reel: its first frame, the file name
+/// written under it.
+class _ReelCard extends StatelessWidget {
+  const _ReelCard({required this.item, required this.thumb});
+
+  final MediaItem item;
+  final String? thumb;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final w = box.maxWidth, pad = w * 0.06;
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            color: InstantFrame.paper,
+            boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 3, offset: Offset(2, 3))],
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(pad, pad, pad, 0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                AspectRatio(
+                  aspectRatio: 1,
+                  child: thumb == null
+                      ? const ColoredBox(color: Color(0xFF2A211B))
+                      : Image.file(
+                          File(thumb!),
+                          fit: BoxFit.cover,
+                          cacheWidth: 200,
+                          gaplessPlayback: true,
+                          errorBuilder: (_, _, _) => const ColoredBox(color: Color(0xFF2A211B)),
+                        ),
+                ),
+                SizedBox(
+                  height: w * 0.26,
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        reelLabel(item),
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: 'Caveat',
+                          fontSize: w * 0.17,
+                          height: 1,
+                          color: const Color(0xFF2B2A4A),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// A traditional plastic push pin stuck in the cork, its shadow on the
+/// board: a render per colour (`tool/render/blender/pin.py`, 40 x 40 dp, the
+/// needle in at (20, 16)), laid out in the old 26 x 30 box with the needle
+/// at (13, 10).
+class PinImage extends StatelessWidget {
+  const PinImage(this.color, {super.key});
+
+  static const _pinScale = 1.15;
 
   final Color color;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final head = Offset(size.width / 2, 10);
-    // Shadow on the board (radial gradient: no blur filter needed).
-    final shadowRect = Rect.fromCenter(center: head + const Offset(6, 10), width: 22, height: 13);
-    canvas.drawOval(
-      shadowRect,
-      Paint()
-        ..shader = const RadialGradient(
-          colors: [Color(0x77000000), Color(0x00000000)],
-        ).createShader(shadowRect),
-    );
-    // Needle: a short steel glint between the head and its shadow.
-    canvas.drawLine(
-      head + const Offset(2.5, 5),
-      head + const Offset(5.5, 10),
-      Paint()
-        ..strokeWidth = 1.6
-        ..strokeCap = StrokeCap.round
-        ..shader = const LinearGradient(
-          colors: [Color(0xFFE6E6E6), Color(0xFF6E6E6E)],
-        ).createShader(Rect.fromPoints(head + const Offset(2.5, 5), head + const Offset(5.5, 10))),
-    );
-    final dark = Color.lerp(color, Colors.black, 0.45)!;
-    final light = Color.lerp(color, Colors.white, 0.55)!;
-    // Flange.
-    canvas.drawCircle(
-      head,
-      9,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.3, -0.4),
-          colors: [color, dark],
-          stops: const [0.55, 1],
-        ).createShader(Rect.fromCircle(center: head, radius: 9)),
-    );
-    canvas.drawCircle(
-      head,
-      9,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 0.7
-        ..color = Colors.black.withValues(alpha: 0.35),
-    );
-    // Grip: a smaller dome standing up from the flange (offset toward the
-    // light so it reads as height).
-    final grip = head + const Offset(-1.2, -1.6);
-    canvas.drawCircle(grip + const Offset(0.8, 1.2), 6, Paint()..color = dark.withValues(alpha: 0.6));
-    canvas.drawCircle(
-      grip,
-      6,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.45, -0.5),
-          colors: [light, color, dark],
-          stops: const [0, 0.55, 1],
-        ).createShader(Rect.fromCircle(center: grip, radius: 6)),
-    );
-    // Specular highlights.
-    canvas.drawOval(
-      Rect.fromCenter(center: grip + const Offset(-2.2, -2.4), width: 3.6, height: 2.4),
-      Paint()..color = Colors.white.withValues(alpha: 0.85),
-    );
-    canvas.drawCircle(
-      head + const Offset(5.2, 3.2),
-      1,
-      Paint()..color = Colors.white.withValues(alpha: 0.35),
+  Widget build(BuildContext context) {
+    final i = _pinColors.indexOf(color);
+    return SizedBox(
+      width: 26,
+      height: 30,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: 13 - 20 * _pinScale,
+            top: 10 - 16 * _pinScale,
+            width: 40 * _pinScale,
+            height: 40 * _pinScale,
+            child: Image.asset(
+              'assets/corkboard/pin_${i < 0 ? 0 : i}.webp',
+              cacheWidth: 160,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
+        ],
+      ),
     );
   }
-
-  @override
-  bool shouldRepaint(PinPainter old) => old.color != color;
 }
 
 /// Red-safelight darkroom: trays with a latent image slowly coming up.
@@ -1521,11 +1621,7 @@ class _Pin extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!visible) return const SizedBox(width: 26, height: 30);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: CustomPaint(size: const Size(26, 30), painter: PinPainter(color)),
-    );
+    return GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: PinImage(color));
   }
 }
 
@@ -1605,10 +1701,7 @@ class _FallingState extends State<_Falling> with SingleTickerProviderStateMixin 
                     opacity: (1 - pin).clamp(0.0, 1.0),
                     child: Transform.translate(
                       offset: Offset(pin * 40, -pin * 60 + (widget.pinAt == Alignment.topCenter ? -7 : 0)),
-                      child: Transform.scale(
-                        scale: 1 + pin * 0.8,
-                        child: CustomPaint(size: const Size(26, 30), painter: PinPainter(widget.pinColor)),
-                      ),
+                      child: Transform.scale(scale: 1 + pin * 0.8, child: PinImage(widget.pinColor)),
                     ),
                   ),
                 ),
@@ -2114,6 +2207,31 @@ class _PrintTrayState extends State<_PrintTray> with SingleTickerProviderStateMi
           ),
         );
       },
+    );
+  }
+}
+
+/// "shake to clear", handwritten on a scrap of paper tucked into the board's
+/// corner.
+class _ShakeNote extends StatelessWidget {
+  const _ShakeNote();
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: -0.07,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4EBD6),
+          borderRadius: BorderRadius.circular(1.5),
+          boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 5, offset: Offset(2, 3))],
+        ),
+        child: const Text(
+          'shake to clear',
+          style: TextStyle(fontFamily: 'Caveat', fontSize: 19, height: 1, color: Color(0xFF2B2A4A)),
+        ),
+      ),
     );
   }
 }

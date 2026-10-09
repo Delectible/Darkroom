@@ -13,7 +13,7 @@ import '../../../../core/diagnostics/debug_flags.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../../core/providers.dart';
 import '../../../camera/application/camera_session_controller.dart';
-import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
+import '../../../camera/application/camera_ui_state.dart' show PrefKeys, bodyFinishProvider;
 import '../../../onboarding/onboarding_screen.dart';
 import '../../application/sd_card_controller.dart';
 import 'explorer_dialogs.dart';
@@ -100,6 +100,19 @@ final _tools = <_Tool>[
     'Every animation runs 5x slower: swaps, slide-ins, the shutter. Good for checking how they move.',
     (_, _) async => timeDilation = timeDilation == 1 ? 5 : 1,
     on: (_) => timeDilation != 1,
+  ),
+  _Tool(
+    PixelIcon.camera,
+    'Camera Finish',
+    'Steps the digital camera through its finishes: silver, silver with a black grip, gunmetal, '
+        'champagne, two-tone. (Later they can be won in the games.)',
+    (context, ref) async {
+      const all = ['silver', 'grip', 'gunmetal', 'champagne', 'twotone'];
+      final now = ref.read(bodyFinishProvider) ?? all.first;
+      final next = all[(all.indexOf(now) + 1) % all.length];
+      await ref.read(bodyFinishProvider.notifier).set(next);
+      if (context.mounted) await _done(context, 'The digital camera is now $next.');
+    },
   ),
   _Tool(
     PixelIcon.computer,

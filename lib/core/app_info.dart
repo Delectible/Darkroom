@@ -3,18 +3,26 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.2';
+  static const version = '1.6.3';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Real 3D cameras: each body is now a live 3D model that turns smoothly when you swap, with its labels, '
-      'LCD and viewfinder staying on it, sharp at every angle. Dials, keys and the lever move on the model.';
+      'Polish for the 3D cameras: buttons press properly with their labels on top, swinging straps, '
+      'new finishes, a realistic Super 8 reel on the board, and shake the phone to clear unsaved prints.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
-    ('1.6', ['Live 3D cameras: labels stay on as they turn', 'Film photos at full camera resolution']),
+    (
+      '1.6',
+      [
+        'Live 3D cameras: labels stay on as they turn',
+        'Film photos at full camera resolution',
+        'Swinging straps, shake to clear the board',
+        'Photoreal Super 8 reels',
+      ],
+    ),
     (
       '1.5',
       [

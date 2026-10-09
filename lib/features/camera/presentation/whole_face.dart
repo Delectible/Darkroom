@@ -82,7 +82,9 @@ class WholeFace extends ConsumerWidget {
             ? Rect.fromLTRB(label.left + 8, label.top + 7, label.right - 8, label.bottom - 7)
             : label;
         final shutterAt = part('shutter') - shutterHub(spec);
-        final live = body.live?..showShutter(spec.recordsVideo);
+        final live = body.live
+          ?..showShutter(spec.recordsVideo)
+          ..setFinish(ref.watch(bodyFinishProvider));
         Widget overlay = ClipRect(
           child: OverflowBox(
             alignment: Alignment.topLeft,

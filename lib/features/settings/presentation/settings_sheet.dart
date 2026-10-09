@@ -96,10 +96,8 @@ class _SettingsSheet extends ConsumerWidget {
           onChanged: (v) => unawaited(g.setHaptics(v)),
         ),
         _Toggle(
-          title: '3D cameras',
-          subtitle:
-              'Photoreal camera bodies that turn when you swap. Off: performance mode for older phones '
-              '(simpler cameras, a lighter viewfinder effect). Photos look the same.',
+          title: 'Fancy graphics',
+          subtitle: "Enhances graphics for immersive experience. Doesn't affect photos. Will affect morale.",
           value: global.controls3d,
           onChanged: (v) => unawaited(g.setControls3d(v)),
         ),

@@ -134,7 +134,16 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
             turns: turn,
             span: 96,
             pressed: _down || (t > 0 && t < 0.6),
-            lamp: recording ? const _Lamp(Offset.zero, 0.09, Color(0xFFFF3B30)) : null,
+            lamp: video
+                ? _Lamp(
+                    Offset.zero,
+                    0.09,
+                    const Color(0xFFFF3B30),
+                    lit: recording,
+                    height: BodyArt.topOf('rec'),
+                    offLens: art == null,
+                  )
+                : null,
           ),
           _Kind.film => _SpriteShutter(
             kind: 'film',
@@ -153,7 +162,7 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
             turns: turn,
             span: 108,
             pressed: _down || recording,
-            lamp: recording ? const _Lamp(Offset(0.36, -0.36), 0.05, Color(0xFFFF453A)) : null,
+            lamp: _Lamp(const Offset(0.36, -0.36), 0.05, const Color(0xFFFF453A), lit: recording),
           ),
         };
       },
@@ -178,9 +187,13 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
               duration: const Duration(milliseconds: 320),
               switchInCurve: Curves.easeOutBack,
               switchOutCurve: Curves.easeIn,
+              // (the live model swaps its own shutter: one sinks, the other
+              // rises; only its lamp fades here)
               transitionBuilder: (child, a) => FadeTransition(
                 opacity: a,
-                child: ScaleTransition(scale: Tween(begin: 0.6, end: 1.0).animate(a), child: child),
+                child: art != null
+                    ? child
+                    : ScaleTransition(scale: Tween(begin: 0.6, end: 1.0).animate(a), child: child),
               ),
               child: face,
             ),
@@ -202,14 +215,21 @@ double _leverAngle(double t) {
   return 0.18 + swing * 0.95;
 }
 
-/// A glowing lamp over the sprite: [at] relative to the hub in sprite
-/// spans, [radius] in spans.
+/// A recording lamp over the sprite: [at] relative to the hub in sprite
+/// spans, [radius] in spans; [lit] while recording (it fades on and off,
+/// and is a dark lens when off). [height]: how high it stands off the
+/// body, design dp (the live 3D model: on top of the key).
 class _Lamp {
-  const _Lamp(this.at, this.radius, this.color);
+  const _Lamp(this.at, this.radius, this.color, {required this.lit, this.height = 0, this.offLens = true});
 
   final Offset at;
   final double radius;
   final Color color;
+  final bool lit;
+  final double height;
+
+  /// Draw a dark lens when off (false: the model has its own red dot).
+  final bool offLens;
 }
 
 /// A shutter drawn from path-traced turntable frames
@@ -387,13 +407,12 @@ class _SpriteShutter extends StatelessWidget {
               width: l.radius * 2 * span,
               height: l.radius * 2 * span,
               child: IgnorePointer(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: l.color.withValues(alpha: 0.85),
-                    boxShadow: [
-                      BoxShadow(color: l.color.withValues(alpha: 0.7), blurRadius: 10, spreadRadius: 2),
-                    ],
+                child: OnTop(
+                  height: art != null ? l.height : 0,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(end: l.lit ? 1 : 0),
+                    duration: const Duration(milliseconds: 180),
+                    builder: (context, on, _) => CustomPaint(painter: _LampPainter(l, on)),
                   ),
                 ),
               ),
@@ -402,4 +421,61 @@ class _SpriteShutter extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A small domed lamp: a dark red lens when off, a hot core with a soft
+/// halo when lit ([on] 0..1 between them).
+class _LampPainter extends CustomPainter {
+  _LampPainter(this.lamp, this.on);
+
+  final _Lamp lamp;
+  final double on;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero);
+    final r = size.shortestSide / 2;
+    final col = lamp.color;
+    if (on > 0) {
+      // halo past the lens (a gradient, no blur pass)
+      final halo = r * 2.6;
+      canvas.drawCircle(
+        c,
+        halo,
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              col.withValues(alpha: 0.55 * on),
+              col.withValues(alpha: 0),
+            ],
+          ).createShader(Rect.fromCircle(center: c, radius: halo)),
+      );
+    }
+    final off = lamp.offLens ? 1.0 : 0.0;
+    final lens = Rect.fromCircle(center: c, radius: r);
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.3, -0.35),
+          colors: [
+            Color.lerp(const Color(0xFF5A1410), const Color(0xFFFFD2C8), on)!,
+            Color.lerp(const Color(0xFF2A0705), col, on)!,
+            Color.lerp(const Color(0xFF120202), col.withValues(alpha: 0.9), on)!,
+          ],
+          stops: const [0, 0.45, 1],
+        ).createShader(lens)
+        ..color = Colors.white.withValues(alpha: math.max(off, on)),
+    );
+    // a pin of light on the dome
+    canvas.drawCircle(
+      c + Offset(-r * 0.35, -r * 0.38),
+      r * 0.22,
+      Paint()..color = Colors.white.withValues(alpha: 0.55 * math.max(off, on)),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_LampPainter o) => o.on != on || o.lamp != lamp;
 }

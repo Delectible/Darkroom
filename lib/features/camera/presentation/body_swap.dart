@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
@@ -516,7 +519,9 @@ class _StrapPainter extends CustomPainter {
     required this.swing,
     required this.color,
     required this.stitch,
-  });
+    this.rope,
+    this.repaint,
+  }) : super(repaint: repaint);
 
   final bool film;
   final int side;
@@ -524,8 +529,19 @@ class _StrapPainter extends CustomPainter {
   final Color color;
   final Color stitch;
 
+  /// Hangs along these points (a simulated rope, from the lug; see
+  /// [_HangingStrap]) instead of a fixed curve.
+  final List<Offset>? rope;
+  final Listenable? repaint;
+
   @override
   void paint(Canvas canvas, Size size) {
+    final rope = this.rope;
+    if (rope != null && rope.length > 2) {
+      return film
+          ? _leatherStrap(canvas, size, rope.first, 0, rope)
+          : _wristCord(canvas, size, rope.first, 0, rope);
+    }
     final top = Offset(size.width / 2, 0);
     // Hangs outwards a little, and lags behind the body's motion.
     final lag = swing * 60;
@@ -539,14 +555,16 @@ class _StrapPainter extends CustomPainter {
   /// A leather neck strap: split ring, a folded end tab through a keeper,
   /// the strap itself (rounded, stitched both edges) and a buckle further
   /// down.
-  void _leatherStrap(Canvas canvas, Size size, Offset top, double lag) {
+  void _leatherStrap(Canvas canvas, Size size, Offset top, double lag, [List<Offset>? rope]) {
     final ringC = top; // threaded through the lug's slot
     final start = ringC.translate(0, 7);
     final mid = Offset(top.dx + side * 26 + lag, size.height * 0.35);
     final bottom = Offset(top.dx + side * 10 + lag * 1.6, size.height * 0.9);
-    final path = Path()
-      ..moveTo(start.dx, start.dy)
-      ..quadraticBezierTo(mid.dx, mid.dy, bottom.dx, bottom.dy);
+    final path = rope != null
+        ? _smooth([start, ...rope.skip(1)])
+        : (Path()
+            ..moveTo(start.dx, start.dy)
+            ..quadraticBezierTo(mid.dx, mid.dy, bottom.dx, bottom.dy));
     final metric = path.computeMetrics().first;
     softStroke(canvas, path.shift(Offset(-side * 4.0, 10)), 24, 9, Colors.black.withValues(alpha: 0.4));
     final dark = Color.lerp(color, Colors.black, 0.35)!;
@@ -653,14 +671,34 @@ class _StrapPainter extends CustomPainter {
 
   /// A braided wrist cord: a thin connector loop through the lug, the cord
   /// (with a woven texture), a cord lock, and the loop.
-  void _wristCord(Canvas canvas, Size size, Offset top, double lag) {
-    final bead = Offset(top.dx + side * 14 + lag * 0.8, size.height * 0.16);
+  void _wristCord(Canvas canvas, Size size, Offset top, double lag, [List<Offset>? rope]) {
+    var bead = Offset(top.dx + side * 14 + lag * 0.8, size.height * 0.16);
     final loopEnd = Offset(top.dx + side * 18 + lag * 1.5, size.height * 0.4);
-    final cord = Path()
-      ..moveTo(top.dx, top.dy + 6)
-      ..quadraticBezierTo(top.dx + side * 4, (top.dy + bead.dy) / 2, bead.dx, bead.dy)
-      ..cubicTo(bead.dx - 30, bead.dy + 60, loopEnd.dx - 28, loopEnd.dy, loopEnd.dx, loopEnd.dy)
-      ..cubicTo(loopEnd.dx + 28, loopEnd.dy, bead.dx + 30, bead.dy + 60, bead.dx, bead.dy);
+    final Path cord;
+    if (rope != null) {
+      // The cord to the lock along the rope, then the loop: two strands
+      // either side of the rest of it, widest half way down.
+      final k = (rope.length * 0.38).round().clamp(2, rope.length - 2);
+      bead = rope[k];
+      final tail = rope.sublist(k);
+      final left = <Offset>[], right = <Offset>[];
+      for (var i = 0; i < tail.length; i++) {
+        final a = tail[math.max(0, i - 1)], b = tail[math.min(tail.length - 1, i + 1)];
+        final d = b - a;
+        final n = d.distance == 0 ? const Offset(1, 0) : Offset(-d.dy, d.dx) / d.distance;
+        final w = 15 * math.sin(math.pi * math.min(1.0, i / (tail.length - 1) * 1.08));
+        left.add(tail[i] + n * w);
+        right.add(tail[i] - n * w);
+      }
+      cord = _smooth([top.translate(0, 6), ...rope.sublist(1, k + 1)])
+        ..addPath(_smooth([...left, ...right.reversed]), Offset.zero);
+    } else {
+      cord = Path()
+        ..moveTo(top.dx, top.dy + 6)
+        ..quadraticBezierTo(top.dx + side * 4, (top.dy + bead.dy) / 2, bead.dx, bead.dy)
+        ..cubicTo(bead.dx - 30, bead.dy + 60, loopEnd.dx - 28, loopEnd.dy, loopEnd.dx, loopEnd.dy)
+        ..cubicTo(loopEnd.dx + 28, loopEnd.dy, bead.dx + 30, bead.dy + 60, bead.dx, bead.dy);
+    }
     softStroke(canvas, cord.shift(Offset(-side * 3.0, 6)), 6, 4, Colors.black.withValues(alpha: 0.4));
     canvas.drawPath(
       cord,
@@ -713,6 +751,17 @@ class _StrapPainter extends CustomPainter {
     }
   }
 
+  /// A smooth curve through [p] (Catmull-Rom).
+  static Path _smooth(List<Offset> p) {
+    final path = Path()..moveTo(p.first.dx, p.first.dy);
+    for (var i = 0; i < p.length - 1; i++) {
+      final p0 = p[math.max(0, i - 1)], p1 = p[i], p2 = p[i + 1], p3 = p[math.min(p.length - 1, i + 2)];
+      final c1 = p1 + (p2 - p0) / 6, c2 = p2 - (p3 - p1) / 6;
+      path.cubicTo(c1.dx, c1.dy, c2.dx, c2.dy, p2.dx, p2.dy);
+    }
+    return path;
+  }
+
   /// A path running alongside [m] at [off] px (positive = right of travel).
   Path _parallel(PathMetric m, double off, double from, double to) {
     final out = Path();
@@ -752,7 +801,7 @@ class _StrapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_StrapPainter old) =>
-      old.swing != swing || old.side != side || old.film != film || old.color != color;
+      old.rope != null || old.swing != swing || old.side != side || old.film != film || old.color != color;
 }
 
 /// Stand-in for a body that hasn't been seen yet this session (no picture
@@ -875,24 +924,21 @@ extension on SwapBody {
         LiveBodyView(key: const ValueKey('model'), body: live, fit: fit, pose: m),
         Transform(
           key: const ValueKey('face'),
-          transform: moving ? (camera.clone()..multiply(m)) : Matrix4.identity(),
+          // (at rest too: the face plane is unchanged, labels lifted onto
+          // key tops get the model's perspective)
+          transform: camera.clone()..multiply(m),
           child: BodyYaw(yaw: capSide * pose.tilt, child: face),
         ),
         if (moving)
-          Positioned(
-            left: lug.dx - 90,
-            width: 180,
-            top: lug.dy + _lugSlot * fit.s,
-            height: size.height,
+          Positioned.fill(
             child: IgnorePointer(
-              child: CustomPaint(
-                painter: _StrapPainter(
-                  film: film,
-                  side: capSide,
-                  swing: pose.swing,
-                  color: film ? const Color(0xFF3A2416) : const Color(0xFF17181B),
-                  stitch: p.bodyHighlight,
-                ),
+              child: _HangingStrap(
+                anchor: lug + Offset(0, _lugSlot * fit.s),
+                film: film,
+                side: capSide,
+                color: film ? const Color(0xFF3A2416) : const Color(0xFF17181B),
+                stitch: p.bodyHighlight,
+                length: size.height * (film ? 0.95 : 0.42),
               ),
             ),
           ),
@@ -934,4 +980,129 @@ class RenderedSwap {
     if (body == null) return null;
     return RenderedBody(art: art, body: body, shutter: shutter(mode), viewfinder: viewfinder(mode, live));
   }
+}
+
+/// The strap (film) or wrist cord (digital) as a rope: a chain of points
+/// hanging from the lug under gravity, the real way down by the phone's
+/// accelerometer, so it trails and swings as the body is tossed and sways
+/// as the phone moves. Verlet steps, the lug pinned, links kept their
+/// length.
+class _HangingStrap extends StatefulWidget {
+  const _HangingStrap({
+    required this.anchor,
+    required this.film,
+    required this.side,
+    required this.color,
+    required this.stitch,
+    required this.length,
+  });
+
+  final Offset anchor;
+  final bool film;
+  final int side;
+  final Color color;
+  final Color stitch;
+
+  /// Rope length, dp.
+  final double length;
+
+  @override
+  State<_HangingStrap> createState() => _HangingStrapState();
+}
+
+class _HangingStrapState extends State<_HangingStrap> with SingleTickerProviderStateMixin {
+  static const _links = 18;
+  late final Ticker _ticker = createTicker(_tick);
+  final _frame = ValueNotifier<int>(0);
+  late List<Offset> _p;
+  late List<Offset> _was;
+  Duration? _last;
+
+  /// Gravity on the screen, dp/s² (from the accelerometer).
+  Offset _g = const Offset(0, 2200);
+  StreamSubscription<AccelerometerEvent>? _sub;
+
+  double get _seg => widget.length / _links;
+
+  @override
+  void initState() {
+    super.initState();
+    // Hangs out from the end, a little curved, as it was lying.
+    _p = [
+      for (var i = 0; i <= _links; i++)
+        widget.anchor + Offset(widget.side * i * _seg * 0.25, i * _seg * 0.95),
+    ];
+    _was = List.of(_p);
+    _sub = accelerometerEventStream(samplingPeriod: SensorInterval.gameInterval).listen((e) {
+      // The phone reads the push against gravity: gravity on the screen is
+      // its opposite (screen y runs down, the phone's y up).
+      final g = Offset(-e.x, e.y);
+      final len = g.distance;
+      if (len > 0.5) _g = g / len * (2200 * (len / 9.81).clamp(0.6, 1.8));
+    }, onError: (Object _) {});
+    unawaited(_ticker.start());
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    unawaited(_sub?.cancel());
+    _frame.dispose();
+    super.dispose();
+  }
+
+  void _tick(Duration now) {
+    final dt = _last == null ? 1 / 60 : ((now - _last!).inMicroseconds / 1e6).clamp(1 / 240, 1 / 30);
+    _last = now;
+    // Verlet: carry on as it was going (a little drag), plus gravity.
+    for (var i = 1; i < _p.length; i++) {
+      final v = (_p[i] - _was[i]) * 0.985;
+      _was[i] = _p[i];
+      _p[i] = _p[i] + v + _g * (dt * dt);
+    }
+    _p[0] = widget.anchor;
+    _was[0] = widget.anchor;
+    // Links keep their length (a few passes, from the lug down).
+    for (var k = 0; k < 8; k++) {
+      _p[0] = widget.anchor;
+      for (var i = 0; i < _p.length - 1; i++) {
+        final d = _p[i + 1] - _p[i];
+        final len = d.distance;
+        if (len == 0) continue;
+        final diff = (len - _seg) / len;
+        if (i == 0) {
+          _p[i + 1] -= d * diff;
+        } else {
+          _p[i] += d * (diff * 0.5);
+          _p[i + 1] -= d * (diff * 0.5);
+        }
+      }
+    }
+    _frame.value++;
+  }
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(painter: _RopeStrap(this));
+}
+
+class _RopeStrap extends CustomPainter {
+  _RopeStrap(this.s) : super(repaint: s._frame);
+
+  final _HangingStrapState s;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = s.widget;
+    _StrapPainter(
+      film: w.film,
+      side: w.side,
+      swing: 0,
+      color: w.color,
+      stitch: w.stitch,
+      rope: List.of(s._p),
+    ).paint(canvas, size);
+  }
+
+  @override
+  bool shouldRepaint(_RopeStrap old) => true;
 }

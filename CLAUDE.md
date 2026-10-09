@@ -222,6 +222,8 @@ Film Mode
   Gabe's scans, strong flicker, dust (dark + light), hairs, long scratches
   and the odd warm flare (`_renderDustFrames`).
 - Corkboard pins must sit **on** the photo, not in the cork above it.
+  Pins are renders of a traditional push pin, one per colour
+  (`assets/corkboard/pin_N.webp`, `tool/render/blender/pin.py`, `PinImage`).
 - The corkboard slides in from the left in a wooden frame
   (`CorkboardScreen.slideIn`, `_WoodFrame`): slow, no overshoot, woody
   swoosh, soft thud as it lands (`Sfx.corkThud`). No bounce or stretch when
@@ -236,7 +238,14 @@ Film Mode
   coffee rings, water marks, faded patches. Easter eggs: tap a
   pin -> "Would you like to discard this image?" -> pin pops, print falls
   (same as Throw away); tap a print's folded corner to see the back (lab
-  stamp; instant prints show their black backing).
+  stamp; instant prints show their black backing). Shake the phone on the
+  board (`core/device/shake.dart`, 3 jolts) to clear it: asks, then every
+  unsaved print unpins and falls, the board judders, the rest re-pin; a
+  paper note in the corner says "shake to clear".
+- Super 8 reels on the board: a photoreal spool (`assets/corkboard/reel.webp`,
+  rendered by `tool/render/blender/reel.py`) resting on two pins under its
+  rim, with an instant photo of the first frame (file name in Caveat)
+  pinned on its front (`PinnedReel`, `_ReelCard`).
 - Darkroom strip: prints go DEV -> STOP -> FIX -> WASH trays under the
   safelight (image comes up in DEV); reels turn in a developing tank; instant
   prints develop in the open. Tap one for a close-up of it developing
@@ -288,6 +297,7 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   PINBALL (Space Rabbit: missions, ranks) / MINES (Minefield, `win98/games/`, rules
   and physics tested in `win98_games_test`), each with its own sounds,
   plus DEFRAG, WINVER, drive letters; Tip of the Day hints at them.
+  Tools menu: Defragment Local Disk (C:), Format SD Card, Format 3½ Floppy (A:).
 - Win98 touch targets: menu titles open on touch-down and touching another
   title while a menu is open switches to it (`showWin98Menu` siblings);
   caption buttons and toolbar buttons have padded hit areas.
@@ -303,7 +313,9 @@ UI
   else it springs back (and can be grabbed again mid-spring). While it
   moves, its viewfinder is a still (`CameraViewport.freeze`): shader
   filters under the 3D transform only move their input. Each body continues past the screen: rounded end,
-  side wall with strap lug, neck strap (film) / wrist cord (digital). Until
+  side wall with strap lug, neck strap (film) / wrist cord (digital): a
+  verlet rope (`_HangingStrap`) that swings with the swap and hangs with
+  the accelerometer's gravity. Until
   the toss commits the arriving body is a picture of it from last time
   (`_lastLook`, or `BodyStandIn`); on commit the leaving body becomes a
   picture and the live UI switches mode. Flutter flattens nested 3D
@@ -352,7 +364,7 @@ UI
   `softStroke` (core/theme/soft_shadow.dart) or gradients. Setting
   **Performance mode** (`GlobalSettings.performance`, `FilmUniforms.lite`):
   viewfinder halation off, the body swaps as one picture (`_dragFace`).
-- Setting **3D cameras** (`GlobalSettings.controls3d`, on by default; the
+- Setting **Fancy graphics** (was "3D cameras"; `GlobalSettings.controls3d`, on by default; the
   tour no longer asks): on = the photoreal bodies (below), controls turn
   with the body, the viewfinder stays live mid-swap (`_startMoving`: the
   live picture runs under a still of itself retaken flat each frame, as
@@ -398,6 +410,15 @@ UI
   `tool/live3d/preview.dart` (see its header; Linux + software Vulkan/GL
   under Xvfb). Tests: `whole_face_test` (layout on phone sizes),
   `photo_body_test` (bundled, 3D off = classic, taps).
+  Each moving node moves only its own way (`setPart`: slide / turn / lever
+  / press (in + 0.93 scale) / rock). Labels on a key's top ride up with
+  `OnTop(BodyArt.topOf(part))` (a z-lift under the pose) so they stay on
+  the cap at an angle. The video/photo shutter swap sinks one and raises
+  the other (`showShutter`, 420 ms). Digital finishes (silver, grip,
+  gunmetal, champagne, two-tone) are baked as `finish.<key>.*` nodes
+  (`export_glb.py` FINISHES), picked by `bodyFinishProvider`
+  (`PrefKeys.bodyFinish`); Debug > Camera Finish cycles them (later:
+  unlocked by mini games).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
 - Camera session: "inactive" does NOT close the camera (Android sends it on

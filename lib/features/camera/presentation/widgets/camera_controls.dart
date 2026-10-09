@@ -19,6 +19,7 @@ import '../../../../core/utils/pixel_font.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../cameras/domain/camera_spec.dart';
 import '../photo_body.dart';
+import '../whole_body.dart';
 import '../../application/camera_ui_state.dart';
 import '../../../cameras/presentation/artwork/camera_artwork.dart';
 import '../../application/capture_controller.dart';
@@ -300,7 +301,13 @@ class _AspectDialState extends State<_AspectDial> with SingleTickerProviderState
                     opacity: a,
                     child: ScaleTransition(scale: Tween(begin: 0.7, end: 1.0).animate(a), child: c),
                   ),
-                  child: KeyedSubtree(key: ValueKey(widget.label), child: widget.child),
+                  child: KeyedSubtree(
+                    key: ValueKey(widget.label),
+                    // the live model: printed on the dial's top
+                    child: top?.layers != null
+                        ? OnTop(height: BodyArt.topOf('aspect'), child: widget.child)
+                        : widget.child,
+                  ),
                 ),
               ],
             ),
@@ -391,12 +398,17 @@ class StockLabel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final spec = ref.watch(activeSpecProvider);
+    // On the 3D body it fills the memo holder's / LCD's window exactly.
+    final fills = ref.watch(wholeBodyProvider(spec.mode)) != null;
     return SwipeToCycle(
       onTap: onOpen,
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 220),
-        layoutBuilder: (current, previous) =>
-            Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.centerLeft,
+          fit: fills ? StackFit.expand : StackFit.loose,
+          children: [...previous, ?current],
+        ),
         transitionBuilder: (c, a) => FadeTransition(
           opacity: a,
           child: SlideTransition(

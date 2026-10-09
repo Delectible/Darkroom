@@ -254,7 +254,12 @@ class LiveBody extends ChangeNotifier {
     }
 
     index(node);
+    // (at rest: the slides are measured in their parents' units)
+    for (final n in _nodes.values) {
+      if (n.name.endsWith('.slide')) _parentScale(n);
+    }
     showShutter(false);
+    setFinish('silver');
   }
 
   /// Model to scene: z turned round.
@@ -292,13 +297,68 @@ class LiveBody extends ChangeNotifier {
 
   /// The body's other shutter (Super 8 RUN, camcorder REC) instead of its
   /// usual one.
+  ///
+  /// Switching, the one in place sinks into the body and the other rises
+  /// out of it (a beat each).
   void showShutter(bool alt) {
     if (alt == _alt) return;
     final first = _alt == null;
     _alt = alt;
-    _nodes['part.shutter']?.visible = !alt;
-    _nodes['part.shutteralt']?.visible = alt;
-    if (!first) _changed();
+    final going = _nodes[alt ? 'part.shutter' : 'part.shutteralt'];
+    final coming = _nodes[alt ? 'part.shutteralt' : 'part.shutter'];
+    if (first || going == null || coming == null) {
+      going?.visible = false;
+      coming?.visible = true;
+      return;
+    }
+    final run = ++_swapRun;
+    final clock = Stopwatch()..start();
+    const ms = 420.0;
+    void frame(Duration _) {
+      if (run != _swapRun) return;
+      final t = (clock.elapsedMilliseconds / ms).clamp(0.0, 1.0);
+      if (t < 0.5) {
+        going.visible = true;
+        coming.visible = false;
+        _sink[going] = Curves.easeIn.transform(t * 2);
+      } else {
+        going.visible = false;
+        _sink[going] = 0;
+        coming.visible = true;
+        _sink[coming] = 1 - Curves.easeOutBack.transform((t - 0.5) * 2);
+      }
+      _placePart(going);
+      _placePart(coming);
+      notifyListeners();
+      if (t < 1) {
+        SchedulerBinding.instance.scheduleFrameCallback(frame);
+      } else {
+        _sink.remove(coming);
+        _placePart(coming);
+      }
+    }
+
+    SchedulerBinding.instance.scheduleFrameCallback(frame);
+    SchedulerBinding.instance.scheduleFrame();
+  }
+
+  int _swapRun = 0;
+
+  /// How far a part has sunk into the body (0 = in place, 1 = gone).
+  final Map<fs.Node, double> _sink = {};
+
+  /// A placed part (`part.*`): moved with the bottom piece by the fit, and
+  /// sunk into the body by [_sink].
+  void _placePart(fs.Node c) {
+    final rest = _rest[c]!;
+    final m = vm.Matrix4.translationValues(0, rest.getTranslation().y < 0 ? _trim : 0, 0)..multiply(rest);
+    final k = _sink[c] ?? 0;
+    if (k > 0) {
+      m
+        ..translateByDouble(0, 0, 34 * k, 1)
+        ..scaleByDouble(1 - 0.35 * k, 1 - 0.35 * k, 1, 1);
+    }
+    c.localTransform = m;
   }
 
   /// Squeezes (stretches) the middle piece by [trim] design dp, moving
@@ -307,19 +367,40 @@ class LiveBody extends ChangeNotifier {
     if (trim == _trim) return;
     _trim = trim;
     final k = math.max(0.04, (2 * band - trim) / (2 * band));
-    final mid = _nodes['body.mid'];
-    if (mid != null) {
-      mid.localTransform = vm.Matrix4.translationValues(0, trim / 2, 0)
-        ..multiply(_rest[mid]!)
-        ..scaleByDouble(1, k, 1, 1);
-    }
     final root = _nodes['body'];
     for (final c in root?.children ?? const <fs.Node>[]) {
-      final rest = _rest[c]!;
-      if (c.name == 'body.bot' || (c.name.startsWith('part.') && rest.getTranslation().y < 0)) {
-        c.localTransform = vm.Matrix4.translationValues(0, trim, 0)..multiply(rest);
+      // the body's pieces and each finish's: *.top / *.mid / *.bot
+      if (c.name.endsWith('.mid')) {
+        c.localTransform = vm.Matrix4.translationValues(0, trim / 2, 0)
+          ..multiply(_rest[c]!)
+          ..scaleByDouble(1, k, 1, 1);
+      } else if (c.name.endsWith('.bot')) {
+        c.localTransform = vm.Matrix4.translationValues(0, trim, 0)..multiply(_rest[c]!);
+      } else if (c.name.startsWith('part.')) {
+        _placePart(c);
       }
     }
+  }
+
+  /// The finishes this body comes in (the digital body's skins), in order.
+  List<String> get finishes => [
+    for (final n in _nodes.keys)
+      if (n.startsWith('finish.') && n.endsWith('.top')) n.split('.')[1],
+  ];
+
+  String? _finish;
+
+  /// Shows the [name] finish (unknown: the first).
+  void setFinish(String? name) {
+    final all = finishes;
+    if (all.isEmpty) return;
+    final f = all.contains(name) ? name! : (all.contains('silver') ? 'silver' : all.first);
+    if (f == _finish) return;
+    _finish = f;
+    for (final MapEntry(key: n, value: node) in _nodes.entries) {
+      if (n.startsWith('finish.')) node.visible = n.split('.')[1] == f;
+    }
+    _changed();
   }
 
   /// Scene space (y up, z away from the viewer) to screen space (dp; y
@@ -356,18 +437,43 @@ class LiveBody extends ChangeNotifier {
     if (entry == null) return;
     final n = _nodes[entry.$1];
     if (n == null) return;
-    final travel = entry.$2 == null ? 0.0 : (body.press[entry.$2] ?? 0);
-    final m = _rest[n]!.clone()
-      // Screen y is down; pressed is into the body (+z in the scene); seen
-      // from -z, a turn clockwise on screen is a turn about +z.
-      ..translateByDouble(dx, -dy, state == 'down' ? travel : 0, 1)
-      ..rotateZ(angle);
-    // the rocker tips about its own y (turned round with z: so the angle)
-    if (state == 'w' || state == 't') m.rotateY(state == 'w' ? 0.035 : -0.035);
+    final m = _rest[n]!.clone();
+    // Each piece moves only its own way (the control's other drift, a dp
+    // or two off its layout spot, mustn't shift it).
+    switch (entry.$1.split('.').last) {
+      case 'slide':
+        // in the piece's parent's units (screen y is down)
+        m.translateByDouble(dx / _parentScale(n), 0, 0, 1);
+      case 'turn' || 'lever':
+        // seen from -z, a turn clockwise on screen is a turn about +z
+        m.rotateZ(angle);
+      case 'press' when state == 'down':
+        // pushed in (+z, away from the viewer) and, as a straight-down
+        // push barely shows face-on, a touch smaller, the way it reads
+        final travel = entry.$2 == null ? 0.0 : (body.press[entry.$2] ?? 0);
+        m
+          ..translateByDouble(0, 0, travel, 1)
+          ..scaleByDouble(0.93, 0.93, 1, 1);
+      case 'rock' when state == 'w' || state == 't':
+        // tips about its own y (turned round with z: so the sign)
+        m.rotateY(state == 'w' ? _rock : -_rock);
+    }
     if (m == n.localTransform) return;
     n.localTransform = m;
     _changed();
   }
+
+  /// How far the zoom rocker tips each way (radians).
+  static const _rock = 0.09;
+
+  final Map<fs.Node, double> _scales = {};
+
+  double _parentScale(fs.Node n) => _scales[n] ??= () {
+    final p = n.parent;
+    if (p == null) return 1.0;
+    final c = p.globalTransform.getColumn(0);
+    return math.max(1e-6, math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z));
+  }();
 
   bool _pending = false;
 

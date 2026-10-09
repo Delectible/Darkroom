@@ -156,6 +156,16 @@ def _coords(nt, scale=(1, 1, 1)):
 
 _mats = {}
 
+# metal finishes for the digital body: base colour, roughness, brushed
+_FINISHES = {
+    'gunAlu': ((0.15, 0.155, 0.17), 0.3, True),
+    'gunDark': ((0.06, 0.06, 0.065), 0.34, False),
+    'champAlu': ((0.82, 0.7, 0.52), 0.27, True),
+    'champDark': ((0.42, 0.35, 0.27), 0.32, False),
+    'blueAnod': ((0.07, 0.13, 0.34), 0.33, True),
+    'blueDark': ((0.04, 0.06, 0.14), 0.36, False),
+}
+
 
 def mat(name):
     if name in _mats:
@@ -284,6 +294,26 @@ def mat(name):
         if 'Thin Film Thickness' in b.inputs:
             b.inputs['Thin Film Thickness'].default_value = 320
             b.inputs['Thin Film IOR'].default_value = 1.38
+    elif name in _FINISHES:     # the digital body's other finishes
+        base, rough, brushed = _FINISHES[name]
+        m, b = _principled(name, base, 1.0, rough)
+        if brushed:
+            nt = m.node_tree
+            n = nt.nodes.new('ShaderNodeTexNoise')
+            n.inputs['Scale'].default_value = 1.0
+            n.inputs['Detail'].default_value = 6
+            nt.links.new(_coords(nt, (0.004, 1.6, 1)), n.inputs['Vector'])
+            _bump(m, b, n.outputs['Fac'], 0.09, 0.2)
+    elif name == 'grip':       # a black rubber grip: fine pebbles
+        m, b = _principled(name, (0.02, 0.02, 0.021), 0.0, 0.7)
+        nt = m.node_tree
+        v = nt.nodes.new('ShaderNodeTexVoronoi')
+        v.feature = 'DISTANCE_TO_EDGE'
+        v.inputs['Scale'].default_value = 0.9
+        nt.links.new(_coords(nt), v.inputs['Vector'])
+        _bump(m, b, v.outputs['Distance'], 0.5, 0.25)
+    elif name == 'ledRed':     # a lamp's lens: deep red, glassy
+        m, b = _principled(name, (0.5, 0.02, 0.015), 0.0, 0.08, **{'Coat Weight': 1.0, 'Coat Roughness': 0.02})
     elif name == 'paper':
         m, b = _principled(name, (0.95, 0.93, 0.88), 0.0, 0.32, **{'Coat Weight': 0.6, 'Coat Roughness': 0.12})
     elif name == 'well':

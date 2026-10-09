@@ -391,7 +391,7 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
                       ),
                       Win98Checkbox(
                         value: global.controls3d,
-                        label: '3D cameras (off: performance mode)',
+                        label: 'Fancy graphics',
                         onChanged: (v) => unawaited(g.setControls3d(v)),
                       ),
                     ],
@@ -702,9 +702,9 @@ Future<void> showTipOfTheDay(BuildContext context) {
 
 Future<void> showDefragmenter(BuildContext context, {required int files}) => showWin98Window<void>(
   context,
-  title: 'Defragmenting Drive E:',
+  title: 'Defragmenting Drive C:',
   width: 340,
-  icon: const PixelIconView(PixelIcon.removableDrive),
+  icon: const PixelIconView(PixelIcon.hardDrive),
   builder: (context) => _Defrag(files: files),
 );
 
@@ -793,7 +793,7 @@ class _DefragState extends State<_Defrag> {
             ),
           ),
           const SizedBox(height: 8),
-          Text(finished ? 'Defragmentation of drive E: is complete.' : 'Reading drive information...'),
+          Text(finished ? 'Defragmentation of drive C: is complete.' : 'Reading drive information...'),
           const SizedBox(height: 6),
           Win98ProgressBar(value: finished ? 1 : _done / total),
           const SizedBox(height: 8),

@@ -827,8 +827,11 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **39.1 Fade on turn**: turning the phone while the corkboard or Win98
   is up glitched as it resized; now the page fades out, the app turns,
   and it fades back in.
+  → 1.6.4 · 2026-10-09 · 8c092da
 - [x] **39.2 Print viewer in landscape**: the buttons stand in a column on
   the right so the print gets the room.
+  → 1.6.4 · 2026-10-09 · 8c092da
 - [x] **39.3 Auto-rotate off = nothing turns**: the carousel, the turning
   icons and labels kept following the phone; with the phone's auto-rotate
   off they now stay put (photos still save the right way up).
+  → 1.6.4 · 2026-10-09 · 8c092da

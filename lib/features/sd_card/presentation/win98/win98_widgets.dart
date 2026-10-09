@@ -59,6 +59,10 @@ class Win98Safe extends StatelessWidget {
   final Widget child;
   final double covered;
 
+  /// Landscape: at most this much is kept clear at a side for a camera
+  /// cutout the system doesn't describe (a punch hole's width, roughly).
+  static const maxSide = 18.0;
+
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
@@ -66,8 +70,10 @@ class Win98Safe extends StatelessWidget {
     var left = 0.0, right = 0.0;
     final cutouts = mq.displayFeatures.where((f) => f.type == ui.DisplayFeatureType.cutout).toList();
     if (cutouts.isEmpty) {
-      left = mq.padding.left;
-      right = mq.padding.right;
+      // Android reports a punch-hole camera as a status-bar-tall inset down
+      // the whole side; the hole itself is a few dp across.
+      left = math.min(mq.padding.left, maxSide);
+      right = math.min(mq.padding.right, maxSide);
     }
     for (final f in cutouts) {
       if (f.bounds.center.dx < mq.size.width / 2) {
@@ -90,11 +96,12 @@ class Win98Safe extends StatelessWidget {
 class Win98Scale extends StatelessWidget {
   const Win98Scale({super.key, required this.child});
 
-  /// Portrait: 1.3x so the pixel UI is easy to hit. Landscape is short
-  /// (about 410 dp), so it lays out 1:1 and gets the room back.
+  /// Portrait: 1.3x so the pixel UI is easy to hit.
   static const factor = 1.3;
 
-  static double factorFor(Size s) => s.width > s.height ? 1.0 : factor;
+  /// Landscape: 1:1, scaled down on shorter phones so the layout always
+  /// has 420 dp of height (the tallest dialogs need it).
+  static double factorFor(Size s) => s.width > s.height ? math.min(1.0, s.height / 420) : factor;
 
   final Widget child;
 

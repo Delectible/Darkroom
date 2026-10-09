@@ -35,7 +35,9 @@ class ProjectorScreen extends ConsumerStatefulWidget {
     settings: UprightApp.landscape,
     transitionDuration: const Duration(milliseconds: 420),
     reverseTransitionDuration: const Duration(milliseconds: 250),
-    pageBuilder: (_, _, _) => ProjectorScreen(reels: reels, initialIndex: index < 0 ? 0 : index),
+    pageBuilder: (_, _, _) => UprightPage(
+      child: ProjectorScreen(reels: reels, initialIndex: index < 0 ? 0 : index),
+    ),
     // Lights go down.
     transitionsBuilder: (context, a, _, child) => FadeTransition(
       opacity: CurvedAnimation(parent: a, curve: Curves.easeInOut),

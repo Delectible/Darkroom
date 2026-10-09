@@ -37,7 +37,7 @@ class CorkboardScreen extends ConsumerStatefulWidget {
     settings: UprightApp.landscape,
     transitionDuration: slideDuration,
     reverseTransitionDuration: const Duration(milliseconds: 460),
-    pageBuilder: (context, _, _) => const CorkboardScreen(),
+    pageBuilder: (context, _, _) => const UprightPage(child: CorkboardScreen()),
     transitionsBuilder: (context, a, _, child) => SlideTransition(
       // Eases off, but still arrives with a little weight behind it.
       position: Tween(

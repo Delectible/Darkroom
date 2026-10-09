@@ -12,68 +12,106 @@ class _Held extends PhysicalOrientationNotifier {
   DeviceOrientation build() => DeviceOrientation.landscapeLeft;
 }
 
-/// Landscape screens really rotate the app once they've slid in (the
-/// camera below keeps its portrait layout), and it goes back to portrait
-/// as they slide out.
+/// Landscape screens turn the app with the phone, only when auto-rotate is
+/// on: laid out in landscape from the moment they start sliding in (no pop
+/// when Android then turns), really rotated once they've arrived, back to
+/// portrait as they slide out; the camera below keeps its portrait layout.
 void main() {
-  testWidgets('landscape screens rotate the app; the camera stays portrait', (tester) async {
+  Future<List<List<dynamic>>> setUp(WidgetTester tester, bool autoRotate) async {
     final asked = <List<dynamic>>[];
-    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
+    final m = tester.binding.defaultBinaryMessenger;
+    m.setMockMethodCallHandler(SystemChannels.platform, (call) async {
       if (call.method == 'SystemChrome.setPreferredOrientations') asked.add(call.arguments as List<dynamic>);
       return null;
     });
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null),
-    );
+    m.setMockMethodCallHandler(const MethodChannel('darkroom/rotation'), (call) async => autoRotate);
+    addTearDown(() {
+      m.setMockMethodCallHandler(SystemChannels.platform, null);
+      m.setMockMethodCallHandler(const MethodChannel('darkroom/rotation'), null);
+    });
+    await AutoRotate.refresh();
+    // a phone held upright (the default test surface is landscape)
+    tester.view.physicalSize = const Size(1236, 2745);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    return asked;
+  }
 
-    Size? cameraSaw;
-    final nav = GlobalKey<NavigatorState>();
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [physicalOrientationProvider.overrideWith(_Held.new)],
-        child: MaterialApp(
-          navigatorKey: nav,
-          navigatorObservers: [UprightApp.observer],
-          builder: (context, child) => UprightApp(child: child!),
-          home: PortraitLock(
-            child: Builder(
-              builder: (context) {
-                cameraSaw = MediaQuery.sizeOf(context);
-                return const SizedBox();
-              },
-            ),
+  Size? cameraSaw, boardSaw;
+  final nav = GlobalKey<NavigatorState>();
+
+  Future<void> pumpApp(WidgetTester tester) => tester.pumpWidget(
+    ProviderScope(
+      overrides: [physicalOrientationProvider.overrideWith(_Held.new)],
+      child: MaterialApp(
+        navigatorKey: nav,
+        navigatorObservers: [UprightApp.observer],
+        builder: (context, child) => UprightApp(child: child!),
+        home: PortraitLock(
+          child: Builder(
+            builder: (context) {
+              cameraSaw = MediaQuery.sizeOf(context);
+              return const SizedBox();
+            },
           ),
         ),
       ),
-    );
-    unawaited(
-      nav.currentState!.push(
-        PageRouteBuilder<void>(
-          settings: UprightApp.landscape,
-          transitionDuration: const Duration(milliseconds: 300),
-          pageBuilder: (_, _, _) => const Text('board'),
-          transitionsBuilder: (_, a, _, child) => SlideTransition(
-            position: Tween(begin: const Offset(-1, 0), end: Offset.zero).animate(a),
-            child: child,
+    ),
+  );
+
+  void pushBoard() => unawaited(
+    nav.currentState!.push(
+      PageRouteBuilder<void>(
+        settings: UprightApp.landscape,
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (_, _, _) => UprightPage(
+          child: Builder(
+            builder: (context) {
+              boardSaw = MediaQuery.sizeOf(context);
+              return const Text('board');
+            },
           ),
         ),
+        transitionsBuilder: (_, a, _, child) => SlideTransition(
+          position: Tween(begin: const Offset(-1, 0), end: Offset.zero).animate(a),
+          child: child,
+        ),
       ),
-    );
+    ),
+  );
+
+  testWidgets('auto-rotate on: turns once arrived, laid out landscape all along', (tester) async {
+    final asked = await setUp(tester, true);
+    await pumpApp(tester);
+    pushBoard();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 150));
     expect(asked, isEmpty, reason: 'turns only once the screen has slid in');
+    expect(boardSaw!.width, greaterThan(boardSaw!.height), reason: 'already laid out in landscape');
     await tester.pumpAndSettle();
     expect(asked.last, ['DeviceOrientation.landscapeLeft']);
 
-    // The phone really turned: the camera underneath still lays out upright.
-    tester.view.physicalSize = Size(tester.view.physicalSize.height, tester.view.physicalSize.width);
-    addTearDown(tester.view.reset);
+    // The phone really turned: the camera underneath still lays out upright,
+    // the board is landscape without being turned again.
+    tester.view.physicalSize = const Size(2745, 1236);
     await tester.pump();
     expect(cameraSaw!.height, greaterThan(cameraSaw!.width));
+    expect(boardSaw!.width, greaterThan(boardSaw!.height));
 
     nav.currentState!.pop();
     await tester.pump();
     expect(asked.last, ['DeviceOrientation.portraitUp'], reason: 'back to portrait as it slides out');
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('auto-rotate off: nothing turns', (tester) async {
+    final asked = await setUp(tester, false);
+    await pumpApp(tester);
+    pushBoard();
+    await tester.pumpAndSettle();
+    expect(asked.where((a) => a.contains('DeviceOrientation.landscapeLeft')), isEmpty);
+    expect(boardSaw!.height, greaterThan(boardSaw!.width), reason: 'stays portrait');
+    nav.currentState!.pop();
     await tester.pumpAndSettle();
   });
 }

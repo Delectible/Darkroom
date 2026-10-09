@@ -245,7 +245,7 @@ Film Mode
 - Super 8 reels on the board: a photoreal spool (`assets/corkboard/reel.webp`,
   rendered by `tool/render/blender/reel.py`) resting on two pins under its
   rim, with an instant photo of the first frame (file name in Caveat)
-  pinned on its front (`PinnedReel`, `_ReelCard`).
+  taped on its front (`PinnedReel`, `_ReelCard`).
 - Darkroom strip: prints go DEV -> STOP -> FIX -> WASH trays under the
   safelight (image comes up in DEV); reels turn in a developing tank; instant
   prints develop in the open. Tap one for a close-up of it developing

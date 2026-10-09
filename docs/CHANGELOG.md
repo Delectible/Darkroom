@@ -793,7 +793,7 @@ Answers: turntable renders, no 2D/3D switch.
   add Format for the floppy in the same menu.
 - [x] **38.13 Super 8 reels on the board**: keep the reel, make it
   photoreal: a real Super 8 spool (round holes), resting on two pins from
-  underneath, a Polaroid-style print of the first frame pinned on its front
+  underneath, a Polaroid-style print of the first frame taped on its front
   with the file name.
 - [x] **38.14 Digital body finishes**: all four (silver + grip, gunmetal,
   champagne, two-tone) in the app, switched in the Debug menu for now

@@ -376,7 +376,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with SingleTi
                                       falling: falling,
                                       pinColor:
                                           _pinColors[math.Random(m.id.hashCode).nextInt(_pinColors.length)],
-                                      pinAt: m.isVideo ? const Alignment(0.04, -0.45) : Alignment.topCenter,
+                                      pinAt: m.isVideo ? const Alignment(-0.5, 0.72) : Alignment.topCenter,
                                       onFallen: () => _discard(m),
                                       child: pinned,
                                     );
@@ -1041,7 +1041,7 @@ class PinnedReel extends StatelessWidget {
                         top: s / 2 + r * 0.8 + 1,
                         child: _Pin(color: pin, visible: showPin, onTap: onPinTap),
                       ),
-                    // An instant photo of the first frame pinned on the front.
+                    // An instant photo of the first frame taped on the front.
                     Positioned(
                       left: s * 0.52 - cardW / 2,
                       top: s * 0.27,
@@ -1049,13 +1049,20 @@ class PinnedReel extends StatelessWidget {
                       child: Transform.rotate(
                         angle: angle * 0.4 + 0.08,
                         alignment: Alignment.topCenter,
-                        child: _ReelCard(item: item, thumb: thumb),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            _ReelCard(item: item, thumb: thumb),
+                            Positioned(
+                              left: cardW * 0.22,
+                              top: -cardW * 0.08,
+                              width: cardW * 0.56,
+                              height: cardW * 0.17,
+                              child: Transform.rotate(angle: -0.09, child: const _Tape()),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Positioned(
-                      left: s * 0.52 - 13,
-                      top: s * 0.27 - 4,
-                      child: _Pin(color: pin, visible: showPin, onTap: onPinTap),
                     ),
                   ],
                 );
@@ -1068,8 +1075,56 @@ class PinnedReel extends StatelessWidget {
   }
 }
 
-/// The little instant photo on a reel: its first frame, the file name
-/// written under it.
+/// A strip of masking tape: creamy, a little see-through, its ends torn.
+class _Tape extends StatelessWidget {
+  const _Tape();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(painter: _TapePainter());
+  }
+}
+
+class _TapePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    // Torn ends: small zigzags down each short side.
+    final path = Path()..moveTo(0, 0);
+    path.lineTo(w, 0);
+    for (var i = 1; i <= 4; i++) {
+      path.lineTo(w - (i.isOdd ? h * 0.12 : 0), h * i / 4);
+    }
+    path.lineTo(0, h);
+    for (var i = 3; i >= 0; i--) {
+      path.lineTo(i.isOdd ? h * 0.12 : 0, h * i / 4);
+    }
+    path.close();
+    canvas.drawShadow(path, const Color(0x55000000), 1.2, false);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xDDF3EBCF), Color(0xD0E7DCB8)],
+        ).createShader(Offset.zero & size),
+    );
+    // Crepe texture: faint lines along the tape.
+    final line = Paint()
+      ..color = const Color(0x14000000)
+      ..strokeWidth = 0.6;
+    for (var y = h * 0.2; y < h; y += h * 0.22) {
+      canvas.drawLine(Offset(h * 0.15, y), Offset(w - h * 0.15, y), line);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_TapePainter old) => false;
+}
+
+/// The little instant photo taped on a reel: its first frame, the file
+/// name written under it.
 class _ReelCard extends StatelessWidget {
   const _ReelCard({required this.item, required this.thumb});
 

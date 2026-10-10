@@ -1,8 +1,8 @@
 # Release roadmap
 
 Where Darkroom stands on the way to a public release on Google Play and
-the App Store. Tick items as they land (`[x]`), note who does what (G =
-Gabe in a console / on a phone, C = Claude in the repo).
+the App Store. Tick items as they land (`[x]`), note who does what (O =
+the owner in a console / on a phone, C = Claude in the repo).
 
 ## 1. Polish for a first public version
 
@@ -12,20 +12,20 @@ Gabe in a console / on a phone, C = Claude in the repo).
   the store listing. Keep new names and listing text brand-free.
 - [ ] Bug bash on the Pixel 9 Pro and the Galaxy S10+ (older GLES phone):
   every screen, every camera, film develop, save / share, Win98 copies.
-  Watch Help > Crash Reports. (G tests, C fixes)
+  Watch Help > Crash Reports. (O tests, C fixes)
 - [ ] Performance check on the S10+: viewfinder frame rate per camera,
-  corkboard scroll, swap animation. (G, C)
+  corkboard scroll, swap animation. (O, C)
 - [ ] Accessibility basics: screen-reader labels on the main buttons, large
   text doesn't break the Win98 dialogs. (C)
 - [~] 3D bodies (1.5, 2026-10-08: the whole body and every control
   rendered in Blender; 3D on by default, Settings switch for the classic
   look); 1.6 draws each camera as a live 3D model
-  (Flutter Scene). Shipped to internal testing; G checks it on the Pixel,
+  (Flutter Scene). Shipped to internal testing; O checks it on the Pixel,
   S10+ and iPhone (phones without Flutter GPU get the classic bodies).
-- [~] Landscape for the corkboard, projector and Darkroom 98 (1.5). (G checks)
+- [~] Landscape for the corkboard, projector and Darkroom 98 (1.5). (O checks)
 - [ ] Store screenshots: 4-8 phone shots (1080x1920 or larger) of the best
   moments: viewfinder, darkroom, corkboard, projector, Win98, picker. (C
-  can stage them from the screen tests; G can take real ones)
+  can stage them from the screen tests; O can take real ones)
 
 ## 2. Google Play
 
@@ -36,13 +36,13 @@ Gabe in a console / on a phone, C = Claude in the repo).
   (none), ads (none).
 - [x] Closed testing track + Google Group, `promote-closed.yml` button.
 - [ ] Content rating (IARC questionnaire) and Target audience: confirm done
-  in App content. (G)
-- [ ] Screenshots uploaded (from section 1). (G / C via fastlane)
+  in App content. (O)
+- [ ] Screenshots uploaded (from section 1). (O / C via fastlane)
 - [ ] **12+ testers opted in to closed testing for 14 days in a row**
   (Google's rule for new personal developer accounts). Then Dashboard >
-  "Apply for production access" (a short questionnaire about the test). (G)
+  "Apply for production access" (a short questionnaire about the test). (O)
 - [ ] Optional: open testing (anyone can join from the store page).
-- [ ] Production release with a staged rollout (e.g. 20%, then 100%). (G)
+- [ ] Production release with a staged rollout (e.g. 20%, then 100%). (O)
 - [ ] Monetization (later): free download + one-time Pro unlock is the plan
   on the table. Needs a payments profile in Play Console and Play Billing in
   the app. A free app can't later become a paid download, but in-app
@@ -50,24 +50,24 @@ Gabe in a console / on a phone, C = Claude in the repo).
 
 ## 3. App Store (iPhone)
 
-- [ ] First proper run on Gabe's iPhone (sideloaded .ipa): camera, film
+- [ ] First proper run on the owner's iPhone (sideloaded .ipa): camera, film
   develop while closed, notifications, save / share, Win98. Fix what breaks.
-  (G tests, C fixes)
+  (O tests, C fixes)
 - [ ] Apple Developer Program membership (US$99 / A$149 a year): needed
-  for TestFlight and the App Store. (G)
+  for TestFlight and the App Store. (O)
 - [ ] App ID `com.dingo.darkroom` and signing for CI: an App Store Connect
   API key as repo secrets; CI signs and uploads builds to TestFlight from
-  the macOS runner (instead of the unsigned .ipa). (G creates the key, C
+  the macOS runner (instead of the unsigned .ipa). (O creates the key, C
   wires CI)
 - [ ] App Store Connect listing: name, subtitle, description, keywords,
   support + privacy URLs, screenshots (6.9" and 6.5" iPhone), age rating,
-  App Privacy = "Data Not Collected". iPhone only (no iPad) to start. (G / C
+  App Privacy = "Data Not Collected". iPhone only (no iPad) to start. (O / C
   drafts the text)
 - [ ] Info.plist: permission texts reviewed; `ITSAppUsesNonExemptEncryption`
   = false (no export paperwork). (C)
 - [ ] TestFlight: internal testers, then external testers (needs a light
-  beta review). (G)
-- [ ] App Review submission, then release. (G)
+  beta review). (O)
+- [ ] App Review submission, then release. (O)
 
 ## Log
 

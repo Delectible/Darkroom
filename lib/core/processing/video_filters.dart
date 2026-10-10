@@ -268,7 +268,7 @@ class VideoFilters {
     final grainW = (outW * res / outH / 1.3).round().clamp(64, outW) & ~1;
     final grainH = (res / 1.3).round().clamp(48, outH) & ~1;
     // The grain stream below has a std of ~24 levels; grainmerge adds it.
-    // Matched to Gabe's Super 8 scans (fine, ~0.015 high-pass in the frame).
+    // Matched to the owner's Super 8 scans (fine, ~0.015 high-pass in the frame).
     final grainOpacity = _f((film.grainAmount * grain.factor * 255 / 24 * 0.3).clamp(0.0, 1.0));
     final halOpacity = _f((film.halation * 1.6).clamp(0.0, 1.0));
     final hr = (255 * film.halationColor[0]).round(), hg = (255 * film.halationColor[1]).round();

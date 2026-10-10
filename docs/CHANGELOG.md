@@ -76,7 +76,7 @@ darkroom, corkboard, ambience).
 - [ ] **2.5 Share sheet preview:** sharing a video on Android shows only the
   file name. Pass a thumbnail to the share sheet.
   Tried in 1.3.0 (build 11): a provider that serves a first-frame thumbnail.
-  Gabe confirmed the sheet still shows no thumbnail. Low priority; revisit.
+  The owner confirmed the sheet still shows no thumbnail. Low priority; revisit.
 
 ### 3. Camera UI & viewfinder
 
@@ -182,28 +182,28 @@ darkroom, corkboard, ambience).
 - [~] **8.1 Film and digital looks:** the looks don't yet behave like the real
   formats and can read as a cheap filter. Plan to iterate (see chat): reference
   contact sheets per look, an on-phone tuning screen, then fixes per stock.
-  - [x] Ektar 100 against Gabe's 5 reference scans: azure skies (not navy),
+  - [x] Ektar 100 against the owner's 5 reference scans: azure skies (not navy),
     warm true reds, golden yellows, deep greens, deep slightly warm blacks,
     clean highlights, less halation. → 1.3.8 · 2026-10-06 · c9b7554 (build 23)
   - [x] Grain rebuilt for every stock: real grain structure (crisp, clumpy,
     mostly luminance) instead of soft blurred noise; strength sets amount and
     size (weak barely there, strong obviously film). Ektar Normal matches the
     scans. → 1.3.8 · 2026-10-06 · c9b7554 (build 23)
-  - [x] Portra 400 against Gabe's 5 reference scans, as the stock that reads
+  - [x] Portra 400 against the owner's 5 reference scans, as the stock that reads
     most obviously as film: green-teal shadows, warm cream highlights, soft
     contrast, peachy skin, visible grain matched to the scans.
     → 1.3.9 · 2026-10-06 · 1c9e691 (build 24)
-  - [x] HP5 400 against Gabe's 4 reference scans: neutral, deep blacks,
+  - [x] HP5 400 against the owner's 4 reference scans: neutral, deep blacks,
     stronger contrast, crisp heavy grain that builds toward the highlights
     (as B&W negatives do), grey (not orange) glow round lamps.
     → 1.3.10 · 2026-10-06 · 286ae6f (build 25)
-  - [x] Polaroid 600 against Gabe's 5 reference scans: washed-out cream
+  - [x] Polaroid 600 against the owner's 5 reference scans: washed-out cream
     highlights (never white), navy-teal shadows, very compressed colour;
     frequent instant-film flaws (sparkles, roller streaks, a ragged
     undeveloped edge, a fogged corner); the frame everywhere in the app is
     now off-white with an embossed texture instead of flat white.
     → 1.3.11 · 2026-10-06 · a085f1e (build 26)
-  - [x] Super 8 against Gabe's 4 reference scans: always landscape (a
+  - [x] Super 8 against the owner's 4 reference scans: always landscape (a
     landscape slice when the phone is upright); reels are full-gate scans
     with the sprocket hole on the left and slivers of the neighbouring frames,
     in the viewfinder too (rotates with the phone); faded colour (lifted
@@ -225,7 +225,7 @@ darkroom, corkboard, ambience).
   secrets) replaces the public test key; CI also builds an .aab for the Play
   Console internal testing track, so installs come from Play with no
   warning. Signing → 2026-10-06 · cc84d67 (secrets added; first private-key
-  build is the next push). Play Console waits on Gabe's ID check; later, CI
+  build is the next push). Play Console waits on the owner's ID check; later, CI
   uploads each build to Play by itself.
 
 ### 10. Requested 2026-10-06 (after build 27)
@@ -258,7 +258,7 @@ darkroom, corkboard, ambience).
 
 ### 11. Requested 2026-10-06 (after build 31)
 
-- [x] **11.1 Google Play:** Gabe registered the app in the Play Console as
+- [x] **11.1 Google Play:** The owner registered the app in the Play Console as
   `com.dingo.darkroom`; the app id moves there (Kotlin package too, and the
   iOS bundle id via `--org com.dingo`). CI uploads each `main` build's .aab
   to the internal testing track once the `PLAY_SERVICE_ACCOUNT_JSON` secret
@@ -412,7 +412,7 @@ darkroom, corkboard, ambience).
 - [x] **16.2 Corkboard overscroll:** no more bounce or stretch past the
   ends (clamping physics, no overscroll indicator), so the prints never
   drift off the cork.
-- [x] **16.3 Cork texture:** rebuilt after Gabe's sample: small, irregular
+- [x] **16.3 Cork texture:** rebuilt after the owner's sample: small, irregular
   pressed granules of varied size and tone (pale tan to orange-brown, the
   odd dark one), domed and lit from the top left, with dark crevices that
   are tight in places and open in others; rendered at 2x. Kept the wear:
@@ -431,7 +431,7 @@ darkroom, corkboard, ambience).
   (`uSpin`, floats 29-30), so strip, hole and picture turn as one
   (`super8_strip_shader_test`: half a turn = the same image upside down).
 - [x] **17.2 Polaroid note after saving:** a note added after Save isn't in
-  the gallery copy. Gabe picked option 2 (see 18.1).
+  the gallery copy. The owner picked option 2 (see 18.1).
 - [x] **17.3 Corkboard thud:** re-synthesised as a struck wooden body (a
   short noise knock ringing a few low, damped modes, plus a dull thump), no
   pitched tones.
@@ -448,7 +448,7 @@ darkroom, corkboard, ambience).
 - [x] **17.7 Bigger film shutter:** release dome 22 (was 16.5), collar 31
   (was 25), longer lever.
 - [x] **17.8 Quieter:** every sound 30% down (`Sfx.master = 0.7`).
-- [x] **17.9 More settings:** Gabe picked haptics + sound effects (18.3).
+- [x] **17.9 More settings:** The owner picked haptics + sound effects (18.3).
 - [x] **17.10 Super 8 grain:** 0.75x on every strength (0.085 -> 0.064).
 - [x] **17.11 Super 8 / camcorder audio:** both, no whir/whine (18.4).
   → 17.1, 17.3-17.8, 17.10: 1.3.26 · 2026-10-07 · 3bf7683
@@ -469,10 +469,10 @@ darkroom, corkboard, ambience).
   pumped by the AGC, slight wow, head click at the start). LGPL filters
   only, run through desktop ffmpeg in `video_audio_ffmpeg_test`.
 - [x] **18.5 High-resolution film setting:** came with the original code,
-  never requested. Gabe: drop it. Film always uses the 1080p-class stream.
+  never requested. Owner: drop it. Film always uses the 1080p-class stream.
   → 1.3.29 · 2026-10-07 · e809741
 - [-] **18.6 Logo eyes:** blue X on the left, red X on the right (opposite
-  their fringe colours). Sample sent; Gabe: keep the old logo for now.
+  their fringe colours). Sample sent; Owner: keep the old logo for now.
 - [x] **18.7 Darkroom close-up:** tap a print / Polaroid / reel in the
   darkroom strip for a big view of it developing live; board greyed
   behind; tap anywhere to go back.
@@ -585,7 +585,7 @@ Answers: turntable renders, no 2D/3D switch.
   panel stays mounted and only its readout changes.
 - [x] **23.3 Gallery button** on an empty card says SD EMPTY.
 - [x] **23.4 Turntable frames on** (21.1): 40 frames, ~870 KB.
-- Monetization: parked until the app is further along (Gabe).
+- Monetization: parked until the app is further along (owner).
   → 21.1, 23.1-23.4: 1.4.1 · 2026-10-08 · 562cea4
 
 ## 24. Polish toward a public release (2026-10-08)
@@ -894,13 +894,13 @@ Answers: turntable renders, no 2D/3D switch.
   lists the app's own album entries with no permission; iOS asks for full
   library access once, after saying why.
   → 1.6.9 · 2026-10-10 · 03e2019
-- [x] **42.5 1999 Floppy Cam look**: tuned to Gabe's five reference shots:
+- [x] **42.5 1999 Floppy Cam look**: tuned to the owner's five reference shots:
   low contrast (blacks lifted ~L10, whites ~L84, barely any clipping),
   muted with a lavender/magenta lean, crisp (sharpened) edges, little
   bloom or smear, JPEG q60. `tool/look_preview.dart` renders photos
   through a digital look for comparison.
   → 1.6.8 · 2026-10-10 · a5d6cce
-- [x] **42.6 2003 CCD Compact look**: tuned to Gabe's six reference shots:
+- [x] **42.6 2003 CCD Compact look**: tuned to the owner's six reference shots:
   natural colour with a slight warm lean (it was cool and over-saturated),
   deep but not crushed shadows, highlights that rarely clip, light
   sharpening, almost no bloom or smear.
@@ -911,7 +911,7 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 43. Camcorder look, iPhone install (2026-10-10)
 
-- [x] **43.1 90s Camcorder look**: tuned to Gabe's five tape frames (bright,
+- [x] **43.1 90s Camcorder look**: tuned to the owner's five tape frames (bright,
   skies blow out, soft, pastel with blue-cyan skies, lifted blacks, no
   visible scanlines), with the camera's edge halos. The rolling tracking
   band is gone; instead tape dropouts (broken white streaks on a line or
@@ -942,7 +942,7 @@ Answers: turntable renders, no 2D/3D switch.
 
 ## 45. Flip phone look (2026-10-10)
 
-- [x] **45.1 Y2K Flip Phone look**: tuned to Gabe's five 2000s phone photos.
+- [x] **45.1 Y2K Flip Phone look**: tuned to the owner's five 2000s phone photos.
   Resolution doubled to a VGA sensor's square crop (480 px, saved 2x
   nearest-neighbour), soft plastic lens (negative `sharpen`, now applied
   to `jpegPixel` stills), cool washed colour with lifted blacks and
@@ -952,3 +952,8 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **45.2 Closed testing**: 1.6.14 (build 117) promoted to the closed
   track (promote-closed.yml); Play reviews it before testers get it.
   → 1.6.14 · 2026-10-10
+
+## 46. Docs (2026-10-10)
+
+- [x] **46.1 No personal name in the repo**: docs, code comments and test
+  fixtures say "the owner" (or a placeholder name) instead.

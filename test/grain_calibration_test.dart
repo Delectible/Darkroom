@@ -5,7 +5,7 @@ import 'package:darkroom/core/processing/film/film_profile.dart';
 import 'package:darkroom/core/processing/film/film_renderer.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Film grain, measured the way Gabe's reference scans were: a bright
+/// Film grain, measured the way the owner's reference scans were: a bright
 /// sky patch, seen at the scans' size (1612 px frame height), high-passed.
 /// The references measure ~0.0076; weak should be barely there, strong
 /// obviously film.

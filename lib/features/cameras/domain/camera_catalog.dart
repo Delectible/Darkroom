@@ -252,7 +252,7 @@ class CameraCatalog {
     subtitle: 'Home video on tape, with sound',
     badge: 'SP',
     look: LookSpec(
-      // Tuned to Gabe's tapes: bright (skies blow out), soft, pastel
+      // Tuned to the owner's tapes: bright (skies blow out), soft, pastel
       // colour with blue-cyan skies, lifted blacks, no visible scanlines;
       // edge halos and the odd dropout come from the signal path.
       kind: ShaderKind.vhs,

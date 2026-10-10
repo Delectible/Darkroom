@@ -6,13 +6,13 @@ Read this first. It's the hand-off from the earlier development sessions
 
 ## The person and how we work
 
-- Owner: Gabe. Tests on a **Pixel 9 Pro** (Android) and is starting to test on
+- The owner tests on a **Pixel 9 Pro** (Android) and is starting to test on
   an iPhone (sideloaded, no paid Apple developer account yet).
-- Usually works from his phone. Keep replies short and plain.
+- Usually works from a phone. Keep replies short and plain.
 - For big revisions, ask clarifying questions first, then implement.
 - He's often low on usage: keep changes focused, don't gold-plate.
 - After every push that builds, wait for the run; once its `play` job has
-  uploaded, wait ~2 more minutes, then send Gabe a push notification
+  uploaded, wait ~2 more minutes, then send the owner a push notification
   (PushNotification) that the build is on Google Play: version, build
   number, one-line what's new. If the build or the upload fails, notify
   that instead.
@@ -31,14 +31,14 @@ Read this first. It's the hand-off from the earlier development sessions
 
 ## Build & release pipeline
 
-- Unless Gabe says otherwise, **commit and push finished changes straight to
+- Unless the owner says otherwise, **commit and push finished changes straight to
   `main`** so a new APK gets built. Don't push half-done work.
 - Push → `.github/workflows/build-apk.yml` builds `Darkroom-N.apk` and, when
   enabled, an unsigned `Darkroom-N.ipa`, and publishes them under **Releases**
   (`build-N`; non-`main` branches are marked pre-release).
 - iOS build runs on a macOS runner. On a private repo it only runs if the
   commit message contains `[ios]` or the workflow is started by hand (Mac
-  minutes cost 10x). The .ipa is unsigned; Gabe signs and installs it with
+  minutes cost 10x). The .ipa is unsigned; the owner signs and installs it with
   Sideloadly + a free Apple ID (expires every 7 days).
 - iOS: deployment target 15.0 (patched into the generated Xcode project by
   CI). Every plugin is a Swift Package, so there is **no Podfile**: adding
@@ -59,7 +59,7 @@ Read this first. It's the hand-off from the earlier development sessions
 - `applicationId` / `namespace` = `com.dingo.darkroom` (the id registered on
   Google Play; was `com.darkroom.darkroom` until 1.3.16); must match the
   package of `MainActivity.kt` (ours, in the repo: gesture channel).
-- **Google Play** is the main way Gabe installs now (internal testing
+- **Google Play** is the main way the owner installs now (internal testing
   track). The `play` job in the workflow uploads every `main` build's .aab
   (secret `PLAY_SERVICE_ACCOUNT_JSON`, repo variable `PLAY_RELEASE_STATUS`,
   default `completed`). Play's "What's new" = version + **`AppInfo.latest`**
@@ -67,12 +67,12 @@ Read this first. It's the hand-off from the earlier development sessions
   **Closed testing** (for other testers) is the slow path: the
   `promote-closed.yml` workflow (Actions tab, run by hand) promotes a build
   already on internal testing to the closed track (`alpha`), which Play
-  reviews. Internal testing stays the instant path for Gabe.
+  reviews. Internal testing stays the instant path for the owner.
   The store listing (title, descriptions, icon, feature graphic) lives in
   `fastlane/metadata/android/en-AU/`; `play-listing.yml` publishes it when
   it changes (fastlane supply, same service account). Screenshots aren't in
   the repo yet. Privacy policy for the listing: `docs/PRIVACY.md`.
-- Release builds are signed with Gabe's **private upload key** (alias
+- Release builds are signed with the owner's **private upload key** (alias
   `upload`), which CI decodes from the repo secrets `ANDROID_KEYSTORE_BASE64`
   and `ANDROID_KEYSTORE_PASSWORD`. Never commit it. Without the secrets
   (local builds) they fall back to the public test key
@@ -175,7 +175,7 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   green-teal shadows, cream highlights, visible grain) and HP5 (neutral,
   deep blacks, heavy grain strongest in the highlights via
   `FilmProfile.grainHighlights`, uniform `uGrainHi`) are tuned against
-  Gabe's reference scans; `grain_calibration_test` pins their Normal grain
+  the owner's reference scans; `grain_calibration_test` pins their Normal grain
   to the scans (Ektar ~0.0076, Portra ~0.034, HP5 ~0.025 mid / ~0.055
   bright).
 - Defects (`film_defects.dart`): developed stills only (never the
@@ -186,7 +186,7 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   Super 8 0). Instant film (`negative: false`) gets chemistry flaws instead:
   pinprick sparkles, a little dark dust, milky streaks up from the rollers,
   a ragged undeveloped band along an edge, a fogged corner.
-- Polaroid 600 is tuned against Gabe's scans: cream highlights capped well
+- Polaroid 600 is tuned against the owner's scans: cream highlights capped well
   below white, navy-teal shadows, very muted colour. The frame is off-white
   (`InstantFrame.paper`) with an embossed pebble texture (`PaperTexture`,
   a seamless tile drawn by `InstantPrint` on screen and baked into exports). Look
@@ -200,15 +200,15 @@ look (`FilmProfile` in `film_profile.dart` for film, `LookSpec` for digital),
 artwork, aspects, `developTime`, `printStyle` (print / instant), `roll`
 (file prefix, frames, counter), `zoom` (digital only), `pickerTag`. No other
 file should switch on a camera id. `test/catalog_contract_test.dart` fails if
-an entry is incomplete. Gabe sends requests on `docs/NEW_CAMERA_FORM.md`.
+an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
 
-## Product rules agreed with Gabe
+## Product rules agreed with the owner
 
 Film Mode
 - Shots develop in the **darkroom** (~5 min), then get pinned to the
   **corkboard**. Notifications are quiet (channel `darkroom_quiet`, no vibration).
 - Photos are deliberately "physical": **nothing reaches the phone gallery until
-  he taps Save on a print, or Save all.** Album: "Darkroom Film".
+  the user taps Save on a print, or Save all.** Album: "Darkroom Film".
   Copies deleted from the phone's photos are noticed (`GalleryCheck`,
   channel `darkroom/gallery`: the album's file names; Android lists the
   app's own MediaStore entries with no permission, iOS needs full/limited
@@ -237,7 +237,7 @@ Film Mode
   `uCanvas`, `uTurns`: it rotates with the phone so the hole stays on the
   viewer's left; `_StripTurn` swings it round when the phone turns, in the shader via
   `uSpin` so the hole turns with the strip); FFmpeg composites it from `gate.png`. Faded look tuned to
-  Gabe's scans, strong flicker, dust (dark + light), hairs, long scratches
+  the owner's scans, strong flicker, dust (dark + light), hairs, long scratches
   and the odd warm flare (`_renderDustFrames`).
 - Corkboard pins must sit **on** the photo, not in the cork above it.
   Pins are renders of a traditional push pin, one per colour
@@ -252,7 +252,7 @@ Film Mode
   monitor (`ExplorerScreen.slideIn`, `ExplorerMonitor`) and slides back
   out however it's closed. The body never moves the way with no camera.
 - The cork wall scrolls with the prints (shader tiles keyed to the scroll
-  offset): granulated cork after Gabe's sample, with wear: pin holes,
+  offset): granulated cork after the owner's sample, with wear: pin holes,
   coffee rings, water marks, faded patches. Easter eggs: tap a
   pin -> "Would you like to discard this image?" -> pin pops, print falls
   (same as Throw away); tap a print's folded corner to see the back (lab
@@ -303,7 +303,7 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   battery, the clock, and the zoom bar exactly as it moved
   (`CamcorderOsd` in `video_plan.dart`; the take's zoom track rides on the
   VideoJob).
-  Look tuned to Gabe's tapes (1.6.11): washed, soft, bright, edge halos
+  Look tuned to the owner's tapes (1.6.11): washed, soft, bright, edge halos
   (wide luma unsharp / the shader's 4-px halo). Tape dropouts and the odd
   torn line come at random: video overlays a few streak PNGs on random
   frames (`TapeDropouts`, enable windows from an exponential schedule,
@@ -509,7 +509,7 @@ UI
   `tool/icon/make_icons.py` (Pillow + numpy): Android adaptive + monochrome
   (themed icons), legacy round, notification glyph, iOS 1024
   default/dark/tinted, and the GitHub social preview `docs/social_preview.png`
-  (Gabe sets it by hand: repo Settings > General > Social preview).
+  (the owner sets it by hand: repo Settings > General > Social preview).
 - The rabbit in the app, used sparingly: `DarkroomMark`
   (`core/theme/darkroom_mark.dart`) pressed into the camera
   bodies' lens-flip cap and on the lab stamp on the back of prints; the
@@ -523,10 +523,10 @@ UI
 ## Backlog
 
 1. Tidier camcorder viewfinder in its artwork.
-2. Digital camera looks: tune against reference photos when Gabe sends them
+2. Digital camera looks: tune against reference photos when the owner sends them
    (1999 Floppy Cam done in 1.6.8, 2003 CCD Compact in 1.6.10, Y2K Flip Phone in
    1.6.14: 480 px square, soft lens via negative `sharpen`, 16 levels; `CAMERA=id dart run tool/look_preview.dart
    outdir photos...` renders photos through a digital body's still pipeline).
-3. First iOS run: the CI .ipa builds (build 19); still to try it on Gabe's iPhone.
+3. First iOS run: the CI .ipa builds (build 19); still to try it on the owner's iPhone.
 4. (Done 2026-10-07, build 35: CI uploads to Play internal testing.) If
-   Gabe drops the Cloud project, delete the secret and he uploads by hand.
+   the owner drops the Cloud project, delete the secret; builds then go up by hand.

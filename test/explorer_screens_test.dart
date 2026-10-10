@@ -167,5 +167,5 @@ class _Theme extends Win98ThemeNotifier {
 
 class _Name extends UserNameNotifier {
   @override
-  String? build() => 'Gabe';
+  String? build() => 'Sam';
 }

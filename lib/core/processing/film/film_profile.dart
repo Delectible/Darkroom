@@ -139,7 +139,7 @@ class FilmProfile {
   static FilmProfile? forStock(String id) => _profiles[id];
 
   static const _profiles = <String, FilmProfile>{
-    // Tuned against Gabe's Ektar 100 scans: clean and sharp, punchy but
+    // Tuned against the owner's Ektar 100 scans: clean and sharp, punchy but
     // natural colour, bright azure skies leaning cyan (not navy), warm true
     // reds and golden yellows, deep greens, deep slightly warm blacks with
     // no lift, neutral clean highlights, very fine luminance grain.
@@ -166,7 +166,7 @@ class FilmProfile {
       vignette: 0.14,
       defects: 0.6,
     ),
-    // Tuned against Gabe's Portra 400 scans: the stock that should read as
+    // Tuned against the owner's Portra 400 scans: the stock that should read as
     // film. Soft contrast, green-teal shadows (red drops out first), warm
     // creamy highlights that never quite reach white, peachy skin, gentle
     // greens, clearly visible grain with a little colour in it.
@@ -194,7 +194,7 @@ class FilmProfile {
       vignette: 0.18,
       defects: 1.0,
     ),
-    // Tuned against Gabe's HP5 scans: strictly neutral, deep blacks, strong
+    // Tuned against the owner's HP5 scans: strictly neutral, deep blacks, strong
     // contrast, bright highlights, and heavy grain that is strongest in the
     // highlights (skies, skin) and cleaner in the shadows; a grey glow round
     // bright lamps.
@@ -215,7 +215,7 @@ class FilmProfile {
       vignette: 0.20,
       defects: 1.0,
     ),
-    // Instant integral film, tuned against Gabe's Polaroid 600 scans:
+    // Instant integral film, tuned against the owner's Polaroid 600 scans:
     // washed-out cream highlights that never reach white, navy-teal shadows,
     // very compressed (muted) colour with greens leaning teal, soft
     // contrast, a heavy vignette and almost no visible grain (the dyes are
@@ -248,7 +248,7 @@ class FilmProfile {
       defects: 1.0,
       negative: false,
     ),
-    // Tuned against Gabe's Super 8 scans: faded home-movie colour, lifted
+    // Tuned against the owner's Super 8 scans: faded home-movie colour, lifted
     // blacks, soft highlights that rarely reach white, very muted colour
     // with olive mids and slightly green highlights, heavy grain, a warm
     // glow, clearly visible flicker and weave; shown as a full-gate scan

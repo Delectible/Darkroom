@@ -21,7 +21,7 @@ class _Prefs extends ExplorerPrefsNotifier {
 
 class _Name extends UserNameNotifier {
   @override
-  String? build() => 'Gabe';
+  String? build() => 'Sam';
 }
 
 String? _saved;

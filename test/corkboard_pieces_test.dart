@@ -208,5 +208,5 @@ class _Tank extends CustomPainter {
 
 class _Name extends UserNameNotifier {
   @override
-  String? build() => 'Gabe';
+  String? build() => 'Sam';
 }

@@ -849,8 +849,8 @@ Answers: turntable renders, no 2D/3D switch.
 ## 41. Polish: keys, label, shake, strap, finishes (2026-10-09)
 
 - [~] **41.1 Ratio keys**: the film ratio dial glitches when it changes; the
-  digital ratio key looks wrong; the flash key's text clips as the body
-  turns.
+  digital ratio key and the flash key cut off a little of their text as
+  the body turns.
 - [~] **41.2 Film stock label**: the window got shorter but the text shrank
   with it: keep the text its old size.
 - [~] **41.3 Shake to clear**: shaking turns the screen sideways and back;

@@ -221,7 +221,11 @@ class AspectButton extends ConsumerWidget {
                 part: art.part(AppMode.digital, 'pillwide')!,
                 onTap: onCycle,
                 enabled: !spec.aspectLocked,
-                child: label,
+                // kept well inside the cap, like the flash key's
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  child: FittedBox(fit: BoxFit.scaleDown, child: label),
+                ),
               ),
       );
     }

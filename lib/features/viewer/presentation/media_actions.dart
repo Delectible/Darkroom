@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/app_info.dart';
 import '../../../core/db/media_repository.dart';
+import '../../../core/device/gallery_check.dart';
 import '../../../core/processing/instant_frame.dart';
 import '../../cameras/domain/camera_catalog.dart';
 
@@ -92,6 +93,45 @@ Future<String?> saveToGallery(MediaItem item, {required String album}) async {
   } on GalException catch (e) {
     return e.type.message;
   }
+}
+
+/// The name [item] goes into the photo library under (see [exportPathFor]:
+/// instant prints are exported as their file name, the rest as stored).
+String galleryNameFor(MediaItem item) {
+  if (!item.isVideo && CameraCatalog.byId(item.cameraId).isInstant) return item.fileName;
+  final p = item.outputPath ?? item.fileName;
+  return p.substring(p.lastIndexOf(Platform.pathSeparator) + 1);
+}
+
+/// The saved items among [items] whose copy is no longer in [album] (the
+/// user deleted it from the phone's photos); null when the phone won't
+/// say. Saves from the last minute are left alone (the library may not
+/// list them yet).
+Future<List<MediaItem>?> missingFromGallery(Iterable<MediaItem> items, String album) async {
+  final cutoff = DateTime.now().subtract(const Duration(minutes: 1));
+  final saved = items.where((m) => m.isSaved && m.savedAt!.isBefore(cutoff)).toList();
+  if (saved.isEmpty) return const [];
+  final names = await GalleryCheck.names(album);
+  if (names == null) return null;
+  return [
+    for (final m in saved)
+      if (!GalleryCheck.contains(names, galleryNameFor(m))) m,
+  ];
+}
+
+/// Whether the albums can be looked in: on iOS that needs photo-library
+/// access, which [explain] asks for once (true: go ahead and ask).
+Future<bool> galleryCheckAllowed({
+  required bool alreadyAsked,
+  required void Function() markAsked,
+  required Future<bool> Function() explain,
+}) async {
+  final access = await GalleryCheck.access();
+  if (access == 'full' || access == 'limited') return true;
+  if (access != 'undetermined' || alreadyAsked) return false;
+  markAsked();
+  if (!await explain()) return false;
+  return GalleryCheck.request();
 }
 
 /// Saves [item] to the photo library and records it on the row ([moveToC]:

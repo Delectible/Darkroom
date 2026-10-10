@@ -11,7 +11,7 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Darkroom saves your developed prints and SD card transfers to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Darkroom creates the "Darkroom" album in your photo library.</string>
+	<string>Darkroom keeps its albums in your photo library and checks that the prints you saved are still there, so it can offer to save any you delete again. It only looks at its own albums.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

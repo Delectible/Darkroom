@@ -33,6 +33,9 @@ class PrefKeys {
   /// The Win98 colour scheme's name (View > Options > Themes).
   static const win98Theme = 'ui.win98.theme';
 
+  /// iOS: the reason for full photo-library access was shown (once).
+  static const galleryAsked = 'gallery.asked';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -48,6 +51,7 @@ class PrefKeys {
     userName,
     bodyFinish,
     win98Theme,
+    galleryAsked,
   };
 }
 

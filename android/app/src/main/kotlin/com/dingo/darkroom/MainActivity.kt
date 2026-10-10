@@ -5,7 +5,9 @@ import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.Environment
 import android.os.Looper
+import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -25,6 +27,8 @@ import io.flutter.plugin.common.MethodChannel
 //  * darkroom/battery: the phone's battery level.
 //  * darkroom/rotation: whether the phone's auto-rotate is on (and when it
 //    changes): the landscape screens only turn when it is.
+//  * darkroom/gallery: the names of the files the app saved to a photo
+//    album that are still there (deleted ones are offered again).
 class MainActivity : FlutterActivity() {
     private var volumeChannel: MethodChannel? = null
     private var captureVolume = false
@@ -121,6 +125,28 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        // darkroom/gallery: what's still in one of our albums. Android lists the
+        // app's own entries without any permission (deleted or binned ones
+        // drop out).
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/gallery")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "names" -> {
+                        val album = call.argument<String>("album") ?: ""
+                        Thread {
+                            val names = try {
+                                albumNames(album)
+                            } catch (e: Exception) {
+                                null
+                            }
+                            Handler(Looper.getMainLooper()).post { result.success(names) }
+                        }.start()
+                    }
+                    "access" -> result.success("full")
+                    "request" -> result.success(true)
+                    else -> result.notImplemented()
+                }
+            }
         // darkroom/crash: the crashes / freezes Android recorded for this app
         // (Android 11+), for Help > Crash Reports. Kept on the phone.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/crash")
@@ -130,6 +156,26 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /// File names in Pictures/<album> (where the gallery plugin saves images,
+    /// and videos too when given an album), photos and videos; null if
+    /// Android won't say.
+    private fun albumNames(album: String): List<String>? {
+        val dir = Environment.DIRECTORY_PICTURES + "/" + album
+        val names = mutableListOf<String>()
+        for (uri in listOf(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)) {
+            val (sel, args) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?" to arrayOf("$dir%")
+            } else {
+                // (Android 9 and older: by path)
+                "${MediaStore.MediaColumns.DATA} LIKE ?" to arrayOf("%/$dir/%")
+            }
+            val c = contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), sel, args, null)
+                ?: return null
+            c.use { while (it.moveToNext()) it.getString(0)?.let(names::add) }
+        }
+        return names
     }
 
     private fun recentExits(): List<Map<String, Any?>> {

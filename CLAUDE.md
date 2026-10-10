@@ -207,6 +207,14 @@ Film Mode
   **corkboard**. Notifications are quiet (channel `darkroom_quiet`, no vibration).
 - Photos are deliberately "physical": **nothing reaches the phone gallery until
   he taps Save on a print, or Save all.** Album: "Darkroom Film".
+  Copies deleted from the phone's photos are noticed (`GalleryCheck`,
+  channel `darkroom/gallery`: the album's file names; Android lists the
+  app's own MediaStore entries with no permission, iOS needs full/limited
+  library access, asked once with the reason, `PrefKeys.galleryAsked`).
+  The board marks such prints unsaved (`markUnsaved`) and offers "Save
+  again"; Win98 offers to copy missing C: files back (File > Copy to
+  Photos). Matching is by the saved name (`galleryNameFor`, numbered
+  duplicates allowed).
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;
   playback is a projector (`projector_screen.dart`): beam + screen, and a
   `ProjectorDeck` with the reel and a masking-tape label (tap: rename reel

@@ -13,7 +13,7 @@ import '../../../core/theme/darkroom_mark.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../../core/shaders/shader_library.dart';
-import '../../camera/application/camera_ui_state.dart' show userNameProvider;
+import '../../camera/application/camera_ui_state.dart' show PrefKeys, userNameProvider;
 import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
 import 'instant_print.dart';
@@ -93,6 +93,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
 
   @override
   void dispose() {
+    _galleryTimer?.cancel();
     _scroll.dispose();
     _shaker.stop();
     _shake.dispose();
@@ -116,6 +117,71 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     // Looking at the board clears "new print" badges and the notification.
     Future.microtask(() => ref.read(darkroomEngineProvider).markSeen());
     _shaker.start();
+    // Once it's up: any saved print deleted from the phone's photos? (Best
+    // effort: never in the way.)
+    _galleryTimer = Timer(const Duration(milliseconds: 900), () async {
+      try {
+        await _checkGallery();
+      } catch (e) {
+        debugPrint('Gallery check skipped: $e');
+      }
+    });
+  }
+
+  /// Prints whose saved copy was deleted from the phone's photos go back to
+  /// unsaved (Save works again), with an offer to save them all now.
+  Timer? _galleryTimer;
+
+  Future<void> _checkGallery() async {
+    if (!mounted) return;
+    final repo = ref.read(filmRepositoryProvider);
+    final items = await repo.readyItems();
+    if (!mounted || !items.any((m) => m.isSaved)) return;
+    final prefs = ref.read(sharedPrefsProvider);
+    final allowed = await galleryCheckAllowed(
+      alreadyAsked: prefs.getBool(PrefKeys.galleryAsked) ?? false,
+      markAsked: () => unawaited(prefs.setBool(PrefKeys.galleryAsked, true)),
+      explain: () async =>
+          mounted &&
+          await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Keep an eye on your saved prints?'),
+                  content: const Text(
+                    'If you delete a print from Photos, Darkroom can notice and offer to save it again. '
+                    'To do that it needs to see your photo library. It only looks in its own albums.',
+                  ),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
+                    TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Continue')),
+                  ],
+                ),
+              ) ==
+              true,
+    );
+    if (!allowed || !mounted) return;
+    final missing = await missingFromGallery(items, filmAlbum);
+    if (missing == null || missing.isEmpty || !mounted) return;
+    await repo.markUnsaved([for (final m in missing) m.id]);
+    if (!mounted) return;
+    final n = missing.length;
+    final what = n == 1 ? (missing.first.isVideo ? 'A reel' : 'A print') : '$n prints';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        duration: const Duration(seconds: 8),
+        content: Text("$what you saved ${n == 1 ? 'is' : 'are'} no longer in your photos."),
+        action: SnackBarAction(
+          label: 'Save again',
+          onPressed: () async {
+            for (final m in missing) {
+              final latest = (await repo.readyItems()).where((x) => x.id == m.id);
+              if (latest.isEmpty) continue;
+              await keepMedia(repo, latest.first, album: filmAlbum);
+            }
+          },
+        ),
+      ),
+    );
   }
 
   /// Shake the phone: every print and reel that hasn't been saved comes off

@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.8';
+  static const version = '1.6.9';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The 1999 Floppy Cam now looks like the real thing: soft, low-contrast shots with crisp edges, '
-      'hazy lavender skies and no more blown-out whites or streaks.';
+      'Deleted a saved print from your photos? Darkroom notices and offers to save it again. '
+      'Digital files on C: can be copied back too (File > Copy to Photos).';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -23,6 +23,7 @@ class AppInfo {
         'Photoreal Super 8 reels',
         'Smooth fade when the phone turns',
         'Floppy Cam tuned to real photos',
+        'Notices prints deleted from Photos',
         'Win98 colour themes, Night mode',
       ],
     ),

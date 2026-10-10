@@ -204,6 +204,19 @@ class MediaRepository {
     notifyChanged();
   }
 
+  /// Forgets that [ids] were saved to the photo library (their copies were
+  /// deleted from it), so they can be saved again.
+  Future<void> markUnsaved(List<String> ids) async {
+    if (ids.isEmpty) return;
+    await _sql.update(
+      table,
+      {'saved_at': null},
+      where: 'id IN (${List.filled(ids.length, '?').join(',')})',
+      whereArgs: ids,
+    );
+    notifyChanged();
+  }
+
   /// Writes (or clears, with an empty string) an instant print's note.
   Future<void> setNote(String id, String note) async {
     final v = note.trim();

@@ -11,7 +11,7 @@ import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
-import '../../../camera/application/camera_ui_state.dart' show win98ThemeProvider;
+import '../../../camera/application/camera_ui_state.dart' show PrefKeys, win98ThemeProvider;
 import '../../../onboarding/onboarding_screen.dart';
 import 'debug_menu.dart';
 import 'explorer_dialogs.dart';
@@ -102,10 +102,75 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       unawaited(s.preload());
     }
     Sfx.w98Login.play();
+    // After the login chime: any C: file deleted from the phone's photos?
+    _galleryTimer = Timer(const Duration(milliseconds: 1600), () async {
+      try {
+        await _checkGallery();
+      } catch (e) {
+        debugPrint('Gallery check skipped: $e');
+      }
+    });
+  }
+
+  /// Files on C: whose copy in the phone's Darkroom album was deleted:
+  /// offered to copy back (No: they're just marked not copied, and File >
+  /// Copy to Photos does it later).
+  Timer? _galleryTimer;
+
+  Future<void> _checkGallery() async {
+    if (!mounted) return;
+    final repo = ref.read(sdCardRepositoryProvider);
+    final onC = (await repo.readyItems()).where((m) => !m.onSdCard).toList();
+    if (!mounted || !onC.any((m) => m.isSaved)) return;
+    final prefs = ref.read(sharedPrefsProvider);
+    final allowed = await galleryCheckAllowed(
+      alreadyAsked: prefs.getBool(PrefKeys.galleryAsked) ?? false,
+      markAsked: () => unawaited(prefs.setBool(PrefKeys.galleryAsked, true)),
+      explain: () async =>
+          mounted &&
+          await _box(
+                'Darkroom',
+                "If you delete a picture from your phone's photos, Darkroom can notice and offer to copy it "
+                    'back from C:. To do that it needs to see your photo library. It only looks in its own albums.',
+                icon: Win98MessageIcon.question,
+                buttons: const ['Continue', 'Not now'],
+              ) ==
+              0,
+    );
+    if (!allowed || !mounted) return;
+    final missing = await missingFromGallery(onC, digitalAlbum);
+    if (missing == null || missing.isEmpty || !mounted) return;
+    final n = missing.length;
+    final what = n == 1 ? "'${missing.first.fileName}' is" : '$n files on Local Disk (C:) are';
+    final r = await _box(
+      'Missing from Photos',
+      "$what no longer in your phone's Darkroom album. Copy ${n == 1 ? 'it' : 'them'} back?",
+      icon: Win98MessageIcon.question,
+      buttons: const ['Yes', 'No'],
+    );
+    if (!mounted) return;
+    if (r == 0) {
+      await _copyToPhotos(missing);
+    } else {
+      await repo.markUnsaved([for (final m in missing) m.id]);
+    }
+  }
+
+  /// Copies C: files (back) into the phone's Darkroom album.
+  Future<void> _copyToPhotos(List<MediaItem> items) async {
+    final repo = ref.read(sdCardRepositoryProvider);
+    var failed = 0;
+    for (final m in items) {
+      if (await keepMedia(repo, m, album: digitalAlbum, moveToC: true) != null) failed++;
+    }
+    if (failed > 0 && mounted) {
+      await _box('Copy to Photos', "$failed file(s) couldn't be copied.", icon: Win98MessageIcon.warning);
+    }
   }
 
   @override
   void dispose() {
+    _galleryTimer?.cancel();
     if (!_shutDown) Sfx.w98Exit.play();
     _sdScroll.dispose();
     _cScroll.dispose();
@@ -535,6 +600,15 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                 Win98MenuItem(
                                   'Transfer All to C:',
                                   onSelected: readyHere == 0 ? null : transferAll,
+                                ),
+                                Win98MenuItem(
+                                  'Copy to Photos',
+                                  onSelected: () {
+                                    final todo = _selectedItems()
+                                        .where((m) => !m.onSdCard && !m.isSaved)
+                                        .toList();
+                                    return todo.isEmpty ? null : () => unawaited(_copyToPhotos(todo));
+                                  }(),
                                 ),
                                 Win98MenuItem(
                                   'Delete',

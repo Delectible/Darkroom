@@ -886,8 +886,13 @@ Answers: turntable renders, no 2D/3D switch.
   again (the viewer's late tap-off check closed the write box once the
   keyboard had moved the print).
   → 1.6.7 · 2026-10-10 · 5535869
-- [ ] **42.4 Copies deleted from the phone's gallery**: notice and offer to
-  save again (asked Gabe how; digital too).
+- [x] **42.4 Copies deleted from the phone's gallery**: noticed and offered
+  again. Film: opening the board, prints whose copy is gone from "Darkroom
+  Film" go back to unsaved (Save works) with a "Save again" snackbar.
+  Digital: opening Win98, C: files missing from "Darkroom" get a "Copy them
+  back?" box (No: marked not copied; File > Copy to Photos later). Android
+  lists the app's own album entries with no permission; iOS asks for full
+  library access once, after saying why.
 - [x] **42.5 1999 Floppy Cam look**: tuned to Gabe's five reference shots:
   low contrast (blacks lifted ~L10, whites ~L84, barely any clipping),
   muted with a lavender/magenta lean, crisp (sharpened) edges, little

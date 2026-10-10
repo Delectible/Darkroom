@@ -1,4 +1,5 @@
 import Flutter
+import Photos
 import UIKit
 import UserNotifications
 
@@ -34,6 +35,33 @@ import UserNotifications
       let level = UIDevice.current.batteryLevel
       result(level < 0 ? nil : Int((level * 100).rounded()))
     }
+    // What's still in one of our photo albums (deleted copies are offered
+    // again). Needs full (or limited) library access, asked for from Dart
+    // with an explanation first.
+    let gallery = FlutterMethodChannel(name: "darkroom/gallery", binaryMessenger: registrar.messenger())
+    gallery.setMethodCallHandler { call, result in
+      switch call.method {
+      case "access":
+        result(Self.accessName(PHPhotoLibrary.authorizationStatus(for: .readWrite)))
+      case "request":
+        PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
+          DispatchQueue.main.async { result(status == .authorized || status == .limited) }
+        }
+      case "names":
+        let album = (call.arguments as? [String: Any])?["album"] as? String ?? ""
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else {
+          result(nil)
+          return
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+          let names = Self.albumNames(album)
+          DispatchQueue.main.async { result(names) }
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
     let channel = FlutterMethodChannel(name: "darkroom/background", binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { [weak self] call, result in
       switch call.method {
@@ -47,6 +75,30 @@ import UserNotifications
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  private static func accessName(_ status: PHAuthorizationStatus) -> String {
+    switch status {
+    case .authorized: return "full"
+    case .limited: return "limited"
+    case .notDetermined: return "undetermined"
+    default: return "denied"
+    }
+  }
+
+  /// The original file names of the assets in the album(s) titled [album].
+  private static func albumNames(_ album: String) -> [String] {
+    var names: [String] = []
+    let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+    collections.enumerateObjects { collection, _, _ in
+      guard collection.localizedTitle == album else { return }
+      PHAsset.fetchAssets(in: collection, options: nil).enumerateObjects { asset, _, _ in
+        for resource in PHAssetResource.assetResources(for: asset) {
+          names.append(resource.originalFilename)
+        }
+      }
+    }
+    return names
   }
 
   private func beginBackgroundTime() {

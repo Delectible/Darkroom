@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.12';
+  static const version = '1.6.13';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The "no longer in your photos" note on the corkboard goes away after 5 seconds and has a close button. '
-      'Close it and those prints are never mentioned again.';
+      'Darkroom 98 remembers when you answer No to copying missing files back to Photos, and won\'t ask about '
+      'those files again (File > Copy to Photos still works).';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

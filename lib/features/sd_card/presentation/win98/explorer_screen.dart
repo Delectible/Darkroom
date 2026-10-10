@@ -140,20 +140,35 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     if (!allowed || !mounted) return;
     final missing = await missingFromGallery(onC, digitalAlbum);
     if (missing == null || missing.isEmpty || !mounted) return;
-    final n = missing.length;
-    final what = n == 1 ? "'${missing.first.fileName}' is" : '$n files on Local Disk (C:) are';
+    // Files the user already said No to stay quiet (File > Copy to Photos
+    // still works on them).
+    final dismissed = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
+    final quiet = [
+      for (final m in missing)
+        if (dismissed.contains(m.id)) m.id,
+    ];
+    if (quiet.isNotEmpty) await repo.markUnsaved(quiet);
+    final ask = [
+      for (final m in missing)
+        if (!dismissed.contains(m.id)) m,
+    ];
+    if (ask.isEmpty || !mounted) return;
+    final n = ask.length;
+    final what = n == 1 ? "'${ask.first.fileName}' is" : '$n files on Local Disk (C:) are';
     final r = await _box(
       'Missing from Photos',
       "$what no longer in your phone's Darkroom album. Copy ${n == 1 ? 'it' : 'them'} back?",
       icon: Win98MessageIcon.question,
       buttons: const ['Yes', 'No'],
     );
-    if (!mounted) return;
     if (r == 0) {
-      await _copyToPhotos(missing);
-    } else {
-      await repo.markUnsaved([for (final m in missing) m.id]);
+      if (mounted) await _copyToPhotos(ask);
+      return;
     }
+    // No (or closed): don't ask about these again.
+    await repo.markUnsaved([for (final m in ask) m.id]);
+    final now = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
+    await prefs.setStringList(PrefKeys.galleryDismissed, {...now, for (final m in ask) m.id}.toList());
   }
 
   /// Copies C: files (back) into the phone's Darkroom album.

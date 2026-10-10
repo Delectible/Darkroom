@@ -935,3 +935,7 @@ Answers: turntable renders, no 2D/3D switch.
   Closing it (X or swipe) means those prints are never mentioned again;
   a time-out doesn't count.
   → 1.6.12 · 2026-10-10
+- [x] **44.2 Same for Darkroom 98**: answering No (or closing) the "Copy
+  them back?" box means those C: files are never asked about again (same
+  `PrefKeys.galleryDismissed`); File > Copy to Photos still works.
+  → 1.6.13 · 2026-10-10

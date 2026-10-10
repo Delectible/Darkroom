@@ -216,7 +216,7 @@ Film Mode
   The board marks such prints unsaved (`markUnsaved`) and offers "Save
   again" (5 s snackbar with a close X; closed or swiped away, those prints
   are never mentioned again: `PrefKeys.galleryDismissed`); Win98 offers to copy missing C: files back (File > Copy to
-  Photos). Matching is by the saved name (`galleryNameFor`, numbered
+  Photos; No is remembered the same way). Matching is by the saved name (`galleryNameFor`, numbered
   duplicates allowed).
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;
   playback is a projector (`projector_screen.dart`): beam + screen, and a

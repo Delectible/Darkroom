@@ -47,6 +47,8 @@ void main(List<String> args) {
     final r = LookRenderer(look, seed: 7 + i);
     if (look.kind == ShaderKind.ccd) {
       r.sharpen(data, w, h, radius: math.max(1, (w / LookSpec.referenceWidth).round()));
+    } else if (look.kind == ShaderKind.vhs) {
+      r.vhsSignal(data, w, h);
     }
     r.grade(data, w, h, flash: flash);
     image = img.Image.fromBytes(width: w, height: h, bytes: data.buffer, numChannels: 3);

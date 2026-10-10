@@ -43,7 +43,9 @@ Read this first. It's the hand-off from the earlier development sessions
 - iOS: deployment target 15.0 (patched into the generated Xcode project by
   CI). Every plugin is a Swift Package, so there is **no Podfile**: adding
   one makes Flutter run CocoaPods and the build dies with "sandbox is not in
-  sync with the Podfile.lock". `ios/` holds only Info.plist,
+  sync with the Podfile.lock". CI ad-hoc signs the frameworks and app
+  before zipping the .ipa (Sideloadly's signer fails on never-signed
+  FFmpeg frameworks). `ios/` holds only Info.plist,
   AppDelegate.swift and the AppIcon set; CI generates the rest.
   Developing never needs the app running: prints store an absolute
   `ready_at`. Android re-arms notifications with WorkManager; iOS schedules
@@ -300,6 +302,12 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   battery, the clock, and the zoom bar exactly as it moved
   (`CamcorderOsd` in `video_plan.dart`; the take's zoom track rides on the
   VideoJob).
+  Look tuned to Gabe's tapes (1.6.11): washed, soft, bright, edge halos
+  (wide luma unsharp / the shader's 4-px halo). Tape dropouts and the odd
+  torn line come at random: video overlays a few streak PNGs on random
+  frames (`TapeDropouts`, enable windows from an exponential schedule,
+  seeded per clip); the shader and stills roll per field / per shot.
+  `LookSpec.tracking` = how often.
 - Win98 colours come from the current `Win98Scheme` (`W98.scheme`; `W98.*`
   are getters, so they can't go in `const` expressions). View > Options >
   Themes picks one (`win98ThemeProvider`, `PrefKeys.win98Theme`; the

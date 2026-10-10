@@ -61,7 +61,8 @@ void main() {
       }
       if (shots != null) {
         final image = await tester.runAsync(
-          () => (boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary).toImage(pixelRatio: 1),
+          () =>
+              (boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary).toImage(pixelRatio: 1),
         );
         final bytes = await tester.runAsync(() => image!.toByteData(format: ui.ImageByteFormat.png));
         File('$shots/print_viewer_${landscape ? 'landscape' : 'portrait'}.png')

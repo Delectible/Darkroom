@@ -1,7 +1,8 @@
 #version 460 core
-// 90s camcorder / VHS: ~240 visible scanlines, horizontal luma softness,
-// chroma bleeding to the right, per-line time-base jitter and a rolling
-// tracking-error band with white dropout streaks.
+// 90s camcorder / VHS: ~240 visible scanlines, horizontal luma softness
+// with the camera's edge halos, chroma bleeding to the right, per-line
+// time-base jitter, and now and then (at random, never on a beat) a tape
+// dropout streak or a few torn lines.
 #include <flutter/runtime_effect.glsl>
 
 precision highp float;
@@ -27,7 +28,7 @@ uniform vec4 uCrop;          // 25-28
 uniform float uScanline;     // 29  darkening between lines (0..1)
 uniform float uBleed;        // 30  chroma smear (0..1)
 uniform float uJitter;       // 31  horizontal time-base error (0..1)
-uniform float uTracking;     // 32  tracking band intensity (0..1)
+uniform float uTracking;     // 32  how often dropouts / tears happen (0..1)
 uniform float uLines;        // 33  visible lines in the frame (e.g. 240)
 
 uniform sampler2D uTexture;
@@ -91,11 +92,12 @@ void main() {
   float jitter = (hash12(vec2(line, field)) - 0.5) * 2.0 * px * uJitter;
   jitter += sin(cropUv.y * 9.0 + uTime * 1.3) * 0.6 * px * uJitter;
 
-  // Rolling tracking band.
-  float bandY = 1.0 - fract(uTime * 0.045);
-  float band = 1.0 - smoothstep(0.0, 0.045, abs(cropUv.y - bandY));
-  band *= uTracking;
-  jitter += band * (hash12(vec2(line, field + 1.0)) * 18.0 - 6.0) * px;
+  // Now and then a few lines tear sideways for a field (random field,
+  // random place).
+  float tearOn = step(1.0 - 0.012 * uTracking, hash12(vec2(field, 7.3)));
+  float tearY = hash12(vec2(field, 11.9));
+  float tear = tearOn * (1.0 - smoothstep(0.0, 0.02, abs(cropUv.y - tearY)));
+  jitter += tear * (hash12(vec2(line, field + 1.0)) * 14.0 - 4.0) * px;
 
   vec2 p = frag + vec2(jitter, 0.0);
 
@@ -104,6 +106,10 @@ void main() {
   vec3 yl = texture(uTexture, toUv(p - vec2(px, 0.0))).rgb;
   vec3 yr = texture(uTexture, toUv(p + vec2(px, 0.0))).rgb;
   float luma = rgb2yiq(y0 * 0.5 + (yl + yr) * 0.25).x;
+  // Edge "enhancement": bright halos round dark edges.
+  vec3 wl = texture(uTexture, toUv(p - vec2(4.0 * px, 0.0))).rgb;
+  vec3 wr = texture(uTexture, toUv(p + vec2(4.0 * px, 0.0))).rgb;
+  luma += (luma - rgb2yiq((wl + wr) * 0.5).x) * 0.6;
 
   float cs = px * (1.0 + 4.0 * uBleed);
   vec2 cshift = vec2(-2.0 * px * uBleed, 0.0);
@@ -115,11 +121,19 @@ void main() {
 
   vec3 c = grade(clamp(yiq2rgb(vec3(luma, iq * (1.0 + 0.3 * uBleed))), 0.0, 1.0), cropUv);
 
-  // Tape noise + dropout streaks inside the tracking band.
+  // Tape noise.
   float n = hash12(floor(p / (px * max(uGrainSize, 1.0))) + vec2(field * 1.7, field * 3.1)) * 2.0 - 1.0;
   c += n * uGrainAmount;
-  float streak = step(0.985 - band * 0.06, hash12(vec2(floor(p.x / (px * 8.0)), line + field)));
-  c = mix(c, vec3(0.92), streak * band);
+  // Dropouts: on a random field, a line or two comes out as a broken white
+  // streak along part of its width.
+  float dropOn = step(1.0 - 0.03 * uTracking, hash12(vec2(field, 3.7)));
+  float dl0 = floor(hash12(vec2(field, 5.1)) * uLines);
+  float dl1 = floor(hash12(vec2(field, 9.4)) * uLines);
+  float onLine = max(step(abs(line - dl0), 0.5), step(abs(line - dl1), 0.5) * step(0.5, hash12(vec2(field, 2.2))));
+  float x0 = hash12(vec2(field, 4.4)), x1 = x0 + 0.15 + 0.6 * hash12(vec2(field, 6.6));
+  float span = step(x0, cropUv.x) * step(cropUv.x, x1);
+  float dash = step(0.3, hash12(vec2(floor(cropUv.x * 40.0), line + field)));
+  c = mix(c, vec3(0.9), dropOn * onLine * span * dash * 0.85);
 
   // Scanlines (cosine profile so the preview doesn't alias on any DPI).
   float sl = 0.5 + 0.5 * cos(cropUv.y * uLines * 6.2831853);

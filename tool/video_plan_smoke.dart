@@ -23,7 +23,7 @@ Future<void> main(List<String> args) async {
       previewAspect: 16 / 9,
       timestamp: true,
       capturedAtMs: DateTime(2026, 10, 5, 14, 32, 7).millisecondsSinceEpoch,
-      durationMs: 3000,
+      durationMs: int.parse(Platform.environment['DURATION_MS'] ?? '3000'),
       rotationTurns: int.parse(Platform.environment['TURNS'] ?? '0'),
     );
     final plan = VideoPlanner.prepare(job, probeWidth: pw, probeHeight: ph);

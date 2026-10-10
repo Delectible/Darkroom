@@ -249,28 +249,32 @@ class CameraCatalog {
     subtitle: 'Home video on tape, with sound',
     badge: 'SP',
     look: LookSpec(
+      // Tuned to Gabe's tapes: bright (skies blow out), soft, pastel
+      // colour with blue-cyan skies, lifted blacks, no visible scanlines;
+      // edge halos and the odd dropout come from the signal path.
       kind: ShaderKind.vhs,
       matrix: [
-        1.05, 0.00, 0.00, //
-        0.00, 0.95, 0.03, //
-        0.02, 0.00, 0.95,
+        1.0, 0.0, 0.0, //
+        0.0, 1.0, 0.02, //
+        0.0, 0.03, 1.04,
       ],
-      offset: [0.02, 0.0, 0.02],
-      saturation: 1.15,
-      exposure: 1.05,
-      gamma: 0.95,
-      contrast: 1.05,
+      offset: [0.01, 0.01, 0.03],
+      saturation: 0.72,
+      exposure: 1.12,
+      gamma: 0.88,
+      contrast: 0.92,
       pivot: 0.5,
-      black: 0.05,
-      white: 0.95,
-      vignette: 0.2,
-      grainAmount: 0.035,
+      black: 0.07,
+      white: 1.0,
+      vignette: 0.05,
+      grainAmount: 0.025,
       grainSize: 1.2,
       flashStrength: 0.5,
-      scanline: 0.28,
-      bleed: 0.55,
-      jitter: 0.6,
-      tracking: 0.55,
+      scanline: 0.06,
+      bleed: 0.7,
+      jitter: 0.35,
+      // dropouts / tears: how often (TapeDropouts, the shader's glitches)
+      tracking: 0.5,
       lines: 240,
     ),
     quality: CaptureQuality.low,

@@ -204,11 +204,25 @@ class VideoPlanner {
     } else {
       final look = spec.look!;
       var nextInput = 1;
+      final tape = <String>[];
       if (look.kind == ShaderKind.vhs) {
         final scan = p.join(job.workDir, 'scan.png');
         File(scan).writeAsBytesSync(_scanlinePng(outW, outH, look.scanline));
         inputs.addAll(['-loop', '1', '-i', scan]);
         nextInput++;
+        // Tape dropouts: a few streak frames shown on random frames of the
+        // take (different every clip, never on a beat).
+        for (final d in TapeDropouts.render(
+          job.workDir,
+          outW,
+          outH,
+          seconds: job.durationMs / 1000,
+          rate: look.tracking,
+          seed: job.id.hashCode,
+        )) {
+          inputs.addAll(['-loop', '1', '-framerate', profile.fps, '-i', d.path]);
+          tape.add(d.overlay(nextInput++));
+        }
       }
       final hasOsd = VideoFilters.wantsOsd(spec, job.timestamp);
       var osdW = 0, osdH = 0;
@@ -250,6 +264,7 @@ class VideoPlanner {
         osdH: osdH,
         rotateTurns: turns,
         extraOverlays: extras,
+        tapeOverlays: tape,
       );
     }
 
@@ -676,4 +691,97 @@ class CamcorderOsd {
   }
 
   static String _f(double v) => v.toStringAsFixed(4);
+}
+
+/// Tape dropouts for the camcorder: the oxide has a gap, and for a frame or
+/// two a line (or a few) of the picture comes out as a broken white streak.
+/// A handful of streak frames are drawn once, each shown on its own random
+/// frames of the take (a few seconds apart, sometimes a little burst), so
+/// they never repeat on a beat. Drawn on the tape, under the OSD.
+class TapeDropouts {
+  TapeDropouts._(this.path, this.windows);
+
+  final String path;
+
+  /// (start, end) seconds it's shown.
+  final List<(double, double)> windows;
+
+  /// "[N:v]overlay=..." for [VideoFilters.graph]'s tape overlays.
+  String overlay(int input) {
+    final on = windows
+        .map((w) => 'between(t,${w.$1.toStringAsFixed(3)},${w.$2.toStringAsFixed(3)})')
+        .join('+');
+    return "[$input:v]overlay=0:0:shortest=0:eof_action=repeat:enable='$on'";
+  }
+
+  static List<TapeDropouts> render(
+    String dir,
+    int w,
+    int h, {
+    required double seconds,
+    required double rate,
+    required int seed,
+  }) {
+    if (rate <= 0 || seconds <= 0) return const [];
+    final rnd = math.Random(seed);
+    const kinds = 6;
+    const frame = 1 / 29.97;
+    // When: on average one every ~3 s (at rate 0.5), a quarter of them a
+    // short burst of two to four.
+    final events = <(int, double, double)>[];
+    var t = 0.4 + rnd.nextDouble() * 2.5;
+    while (t < seconds) {
+      final burst = rnd.nextDouble() < 0.25 ? 2 + rnd.nextInt(3) : 1;
+      var bt = t;
+      for (var b = 0; b < burst && bt < seconds; b++) {
+        final len = frame * (1 + rnd.nextInt(2));
+        events.add((rnd.nextInt(kinds), bt, bt + len));
+        bt += len + frame * (1 + rnd.nextInt(6));
+      }
+      // exponential gaps: no rhythm
+      t = bt + -math.log(1 - rnd.nextDouble()) * 1.5 / rate;
+    }
+    final out = <TapeDropouts>[];
+    final unit = h / 480.0;
+    for (var k = 0; k < kinds; k++) {
+      final windows = [
+        for (final e in events)
+          if (e.$1 == k) (e.$2, e.$3),
+      ];
+      if (windows.isEmpty) continue;
+      final im = img.Image(width: w, height: h, numChannels: 4);
+      final lines = 1 + rnd.nextInt(3);
+      for (var l = 0; l < lines; l++) {
+        final y0 = rnd.nextInt(h);
+        final thick = math.max(1, (unit * (1.0 + rnd.nextDouble() * 1.5)).round());
+        // a broken streak: a few dashes along part of the line
+        var x = rnd.nextInt(w);
+        final end = math.min(w, x + (w * (0.15 + rnd.nextDouble() * 0.7)).round());
+        while (x < end) {
+          final dash = (w * (0.01 + rnd.nextDouble() * 0.12)).round();
+          final a = 200 + rnd.nextInt(56);
+          final v = 220 + rnd.nextInt(36);
+          for (var xx = x; xx < math.min(end, x + dash); xx++) {
+            for (var yy = y0; yy < math.min(h, y0 + thick); yy++) {
+              // ragged: the odd pixel drops out of the streak
+              if (rnd.nextDouble() < 0.12) continue;
+              im.setPixelRgba(xx, yy, v, v, v, a);
+            }
+          }
+          x += dash + (w * rnd.nextDouble() * 0.06).round();
+        }
+      }
+      // now and then a fainter speckled line beside it
+      if (rnd.nextDouble() < 0.5) {
+        final y0 = rnd.nextInt(h);
+        for (var xx = 0; xx < w; xx++) {
+          if (rnd.nextDouble() < 0.08) im.setPixelRgba(xx, y0, 230, 230, 230, 90 + rnd.nextInt(120));
+        }
+      }
+      final path = p.join(dir, 'dropout_$k.png');
+      File(path).writeAsBytesSync(img.encodePng(im, level: 1));
+      out.add(TapeDropouts._(path, windows));
+    }
+    return out;
+  }
 }

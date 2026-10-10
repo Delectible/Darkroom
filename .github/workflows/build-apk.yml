@@ -82,6 +82,16 @@ jobs:
         run: |
           mkdir -p dist/Payload
           cp -R build/ios/iphoneos/Runner.app dist/Payload/
+          # Ad-hoc sign every framework and the app: Sideloadly re-signs
+          # with your Apple ID, and its signer fails on a binary that has
+          # never been signed ("macho sign/edit failed (-18)" on the FFmpeg
+          # frameworks); it only has to replace an existing signature.
+          xattr -cr dist/Payload/Runner.app
+          for f in dist/Payload/Runner.app/Frameworks/*.framework dist/Payload/Runner.app/Frameworks/*.dylib; do
+            if [ -e "$f" ]; then codesign --force --sign - --timestamp=none "$f"; fi
+          done
+          codesign --force --sign - --timestamp=none dist/Payload/Runner.app
+          codesign --verify --deep --strict dist/Payload/Runner.app && echo "ad-hoc signed"
           cd dist && zip -qry Darkroom-${{ github.run_number }}.ipa Payload && rm -rf Payload
       - uses: actions/upload-artifact@v4
         with: { name: ios, path: dist/ }

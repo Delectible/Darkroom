@@ -908,3 +908,17 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **42.7 Closed testing**: 1.6.10 (build 110) promoted to the closed
   track (promote-closed.yml); Play reviews it before testers get it.
   → 1.6.10 · 2026-10-10
+
+## 43. Camcorder look, iPhone install (2026-10-10)
+
+- [x] **43.1 90s Camcorder look**: tuned to Gabe's five tape frames (bright,
+  skies blow out, soft, pastel with blue-cyan skies, lifted blacks, no
+  visible scanlines), with the camera's edge halos. The rolling tracking
+  band is gone; instead tape dropouts (broken white streaks on a line or
+  two) and the odd torn line or sideways hop happen at random moments:
+  video overlays a few streak frames on random frames of each take
+  (`TapeDropouts`), the viewfinder shader and stills roll their own. OSD
+  unchanged.
+- [x] **43.2 Sideloadly "macho sign/edit failed (-18)" on libavfilter**: CI
+  now ad-hoc signs every framework and the app before zipping the .ipa, so
+  Sideloadly only replaces signatures.

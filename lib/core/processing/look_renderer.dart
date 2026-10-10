@@ -57,15 +57,25 @@ class LookRenderer {
     }
   }
 
-  /// VHS signal path: per-line time-base jitter, rolling tracking band with
-  /// dropouts, soft luma and right-smeared chroma. Operates on a frame that is
+  /// VHS signal path: per-line time-base jitter, soft luma with the
+  /// camera's edge halos, right-smeared chroma, and (by chance, seeded per
+  /// shot) a few torn lines or a dropout streak. Operates on a frame that is
   /// already at "tape" resolution (~640 wide).
   void vhsSignal(Uint8List data, int w, int h) {
     final rnd = math.Random(seed);
     final rowBytes = w * 3;
     final src = Uint8List(rowBytes);
     final y = Float64List(w), i = Float64List(w), q = Float64List(w);
-    final bandY = 0.62 + rnd.nextDouble() * 0.3;
+    // This frame's glitches (like the shader: random, sometimes none).
+    final tearY = rnd.nextDouble() < 0.35 * look.tracking ? rnd.nextDouble() : -1.0;
+    final drops = <(int, double, double)>[
+      if (rnd.nextDouble() < 0.6 * look.tracking)
+        for (var k = 0; k < 1 + rnd.nextInt(2); k++)
+          () {
+            final x0 = rnd.nextDouble();
+            return (rnd.nextInt(h), x0, x0 + 0.15 + rnd.nextDouble() * 0.6);
+          }(),
+    ];
     final bleed = look.bleed;
     final cs = 1.0 + 4.0 * bleed;
     final cshift = -2.0 * bleed;
@@ -75,8 +85,9 @@ class LookRenderer {
       final lineHash = _hash(row * 7919 + seed);
       var jitter = (lineHash - 0.5) * 2.0 * look.jitter;
       jitter += math.sin(ny * 9.0 + seed * 0.1) * 0.6 * look.jitter;
-      final band = (1 - _smoothstep(0, 0.045, (ny - bandY).abs())) * look.tracking;
-      jitter += band * (_hash(row * 104729 + seed + 1) * 18.0 - 6.0);
+      final tear = tearY < 0 ? 0.0 : 1 - _smoothstep(0, 0.02, (ny - tearY).abs());
+      jitter += tear * (_hash(row * 104729 + seed + 1) * 14.0 - 4.0);
+      final drop = drops.where((d) => d.$1 == row).firstOrNull;
 
       final base = row * rowBytes;
       src.setRange(0, rowBytes, data, base);
@@ -90,7 +101,9 @@ class LookRenderer {
       }
       for (var x = 0; x < w; x++) {
         final yl = y[math.max(0, x - 1)], yr = y[math.min(w - 1, x + 1)];
-        final luma = y[x] * 0.5 + (yl + yr) * 0.25;
+        var luma = y[x] * 0.5 + (yl + yr) * 0.25;
+        // edge "enhancement": bright halos round dark edges
+        luma += (luma - (y[math.max(0, x - 4)] + y[math.min(w - 1, x + 4)]) * 0.5) * 0.6;
         var si = 0.0, sq = 0.0;
         for (var t = -2; t <= 2; t++) {
           final sx = (x + cshift + t * cs).round().clamp(0, w - 1);
@@ -102,8 +115,13 @@ class LookRenderer {
         var r = luma + 0.956 * si + 0.621 * sq;
         var g = luma - 0.272 * si - 0.647 * sq;
         var b = luma - 1.106 * si + 1.703 * sq;
-        if (band > 0 && _hash((x ~/ 8) * 31 + row * 977 + seed) > 0.985 - band * 0.06) {
-          r = g = b = 0.92;
+        if (drop != null) {
+          final u = x / w;
+          if (u >= drop.$2 && u <= drop.$3 && _hash((x * 40 ~/ w) * 31 + row * 977 + seed) > 0.3) {
+            r = r + (0.9 - r) * 0.85;
+            g = g + (0.9 - g) * 0.85;
+            b = b + (0.9 - b) * 0.85;
+          }
         }
         final o = base + x * 3;
         data[o] = (r * 255).round().clamp(0, 255);

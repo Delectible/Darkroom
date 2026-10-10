@@ -165,6 +165,7 @@ class VideoFilters {
     required int osdH,
     int rotateTurns = 0,
     List<String> extraOverlays = const [],
+    List<String> tapeOverlays = const [],
   }) {
     final chain = _geometry(crop, rotateTurns, outW, outH, profile);
 
@@ -191,10 +192,17 @@ class VideoFilters {
         final jit = _f(look.jitter * 2.5);
         chain
           // ~240 lines of horizontal luma resolution.
-          ..add('scale=${(outW * 0.55).round() & ~1}:$outH:flags=bilinear')
+          ..add('scale=${(outW * 0.45).round() & ~1}:$outH:flags=bilinear')
           ..add('scale=$outW:$outH:flags=bicubic')
-          ..add('pad=${outW + 8}:$outH:4:0')
-          ..add("crop=$outW:$outH:'4+$jit*sin(t*2.3)+$jit*(random(0)-0.5)':0")
+          // The camcorder's edge "enhancement": bright halos round dark
+          // edges (a wide luma unsharp).
+          ..add('unsharp=9:9:0.85:3:3:0')
+          ..add('pad=${outW + 16}:$outH:8:0')
+          // time-base wobble, and now and then (unpredictably) a frame that
+          // hops sideways
+          ..add(
+            "crop=$outW:$outH:'8+$jit*sin(t*2.3)+$jit*(random(0)-0.5)+gt(random(1),0.985)*(random(2)-0.5)*12':0",
+          )
           ..add('vignette=a=${_f(look.vignette * 3.2)}')
           ..add('format=gbrp')
           ..add(colorMatrix(look))
@@ -213,6 +221,11 @@ class VideoFilters {
     if (look.kind == ShaderKind.vhs) {
       g.write(';[$last][1:v]overlay=0:0:shortest=1:format=auto[scan]');
       last = 'scan';
+      // Dropouts on the tape (under the OSD): see TapeDropouts.
+      for (var i = 0; i < tapeOverlays.length; i++) {
+        g.write(';[$last]${tapeOverlays[i]}[tape$i]');
+        last = 'tape$i';
+      }
     }
     if (hasOsd) {
       final x = outW - osdW - (outW * 0.06).round();

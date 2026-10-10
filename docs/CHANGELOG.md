@@ -919,6 +919,8 @@ Answers: turntable renders, no 2D/3D switch.
   video overlays a few streak frames on random frames of each take
   (`TapeDropouts`), the viewfinder shader and stills roll their own. OSD
   unchanged.
+  → 1.6.11 · 2026-10-10 · 506eb7d
 - [x] **43.2 Sideloadly "macho sign/edit failed (-18)" on libavfilter**: CI
   now ad-hoc signs every framework and the app before zipping the .ipa, so
   Sideloadly only replaces signatures.
+  → 1.6.11 · 2026-10-10 · 506eb7d

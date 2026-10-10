@@ -252,6 +252,10 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                           // A tap off the print (on the dimmed board) puts it down;
                           // so does a swipe up or down.
                           onTap: (at) {
+                            // (it fires late, after the double-tap window: by
+                            // then a tap on the note may have opened the write
+                            // box, whose keyboard moved the print; never close it)
+                            if (ModalRoute.of(context)?.isCurrent != true) return;
                             final box =
                                 _printKeys[items[_index].id]?.currentContext?.findRenderObject()
                                     as RenderBox?;

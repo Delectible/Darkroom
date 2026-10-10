@@ -194,19 +194,25 @@ class AspectButton extends ConsumerWidget {
     final art = ref.watch(photoBodyProvider(spec.mode));
     if (art != null) {
       final film = spec.mode == AppMode.film;
-      final label = Upright(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (spec.aspectLocked && !sideways)
-              Icon(Icons.lock, size: 10, color: film ? const Color(0xFF151515) : const Color(0xFFE4E6E9)),
-            Text(
-              aspect.label,
-              style: photoLabel(onMetal: film).copyWith(fontSize: film ? 9.5 : 11),
-            ),
-          ],
-        ),
-      );
+      // [alpha] fades the ink itself: an opacity layer round a label lifted
+      // onto a key in 3D either flattens the lift or crops the letters.
+      Widget inked(double alpha) {
+        final ink = (film ? const Color(0xFF151515) : const Color(0xFFE4E6E9)).withValues(alpha: alpha);
+        return Upright(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (spec.aspectLocked && !sideways) Icon(Icons.lock, size: 10, color: ink),
+              Text(
+                aspect.label,
+                style: photoLabel(onMetal: film).copyWith(fontSize: film ? 9.5 : 11, color: ink),
+              ),
+            ],
+          ),
+        );
+      }
+
+      final label = inked(1);
       return SizedBox(
         width: 64,
         height: 36,
@@ -215,7 +221,7 @@ class AspectButton extends ConsumerWidget {
                 art: art,
                 label: aspect.label,
                 onTap: spec.aspectLocked ? null : onCycle,
-                child: label,
+                inked: inked,
               )
             : PhotoKey(
                 part: art.part(AppMode.digital, 'pillwide')!,
@@ -224,7 +230,7 @@ class AspectButton extends ConsumerWidget {
                 // kept well inside the cap, like the flash key's
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                  child: FittedBox(fit: BoxFit.scaleDown, child: label),
+                  child: FittedBox(fit: BoxFit.scaleDown, child: spec.aspectLocked ? inked(0.55) : label),
                 ),
               ),
       );
@@ -254,15 +260,17 @@ class AspectButton extends ConsumerWidget {
 }
 
 /// Film's format dial: each change turns the knurled top a click (90
-/// degrees, ending where the render repeats) with a little overshoot, the
-/// old format turning away with it and the new one settling in.
+/// degrees, ending where the render repeats) with a little overshoot; the
+/// printed format stays upright, the old one fading out and the new one in.
 class _AspectDial extends StatefulWidget {
-  const _AspectDial({required this.art, required this.label, required this.onTap, required this.child});
+  const _AspectDial({required this.art, required this.label, required this.onTap, required this.inked});
 
   final BodyArt art;
   final String label;
   final VoidCallback? onTap;
-  final Widget child;
+
+  /// The printed format with its ink at an opacity.
+  final Widget Function(double alpha) inked;
 
   @override
   State<_AspectDial> createState() => _AspectDialState();
@@ -271,14 +279,14 @@ class _AspectDial extends StatefulWidget {
 class _AspectDialState extends State<_AspectDial> with SingleTickerProviderStateMixin {
   late final _turn = AnimationController(vsync: this, duration: const Duration(milliseconds: 380), value: 1);
 
-  /// The format turning away (until the click finishes).
-  Widget? _old;
+  /// The format fading away (until the click finishes).
+  Widget Function(double alpha)? _old;
 
   @override
   void didUpdateWidget(_AspectDial old) {
     super.didUpdateWidget(old);
     if (old.label != widget.label) {
-      _old = old.child;
+      _old = old.inked;
       unawaited(_turn.forward(from: 0).whenComplete(() => mounted ? setState(() => _old = null) : null));
     }
   }
@@ -307,8 +315,9 @@ class _AspectDialState extends State<_AspectDial> with SingleTickerProviderState
             animation: _turn,
             builder: (context, _) {
               // One click: the knurled top turns a quarter (it repeats, so
-              // it lands looking the same); the old format turns away with
-              // it and fades, the new one turns in from behind.
+              // it lands looking the same). The printed format stays upright
+              // (turning text reads as jank): the old one fades out, then
+              // the new one fades in where it was.
               final v = _turn.value;
               final t = Curves.easeOutBack.transform(v);
               final old = _old;
@@ -320,14 +329,12 @@ class _AspectDialState extends State<_AspectDial> with SingleTickerProviderState
                     angle: (t - 1) * math.pi / 2,
                     child: top == null ? const SizedBox.shrink() : BodySprite(top),
                   ),
-                  if (old != null && v < 1)
-                    Opacity(
-                      opacity: (1 - v / 0.5).clamp(0.0, 1.0),
-                      child: Transform.rotate(angle: t * math.pi / 2, child: _printed(old, top)),
+                  if (old != null && v < 0.4) _printed(old(Curves.easeIn.transform(1 - v / 0.4)), top),
+                  _printed(
+                    widget.inked(
+                      old == null ? 1 : Curves.easeOut.transform(((v - 0.4) / 0.5).clamp(0.0, 1.0)),
                     ),
-                  Opacity(
-                    opacity: old == null ? 1 : ((v - 0.25) / 0.6).clamp(0.0, 1.0),
-                    child: Transform.rotate(angle: (t - 1) * math.pi / 2, child: _printed(widget.child, top)),
+                    top,
                   ),
                 ],
               );
@@ -519,11 +526,7 @@ class _MemoHolder extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
         decoration: card.decoration,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: card.child,
-        ),
+        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: card.child),
       );
     }
     if (clip != null) {

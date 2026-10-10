@@ -736,7 +736,9 @@ class PhotoKey extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = child;
     return Opacity(
-      opacity: enabled ? 1 : 0.55,
+      // (the live model's labels are lifted in 3D, and a dimming layer round
+      // one crops it: those dim their own ink instead)
+      opacity: enabled || part.layers != null ? 1 : 0.55,
       child: PressFeedback(
         enabled: enabled,
         onTap: onTap,

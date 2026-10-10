@@ -436,7 +436,11 @@ UI
   Each moving node moves only its own way (`setPart`: slide / turn / lever
   / press (in + 0.93 scale) / rock). Labels on a key's top ride up with
   `OnTop(BodyArt.topOf(part))` (a z-lift under the pose) so they stay on
-  the cap at an angle. The video/photo shutter swap sinks one and raises
+  the cap at an angle. Never put an opacity (or any compositing) layer
+  inside an `OnTop` (Flutter flattens the lift) or round one below 1.0
+  (its bounds are flat and crop the lifted label): fade a label's ink
+  colour instead (`_AspectDial` / `inked`). The face overlay isn't
+  clipped (a flat clip cut off lifted labels near the top edge). The video/photo shutter swap sinks one and raises
   the other (`showShutter`, 420 ms). Digital finishes (silver, grip,
   gunmetal, champagne, two-tone) are baked as `finish.<key>.*` nodes
   (`export_glb.py` FINISHES), picked by `bodyFinishProvider`

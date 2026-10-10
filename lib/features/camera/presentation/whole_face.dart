@@ -85,7 +85,10 @@ class WholeFace extends ConsumerWidget {
         final live = body.live
           ?..showShutter(spec.recordsVideo)
           ..setFinish(ref.watch(bodyFinishProvider));
-        Widget overlay = ClipRect(
+        // (Not clipped: labels lifted onto the keys' tops sit out from the
+        // face, and a flat clip at the face's edge cut off their tops as
+        // the body turned. Nothing else reaches past the face.)
+        Widget overlay = SizedBox.expand(
           child: OverflowBox(
             alignment: Alignment.topLeft,
             minWidth: design.width,

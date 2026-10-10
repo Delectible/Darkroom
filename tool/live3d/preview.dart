@@ -7,6 +7,7 @@
 //   MODE=film POSES=0,30 build/linux/x64/debug/bundle/darkroom
 //
 // Each pose prints `SHOT n` on stderr once it has drawn (screenshot it).
+// ASPECT_FRAMES=n then plays a format change in slow motion, n shots.
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -25,7 +26,9 @@ import 'package:darkroom/features/camera/presentation/body_swap.dart';
 import 'package:darkroom/features/camera/presentation/whole_body.dart';
 import 'package:darkroom/features/camera/presentation/whole_face.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
+import 'package:darkroom/features/settings/application/settings_controllers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show timeDilation;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -90,6 +93,7 @@ Future<void> main() async {
   }
   final body = art.bodies[mode]!;
   final pose = ValueNotifier<double>(0);
+  final scope = GlobalKey();
   runApp(
     ProviderScope(
       overrides: [
@@ -109,6 +113,7 @@ Future<void> main() async {
         batteryLevelProvider.overrideWith((ref) => Stream.value(80)),
       ],
       child: MaterialApp(
+        key: scope,
         debugShowCheckedModeBanner: false,
         theme: RetroPalette.forMode(mode).toTheme(),
         home: Scaffold(
@@ -146,6 +151,24 @@ Future<void> main() async {
     pose.value = deg;
     await Future<void>.delayed(const Duration(seconds: 4));
     stderr.writeln('SHOT $i');
+    await Future<void>.delayed(const Duration(seconds: 2));
+  }
+  // ASPECT_FRAMES=n: change the format (film dial / ratio key) in slow
+  // motion (x30) and print a SHOT every 1.3 s through the change.
+  final frames = int.tryParse(env['ASPECT_FRAMES'] ?? '');
+  if (frames != null) {
+    final container = ProviderScope.containerOf(scope.currentContext!);
+    timeDilation = 30;
+    unawaited(
+      container
+          .read(cameraSettingsProvider.notifier)
+          .cycleAspect(container.read(activeSpecProvider).id)
+          .catchError((Object _) {}), // (no settings store on the desktop)
+    );
+    for (var i = 0; i < frames; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 1300));
+      stderr.writeln('SHOT ${poses.length + i}');
+    }
     await Future<void>.delayed(const Duration(seconds: 2));
   }
   exit(0);

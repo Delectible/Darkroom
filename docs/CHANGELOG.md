@@ -904,3 +904,4 @@ Answers: turntable renders, no 2D/3D switch.
   natural colour with a slight warm lean (it was cool and over-saturated),
   deep but not crushed shadows, highlights that rarely clip, light
   sharpening, almost no bloom or smear.
+  → 1.6.10 · 2026-10-10 · cd9d93b

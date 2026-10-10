@@ -905,3 +905,6 @@ Answers: turntable renders, no 2D/3D switch.
   deep but not crushed shadows, highlights that rarely clip, light
   sharpening, almost no bloom or smear.
   → 1.6.10 · 2026-10-10 · cd9d93b
+- [x] **42.7 Closed testing**: 1.6.10 (build 110) promoted to the closed
+  track (promote-closed.yml); Play reviews it before testers get it.
+  → 1.6.10 · 2026-10-10

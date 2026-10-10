@@ -924,3 +924,6 @@ Answers: turntable renders, no 2D/3D switch.
   now ad-hoc signs every framework and the app before zipping the .ipa, so
   Sideloadly only replaces signatures.
   → 1.6.11 · 2026-10-10 · 506eb7d
+- [x] **43.3 Closed testing**: 1.6.11 (build 111) promoted to the closed
+  track (promote-closed.yml); Play reviews it before testers get it.
+  → 1.6.11 · 2026-10-10

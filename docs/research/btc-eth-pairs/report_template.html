@@ -1,0 +1,691 @@
+<title>BTC–ETH Pairs Study</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column (~72ch) for argument; tables and charts break out to a wider measure. Research-desk note, not a dashboard. */
+:root {
+  --bg: #f6f7f8; --surface: #fcfcfb; --ink: #121417; --ink-2: #4b5059; --muted: #838994;
+  --rule: #dfe2e6; --rule-2: #c6cad1; --accent: #1d4f7a; --accent-wash: #e6eef6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --gain: #2a78d6; --loss: #e34948;
+  --good: #0ca30c; --warn: #fab219; --crit: #d03b3b; --crit-wash: #fbeceb; --crit-ink: #9d2323;
+  --t-obs: #e7eef6; --t-obs-ink: #1d4f7a; --t-asm: #f4eee2; --t-asm-ink: #7a5310; --t-opt: #efe9f8; --t-opt-ink: #5a3c9e;
+  --t-oos: #e5f3ec; --t-oos-ink: #17633f; --t-proj: #f3e9ee; --t-proj-ink: #8a2f5a;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111315; --surface: #1a1a19; --ink: #eef0f2; --ink-2: #b9bec6; --muted: #898781;
+  --rule: #2a2d31; --rule-2: #3a3e44; --accent: #8cb8e6; --accent-wash: #1a2633;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --gain: #3987e5; --loss: #e66767;
+  --crit-wash: #2f1a1a; --crit-ink: #f09a9a;
+  --t-obs: #1b2734; --t-obs-ink: #9cc3ea; --t-asm: #2e2717; --t-asm-ink: #e5c27e; --t-opt: #261f36; --t-opt-ink: #c3b2f0;
+  --t-oos: #16291f; --t-oos-ink: #8fd6ae; --t-proj: #2e1a24; --t-proj-ink: #eaa3c4; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111315; --surface: #1a1a19; --ink: #eef0f2; --ink-2: #b9bec6; --muted: #898781;
+  --rule: #2a2d31; --rule-2: #3a3e44; --accent: #8cb8e6; --accent-wash: #1a2633;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --gain: #3987e5; --loss: #e66767;
+  --crit-wash: #2f1a1a; --crit-ink: #f09a9a;
+  --t-obs: #1b2734; --t-obs-ink: #9cc3ea; --t-asm: #2e2717; --t-asm-ink: #e5c27e; --t-opt: #261f36; --t-opt-ink: #c3b2f0;
+  --t-oos: #16291f; --t-oos-ink: #8fd6ae; --t-proj: #2e1a24; --t-proj-ink: #eaa3c4; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.6 var(--f-body); padding: 0 16px; }
+main { max-width: 1060px; margin: 0 auto; padding-block: 28px 80px; display: grid; gap: 56px }
+.col { max-width: 72ch }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 600; text-wrap: balance; margin: 0; line-height: 1.15 }
+h1 { font-size: clamp(2rem, 5vw, 2.9rem); letter-spacing: -0.01em }
+h2 { font-size: 1.6rem; margin-bottom: 4px }
+h3 { font-size: 1.15rem; font-weight: 500; margin-top: 8px }
+p { margin: 0 }
+section { display: grid; gap: 16px; min-width: 0 }
+.eyebrow { font: 500 0.72rem/1.2 var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted) }
+.lede { font-size: 1.1rem; color: var(--ink-2) }
+.mono, td.n, th.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums }
+.small { font-size: 0.86rem; color: var(--ink-2) }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px }
+a { color: var(--accent) }
+code { font-family: var(--f-mono); font-size: 0.88em; background: var(--accent-wash); padding: 1px 5px; border-radius: 3px }
+
+.verdict { border: 1px solid var(--crit); background: var(--crit-wash); border-radius: 6px; padding: 18px 20px; display: grid; gap: 10px }
+.verdict .tag { font: 600 0.8rem/1 var(--f-mono); letter-spacing: 0.08em; color: var(--crit-ink); display: flex; gap: 8px; align-items: center }
+.verdict .tag::before { content: ""; width: 10px; height: 10px; border-radius: 2px; background: var(--crit) }
+.verdict h2 { font-size: 1.45rem }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 6px; overflow: hidden }
+.tile { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; align-content: start }
+.tile .v { font: 600 1.7rem/1.1 var(--f-display) }
+.tile .l { font-size: 0.86rem; color: var(--ink-2) }
+
+.t { display: inline-block; font: 500 0.66rem/1 var(--f-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 6px; border-radius: 3px; vertical-align: 2px; white-space: nowrap }
+.t.obs { background: var(--t-obs); color: var(--t-obs-ink) } .t.asm { background: var(--t-asm); color: var(--t-asm-ink) }
+.t.opt { background: var(--t-opt); color: var(--t-opt-ink) } .t.oos { background: var(--t-oos); color: var(--t-oos-ink) }
+.t.proj { background: var(--t-proj); color: var(--t-proj-ink) }
+.legend-tags { display: flex; flex-wrap: wrap; gap: 8px 14px; font-size: 0.86rem; color: var(--ink-2) }
+.legend-tags span { display: inline-flex; gap: 6px; align-items: center }
+
+.tw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface) }
+table { border-collapse: collapse; width: 100%; font-size: 0.86rem }
+th, td { padding: 7px 10px; text-align: left; border-bottom: 1px solid var(--rule); white-space: nowrap; vertical-align: top }
+th { font: 500 0.72rem/1.3 var(--f-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); background: var(--surface); position: sticky; top: 0 }
+td.n, th.n { text-align: right }
+tr:last-child td { border-bottom: 0 }
+td.wrap { white-space: normal; min-width: 220px }
+.sticky1 th:first-child, .sticky1 td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; border-right: 1px solid var(--rule) }
+.neg { color: var(--crit-ink) } .pos { color: var(--t-oos-ink) } .dim { color: var(--muted) }
+tr.grp td { font: 500 0.72rem/1.3 var(--f-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2); background: var(--bg) }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center }
+.seg { display: inline-flex; border: 1px solid var(--rule-2); border-radius: 6px; overflow: hidden; flex-wrap: wrap }
+.seg button { font: 500 0.8rem/1 var(--f-mono); border: 0; background: var(--surface); color: var(--ink-2); padding: 8px 11px; cursor: pointer; border-right: 1px solid var(--rule-2) }
+.seg button:last-child { border-right: 0 }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--surface) }
+.seg button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+select { font: 500 0.85rem var(--f-body); padding: 7px 10px; border: 1px solid var(--rule-2); border-radius: 6px; background: var(--surface); color: var(--ink); max-width: 100% }
+label.ctl { display: inline-flex; gap: 8px; align-items: center; font-size: 0.86rem; color: var(--ink-2); flex-wrap: wrap }
+
+.chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 12px 6px; position: relative; min-width: 0 }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible }
+.chart .ttl { font-size: 0.86rem; color: var(--ink-2); margin: 0 0 6px 4px }
+.chart .lg { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.8rem; color: var(--ink-2); margin: 0 0 4px 4px }
+.chart .lg i { display: inline-block; width: 14px; height: 2px; vertical-align: middle; margin-right: 6px }
+.chart .lg i.box { height: 10px; width: 10px; border-radius: 2px }
+.ax text { fill: var(--muted); font: 11px var(--f-mono) }
+.ax line, .ax path { stroke: var(--rule) }
+.base { stroke: var(--rule-2) }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--rule-2); border-radius: 5px; padding: 7px 9px; font-size: 0.78rem; box-shadow: 0 4px 14px rgba(0,0,0,.12); min-width: 140px; z-index: 5 }
+.tip .h { color: var(--muted); font: 0.72rem var(--f-mono); margin-bottom: 4px }
+.tip .r { display: flex; gap: 8px; align-items: center; justify-content: space-between }
+.tip .r b { font: 600 0.82rem var(--f-mono); color: var(--ink) }
+.tip .r span { color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px }
+.tip .r span i { width: 12px; height: 2px; display: inline-block }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px }
+.note { border-left: 3px solid var(--rule-2); padding: 4px 0 4px 14px; color: var(--ink-2); font-size: 0.92rem }
+details { border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); padding: 10px 14px }
+details summary { cursor: pointer; font-weight: 500 }
+pre { font: 0.8rem/1.5 var(--f-mono); background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 14px; overflow-x: auto; margin: 0; white-space: pre }
+.spec { display: grid; grid-template-columns: minmax(130px, 200px) 1fr; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--surface) }
+.spec > div { padding: 8px 12px; border-bottom: 1px solid var(--rule); font-size: 0.9rem; min-width: 0 }
+.spec > div:nth-child(odd) { font: 500 0.75rem/1.4 var(--f-mono); text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-2); background: var(--bg) }
+@media (max-width: 560px) { .spec { grid-template-columns: 1fr } .spec > div:nth-child(odd) { border-bottom: 0; padding-bottom: 0 } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<main>
+<header class="col" style="display:grid;gap:14px">
+  <div class="eyebrow">Research note · BTC/ETH relative value · data to 10 Oct 2026</div>
+  <h1>BTC–ETH pairs trading: does the edge survive costs?</h1>
+  <p class="lede">I tested your 1% divergence idea and a properly validated z-score version, on real exchange candles, with costs, walk-forward selection and stress tests. Short answer: no out-of-sample edge, and nothing close to $150 a week.</p>
+  <div class="legend-tags" aria-label="Evidence labels">
+    <span><b class="t obs">Observed</b> measured in historical data</span>
+    <span><b class="t asm">Assumption</b> my modelling choice</span>
+    <span><b class="t opt">Optimised</b> fitted on past data</span>
+    <span><b class="t oos">Out-of-sample</b> data the choice never saw</span>
+    <span><b class="t proj">Projection</b> forward-looking, speculative</span>
+  </div>
+</header>
+
+<section>
+  <div class="verdict col">
+    <div class="tag">VERDICT C · NO-GO</div>
+    <h2>Historical evidence does not justify putting money into this bot.</h2>
+    <p>The BTC/ETH relationship was not stable enough over the past year to trade intraday. After realistic costs, the 1% rule lost money on four of five timeframes. On the fifth (1 hour) it made +2.0% over 47 days but lost in the final, untouched stretch. The statistically selected version lost money out-of-sample on four of five timeframes. No result is statistically distinguishable from luck. Only 1 of 103 strategy-weeks reached $150.</p>
+    <p class="small">One caveat runs through everything: the only market data reachable from this environment was Gemini spot candles. They cover 12 months only at daily resolution; intraday history is 14 to 91 days. That is enough to reject the strategy at the 3%-a-week level, but not enough to rule out a small multi-day edge. Section 12 says what would change my mind.</p>
+  </div>
+  <div class="tiles" id="tiles"></div>
+</section>
+
+<section class="col">
+  <div class="eyebrow">1 · Data</div>
+  <h2>What was actually tested</h2>
+  <p><b class="t obs">Observed</b> Source: <b>Gemini exchange</b>, spot <b>BTC/USD</b> and <b>ETH/USD</b> OHLCV candles from Gemini's public market-data API. Timestamps are UTC bar opens; close = last trade in the bar. All bars joined on timestamp, with no gaps on any timeframe, and hourly closes roll up exactly to daily closes. Binance, Bybit, OKX and every other exchange were blocked by this environment's network policy. Gemini returns about 1,460 bars per timeframe with no way to page further back, and offers no 4-hour candles, so 6-hour stands in for 4-hour.</p>
+</section>
+<section>
+  <div class="tw"><table id="tbl-data"></table></div>
+  <div class="col note">Price convention: signals use closes. Every order fills at the <b>next bar's open</b> plus costs, so no trade uses a price it could not have had. P&amp;L is tracked in USD returns on an account treated as A$5,000 <b class="t asm">Assumption</b>: AUD/USD moves are ignored, but a USD-margined account carries that FX risk in practice. Gemini spot is thinner than the big perp venues (median 1-hour BTC volume about 3.5 BTC), so its candles are noisier than Binance's. I checked for bid–ask bounce artefacts: lag-1 autocorrelation of BTC returns is within ±0.03 on every timeframe.</div>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">2 · The relationship</div>
+    <h2>BTC and ETH move together, but their price levels drift apart</h2>
+    <p><b class="t obs">Observed</b> Daily returns correlate at 0.90, and ETH moves about 1.26× BTC on a typical day. Yet over the year <b>ETH/BTC fell 11%</b> and the full-year Engle–Granger cointegration test fails (p = 0.17). In rolling windows, cointegration passes at p &lt; 0.05 in only 5–42% of windows depending on timeframe; with no relationship at all you'd expect 5%. The fitted hedge ratio wanders widely: 0.65 to 1.83 on 30-day windows, 0.2 to 1.7 on 1-week hourly windows. A static hedge ratio is therefore unsafe, and a rolling one is chasing a moving target.</p>
+  </div>
+  <div class="chart" id="ch-rel"></div>
+  <div class="tw"><table id="tbl-study"></table></div>
+  <div class="col note"><b>How to read the variance ratio.</b> VR(q) compares the spread's q-bar move to q × its one-bar move: below 1 means divergences tend to reverse; above 1 means they tend to keep going. Daily and 6-hour spreads mean-revert over roughly 4 days to a month (VR 0.4–0.6). The 15-minute and 30-minute spreads behave like a random walk (VR ≈ 1). The hourly VR above 1 is mostly one event, the 17–21 Aug 2026 ETH squeeze; without it the hourly VR is ≈1.0 out to 8 h and 0.66 at 32 h. <b>Divergences that do revert take days, not hours.</b> That works against a 1% intraday trigger. The in-window half-lives look short (1–25 bars), but they are biased low because the hedge ratio is fitted on the same window.</div>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">3 · Your original idea</div>
+    <h2>The 1% rule, exactly as described</h2>
+    <p><b class="t asm">Assumption</b> How I turned your words into rules: "established relationship" = rolling mean of log(ETH/BTC) over 60 days (daily), 14 days (6 h), 7 days (1 h), 4 days (30 m), 2 days (15 m). Enter when the ratio is ≥ 1% from that mean: short the rich coin, long the cheap one. Exit at 75% convergence (within 0.25%). Sizing is $2,500 each side (dollar-neutral, 1× gross), with no stop, no time limit and no filters. Nothing was fitted, so the whole period counts as out-of-sample for this rule. Trading starts after the longest lookback has warmed up, so the daily run covers 273 days (9 Jan – 9 Oct 2026) and the 1-hour run 47 days.</p>
+  </div>
+  <div class="tw"><table id="tbl-bench"></table></div>
+  <div class="tw"><table id="tbl-thr"></table></div>
+  <div class="col note"><b class="t obs">Observed</b> On daily bars the rule loses 11.9% (base costs). ETH/BTC kept trending, so the average trade sat open for 32 days paying funding. On 1-hour bars it won 12 of 15 trades and made +2.0%. Most of that came early: in the last 30% of the period it lost 1.65%. The gross edge per trade (about 30 bps of notional) is only about twice the round-trip cost (about 14 bps), so doubling fees and slippage wipes it out. No threshold from 0.5% to 2% works across timeframes: the best one changes from timeframe to timeframe, and on daily bars all six lose.</div>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">4 · The statistical version</div>
+    <h2>Z-score strategy with honest selection</h2>
+    <p><b class="t opt">Optimised</b> Spread = residual of a rolling regression of log ETH on log BTC. z = residual ÷ its rolling standard deviation. Each timeframe's history was split into <b>train (first 50%) → validation (next 20%) → untouched test (last 30%)</b>. A small pre-declared grid of 18 settings (3 lookbacks × entry |z| 1.5 / 2.0 / 2.5 × exit z 0 / 0.5) was scored on train. The top 3 went to validation, and the system stays flat if none is positive on both. Separately, a <b>walk-forward</b> re-selects from the same grid every week (intraday) or month (daily) using only the preceding window, again staying flat when nothing qualifies. Fixed defaults throughout: beta-neutral sizing, 1% equity at risk to a stop at entry + 1.5σ, max hold half the lookback, volatility-emergency exit, and the risk limits in section 7.</p>
+  </div>
+  <div class="tw"><table id="tbl-wf"></table></div>
+  <div class="grid2">
+    <div class="tw"><table id="tbl-locked"></table></div>
+    <div class="tw"><table id="tbl-folds"></table></div>
+  </div>
+  <div class="col note"><b class="t oos">Out-of-sample</b> Train → validation refused to trade on 1-day, 6-hour and 15-minute data, which is the "decide not to trade" behaviour working. Where it did pick settings (1 h, 30 m), the untouched test lost 3.0% and 3.3%. Walk-forward made +4.2% on 6-hour bars (8 trades over 6 weeks; t = 1.2, not significant) and lost on every other timeframe. <b>Parameter stability:</b> walk-forward chose 2–4 different setting combinations across 3–6 folds on every timeframe, so I flag the strategy as unstable.</div>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">5 · Overfitting check</div>
+    <h2>Good in development, gone in the test</h2>
+    <p>Every design variant in section 6 (hedge method, entry and exit rules, sizing, filters: 46–48 per timeframe) was run on the development period and on the untouched test. If design choices carried real information, dots would sit along the diagonal. Instead, most hourly and 30-minute variants are positive in development and negative in test. The rank correlation between dev and test is +0.19 (1 h), +0.33 (30 m), −0.72 (6 h) and +0.33 (1 d). That is the signature of selecting noise.</p>
+  </div>
+  <div class="controls"><div class="seg" id="seg-sc" role="group" aria-label="Timeframe"></div></div>
+  <div class="chart" id="ch-sc"></div>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">6 · Design questions</div>
+    <h2>Static vs rolling hedge, % vs z, exits, sizing, filters</h2>
+    <p>Each row changes one thing from the default (rolling hedge, mid lookback, enter |z| 2, exit z 0.5, beta sizing). Base costs. "Dev" is train + validation; "Test" is the untouched last 30%, shown for honesty but never used to choose.</p>
+  </div>
+  <div class="controls"><div class="seg" id="seg-fac" role="group" aria-label="Timeframe"></div></div>
+  <div class="tw"><table id="tbl-fac" class="sticky1"></table></div>
+  <div class="col">
+    <h3>What the tables say</h3>
+    <ul>
+      <li><b>Static vs rolling hedge.</b> No consistent winner. Static looked fine on 30 m dev and lost on test; rolling lost in test everywhere. With a hedge ratio that drifts 0.2–1.9, neither is reliable.</li>
+      <li><b>% vs z-score thresholds.</b> Z-scores are themselves volatility-adjusted thresholds. On test, z entries lost less than % entries on 1 d and 1 h, did about the same on 30 m, and did worse on 6 h, where 1.25–1.5% entries made +5–6% on test after losing in dev. No consistent improvement.</li>
+      <li><b>Exits and asymmetry.</b> Wider entries (|z| ≥ 2.5) lost least on test at 1 h and 30 m; the exit level made no consistent difference. Every entry/exit combination still lost on the hourly test.</li>
+      <li><b>Sizing.</b> Dollar-neutral had the smallest test loss on 1 h and 30 m; vol-scaled had the smallest on 1 d and the lowest daily dev drawdown; beta-neutral was never best on test. Beta-neutral is right in theory, but it leans on a hedge ratio that is badly estimated over short windows, and that estimation error costs more than the hedge saves. If anything is used, prefer dollar- or vol-neutral with a slow, return-based β check.</li>
+      <li><b>Filters.</b> The cointegration filter cut trades and reduced test losses on every timeframe (1 h −2.9% → −2.0%, 30 m −3.1% → −2.6%, 6 h −5.0% → −2.1%), and gave the only positive daily test (+0.6%, 2 trades). On hourly dev it made things worse. The correlation filter never bound. The volatility-emergency exit fired rarely.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">7 · Full results</div>
+    <h2>Every major variant, every metric</h2>
+    <p>Base-case costs. Walk-forward rows are fully out-of-sample. "Your 1% rule" rows have no fitted parameters. Annualised return is shown only where the sample is at least 90 days. Sharpe and Sortino on samples under 3 months mean very little.</p>
+  </div>
+  <div class="tw"><table id="tbl-full" class="sticky1"></table></div>
+  <div class="controls">
+    <label class="ctl" for="sel-eq">Equity &amp; drawdown <select id="sel-eq"></select></label>
+  </div>
+  <div class="grid2"><div class="chart" id="ch-eq"></div><div class="chart" id="ch-dd"></div></div>
+  <div class="tw"><table id="tbl-costs"></table></div>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">8 · The $150 question</div>
+    <h2>One week in 103 made $150</h2>
+    <p><b class="t obs">Observed</b> Weeks are 7-day blocks from each variant's start; the last block may be partial. Flat weeks are weeks with no trade. Across all ten variants, <b>1 of 103 strategy-weeks</b> reached $150: +$168 in the week of 13 Mar 2026, from the daily 1% rule, which still lost 11.9% overall. Average weekly P&amp;L was negative for 8 of 10 variants. The best (6-hour walk-forward) averaged +$35 a week over just 6 weeks.</p>
+  </div>
+  <div class="tw"><table id="tbl-week" class="sticky1"></table></div>
+  <div class="controls"><label class="ctl" for="sel-wk">Weekly P&amp;L <select id="sel-wk"></select></label></div>
+  <div class="chart" id="ch-wk"></div>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">9 · Costs, stress and Monte Carlo</div>
+    <h2>Costs eat most of the gross edge</h2>
+    <p><b class="t asm">Assumption</b> Both legs on USDT-margined perpetual futures (spot shorting needs margin borrow). No funding history was reachable, so funding is a flat drag on gross notional.</p>
+  </div>
+  <div class="tw"><table id="tbl-costasm"></table></div>
+  <div class="col note">Per trade, round-trip costs came to about <b>14 bps of gross notional</b> at base case. The 1% rule's hourly gross edge was about 30 bps per trade; the selected z-score strategies' out-of-sample gross edge was −6 bps (1 h), +4 bps (30 m) and +53 bps (6 h). Costs don't need to be large to destroy an edge that small.</div>
+  <h3 class="col">Stress tests on three fixed reference strategies</h3>
+  <p class="col small">A = your 1% rule (1 h). B = the 6-hour z-score settings walk-forward chose most often. C = the 1-hour settings walk-forward chose most often. B and C were picked with hindsight, so their baselines are in-sample and flattering; look at the changes, not the levels. Synthetic shocks are applied to the real price path, and multi-run rows show the mean, with the worst case alongside.</p>
+  <div class="tw"><table id="tbl-stress" class="sticky1"></table></div>
+  <div class="col note">What breaks it: <b>funding</b> (5 bps per 8 h turns all three negative), <b>execution delay</b> on 6-hour bars (−4.4%), <b>correlation dropping to 0.6</b> (5th-percentile runs −7% to −12%), and <b>permanent divergence</b> (worst runs −5 to −6%, with drawdowns near 10% despite the stops). A single crash bar (BTC −15%, ETH −22%) cost up to 8.5% even with the hedge on, because ETH falls further than the hedge assumes. The risk limits capped damage but did not create profit.</div>
+  <h3 class="col">Monte Carlo: trade bootstrap, one year, by position size</h3>
+  <div class="tw"><table id="tbl-mc" class="sticky1"></table></div>
+  <div class="col note"><b class="t proj">Projection</b> Resampling 9–15 historical trades only replays whatever edge those few trades happened to have. C's in-sample "+54%/yr" is not evidence; its own walk-forward lost money. The useful parts are the drawdown odds at each size, and the zero-edge rows: without a real edge, the coin-flip odds of a losing year stay near 50% before you even add costs. Even replaying C's flattering trades at 4× size gives only a 51% chance of averaging 3% a week, along with a 29% chance of a 30% drawdown.</div>
+</section>
+
+<section class="col">
+  <div class="eyebrow">10 · Risk controls used</div>
+  <h2>Controls built for a $5,000 account</h2>
+  <div class="tw"><table id="tbl-risk"></table></div>
+  <p class="small">These were fixed in advance <b class="t asm">Assumption</b>, never optimised. The system halts on drawdown and sits out the rest of a day or week after the loss limit. One position at a time. No entry when |z| is already past the stop, when short-term spread volatility is more than 2.5× normal, or (if enabled) when rolling cointegration p &gt; 0.20.</p>
+</section>
+
+<section class="col">
+  <div class="eyebrow">11 · Other markets</div>
+  <h2>Would the method suit other pairs?</h2>
+  <p><b class="t proj">Projection</b> Not tested; no data was reachable. The method itself (rolling hedge, z-score, walk-forward selection, cost-first evaluation) carries over, but each market needs its own model:</p>
+  <ul>
+    <li><b>AUD/USD vs NZD/USD:</b> the most promising candidate on paper. The economies are closely linked, costs are a fraction of crypto's (sub-1 bp spreads), and there's no funding, only swap. But the spread moves maybe 0.2–0.5% a day, so returns need leverage, and central-bank divergence (RBA vs RBNZ) breaks the relationship for months at a time. Worth a separate test with 5+ years of hourly data.</li>
+    <li><b>Gold vs silver:</b> the ratio trends for years, so mean reversion only appears over months. Futures roll costs and margin matter. A slow, low-turnover strategy at best; poor fit for a weekly target.</li>
+    <li><b>Other crypto pairs (e.g. SOL/ETH):</b> higher idiosyncratic risk (unlocks, hacks, listings), thinner books, more expensive funding. Likely worse than BTC/ETH, not better.</li>
+  </ul>
+</section>
+
+<section class="col">
+  <div class="eyebrow">12 · Verdict</div>
+  <h2>C · NO-GO for live money</h2>
+  <ul>
+    <li><b>The 3% a week target is not supported.</b> No variant came within a factor of four, and 1 of 103 strategy-weeks hit $150. Market-neutral BTC/ETH stat-arb that nets 0.1–0.5% a week in a good regime would already be a good result <b class="t proj">Projection</b>.</li>
+    <li><b>Extra sophistication did not reliably help.</b> On the same out-of-sample windows, the z-score version beat your 1% rule on 6-hour, 1-day and 15-minute bars but lost to it on 1-hour and 30-minute. Every comparison falls within the luck band: a pure coin-flip spread swings about ±9% over two months in this engine.</li>
+    <li><b>If you keep researching,</b> look at multi-day horizons (6 h to daily bars, holds of days), the only place the data shows mean reversion, with a cointegration gate. Treat it as unproven.</li>
+  </ul>
+  <h3>What would change my mind</h3>
+  <p>A re-run on 12+ months of Binance USDT-perp 15m/30m/1h/4h data with real funding history, using the same frozen protocol, where the walk-forward out-of-sample result clears <b>all</b> of these: ≥ 60 trades; t-stat on trade returns ≥ 2; positive at pessimistic costs; Sharpe ≥ 1; max drawdown ≤ 8%; the same parameter set chosen in ≥ 60% of folds. Then 8 weeks of paper trading, with live fills within 3 bps of the model. Unblock <code>data.binance.vision</code> in this environment's network settings and I can run that exact protocol.</p>
+</section>
+
+<section>
+  <div class="col" style="display:grid;gap:14px">
+    <div class="eyebrow">13 · Re-test specification</div>
+    <h2>The exact algorithm tested, for a like-for-like re-run</h2>
+    <p class="small">This is not a deployment spec. With a NO-GO verdict it's the algorithm a developer should reproduce on better data, paper-trade only, and kill if it fails the criteria above. Every rule below is what produced this report's numbers.</p>
+  </div>
+  <div class="spec col">
+    <div>Data inputs</div><div>BTCUSDT and ETHUSDT perpetual klines (OHLCV, UTC), aligned on bar-open time; drop any bar missing either leg. Funding-rate history for both. Best bid/ask snapshot at each signal for the spread check.</div>
+    <div>Timeframe</div><div>Primary research candidate: 4 h (6 h here). Also re-test 1 h for comparison. Do not trade 15 m / 30 m; no evidence of reversion there.</div>
+    <div>Rolling windows</div><div>Lookback L ∈ {7, 14, 28} days (4 h/6 h) or {3, 7, 14} days (1 h). Vol-emergency short window = max(L/6, 4) bars. Correlation window = L/2.</div>
+    <div>Hedge ratio</div><div>Rolling OLS over the last L bars, including the bar just closed: ln ETH = α + β·ln BTC. β clipped to [0.2, 3.0] for sizing.</div>
+    <div>Spread</div><div>e<sub>t</sub> = ln ETH<sub>t</sub> − α<sub>t</sub> − β<sub>t</sub>·ln BTC<sub>t</sub> (the regression residual).</div>
+    <div>Z-score</div><div>z<sub>t</sub> = e<sub>t</sub> / σ<sub>t</sub>, with σ<sub>t</sub> = √(Var(ln ETH) − Cov²/Var(ln BTC)) over the same window: the residual standard deviation.</div>
+    <div>Cointegration test</div><div>Engle–Granger (ADF on the residual, MacKinnon p) over the last L bars, recomputed every L/12 bars. Gate: no new entry if p &gt; 0.20; exit open position if p &gt; 0.50.</div>
+    <div>Entry</div><div>|z| ≥ z<sub>in</sub> (grid 1.5 / 2.0 / 2.5) and |z| &lt; z<sub>in</sub> + 1.5. z &gt; 0: short ETH, long BTC. z &lt; 0: long ETH, short BTC.</div>
+    <div>Exit</div><div>Converged: z crosses back to z<sub>out</sub> (grid 0 / 0.5) on the entry side. Or stop: |z| ≥ z<sub>in</sub> + 1.5. Or time: held ≥ L/2 bars. Or vol emergency, relationship break, or a risk limit.</div>
+    <div>Position sizing</div><div>Risk 1% of equity to the stop: N<sub>ETH</sub> = 0.01·Equity / ((z<sub>stop</sub> − |z|)·σ + 2(1+β)·c). Gross G = N<sub>ETH</sub>(1+β), capped at 2× equity. Legs: ETH = G/(1+β), BTC = G·β/(1+β).</div>
+    <div>Leverage limit</div><div>Gross notional ≤ 2.0× equity. Isolated margin at ≤ 3× per leg, so neither leg is near liquidation inside a 25% move.</div>
+    <div>Loss limits</div><div>Daily −2% (from UTC-day start equity): flatten, no entries until next UTC day. Weekly −4%: flatten until next week. Drawdown −15% from peak: flatten and halt until a human re-enables it.</div>
+    <div>Costs assumed</div><div>Per leg per fill: optimistic 2 bps, base 7 bps (5 taker + 0.5 half-spread + 1.5 slippage), pessimistic 12 bps. Funding drag on gross notional: 0 / 0.5 / 1.5 bps per 8 h; stress test at 5.</div>
+    <div>Execution</div><div>Signal on bar close. At next bar open, send both legs as marketable limit IOC orders at most 5 bps through the touch. If one leg fills and the other doesn't within 30 s, retry once, then flatten the filled leg at market and log a leg-failure. Never hold one leg alone past 60 s.</div>
+    <div>Parameter selection</div><div>Walk-forward: re-select from the 18-setting grid every test period (1 week on 1 h / 4 h) using the prior 3 weeks only. Score = return ÷ max(drawdown, 2%), with at least 3 trades. If the best score ≤ 0, stay flat for that period.</div>
+    <div>Monitoring and alerts</div><div>Push an alert on: any entry or exit; a leg-failure; position mismatch versus exchange (reconcile every minute); API errors 3 times in 5 minutes (stop new entries); stale data (no candle within 2 minutes of bar close); a funding rate above 3 bps per 8 h on the paying leg; any loss limit or halt; the cointegration gate closing. The twice-daily check reviews equity, open position and alert log.</div>
+  </div>
+  <details class="col"><summary>Pseudocode</summary>
+<pre id="pseudo"></pre>
+  </details>
+</section>
+
+<section class="col">
+  <div class="eyebrow">Appendix</div>
+  <h2>Method notes</h2>
+  <ul class="small">
+    <li><b>Look-ahead:</b> every series at bar t uses closes up to t; fills at t+1 open. Verified by re-running on truncated data, which gave identical decisions before the cut for all four hedge methods.</li>
+    <li><b>Engine checks:</b> trade P&amp;L reconciles with the equity curve to the cent. A synthetic mean-reverting pair is profitable; 30 synthetic random-walk pairs at zero cost average −1.6% to −2.9% (t ≈ −1 to −1.9), so the engine has no built-in positive bias.</li>
+    <li><b>Search size:</b> <span id="nb"></span> backtests in the main study plus about 500 for stress tests. The grid used for selection was 18 settings; the rest are reported comparisons, never picked from.</li>
+    <li><b>Significance:</b> per-trade t-stats ranged from −1.3 to +1.2 across all reported variants; none clear 2.</li>
+    <li><b>Not modelled:</b> AUD/USD, partial fills, exchange outages beyond the one-bar delay and leg-delay tests, tax, and the regulatory question of which exchange will legally offer perpetual futures to an Australian retail account. Check that before any live step.</li>
+    <li><b>Code and data:</b> the scripts, Gemini candles and result files are on branch <code>claude/crypto-klines-download-7pam42</code> under <code>docs/research/btc-eth-pairs/</code>.</li>
+  </ul>
+</section>
+</main>
+
+<div class="tip" id="tip" hidden></div>
+<script>
+const D = __DATA__;
+const $ = s => document.querySelector(s);
+const el = (t, a = {}, ...kids) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) { if (k === "class") e.className = v; else if (k === "text") e.textContent = v; else e.setAttribute(k, v); } for (const c of kids) e.append(c); return e; };
+const NS = "http://www.w3.org/2000/svg";
+const sv = (t, a = {}) => { const e = document.createElementNS(NS, t); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); return e; };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (v, d = 2, sign = false) => v == null || !isFinite(v) ? "–" : (sign && v > 0 ? "+" : "") + Number(v).toLocaleString("en-AU", { minimumFractionDigits: d, maximumFractionDigits: d });
+const money = (v, sign = true) => v == null || !isFinite(v) ? "–" : (v < 0 ? "−$" : sign && v > 0 ? "+$" : "$") + Math.abs(v).toLocaleString("en-AU", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const pct = (v, d = 2) => v == null || !isFinite(v) ? "–" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(d) + "%";
+const cls = v => v == null || !isFinite(v) ? "dim" : v > 0 ? "pos" : v < 0 ? "neg" : "";
+const TFL = { "1day": "1 day", "6hr": "6 hour", "1hr": "1 hour", "30m": "30 min", "15m": "15 min" };
+const V = Object.fromEntries(D.variants.map(v => [v.id, v]));
+const dateS = ms => new Date(ms).toISOString().slice(0, 10);
+const tip = $("#tip");
+
+function table(sel, head, rows, opts = {}) {
+  const t = $(sel); t.replaceChildren();
+  const thead = el("thead"); const tr = el("tr");
+  head.forEach((h, i) => tr.append(el("th", { class: (opts.num || []).includes(i) ? "n" : "", text: h })));
+  thead.append(tr); t.append(thead);
+  const tb = el("tbody");
+  for (const r of rows) {
+    if (r.group) { const g = el("tr", { class: "grp" }); g.append(el("td", { colspan: head.length, text: r.group })); tb.append(g); continue; }
+    const row = el("tr");
+    r.forEach((c, i) => {
+      const o = typeof c === "object" && c !== null ? c : { t: c };
+      const td = el("td", { class: [(opts.num || []).includes(i) ? "n" : "", o.c || "", o.w ? "wrap" : ""].join(" ").trim() });
+      if (o.tag) { td.append(el("b", { class: "t " + o.tag, text: o.tagText })); td.append(" "); }
+      td.append(String(o.t ?? "–")); row.append(td);
+    });
+    tb.append(row);
+  }
+  t.append(tb);
+}
+
+// ---------- tiles
+(() => {
+  const wks = D.variants.reduce((a, v) => a + v.m.weeks, 0), hit = D.variants.reduce((a, v) => a + v.m.wk_ge_target, 0);
+  const wf = ["1day", "6hr", "1hr", "30m", "15m"].map(tf => V["wf_" + tf].m.ret_pct);
+  const tiles = [
+    [`${hit} of ${wks}`, "strategy-weeks reached the $150 target"],
+    [`${wf.filter(x => x < 0).length} of 5`, "timeframes lost money out-of-sample (walk-forward, base costs)"],
+    [pct(V.bench_1hr.m.ret_pct, 1), "your 1% rule on 1 h bars over 47 days, the best case; −1.65% in its final 30%"],
+    ["p = 0.17", "full-year cointegration test on daily closes: not cointegrated"],
+  ];
+  for (const [v, l] of tiles) $("#tiles").append(el("div", { class: "tile" }, el("div", { class: "v", text: v }), el("div", { class: "l", text: l })));
+  $("#nb").textContent = D.total_backtests.toLocaleString();
+})();
+
+// ---------- data table
+(() => {
+  const rows = ["1day", "6hr", "1hr", "30m", "15m"].map(tf => { const s = D.splits[tf]; const st = D.study[tf];
+    return [TFL[tf], { t: s.start.slice(0, 16).replace("T", " ") }, { t: s.end.slice(0, 16).replace("T", " ") }, s.n, ((new Date(s.end) - new Date(s.start)) / 864e5).toFixed(0), s.test[0].slice(0, 10), fmt(st.ret_corr, 2)]; });
+  table("#tbl-data", ["Timeframe", "First bar (UTC)", "Last bar (UTC)", "Bars", "Days", "Test segment from", "Return corr"], rows, { num: [3, 4, 6] });
+})();
+
+// ---------- study table
+(() => {
+  const rows = [];
+  for (const tf of ["1day", "6hr", "1hr", "30m", "15m"]) {
+    const s = D.study[tf]; const vr = s.variance_ratio_hedged;
+    const roll = Object.entries(s.rolling).map(([w, x]) => `${Math.round(x.share_coint_p05 * 100)}%`).join(" / ");
+    const betas = Object.values(s.rolling).map(x => `${x.beta_p5_p50_p95[0].toFixed(2)}–${x.beta_p5_p50_p95[2].toFixed(2)}`).join(" · ");
+    rows.push([TFL[tf], pct(s.ratio_change_pct, 1), fmt(s.eg_p_eth_on_btc, 3), fmt(s.adf_p_static_spread, 3), fmt(s.ret_beta, 2), roll, betas,
+      ["2", "4", "8", "16", "32"].map(q => vr[q] == null ? "–" : vr[q].toFixed(2)).join(" "), fmt(s.half_life_static_bars, 0)]);
+  }
+  table("#tbl-study", ["Timeframe", "ETH/BTC change", "EG p (full)", "ADF p, static spread", "Return β", "Coint p<.05, short/mid/long window", "Rolling β 5–95% range", "VR q=2 4 8 16 32", "Half-life, static (bars)"], rows, { num: [1, 2, 3, 4, 8] });
+})();
+
+// ---------- benchmark tables
+(() => {
+  const rows = [];
+  for (const tf of ["1day", "6hr", "1hr", "30m", "15m"]) {
+    const v = V["bench_" + tf]; rows.push({ group: `${TFL[tf]} · ${D.splits[tf].n} bars` });
+    for (const c of ["optimistic", "base", "pessimistic"]) {
+      const m = v.cost[c].full, t = v.cost[c].test;
+      rows.push([c, money(m.gross), money(-m.costs), money(-m.funding), { t: money(m.net), c: cls(m.net) }, { t: pct(m.ret_pct), c: cls(m.ret_pct) }, m.trades, fmt(m.win_rate, 0) + "%", pct(m.max_dd_pct), fmt(m.avg_hold_h, 0), { t: pct(t.ret_pct), c: cls(t.ret_pct) }]);
+    }
+  }
+  table("#tbl-bench", ["Costs", "Gross P&L", "Fees+slip", "Funding", "Net P&L", "Return", "Trades", "Win", "Max DD", "Avg hold h", "Last 30% only"], rows, { num: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] });
+  const thr = ["0.5", "0.75", "1.0", "1.25", "1.5", "2.0"];
+  table("#tbl-thr", ["Divergence trigger (base costs)", ...thr.map(x => x + "%")], ["1day", "6hr", "1hr", "30m", "15m"].map(tf =>
+    [TFL[tf], ...thr.map(x => { const r = D.thresholds[tf][x]; return { t: `${pct(r.ret_pct, 1)} (${r.trades})`, c: cls(r.ret_pct) }; })]), { num: [1, 2, 3, 4, 5, 6] });
+})();
+
+// ---------- walk-forward + locked
+(() => {
+  const rows = [];
+  for (const tf of ["1day", "6hr", "1hr", "30m", "15m"]) {
+    const v = V["wf_" + tf], b = D.variants.find(x => x.id === "bench_" + tf);
+    for (const c of ["optimistic", "base", "pessimistic"]) {
+      const m = v.cost[c];
+      rows.push([c === "base" ? TFL[tf] : "", c, money(m.gross), money(-m.costs), { t: money(m.net), c: cls(m.net) }, { t: pct(m.ret_pct), c: cls(m.ret_pct) }, m.trades, pct(m.max_dd_pct)]);
+    }
+  }
+  table("#tbl-wf", ["Walk-forward OOS", "Costs", "Gross", "Fees+slip", "Net", "Return", "Trades", "Max DD"], rows, { num: [2, 3, 4, 5, 6, 7] });
+  const lr = [];
+  for (const tf of ["1day", "6hr", "1hr", "30m", "15m"]) {
+    const ch = D.locked[tf];
+    if (typeof ch === "string") lr.push([TFL[tf], { t: "No trade: nothing positive on train and validation", w: true }, "–", "–", "–"]);
+    else { const t = D.locked_test[tf]; lr.push([TFL[tf], `${ch.L_days} d · in ${ch.entry} · out ${ch.exit}`, { t: pct(t.base.ret_pct), c: cls(t.base.ret_pct) }, { t: pct(t.pessimistic.ret_pct), c: cls(t.pessimistic.ret_pct) }, t.base.trades]); }
+  }
+  table("#tbl-locked", ["Train→val→test", "Locked choice", "Test, base", "Test, pess.", "Trades"], lr, { num: [2, 3, 4] });
+  const fr = [];
+  for (const tf of ["6hr", "1hr", "30m", "1day"]) {
+    for (const f of V["wf_" + tf].folds) fr.push([TFL[tf], f.test[0].slice(5, 10), f.decision ? "flat" : `${f.L_days} d · ${f.entry} / ${f.exit}`, f.net == null ? "–" : { t: money(f.net), c: cls(f.net) }]);
+  }
+  table("#tbl-folds", ["Walk-forward fold", "Test from", "Chosen L · in / out", "Net"], fr, { num: [3] });
+})();
+
+// ---------- generic charts
+function frame(host, w, h) { const s = sv("svg", { viewBox: `0 0 ${w} ${h}`, role: "img" }); host.append(s); return s; }
+function ticks(a, b, n) { const span = b - a || 1, step0 = span / n, mag = 10 ** Math.floor(Math.log10(step0)), st = [1, 2, 2.5, 5, 10].map(k => k * mag).find(k => span / k <= n) || mag * 10; const out = []; for (let v = Math.ceil(a / st) * st; v <= b + 1e-9; v += st) out.push(+v.toFixed(10)); return out; }
+function showTip(host, x, y, head, rows) {
+  tip.replaceChildren(el("div", { class: "h", text: head }));
+  for (const [name, val, color] of rows) { const i = el("i"); i.style.background = color; tip.append(el("div", { class: "r" }, el("span", {}, i, name), el("b", { text: val }))); }
+  tip.hidden = false; const r = host.getBoundingClientRect(), tr = tip.getBoundingClientRect();
+  let lx = r.left + x + 14 + window.scrollX, ly = r.top + y + window.scrollY - 10;
+  if (lx + tr.width > window.scrollX + document.documentElement.clientWidth - 8) lx = r.left + x - tr.width - 14 + window.scrollX;
+  tip.style.left = lx + "px"; tip.style.top = ly + "px";
+}
+document.addEventListener("scroll", () => tip.hidden = true, { passive: true });
+
+function lineChart(host, { title, series, yFmt, refs = [], area = false, yMin, yMax, h = 260, pad = { l: 58, r: 14, t: 8, b: 26 } }) {
+  host.replaceChildren();
+  if (title) host.append(el("div", { class: "ttl", text: title }));
+  if (series.length > 1) { const lg = el("div", { class: "lg" }); for (const s of series) { const i = el("i"); i.style.background = s.color; lg.append(el("span", {}, i, s.name)); } host.append(lg); }
+  const W = Math.max(300, Math.round(host.clientWidth - 24)), H = h, svg = frame(host, W, H);
+  const xs = series.flatMap(s => s.points.map(p => p[0])), ys = series.flatMap(s => s.points.map(p => p[1])).filter(v => v != null);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs); let y0 = yMin ?? Math.min(...ys, ...refs.map(r => r.y)), y1 = yMax ?? Math.max(...ys, ...refs.map(r => r.y));
+  const padY = (y1 - y0) * 0.06 || 1; if (yMin == null) y0 -= padY; if (yMax == null) y1 += padY;
+  const X = v => pad.l + (v - x0) / (x1 - x0 || 1) * (W - pad.l - pad.r), Y = v => pad.t + (1 - (v - y0) / (y1 - y0)) * (H - pad.t - pad.b);
+  const ax = sv("g", { class: "ax" }); svg.append(ax);
+  for (const t of ticks(y0, y1, 5)) { ax.append(sv("line", { x1: pad.l, x2: W - pad.r, y1: Y(t), y2: Y(t) })); const tx = sv("text", { x: pad.l - 6, y: Y(t) + 4, "text-anchor": "end" }); tx.textContent = yFmt(t); ax.append(tx); }
+  const days = (x1 - x0) / 864e5, nx = 5;
+  for (let i = 0; i <= nx; i++) { const v = x0 + (x1 - x0) * i / nx; const tx = sv("text", { x: X(v), y: H - 6, "text-anchor": i === 0 ? "start" : i === nx ? "end" : "middle" }); const d = new Date(v); tx.textContent = days > 120 ? d.toLocaleDateString("en-AU", { month: "short", year: "2-digit" }) : d.toLocaleDateString("en-AU", { day: "numeric", month: "short" }); ax.append(tx); }
+  for (const r of refs) { svg.append(sv("line", { x1: pad.l, x2: W - pad.r, y1: Y(r.y), y2: Y(r.y), stroke: css("--rule-2"), "stroke-width": 1 })); const tx = sv("text", { x: W - pad.r, y: Y(r.y) - 5, "text-anchor": "end", fill: css("--ink-2"), "font-size": 11, "font-family": "IBM Plex Mono, monospace" }); tx.textContent = r.label; svg.append(tx); }
+  for (const s of series) {
+    const pts = s.points.filter(p => p[1] != null); if (!pts.length) continue;
+    const d = pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + "," + Y(p[1]).toFixed(1)).join("");
+    if (area) svg.append(sv("path", { d: d + `L${X(pts.at(-1)[0])},${Y(Math.min(0, y1))}L${X(pts[0][0])},${Y(Math.min(0, y1))}Z`, fill: s.color, opacity: 0.1 }));
+    svg.append(sv("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    const lp = pts.at(-1); svg.append(sv("circle", { cx: X(lp[0]), cy: Y(lp[1]), r: 4, fill: s.color, stroke: css("--surface"), "stroke-width": 2 }));
+  }
+  const cross = sv("line", { y1: pad.t, y2: H - pad.b, stroke: css("--muted"), "stroke-width": 1, visibility: "hidden" }); svg.append(cross);
+  const hit = sv("rect", { x: pad.l, y: pad.t, width: W - pad.l - pad.r, height: H - pad.t - pad.b, fill: "transparent", tabindex: 0 }); svg.append(hit);
+  const move = ev => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * W, xv = x0 + (px - pad.l) / (W - pad.l - pad.r) * (x1 - x0);
+    const rows = series.map(s => { let best = s.points[0]; for (const p of s.points) if (Math.abs(p[0] - xv) < Math.abs(best[0] - xv)) best = p; return [s.name, best[1] == null ? "–" : yFmt(best[1], true), s.color, best[0]]; });
+    const xx = X(rows[0][3]); cross.setAttribute("x1", xx); cross.setAttribute("x2", xx); cross.setAttribute("visibility", "visible");
+    showTip(host, xx / W * r.width + (r.left - host.getBoundingClientRect().left), ev.clientY - host.getBoundingClientRect().top, new Date(rows[0][3]).toISOString().slice(0, 16).replace("T", " ") + " UTC", rows);
+  };
+  hit.addEventListener("pointermove", move); hit.addEventListener("pointerleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
+}
+
+// ---------- relationship chart (3 stacked panels)
+(() => {
+  const host = $("#ch-rel"); const wrap = el("div", { class: "grid2" }); host.append(el("div", { class: "ttl", text: "Daily closes, 11 Oct 2025 – 9 Oct 2026. Rolling statistics use the trailing 60 days." }));
+  const a = el("div"), b = el("div"), c = el("div"); host.append(wrap); wrap.append(a, b);
+  lineChart(a, { title: "ETH/BTC price ratio", series: [{ name: "ETH/BTC", color: css("--s1"), points: D.rel.map(r => [r[0], r[1]]) }], yFmt: v => v.toFixed(4), h: 220 });
+  lineChart(b, { title: "Rolling 60-day hedge ratio β (ln ETH on ln BTC)", series: [{ name: "β", color: css("--s2"), points: D.rel.map(r => [r[0], r[2]]) }], yFmt: v => v.toFixed(2), refs: [{ y: 1, label: "β = 1" }], h: 220 });
+  host.append(c);
+  lineChart(c, { title: "Rolling 60-day Engle–Granger p-value: below the 0.05 line = cointegrated", series: [{ name: "p-value", color: css("--s3"), points: D.rel.map(r => [r[0], r[3]]) }], yFmt: v => v.toFixed(2), refs: [{ y: 0.05, label: "p = 0.05" }], yMin: 0, yMax: 1, h: 200 });
+})();
+
+// ---------- scatter dev vs test
+function scatter(tf) {
+  const host = $("#ch-sc"); host.replaceChildren();
+  const pts = D.scatter[tf]; host.append(el("div", { class: "ttl", text: `${TFL[tf]} · ${pts.length} design variants · dev/test rank correlation ${D.rank[tf] >= 0 ? "+" : "−"}${Math.abs(D.rank[tf]).toFixed(2)}` }));
+  const W = Math.max(300, Math.round(host.clientWidth - 24)), H = 340, p = { l: 52, r: 14, t: 10, b: 38 }, svg = frame(host, W, H);
+  const all = pts.flatMap(q => [q[0], q[1]]); const m = Math.max(2, ...all.map(Math.abs)) * 1.1;
+  const X = v => p.l + (v + m) / (2 * m) * (W - p.l - p.r), Y = v => p.t + (1 - (v + m) / (2 * m)) * (H - p.t - p.b);
+  const ax = sv("g", { class: "ax" }); svg.append(ax);
+  for (const t of ticks(-m, m, 6)) { ax.append(sv("line", { x1: p.l, x2: W - p.r, y1: Y(t), y2: Y(t) })); ax.append(sv("line", { y1: p.t, y2: H - p.b, x1: X(t), x2: X(t) }));
+    let tx = sv("text", { x: p.l - 6, y: Y(t) + 4, "text-anchor": "end" }); tx.textContent = t + "%"; ax.append(tx);
+    tx = sv("text", { x: X(t), y: H - p.b + 14, "text-anchor": "middle" }); tx.textContent = t + "%"; ax.append(tx); }
+  let tx = sv("text", { x: (p.l + W - p.r) / 2, y: H - 4, "text-anchor": "middle" }); tx.textContent = "Development return (train + validation)"; ax.append(tx);
+  tx = sv("text", { x: 12, y: (p.t + H - p.b) / 2, "text-anchor": "middle", transform: `rotate(-90 12 ${(p.t + H - p.b) / 2})` }); tx.textContent = "Untouched test return"; ax.append(tx);
+  svg.append(sv("line", { x1: X(-m), y1: Y(-m), x2: X(m), y2: Y(m), stroke: css("--rule-2"), "stroke-width": 1 }));
+  svg.append(sv("line", { x1: X(0), x2: X(0), y1: p.t, y2: H - p.b, stroke: css("--rule-2") })); svg.append(sv("line", { y1: Y(0), y2: Y(0), x1: p.l, x2: W - p.r, stroke: css("--rule-2") }));
+  const lab = sv("text", { x: X(m * 0.62), y: Y(m * 0.62) - 8, fill: css("--muted"), "font-size": 11, "font-family": "IBM Plex Mono, monospace", "text-anchor": "middle" }); lab.textContent = "test = dev"; svg.append(lab);
+  for (const q of pts) {
+    const g = sv("g", { tabindex: 0 });
+    g.append(sv("circle", { cx: X(q[0]), cy: Y(q[1]), r: 12, fill: "transparent" }));
+    g.append(sv("circle", { cx: X(q[0]), cy: Y(q[1]), r: 4.5, fill: css("--s1"), stroke: css("--surface"), "stroke-width": 2, opacity: 0.9 }));
+    const show = ev => { const r = host.getBoundingClientRect(), sr = svg.getBoundingClientRect(); showTip(host, X(q[0]) / W * sr.width + (sr.left - r.left), Y(q[1]) / H * sr.height + (sr.top - r.top), q[2], [["Dev", pct(q[0]), css("--s1")], ["Test", pct(q[1]), css("--s2")]]); };
+    g.addEventListener("pointerenter", show); g.addEventListener("focus", show); g.addEventListener("pointerleave", () => tip.hidden = true); g.addEventListener("blur", () => tip.hidden = true);
+    svg.append(g);
+  }
+}
+function seg(sel, opts, on, init) {
+  const box = $(sel); const btns = opts.map(([k, l]) => { const b = el("button", { type: "button", "aria-pressed": String(k === init), text: l }); b.addEventListener("click", () => { btns.forEach(x => x.setAttribute("aria-pressed", "false")); b.setAttribute("aria-pressed", "true"); on(k); }); box.append(b); return b; }); on(init);
+}
+seg("#seg-sc", [["1hr", "1 hour"], ["30m", "30 min"], ["6hr", "6 hour"], ["1day", "1 day"]], scatter, "1hr");
+
+// ---------- factor tables
+const FACN = { hedge: "Hedge ratio", lookback_days: "Lookback (days)", entry_pct: "Entry: % divergence", entry_z: "Entry: z-score", exit: "Exit rule", asymmetric: "Asymmetric entry / exit (z)", max_hold: "Max holding period", stop: "Statistical stop", sizing: "Leg sizing", filters: "Regime filters" };
+seg("#seg-fac", [["1hr", "1 hour"], ["30m", "30 min"], ["6hr", "6 hour"], ["1day", "1 day"]], tf => {
+  const rows = [];
+  for (const [f, vs] of Object.entries(D.factors[tf])) { rows.push({ group: FACN[f] || f });
+    for (const [k, v] of Object.entries(vs)) rows.push([k, { t: pct(v.dev.ret_pct), c: cls(v.dev.ret_pct) }, v.dev.trades, money(v.dev.gross), pct(v.dev.max_dd_pct), { t: pct(v.test.ret_pct), c: cls(v.test.ret_pct) }, v.test.trades, money(v.test.gross)]); }
+  table("#tbl-fac", ["Variant", "Dev net", "Dev trades", "Dev gross", "Dev max DD", "Test net", "Test trades", "Test gross"], rows, { num: [1, 2, 3, 4, 5, 6, 7] });
+}, "1hr");
+
+// ---------- full results table (metrics x variants)
+(() => {
+  const vs = D.variants;
+  const M = [
+    ["Period", v => `${v.m.days.toFixed(0)} days`], ["Starting capital", v => money(v.m.start, false)], ["Ending capital", v => money(v.m.end, false)],
+    ["Gross P&L (before costs)", v => money(v.m.gross)], ["Net P&L", v => ({ t: money(v.m.net), c: cls(v.m.net) })], ["Return", v => ({ t: pct(v.m.ret_pct), c: cls(v.m.ret_pct) })],
+    ["Annualised return", v => v.m.ann_ret_pct == null ? "n/a (<90 d)" : pct(v.m.ann_ret_pct, 1)],
+    ["Avg weekly P&L", v => money(v.m.wk_mean)], ["Avg weekly return", v => pct(v.m.wk_mean_pct)], ["Median weekly P&L", v => money(v.m.wk_median)],
+    ["Profitable weeks", v => `${fmt(v.m.wk_pos_pct, 0)}% of ${v.m.weeks}`], ["Best week", v => money(v.m.wk_best)], ["Worst week", v => money(v.m.wk_worst)],
+    ["Max drawdown", v => pct(v.m.max_dd_pct)], ["Volatility (ann.)", v => v.m.vol_ann_pct == null ? "–" : fmt(v.m.vol_ann_pct, 1) + "%"],
+    ["Sharpe", v => fmt(v.m.sharpe, 2)], ["Sortino", v => fmt(v.m.sortino, 2)], ["Trades", v => v.m.trades], ["Win rate", v => v.m.win_rate == null ? "–" : fmt(v.m.win_rate, 0) + "%"],
+    ["Avg winning trade", v => money(v.m.avg_win)], ["Avg losing trade", v => money(v.m.avg_loss)], ["Profit factor", v => fmt(v.m.profit_factor, 2)],
+    ["Avg holding time", v => v.m.avg_hold_h == null ? "–" : fmt(v.m.avg_hold_h, 0) + " h"], ["Max holding time", v => v.m.max_hold_h == null ? "–" : fmt(v.m.max_hold_h, 0) + " h"],
+    ["Fees + slippage paid", v => money(-v.m.costs)], ["Funding paid", v => money(-v.m.funding)], ["Longest losing streak", v => v.m.max_loss_streak],
+    ["Time in market", v => fmt(v.m.time_in_mkt_pct, 0) + "%"], ["Avg gross exposure when in", v => v.m.avg_gross_lev ? fmt(v.m.avg_gross_lev, 2) + "× equity" : "–"],
+  ];
+  const t = $("#tbl-full"); t.replaceChildren();
+  const hr = el("tr"); hr.append(el("th", { text: "Metric (base costs)" })); vs.forEach(v => hr.append(el("th", { class: "n", text: v.name.replace(" · ", " — ") })));
+  const th = el("thead"); th.append(hr); t.append(th);
+  const tagr = el("tr"); tagr.append(el("td", { text: "Evidence" })); vs.forEach(v => { const td = el("td", { class: "n" }); td.append(el("b", { class: "t " + (v.kind === "benchmark" ? "obs" : "oos"), text: v.kind === "benchmark" ? "no fitting" : "out-of-sample" })); tagr.append(td); });
+  const tb = el("tbody"); tb.append(tagr);
+  for (const [name, f] of M) { const r = el("tr"); r.append(el("td", { text: name })); vs.forEach(v => { const o = f(v); const oo = typeof o === "object" && o !== null ? o : { t: o }; r.append(el("td", { class: "n " + (oo.c || ""), text: String(oo.t ?? "–") })); }); tb.append(r); }
+  t.append(tb);
+  // cost table
+  const rows = [];
+  for (const v of vs) for (const c of ["optimistic", "base", "pessimistic"]) { const m = v.kind === "benchmark" ? v.cost[c].full : v.cost[c];
+    rows.push([c === "optimistic" ? v.name : "", c, money(m.gross), money(-(m.costs + m.funding)), { t: money(m.net), c: cls(m.net) }, { t: pct(m.ret_pct), c: cls(m.ret_pct) }]); }
+  table("#tbl-costs", ["Gross vs net by cost scenario", "Costs", "Gross", "All costs", "Net", "Return"], rows, { num: [2, 3, 4, 5] });
+})();
+
+// ---------- equity / drawdown picker
+(() => {
+  const s = $("#sel-eq"), w = $("#sel-wk");
+  for (const v of D.variants) { s.append(el("option", { value: v.id, text: v.name })); w.append(el("option", { value: v.id, text: v.name })); }
+  const draw = id => {
+    const pts = D.eq[id]; let pk = -Infinity; const dd = pts.map(p => { pk = Math.max(pk, p[1]); return [p[0], (p[1] / pk - 1) * 100]; });
+    lineChart($("#ch-eq"), { title: `Equity, A$ — ${V[id].name}`, series: [{ name: "Equity", color: css("--s1"), points: pts }], yFmt: v => "$" + Math.round(v).toLocaleString(), refs: [{ y: 5000, label: "start $5,000" }] });
+    lineChart($("#ch-dd"), { title: "Drawdown from peak", series: [{ name: "Drawdown", color: css("--loss"), points: dd }], yFmt: (v, t) => v.toFixed(t ? 2 : 0) + "%", area: true, yMax: 0 });
+  };
+  s.value = "wf_6hr"; draw("wf_6hr"); s.addEventListener("change", () => draw(s.value));
+  const wk = id => {
+    const host = $("#ch-wk"); host.replaceChildren(); const bars = D.wk[id];
+    host.append(el("div", { class: "ttl", text: `Weekly P&L, A$ — ${V[id].name} · dashed level = $150 target` }));
+    const lg = el("div", { class: "lg" }); const i1 = el("i", { class: "box" }); i1.style.background = css("--gain"); const i2 = el("i", { class: "box" }); i2.style.background = css("--loss"); lg.append(el("span", {}, i1, "Profit week"), el("span", {}, i2, "Loss week")); host.append(lg);
+    const W = Math.max(300, Math.round(host.clientWidth - 24)), H = 240, p = { l: 52, r: 10, t: 10, b: 26 }, svg = frame(host, W, H);
+    const vals = bars.map(b => b[1]); const y0 = Math.min(-160, ...vals) * 1.08, y1 = Math.max(170, ...vals) * 1.08;
+    const Y = v => p.t + (1 - (v - y0) / (y1 - y0)) * (H - p.t - p.b); const bw = (W - p.l - p.r) / bars.length;
+    const ax = sv("g", { class: "ax" }); svg.append(ax);
+    for (const t of ticks(y0, y1, 5)) { ax.append(sv("line", { x1: p.l, x2: W - p.r, y1: Y(t), y2: Y(t) })); const tx = sv("text", { x: p.l - 6, y: Y(t) + 4, "text-anchor": "end" }); tx.textContent = (t < 0 ? "−$" : "$") + Math.abs(t); ax.append(tx); }
+    svg.append(sv("line", { x1: p.l, x2: W - p.r, y1: Y(150), y2: Y(150), stroke: css("--ink-2"), "stroke-width": 1, "stroke-dasharray": "4 3" }));
+    bars.forEach((b, i) => {
+      const x = p.l + i * bw + Math.max(1, bw * 0.15), w2 = Math.min(24, bw - Math.max(2, bw * 0.3)), top = Y(Math.max(0, b[1])), bot = Y(Math.min(0, b[1]));
+      const g = sv("g", { tabindex: 0 }); const hgt = Math.max(1, bot - top);
+      const r = Math.min(4, hgt, w2 / 2);
+      const d = b[1] >= 0 ? `M${x},${bot}V${top + r}Q${x},${top} ${x + r},${top}H${x + w2 - r}Q${x + w2},${top} ${x + w2},${top + r}V${bot}Z` : `M${x},${top}V${bot - r}Q${x},${bot} ${x + r},${bot}H${x + w2 - r}Q${x + w2},${bot} ${x + w2},${bot - r}V${top}Z`;
+      g.append(sv("rect", { x: p.l + i * bw, y: p.t, width: bw, height: H - p.t - p.b, fill: "transparent" }));
+      g.append(sv("path", { d, fill: b[1] >= 0 ? css("--gain") : css("--loss") }));
+      const show = () => { const hr = host.getBoundingClientRect(), sr = svg.getBoundingClientRect(); showTip(host, (x + w2 / 2) / W * sr.width + (sr.left - hr.left), top / H * sr.height + (sr.top - hr.top), "Week from " + b[0], [["P&L", money(b[1]), b[1] >= 0 ? css("--gain") : css("--loss")]]); };
+      g.addEventListener("pointerenter", show); g.addEventListener("focus", show); g.addEventListener("pointerleave", () => tip.hidden = true); g.addEventListener("blur", () => tip.hidden = true);
+      svg.append(g);
+    });
+    svg.append(sv("line", { x1: p.l, x2: W - p.r, y1: Y(0), y2: Y(0), stroke: css("--rule-2") }));
+    [0, bars.length - 1].forEach(i => { const tx = sv("text", { x: p.l + (i + 0.5) * bw, y: H - 6, "text-anchor": i ? "end" : "start", fill: css("--muted"), "font-size": 11, "font-family": "IBM Plex Mono, monospace" }); tx.textContent = bars[i][0]; svg.append(tx); });
+  };
+  w.value = "bench_1day"; wk("bench_1day"); w.addEventListener("change", () => wk(w.value));
+  const rows = D.variants.map(v => { const m = v.m; return [v.name, m.weeks, m.wk_ge_target, m.wk_pos_below, m.wk_loss, m.wk_flat, { t: money(m.wk_mean), c: cls(m.wk_mean) }, money(m.wk_median), m.wk_std == null ? "–" : money(m.wk_std, false), money(m.wk_worst)]; });
+  table("#tbl-week", ["Variant", "Weeks", "≥ $150", "Profit < $150", "Loss", "Flat", "Avg / wk", "Median / wk", "Std dev / wk", "Worst week"], rows, { num: [1, 2, 3, 4, 5, 6, 7, 8, 9] });
+})();
+
+// ---------- cost assumptions, stress, MC, risk
+table("#tbl-costasm", ["Scenario", "Fee / fill", "Half-spread", "Slippage", "Total / leg / fill", "Round trip, both legs", "Funding / 8 h on gross"], [
+  ["Optimistic", "1 bp (maker)", "0.5 bp", "0.5 bp", "2 bps", "8 bps of leg notional", "0"], ["Base", "5 bps (taker)", "0.5 bp", "1.5 bps", "7 bps", "28 bps of leg notional", "0.5 bp"],
+  ["Pessimistic", "6 bps", "1 bp", "5 bps", "12 bps", "48 bps of leg notional", "1.5 bps"], ["Stress: fees ×2", "10 bps", "0.5 bp", "1.5 bps", "12 bps", "", "0.5 bp"], ["Stress: funding spike", "", "", "", "7 bps", "", "5 bps"]],
+  { num: [] });
+(() => {
+  const S = D.stress, names = Object.keys(S);
+  const keys = Object.keys(S[names[0]].stress);
+  const t = $("#tbl-stress"); t.replaceChildren(); const hr = el("tr"); hr.append(el("th", { text: "Scenario" })); names.forEach(n => hr.append(el("th", { class: "n", text: n.split(":")[0] + " · return / max DD" })));
+  const th = el("thead"); th.append(hr); t.append(th); const tb = el("tbody");
+  for (const k of keys) { const r = el("tr"); r.append(el("td", { text: k }));
+    for (const n of names) { const m = S[n].stress[k]; let s = pct(m.ret_pct); if (m.max_dd_pct != null) s += " / " + pct(m.max_dd_pct, 1); if (m.ret_worst != null) s += ` (worst ${pct(m.ret_worst, 1)}${m.dd_worst != null ? ", DD " + pct(m.dd_worst, 1) : ""})`; else if (m.ret_p5 != null) s += ` (p5 ${pct(m.ret_p5, 1)})`; r.append(el("td", { class: "n " + cls(m.ret_pct), text: s })); }
+    tb.append(r); }
+  const r = el("tr"); r.append(el("td", { text: "Per trade: gross edge / costs / funding (bps of notional)" }));
+  names.forEach(n => { const p = S[n].per_trade; r.append(el("td", { class: "n", text: `${fmt(p.gross_bps_of_notional, 1)} / ${fmt(p.cost_bps_of_notional, 1)} / ${fmt(p.funding_bps_of_notional, 1)} (${p.n} tr)` })); }); tb.append(r);
+  t.append(tb);
+  const mrows = [];
+  for (const n of names) { const mc = S[n].monte_carlo; mrows.push({ group: n });
+    for (const [k, x] of Object.entries(mc)) mrows.push([k, x.trades_per_year ?? "", { t: pct(x.median_year_ret_pct, 1), c: cls(x.median_year_ret_pct) }, x.p5_year_ret_pct == null ? "–" : pct(x.p5_year_ret_pct, 1), fmt(x.p_loss * 100, 1) + "%", x.p_dd10 == null ? "–" : fmt(x.p_dd10 * 100, 1) + "%", x.p_dd20 == null ? "–" : fmt(x.p_dd20 * 100, 1) + "%", x.p_dd30 == null ? "–" : fmt(x.p_dd30 * 100, 1) + "%", x.p_ruin50 == null ? "–" : fmt(x.p_ruin50 * 100, 2) + "%", x.p_3pct_week == null ? "–" : fmt(x.p_3pct_week * 100, 1) + "%"]); }
+  table("#tbl-mc", ["Size multiple", "Trades / yr", "Median 1-yr return", "5th pct", "P(losing year)", "P(DD > 10%)", "P(DD > 20%)", "P(DD > 30%)", "P(lose half)", "P(≥ 3%/wk avg)"], mrows, { num: [1, 2, 3, 4, 5, 6, 7, 8, 9] });
+})();
+table("#tbl-risk", ["Control", "Setting", "Why"], [
+  ["Max gross exposure", "2.0× equity (A$10,000 at start)", { t: "Both legs together; with ≤ 3× isolated margin per leg, a 25% one-leg move does not liquidate", w: true }],
+  ["Risk per trade", "1% of equity to the stop", { t: "Position size falls automatically when the spread is volatile", w: true }],
+  ["Statistical stop", "|z| ≥ entry + 1.5", { t: "Caps a divergence that keeps widening", w: true }],
+  ["Max holding period", "½ × lookback", { t: "Stops money sitting in a dead trade paying funding", w: true }],
+  ["Daily loss limit", "−2% → flat until next UTC day", { t: "", w: true }], ["Weekly loss limit", "−4% → flat until next week", { t: "", w: true }],
+  ["Max drawdown", "−15% from peak → halt", { t: "Needs a human to restart", w: true }],
+  ["Volatility spike", "short-window spread vol > 2.5× normal → exit, no entries", { t: "", w: true }],
+  ["Relationship break", "rolling EG p > 0.20 blocks entries; > 0.50 exits (optional filter)", { t: "", w: true }],
+  ["Positions", "one pair trade at a time", { t: "", w: true }],
+  ["Exchange / API failure", "leg timeout 30 s → flatten; tested with one leg a full bar late", { t: "", w: true }]], {});
+
+$("#pseudo").textContent = `PARAMS  (per timeframe; z_in, z_out, L chosen by walk-forward)
+  L, z_in in {1.5, 2.0, 2.5}, z_out in {0, 0.5}, Z_STOP_ADD = 1.5, HOLD_MAX = L/2
+  RISK = 0.01, GROSS_MAX = 2.0, DAY_LOSS = 0.02, WEEK_LOSS = 0.04, DD_HALT = 0.15
+  COINT_BLOCK = 0.20, COINT_EXIT = 0.50, VOL_SPIKE = 2.5, COST_PER_FILL c
+
+ON EACH BAR CLOSE t:
+  bars <- last L+1 aligned closes for ETH, BTC (abort cycle if either is stale or missing)
+  x <- ln(BTC[t-L+1..t]);  y <- ln(ETH[t-L+1..t])
+  beta  <- cov(x, y) / var(x);  alpha <- mean(y) - beta * mean(x)
+  e     <- y[t] - alpha - beta * x[t]
+  sigma <- sqrt(var(y) - cov(x, y)^2 / var(x))
+  z     <- e / sigma
+  p_eg  <- engle_granger_pvalue(y, x)            # refresh every L/12 bars
+  spike <- std(d_spread over L/6 bars) / std(d_spread over L bars)
+  equity <- broker_equity();  peak <- max(peak, equity)
+
+  # risk limits first
+  IF equity <= peak * (1 - DD_HALT):     flatten(); HALT; alert("drawdown halt"); RETURN
+  IF equity <= day_open * (1 - DAY_LOSS):  flatten(); cooldown_until <- next UTC day; RETURN
+  IF equity <= week_open * (1 - WEEK_LOSS): flatten(); cooldown_until <- next week; RETURN
+
+  IF position open:
+    held <- held + 1
+    IF (side = SHORT_SPREAD and z <= z_out) or (side = LONG_SPREAD and z >= -z_out): exit("converged")
+    ELSE IF |z| >= z_entry + Z_STOP_ADD:  exit("stop")
+    ELSE IF held >= HOLD_MAX:             exit("max hold")
+    ELSE IF spike > VOL_SPIKE:            exit("vol emergency")
+    ELSE IF p_eg > COINT_EXIT:            exit("relationship break")
+    RETURN
+
+  IF halted or now < cooldown_until or spike > VOL_SPIKE: RETURN
+  IF |z| < z_in or |z| >= z_in + Z_STOP_ADD or p_eg > COINT_BLOCK: RETURN
+
+  b      <- clip(beta, 0.2, 3.0)
+  stop_d <- (z_in + Z_STOP_ADD - |z|) * sigma
+  n_eth  <- RISK * equity / (stop_d + 2 * (1 + b) * c)
+  gross  <- min(n_eth * (1 + b), GROSS_MAX * equity)
+  eth_usd <- gross / (1 + b);  btc_usd <- gross * b / (1 + b)
+  IF z > 0: side <- SHORT_SPREAD  (sell eth_usd ETH, buy btc_usd BTC)
+  ELSE:     side <- LONG_SPREAD   (buy eth_usd ETH, sell btc_usd BTC)
+  z_entry <- |z|; held <- 0
+  place_pair(side, eth_usd, btc_usd)              # at next bar open
+
+place_pair / exit:
+  send both legs as IOC limit orders, price = touch +/- 5 bps
+  wait up to 30 s for both fills
+  IF one leg unfilled: re-send once at touch +/- 10 bps; wait 30 s
+  IF still unfilled: market-close the filled leg; alert("leg failure"); RETURN fail
+  record fills, fees; reconcile positions with exchange every minute
+
+WALK-FORWARD (weekly):
+  FOR each setting in grid (18): backtest on previous 3 weeks with costs
+    score <- return / max(maxDD, 2%)  if trades >= 3 else -inf
+  IF best score <= 0: trade nothing this week
+  ELSE: use best setting for the coming week`;
+</script>

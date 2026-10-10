@@ -152,7 +152,9 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
             turns: turn,
             span: 138,
             hub: const Offset(0.6, 0.52),
-            pressed: _down,
+            // held in through the start of the shot, so a tap (or a volume
+            // key) visibly pushes the release in before the lever swings
+            pressed: _down || (t > 0 && t < 0.3),
             lever: _leverAngle(t),
           ),
           _Kind.run => _SpriteShutter(

@@ -71,7 +71,7 @@ def f_flash(_):
     g = group('flash')
     rbox(62, 8, 1.2, 3, 0.4, 'gap', -0.9, g).location = (-4, -6, -0.3)
     for t, u in (('A', -27), ('ON', -4), ('OFF', 19)):
-        text(t, 5.4, 'ink', 0, 0.08, 'CENTER', 'InterDisplay-Bold.ttf', 1.05, g, (u, 9))
+        text(t, 10.8, 'ink', 0, 0.08, 'CENTER', 'InterDisplay-Bold.ttf', 1.05, g, (u, 6))
     pts = [((u - 0.5) * 8 + 36, (0.5 - v) * 11 - 6) for u, v in ((0.62, 0), (0.1, 0.58), (0.46, 0.58), (0.3, 1), (0.92, 0.38), (0.55, 0.38))]
     slab([pts], 0.08, 0, 'ink', 0, g, 'bolt')
     return g
@@ -169,11 +169,12 @@ def film_release(state, with_lever=True, cap=True):
     k = 138 / 40
     g = group('release')
     g.scale = (k, k, k)
-    lathe([(0, 0), (9.0, 0), (9.0, 2.6), (8.6, 3.0), (6.9, 3.0), (6.9, 2.4), (0, 2.4)], 'satin', 128, g, 'collar')
-    knurl(9.0, 2.2, 90, 'satin', 0.45, 0.3, g)
+    # the collar: matte (a satin metal mirrored the dark studio as gloss)
+    lathe([(0, 0), (9.0, 0), (9.0, 2.6), (8.6, 3.0), (6.9, 3.0), (6.9, 2.4), (0, 2.4)], 'matteCollar', 128, g, 'collar')
+    knurl(9.0, 2.2, 90, 'matteCollar', 0.45, 0.3, g)
     cylinder(6.9, 0.4, 'gap', 2.3, 96, 0, g)
     if cap:
-        top = 4.0 if state == 'down' else 4.9
+        top = 3.2 if state == 'down' else 4.9
         prof = [(0, top), (1.4, top), (1.5, top - 0.02)]
         r = 1.6
         while r <= 5.6:

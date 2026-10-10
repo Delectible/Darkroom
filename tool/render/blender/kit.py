@@ -204,6 +204,8 @@ def mat(name):
         m, b = _principled(name, (0.012, 0.012, 0.013), 0.0, 0.32, **{'Coat Weight': 0.6, 'Coat Roughness': 0.15})
     elif name == 'glossBlack':
         m, b = _principled(name, (0.008, 0.008, 0.009), 0.0, 0.12, **{'Coat Weight': 1.0, 'Coat Roughness': 0.04})
+    elif name == 'matteCollar':  # the film release's collar: dark, soft sheen
+        m, b = _principled(name, (0.05, 0.05, 0.055), 0.0, 0.62)
     elif name == 'gap':
         m, b = _principled(name, (0.004, 0.004, 0.004), 0.0, 0.9)
     elif name == 'red':

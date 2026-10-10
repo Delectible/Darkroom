@@ -31,7 +31,15 @@ class PhysicalOrientationNotifier extends Notifier<DeviceOrientation> {
     return DeviceOrientation.portraitUp;
   }
 
+  /// Being shaken (shake to clear the board): the jolts read as tilts, so
+  /// the orientation holds until the phone has been calm for a moment.
+  DateTime _calmFrom = DateTime.fromMillisecondsSinceEpoch(0);
+
   void _onEvent(AccelerometerEvent e) {
+    final now = DateTime.now();
+    final g = math.sqrt(e.x * e.x + e.y * e.y + e.z * e.z);
+    if ((g - 9.81).abs() > 4.5) _calmFrom = now.add(const Duration(milliseconds: 700));
+    if (now.isBefore(_calmFrom)) return;
     final next = classify(e.x, e.y, e.z, state);
     if (next != state) state = next;
   }

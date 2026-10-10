@@ -845,3 +845,21 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **40.2 Desktop back**: the teal desktop shows round the window again
   (since 1.5.5 the window filled the monitor and the bezel read as white).
   → 1.6.5 · 2026-10-09 · 4b94dad
+
+## 41. Polish: keys, label, shake, strap, finishes (2026-10-09)
+
+- [~] **41.1 Ratio keys**: the film ratio dial glitches when it changes; the
+  digital ratio key looks wrong; the flash key's text clips as the body
+  turns.
+- [~] **41.2 Film stock label**: the window got shorter but the text shrank
+  with it: keep the text its old size.
+- [~] **41.3 Shake to clear**: shaking turns the screen sideways and back;
+  prints fall in several waves. Drop what's on screen once, then re-sort
+  (fade to the top if the old position would be past the end). Every
+  re-sort (delete, new print, shake) fades the prints out and back in
+  instead of jumping.
+- [~] **41.4 Lanyard**: a gentle sway at rest, a flick whips it hard, back
+  to rest quickly.
+- [~] **41.5 Camera finish**: a menu of options in Debug, not cycling.
+- [~] **41.6 Film shutter**: the button still doesn't visibly press in; less
+  gloss on the plastic ring round it.

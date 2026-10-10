@@ -1018,9 +1018,17 @@ class _HangingStrapState extends State<_HangingStrap> with SingleTickerProviderS
   late List<Offset> _was;
   Duration? _last;
 
-  /// Gravity on the screen, dp/s² (from the accelerometer).
-  Offset _g = const Offset(0, 2200);
+  /// Gravity on the screen, dp/s² (from the accelerometer, smoothed: the
+  /// hand's jitter only sways it gently).
+  Offset _g = const Offset(0, _gravity);
+  Offset _gRaw = const Offset(0, _gravity);
+  static const _gravity = 2200.0;
   StreamSubscription<AccelerometerEvent>? _sub;
+
+  /// Where the lug was last frame, and how lively the rope is (0 at rest,
+  /// 1 while the body is flung): a flick whips it, then it settles fast.
+  Offset? _lastAnchor;
+  double _excite = 0;
 
   double get _seg => widget.length / _links;
 
@@ -1038,7 +1046,7 @@ class _HangingStrapState extends State<_HangingStrap> with SingleTickerProviderS
       // its opposite (screen y runs down, the phone's y up).
       final g = Offset(-e.x, e.y);
       final len = g.distance;
-      if (len > 0.5) _g = g / len * (2200 * (len / 9.81).clamp(0.6, 1.8));
+      if (len > 0.5) _gRaw = g / len * _gravity;
     }, onError: (Object _) {});
     unawaited(_ticker.start());
   }
@@ -1054,17 +1062,35 @@ class _HangingStrapState extends State<_HangingStrap> with SingleTickerProviderS
   void _tick(Duration now) {
     final dt = _last == null ? 1 / 60 : ((now - _last!).inMicroseconds / 1e6).clamp(1 / 240, 1 / 30);
     _last = now;
-    // Verlet: carry on as it was going (a little drag), plus gravity.
+    final anchor = widget.anchor;
+    final moved = anchor - (_lastAnchor ?? anchor);
+    _lastAnchor = anchor;
+    // Flung (the swap's toss): lively at once, calm again within a second.
+    final speed = moved.distance / dt;
+    _excite = math.max(_excite * math.exp(-dt / 0.45), (speed / 1400).clamp(0.0, 1.0));
+    // Gravity follows the phone's tilt slowly.
+    _g = Offset.lerp(_g, _gRaw, 1 - math.exp(-dt / 0.25))!;
+    // Drag: heavy at rest (a gentle sway that dies quickly), light while
+    // flung so it whips round.
+    final keep = math.pow(_lerp(0.86, 0.985, _excite), dt * 60).toDouble();
+    // Pull back toward its resting hang (along gravity, a slight curve).
+    final down = _g / _g.distance;
+    final across = Offset(-down.dy, down.dx) * widget.side.toDouble();
+    final pull = (1 - math.exp(-dt * _lerp(5.0, 0.3, _excite))).toDouble();
     for (var i = 1; i < _p.length; i++) {
-      final v = (_p[i] - _was[i]) * 0.985;
+      final v = (_p[i] - _was[i]) * keep;
       _was[i] = _p[i];
-      _p[i] = _p[i] + v + _g * (dt * dt);
+      final t = i / _links;
+      final rest = anchor + down * (i * _seg * 0.97) + across * (math.sin(t * math.pi) * _seg * 1.2);
+      // the rope lags the lug's jump (more toward the tail): it whips
+      final lag = -moved * (0.35 * t * _excite);
+      _p[i] = _p[i] + v + _g * (dt * dt) + (rest - _p[i]) * pull + lag;
     }
-    _p[0] = widget.anchor;
-    _was[0] = widget.anchor;
+    _p[0] = anchor;
+    _was[0] = anchor;
     // Links keep their length (a few passes, from the lug down).
     for (var k = 0; k < 8; k++) {
-      _p[0] = widget.anchor;
+      _p[0] = anchor;
       for (var i = 0; i < _p.length - 1; i++) {
         final d = _p[i + 1] - _p[i];
         final len = d.distance;
@@ -1080,6 +1106,8 @@ class _HangingStrapState extends State<_HangingStrap> with SingleTickerProviderS
     }
     _frame.value++;
   }
+
+  static double _lerp(double a, double b, double t) => a + (b - a) * t;
 
   @override
   Widget build(BuildContext context) => CustomPaint(painter: _RopeStrap(this));

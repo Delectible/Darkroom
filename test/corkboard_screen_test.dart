@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -110,4 +111,57 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
     });
   }
+
+  testWidgets('a print coming off: the prints fade round to the new order, no jump', (tester) async {
+    tester.view.physicalSize = const Size(1280, 2856);
+    tester.view.devicePixelRatio = 3.1;
+    addTearDown(tester.view.reset);
+    final now = DateTime.now();
+    MediaItem print(int i) => MediaItem(
+      id: 'p$i',
+      cameraId: 'portra400',
+      kind: MediaKind.photo,
+      status: MediaStatus.ready,
+      fileName: 'ROLL001_0$i.JPG',
+      capturedAt: now.subtract(const Duration(minutes: 2)),
+      readyAt: now.subtract(const Duration(minutes: 1)),
+      width: 3,
+      height: 2,
+      seen: true,
+    );
+    final items = StreamController<List<MediaItem>>();
+    addTearDown(items.close);
+    items.add([print(1), print(2), print(3)]);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          filmItemsProvider.overrideWith((ref) => items.stream),
+          secondTickerProvider.overrideWith((ref) => Stream.value(now)),
+          darkroomEngineProvider.overrideWithValue(_Engine()),
+          userNameProvider.overrideWith(_Name.new),
+        ],
+        child: const MaterialApp(home: CorkboardScreen()),
+      ),
+    );
+    for (var i = 0; i < 20; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    expect(find.byType(PinnedPrint), findsNWidgets(3));
+
+    items.add([print(1), print(3)]);
+    double opacity() => tester.widget<SliverFadeTransition>(find.byType(SliverFadeTransition)).opacity.value;
+    for (var i = 0; i < 20 && opacity() > 0.9; i++) {
+      await tester.pump(const Duration(milliseconds: 20));
+    }
+    expect(opacity(), lessThan(0.9), reason: 'the prints fade out');
+    expect(find.byType(PinnedPrint), findsNWidgets(3), reason: 'still the old order while it fades out');
+
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 60));
+    }
+    expect(find.byType(PinnedPrint), findsNWidgets(2), reason: 'the new order, faded back in');
+    expect(opacity(), 1);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 2));
+  });
 }

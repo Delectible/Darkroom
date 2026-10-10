@@ -37,7 +37,7 @@ import whole_body as WB  # noqa: E402
 # How far each pressed piece travels (its own units, before the part's
 # scale), from the down states in parts.py.
 PRESS = {
-    'menu': 1.4, 'shutter': 0.9, 'shutteralt': 1.8, 'pill': 0.9, 'pillwide': 0.9, 'pillsmall': 0.9,
+    'menu': 1.4, 'shutter': 1.7, 'shutteralt': 1.8, 'pill': 0.9, 'pillwide': 0.9, 'pillsmall': 0.9,
 }
 PRESS_DIGITAL = {'shutter': 1.0, 'shutteralt': 1.0}
 

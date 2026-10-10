@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.5';
+  static const version = '1.6.6';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Windows themes: pick a colour scheme in View > Options > Themes, including a Night one. '
-      'The teal desktop is back round the window.';
+      'Smoother corkboard: prints fade into their new places, and a shake drops them in one go without turning '
+      'the screen. Gentler straps that whip on a flick, a finish picker, and fixes to the film shutter and labels.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

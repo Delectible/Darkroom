@@ -141,11 +141,16 @@ class FlashButton extends ConsumerWidget {
               child: Upright(
                 child: sideways
                     ? icon
-                    : FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [icon, const SizedBox(width: 2), Text(flash.name.toUpperCase())],
+                    // kept well inside the cap: turned, its near edge
+                    // shows and a full-width label runs onto it
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [icon, const SizedBox(width: 2), Text(flash.name.toUpperCase())],
+                          ),
                         ),
                       ),
               ),
@@ -262,10 +267,16 @@ class _AspectDial extends StatefulWidget {
 class _AspectDialState extends State<_AspectDial> with SingleTickerProviderStateMixin {
   late final _turn = AnimationController(vsync: this, duration: const Duration(milliseconds: 380), value: 1);
 
+  /// The format turning away (until the click finishes).
+  Widget? _old;
+
   @override
   void didUpdateWidget(_AspectDial old) {
     super.didUpdateWidget(old);
-    if (old.label != widget.label) unawaited(_turn.forward(from: 0));
+    if (old.label != widget.label) {
+      _old = old.child;
+      unawaited(_turn.forward(from: 0).whenComplete(() => mounted ? setState(() => _old = null) : null));
+    }
   }
 
   @override
@@ -273,6 +284,10 @@ class _AspectDialState extends State<_AspectDial> with SingleTickerProviderState
     _turn.dispose();
     super.dispose();
   }
+
+  /// Printed on the dial's top on the live model (lifted onto it).
+  Widget _printed(Widget label, BodyPart? top) =>
+      top?.layers != null ? OnTop(height: BodyArt.topOf('aspect'), child: label) : label;
 
   @override
   Widget build(BuildContext context) {
@@ -286,31 +301,33 @@ class _AspectDialState extends State<_AspectDial> with SingleTickerProviderState
           BodySprite(widget.art.part(AppMode.film, 'aspect')!),
           AnimatedBuilder(
             animation: _turn,
-            builder: (context, child) {
-              final t = Curves.easeOutBack.transform(_turn.value);
-              return Transform.rotate(angle: (t - 1) * math.pi / 2, child: child);
+            builder: (context, _) {
+              // One click: the knurled top turns a quarter (it repeats, so
+              // it lands looking the same); the old format turns away with
+              // it and fades, the new one turns in from behind.
+              final v = _turn.value;
+              final t = Curves.easeOutBack.transform(v);
+              final old = _old;
+              return Stack(
+                alignment: Alignment.center,
+                clipBehavior: Clip.none,
+                children: [
+                  Transform.rotate(
+                    angle: (t - 1) * math.pi / 2,
+                    child: top == null ? const SizedBox.shrink() : BodySprite(top),
+                  ),
+                  if (old != null && v < 1)
+                    Opacity(
+                      opacity: (1 - v / 0.5).clamp(0.0, 1.0),
+                      child: Transform.rotate(angle: t * math.pi / 2, child: _printed(old, top)),
+                    ),
+                  Opacity(
+                    opacity: old == null ? 1 : ((v - 0.25) / 0.6).clamp(0.0, 1.0),
+                    child: Transform.rotate(angle: (t - 1) * math.pi / 2, child: _printed(widget.child, top)),
+                  ),
+                ],
+              );
             },
-            child: Stack(
-              alignment: Alignment.center,
-              clipBehavior: Clip.none,
-              children: [
-                ?(top == null ? null : BodySprite(top)),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (c, a) => FadeTransition(
-                    opacity: a,
-                    child: ScaleTransition(scale: Tween(begin: 0.7, end: 1.0).animate(a), child: c),
-                  ),
-                  child: KeyedSubtree(
-                    key: ValueKey(widget.label),
-                    // the live model: printed on the dial's top
-                    child: top?.layers != null
-                        ? OnTop(height: BodyArt.topOf('aspect'), child: widget.child)
-                        : widget.child,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -460,6 +477,7 @@ class _MemoHolder extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
@@ -491,11 +509,16 @@ class _MemoHolder extends StatelessWidget {
     );
     final clip = art?.part(AppMode.film, 'memo');
     if (clip?.layers != null) {
-      // Whole-body render: the card fills the rendered holder's opening.
-      return SizedBox.expand(
+      // Whole-body render: the card fills the rendered holder's opening,
+      // its text at its own size (never squeezed to the opening's width;
+      // only if it can't fit does it shrink, evenly).
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
+        decoration: card.decoration,
         child: FittedBox(
-          fit: BoxFit.fill,
-          child: SizedBox(width: 356, child: card),
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: card.child,
         ),
       );
     }

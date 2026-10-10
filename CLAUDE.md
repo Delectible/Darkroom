@@ -248,7 +248,14 @@ Film Mode
   stamp; instant prints show their black backing). Shake the phone on the
   board (`core/device/shake.dart`, 3 jolts) to clear it: asks, then every
   unsaved print unpins and falls, the board judders, the rest re-pin; a
-  paper note in the corner says "shake to clear".
+  paper note in the corner says "shake to clear". The prints on screen
+  drop once, together; the rest just go; all are deleted in one batch.
+  The board never jumps: the drawn prints (`_shown`) change only through
+  `_reflow`, which fades the grid out, swaps in the new order and fades it
+  back (the whole board, cork too, after a shake or when near the end; it
+  jumps to the top if the old spot is now past the end). While the phone
+  is shaken the orientation holds (`PhysicalOrientationNotifier` ignores
+  readings until |g| has been calm for 0.7 s).
 - Super 8 reels on the board: a photoreal spool (`assets/corkboard/reel.webp`,
   rendered by `tool/render/blender/reel.py`) resting on two pins under its
   rim, with an instant photo of the first frame (file name in Caveat)
@@ -329,8 +336,9 @@ UI
   moves, its viewfinder is a still (`CameraViewport.freeze`): shader
   filters under the 3D transform only move their input. Each body continues past the screen: rounded end,
   side wall with strap lug, neck strap (film) / wrist cord (digital): a
-  verlet rope (`_HangingStrap`) that swings with the swap and hangs with
-  the accelerometer's gravity. Until
+  verlet rope (`_HangingStrap`): heavy drag and a pull back to its resting
+  hang at rest (a gentle sway from the smoothed tilt), light drag and extra
+  lag while the body is flung (`_excite`), so a toss whips it. Until
   the toss commits the arriving body is a picture of it from last time
   (`_lastLook`, or `BodyStandIn`); on commit the leaving body becomes a
   picture and the live UI switches mode. Flutter flattens nested 3D
@@ -432,8 +440,12 @@ UI
   the other (`showShutter`, 420 ms). Digital finishes (silver, grip,
   gunmetal, champagne, two-tone) are baked as `finish.<key>.*` nodes
   (`export_glb.py` FINISHES), picked by `bodyFinishProvider`
-  (`PrefKeys.bodyFinish`); Debug > Camera Finish cycles them (later:
-  unlocked by mini games).
+  (`PrefKeys.bodyFinish`); Debug > Camera Finish is a list to pick from
+  (later: unlocked by mini games). The film format dial's label turns
+  with its top: the old one away, the new one in (`_AspectDial`). Key
+  labels stay well inside the cap (turned, its near edge shows). The
+  memo card's text keeps its size in the holder (shrinks evenly only if
+  it can't fit).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
 - Camera session: "inactive" does NOT close the camera (Android sends it on

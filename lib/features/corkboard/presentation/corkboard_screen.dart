@@ -64,7 +64,7 @@ class CorkboardScreen extends ConsumerStatefulWidget {
   ConsumerState<CorkboardScreen> createState() => _CorkboardScreenState();
 }
 
-class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with SingleTickerProviderStateMixin {
+class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerProviderStateMixin {
   bool _saving = false;
   late final _scroll = ScrollController()
     ..addListener(() => PerfRecorder.mark('corkboard scroll', hold: const Duration(milliseconds: 150)));
@@ -96,6 +96,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with SingleTi
     _scroll.dispose();
     _shaker.stop();
     _shake.dispose();
+    _gridFade.dispose();
+    _boardFade.dispose();
     super.dispose();
   }
 
@@ -159,16 +161,81 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with SingleTi
     for (var i = 0; i < 4; i++) {
       Future<void>.delayed(Duration(milliseconds: 130 * i), () => Haptics.heavyImpact());
     }
+    // The ones on screen drop together, once; the rest just go. Then they
+    // all come off in one go and the board fades round to its new order.
+    final ids = {for (final m in off) m.id};
+    _batch.addAll(ids);
     final rnd = math.Random();
-    for (final m in off) {
-      Future<void>.delayed(Duration(milliseconds: 120 + rnd.nextInt(380)), () {
+    for (final m in off.where((m) => _onScreen(m.id))) {
+      Future<void>.delayed(Duration(milliseconds: 60 + rnd.nextInt(140)), () {
         if (mounted) setState(() => _falling.add(m.id));
       });
     }
-    // Once they're down, the rest pin themselves up again in their new places.
-    Future<void>.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) setState(() => _openedAt = DateTime.now());
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    if (!mounted) return;
+    _wholeBoard = true;
+    final repo = ref.read(filmRepositoryProvider);
+    await Future.wait([for (final m in off) deleteMedia(repo, m)]);
+    _batch.removeAll(ids);
+  }
+
+  /// Whether the print [id] is on screen now.
+  bool _onScreen(String id) {
+    final box = _keys[id]?.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached || !box.hasSize) return false;
+    final r = box.localToGlobal(Offset.zero) & box.size;
+    return r.overlaps(Offset.zero & MediaQuery.sizeOf(context));
+  }
+
+  /// The prints as drawn: they change only through [_reflow], which fades
+  /// them out, swaps in the new order and fades them back (rather than
+  /// jumping when one is taken down or a new one comes up).
+  List<MediaItem>? _shown;
+  bool _reflowing = false;
+
+  /// The next reflow fades the whole board (cork too), as after a shake.
+  bool _wholeBoard = false;
+  late final _gridFade = AnimationController(vsync: this, value: 1);
+  late final _boardFade = AnimationController(vsync: this, value: 1);
+
+  /// Prints in a shake's batch (they come off together, not one by one).
+  final _batch = <String>{};
+  final _keys = <String, GlobalKey>{};
+
+  static bool _sameIds(List<MediaItem> a, List<MediaItem> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i].id != b[i].id) return false;
+    }
+    return true;
+  }
+
+  Future<void> _reflow() async {
+    // Near the end the scroll may have to give: fade the cork too.
+    final p = _scroll.hasClients ? _scroll.position : null;
+    final whole =
+        _wholeBoard ||
+        (p != null && p.pixels > 0 && p.extentAfter < 300 && _developed.length < (_shown?.length ?? 0));
+    final fade = whole ? _boardFade : _gridFade;
+    await fade.animateTo(0, duration: const Duration(milliseconds: 180), curve: Curves.easeIn);
+    if (!mounted) return;
+    final before = p?.pixels ?? 0;
+    setState(() {
+      _shown = _developed;
+      final left = {for (final m in _developed) m.id};
+      _falling.removeWhere((id) => !left.contains(id));
+      _keys.removeWhere((id, _) => !left.contains(id));
     });
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    // Past the end now: start again from the top.
+    if (_scroll.hasClients && _scroll.position.pixels < before - 0.5) _scroll.jumpTo(0);
+    if (_wholeBoard) setState(() => _openedAt = DateTime.now()); // the rest pin themselves back up
+    _wholeBoard = false;
+    await fade.animateTo(1, duration: const Duration(milliseconds: 260), curve: Curves.easeOut);
+    _reflowing = false;
+    // Changed again meanwhile?
+    if (mounted && !_sameIds(_shown!, _developed)) setState(() {});
   }
 
   Future<void> _saveAll(List<MediaItem> developed) async {
@@ -230,10 +297,9 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with SingleTi
     setState(() => _falling.add(item.id));
   }
 
-  Future<void> _discard(MediaItem item) async {
-    await deleteMedia(ref.read(filmRepositoryProvider), item);
-    if (mounted) setState(() => _falling.remove(item.id));
-  }
+  /// Off the board for good (it stays fallen until the board fades round
+  /// to its new order: see [_reflow]).
+  Future<void> _discard(MediaItem item) => deleteMedia(ref.read(filmRepositoryProvider), item);
 
   void _open(BuildContext context, List<MediaItem> developed, MediaItem item) {
     final reels = developed.where((m) => m.isVideo).toList();
@@ -254,6 +320,14 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with SingleTi
       ..sort((a, b) => a.readyAt.compareTo(b.readyAt));
     final unsaved = developed.where((m) => !m.isSaved).length;
     _developed = developed;
+    // (an empty board just fills: on opening, the prints load in)
+    if (_shown == null || _shown!.isEmpty || _sameIds(_shown!, developed)) {
+      _shown = developed;
+    } else if (!_reflowing) {
+      _reflowing = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_reflow()));
+    }
+    final shown = _shown!;
     // Polaroids need their framed share file made: do it in the background
     // now, so holding one brings the share sheet up straight away.
     final cold = developed.where((m) => _warmed.add('${m.id}:${m.note}')).toList();
@@ -301,109 +375,124 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with SingleTi
                   final dx = _shake.isAnimating ? math.sin(t * math.pi * 9) * 14 * (1 - t) : 0.0;
                   return Transform.translate(offset: Offset(dx, 0), child: child);
                 },
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: _CorkWall(scroll: _scroll)),
-                    // The prints are pinned to the cork: no bounce or stretch
-                    // past the ends, or they'd slide off the wall. They scroll
-                    // right up to the frame, under the status bar and the home
-                    // bar, rather than vanishing a strip short of the edges.
-                    Padding(
-                      padding: EdgeInsets.only(left: leftInset, right: rightInset),
-                      child: ScrollConfiguration(
-                        behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
-                        child: CustomScrollView(
-                          controller: _scroll,
-                          physics: const ClampingScrollPhysics(),
-                          // Build (and decode) prints well before they scroll into view.
-                          scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
-                          slivers: [
-                            SliverToBoxAdapter(child: SizedBox(height: topInset)),
-                            SliverToBoxAdapter(
-                              child: _Header(
-                                onBack: () => Navigator.of(context).pop(),
-                                unsaved: unsaved,
-                                total: developed.length,
-                                saving: _saving,
-                                onSaveAll: () => _saveAll(developed),
-                              ),
-                            ),
-                            if (inDarkroom.isNotEmpty)
+                child: FadeTransition(
+                  opacity: _boardFade,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _CorkWall(scroll: _scroll)),
+                      // The prints are pinned to the cork: no bounce or stretch
+                      // past the ends, or they'd slide off the wall. They scroll
+                      // right up to the frame, under the status bar and the home
+                      // bar, rather than vanishing a strip short of the edges.
+                      Padding(
+                        padding: EdgeInsets.only(left: leftInset, right: rightInset),
+                        child: ScrollConfiguration(
+                          behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
+                          child: CustomScrollView(
+                            controller: _scroll,
+                            physics: const ClampingScrollPhysics(),
+                            // Build (and decode) prints well before they scroll into view.
+                            scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
+                            slivers: [
+                              SliverToBoxAdapter(child: SizedBox(height: topInset)),
                               SliverToBoxAdapter(
-                                child: _DarkroomStrip(items: inDarkroom, now: now),
-                              ),
-                            if (developed.isEmpty)
-                              const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
-                            else
-                              SliverPadding(
-                                padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
-                                sliver: SliverGrid(
-                                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                    maxCrossAxisExtent: 220,
-                                    mainAxisSpacing: 26,
-                                    crossAxisSpacing: 22,
-                                    childAspectRatio: 0.78,
-                                  ),
-                                  delegate: SliverChildBuilderDelegate(childCount: developed.length, (
-                                    context,
-                                    i,
-                                  ) {
-                                    final m = developed[i];
-                                    void open() => _open(context, developed, m);
-                                    void unpin() => _unpin(m);
-                                    final falling = _falling.contains(m.id);
-                                    final pinned = m.isVideo
-                                        ? PinnedReel(
-                                            item: m,
-                                            onOpen: open,
-                                            onPinTap: unpin,
-                                            showPin: !falling,
-                                          )
-                                        : CameraCatalog.byId(m.cameraId).isInstant
-                                        ? PinnedInstant(
-                                            item: m,
-                                            onOpen: open,
-                                            onPinTap: unpin,
-                                            showPin: !falling,
-                                          )
-                                        : PinnedPrint(
-                                            item: m,
-                                            onOpen: open,
-                                            onPinTap: unpin,
-                                            showPin: !falling,
-                                          );
-                                    final child = _Falling(
-                                      falling: falling,
-                                      pinColor:
-                                          _pinColors[math.Random(m.id.hashCode).nextInt(_pinColors.length)],
-                                      pinAt: m.isVideo ? const Alignment(-0.5, 0.72) : Alignment.topCenter,
-                                      onFallen: () => _discard(m),
-                                      child: pinned,
-                                    );
-                                    if (!_animatePin(m, i)) {
-                                      return KeyedSubtree(key: ValueKey(m.id), child: child);
-                                    }
-                                    return _PinIn(
-                                      key: ValueKey(m.id),
-                                      delay: Duration(milliseconds: 40 * math.min(i, 8)),
-                                      child: child,
-                                    );
-                                  }),
+                                child: _Header(
+                                  onBack: () => Navigator.of(context).pop(),
+                                  unsaved: unsaved,
+                                  total: developed.length,
+                                  saving: _saving,
+                                  onSaveAll: () => _saveAll(developed),
                                 ),
                               ),
-                            SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
-                          ],
+                              if (inDarkroom.isNotEmpty)
+                                SliverToBoxAdapter(
+                                  child: _DarkroomStrip(items: inDarkroom, now: now),
+                                ),
+                              if (shown.isEmpty)
+                                const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
+                              else
+                                SliverFadeTransition(
+                                  opacity: _gridFade,
+                                  sliver: SliverPadding(
+                                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
+                                    sliver: SliverGrid(
+                                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                        maxCrossAxisExtent: 220,
+                                        mainAxisSpacing: 26,
+                                        crossAxisSpacing: 22,
+                                        childAspectRatio: 0.78,
+                                      ),
+                                      delegate: SliverChildBuilderDelegate(childCount: shown.length, (
+                                        context,
+                                        i,
+                                      ) {
+                                        final m = shown[i];
+                                        void open() => _open(context, shown, m);
+                                        void unpin() => _unpin(m);
+                                        final falling = _falling.contains(m.id);
+                                        final pinned = m.isVideo
+                                            ? PinnedReel(
+                                                item: m,
+                                                onOpen: open,
+                                                onPinTap: unpin,
+                                                showPin: !falling,
+                                              )
+                                            : CameraCatalog.byId(m.cameraId).isInstant
+                                            ? PinnedInstant(
+                                                item: m,
+                                                onOpen: open,
+                                                onPinTap: unpin,
+                                                showPin: !falling,
+                                              )
+                                            : PinnedPrint(
+                                                item: m,
+                                                onOpen: open,
+                                                onPinTap: unpin,
+                                                showPin: !falling,
+                                              );
+                                        final child = _Falling(
+                                          falling: falling,
+                                          pinColor:
+                                              _pinColors[math.Random(
+                                                m.id.hashCode,
+                                              ).nextInt(_pinColors.length)],
+                                          pinAt: m.isVideo
+                                              ? const Alignment(-0.5, 0.72)
+                                              : Alignment.topCenter,
+                                          onFallen: () {
+                                            if (!_batch.contains(m.id)) unawaited(_discard(m));
+                                          },
+                                          child: KeyedSubtree(
+                                            key: _keys.putIfAbsent(m.id, GlobalKey.new),
+                                            child: pinned,
+                                          ),
+                                        );
+                                        if (!_animatePin(m, i)) {
+                                          return KeyedSubtree(key: ValueKey(m.id), child: child);
+                                        }
+                                        return _PinIn(
+                                          key: ValueKey(m.id),
+                                          delay: Duration(milliseconds: 40 * math.min(i, 8)),
+                                          child: child,
+                                        );
+                                      }),
+                                    ),
+                                  ),
+                                ),
+                              SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    // A note tucked in the corner of the frame: the shake.
-                    if (developed.isNotEmpty)
-                      Positioned(
-                        right: 10 + rightInset,
-                        bottom: 10 + bottomInset,
-                        child: const IgnorePointer(child: _ShakeNote()),
-                      ),
-                  ],
+                      // A note tucked in the corner of the frame: the shake.
+                      if (developed.isNotEmpty)
+                        Positioned(
+                          right: 10 + rightInset,
+                          bottom: 10 + bottomInset,
+                          child: const IgnorePointer(child: _ShakeNote()),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),

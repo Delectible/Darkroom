@@ -900,3 +900,7 @@ Answers: turntable renders, no 2D/3D switch.
   bloom or smear, JPEG q60. `tool/look_preview.dart` renders photos
   through a digital look for comparison.
   → 1.6.8 · 2026-10-10 · a5d6cce
+- [x] **42.6 2003 CCD Compact look**: tuned to Gabe's six reference shots:
+  natural colour with a slight warm lean (it was cool and over-saturated),
+  deep but not crushed shadows, highlights that rarely clip, light
+  sharpening, almost no bloom or smear.

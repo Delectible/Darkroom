@@ -893,3 +893,4 @@ Answers: turntable renders, no 2D/3D switch.
   muted with a lavender/magenta lean, crisp (sharpened) edges, little
   bloom or smear, JPEG q60. `tool/look_preview.dart` renders photos
   through a digital look for comparison.
+  → 1.6.8 · 2026-10-10 · a5d6cce

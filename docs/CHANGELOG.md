@@ -863,3 +863,4 @@ Answers: turntable renders, no 2D/3D switch.
 - [~] **41.5 Camera finish**: a menu of options in Debug, not cycling.
 - [~] **41.6 Film shutter**: the button still doesn't visibly press in; less
   gloss on the plastic ring round it.
+- [~] **41.7 Film flash switch**: the A / ON / OFF lettering twice as big.

@@ -888,4 +888,8 @@ Answers: turntable renders, no 2D/3D switch.
   → 1.6.7 · 2026-10-10 · 5535869
 - [ ] **42.4 Copies deleted from the phone's gallery**: notice and offer to
   save again (asked Gabe how; digital too).
-- [~] **42.5 1999 Floppy Cam look**: tune to Gabe's reference photos.
+- [x] **42.5 1999 Floppy Cam look**: tuned to Gabe's five reference shots:
+  low contrast (blacks lifted ~L10, whites ~L84, barely any clipping),
+  muted with a lavender/magenta lean, crisp (sharpened) edges, little
+  bloom or smear, JPEG q60. `tool/look_preview.dart` renders photos
+  through a digital look for comparison.

@@ -121,29 +121,29 @@ class CameraCatalog {
     look: LookSpec(
       kind: ShaderKind.ccd,
       matrix: [
-        1.04, 0.00, -0.02, //
-        -0.02, 0.98, 0.04, //
-        0.02, -0.03, 0.96,
+        1.0, -0.02, 0.06, //
+        -0.02, 0.95, 0.02, //
+        0.03, -0.03, 0.97,
       ],
-      offset: [0.025, 0.0, 0.02],
-      saturation: 0.86,
-      exposure: 1.18, // tiny sensor, tiny dynamic range: highlights clip early
-      gamma: 0.9,
-      contrast: 1.12,
+      offset: [0.035, 0.015, 0.035],
+      saturation: 0.74,
+      exposure: 0.97,
+      gamma: 1.0,
+      contrast: 1.06,
       pivot: 0.5,
-      black: 0.035,
-      white: 0.985,
-      vignette: 0.22,
-      grainAmount: 0.022,
-      grainSize: 1.6,
+      black: 0.065,
+      white: 0.9,
+      vignette: 0.08,
+      grainAmount: 0.015,
+      grainSize: 1.4,
       flashStrength: 0.95,
-      sharpen: -0.35, // soft plastic lens
-      chromaNoise: 0.10,
-      bloom: 0.55,
-      smear: 0.65, // vertical CCD smear from bright lights
+      sharpen: 0.35,
+      chromaNoise: 0.06,
+      bloom: 0.12,
+      smear: 0.1,
     ),
     quality: CaptureQuality.low,
-    output: OutputProfile(maxLongEdge: 640, jpegQuality: 88, lowResLongEdge: 640, lowResJpegQuality: 48),
+    output: OutputProfile(maxLongEdge: 640, jpegQuality: 88, lowResLongEdge: 640, lowResJpegQuality: 60),
     aspects: [AspectRatioOption.r4x3],
     defaultAspect: AspectRatioOption.r4x3,
     artwork: 'assets/artwork/floppy99.webp',

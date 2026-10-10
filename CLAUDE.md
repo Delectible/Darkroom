@@ -506,7 +506,9 @@ UI
 ## Backlog
 
 1. Tidier camcorder viewfinder in its artwork.
-2. Digital camera looks: tune against reference photos when Gabe sends them.
+2. Digital camera looks: tune against reference photos when Gabe sends them
+   (1999 Floppy Cam done in 1.6.8; `CAMERA=id dart run tool/look_preview.dart
+   outdir photos...` renders photos through a digital body's still pipeline).
 3. First iOS run: the CI .ipa builds (build 19); still to try it on Gabe's iPhone.
 4. (Done 2026-10-07, build 35: CI uploads to Play internal testing.) If
    Gabe drops the Cloud project, delete the secret and he uploads by hand.

@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.7';
+  static const version = '1.6.8';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Cleaner format dial: the knurled top clicks round while the format fades over, no flipping or clipped text. '
-      'Key labels no longer cut off as the camera turns, and "tap to write" on instant prints keeps its keyboard.';
+      'The 1999 Floppy Cam now looks like the real thing: soft, low-contrast shots with crisp edges, '
+      'hazy lavender skies and no more blown-out whites or streaks.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -22,6 +22,7 @@ class AppInfo {
         'Swinging straps, shake to clear the board',
         'Photoreal Super 8 reels',
         'Smooth fade when the phone turns',
+        'Floppy Cam tuned to real photos',
         'Win98 colour themes, Night mode',
       ],
     ),

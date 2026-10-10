@@ -207,7 +207,11 @@ class PhotoPipeline {
         case ShaderKind.vhs:
           renderer.vhsSignal(data, w, h);
           renderer.grade(data, w, h, flash: flash);
-        case ShaderKind.jpegPixel || ShaderKind.film:
+        case ShaderKind.jpegPixel:
+          // Negative sharpen = the soft plastic lens.
+          renderer.sharpen(data, w, h);
+          renderer.grade(data, w, h, flash: flash);
+        case ShaderKind.film:
           renderer.grade(data, w, h, flash: flash);
       }
     }

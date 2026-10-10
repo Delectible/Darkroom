@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.13';
+  static const version = '1.6.14';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98 remembers when you answer No to copying missing files back to Photos, and won\'t ask about '
-      'those files again (File > Copy to Photos still works).';
+      'The Y2K Flip Phone is tuned to real 2000s phone photos: twice the resolution (VGA), a soft plastic lens, '
+      'cool washed colour and 4096-colour banding, with the JPEG blocks kept.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -26,6 +26,7 @@ class AppInfo {
         'Notices prints deleted from Photos',
         'CCD Compact tuned to real photos',
         'Camcorder tuned to real tapes, random dropouts',
+        'Flip Phone tuned to real photos',
         'Win98 colour themes, Night mode',
       ],
     ),

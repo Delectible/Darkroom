@@ -939,3 +939,13 @@ Answers: turntable renders, no 2D/3D switch.
   them back?" box means those C: files are never asked about again (same
   `PrefKeys.galleryDismissed`); File > Copy to Photos still works.
   → 1.6.13 · 2026-10-10
+
+## 45. Flip phone look (2026-10-10)
+
+- [x] **45.1 Y2K Flip Phone look**: tuned to Gabe's five 2000s phone photos.
+  Resolution doubled to a VGA sensor's square crop (480 px, saved 2x
+  nearest-neighbour), soft plastic lens (negative `sharpen`, now applied
+  to `jpegPixel` stills), cool washed colour with lifted blacks and
+  periwinkle skies, 16 levels a channel (4096-colour banding), real JPEG
+  at quality 30 for the blocks. Date stamp unchanged.
+  → 1.6.14 · 2026-10-10

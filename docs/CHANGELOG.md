@@ -893,6 +893,7 @@ Answers: turntable renders, no 2D/3D switch.
   back?" box (No: marked not copied; File > Copy to Photos later). Android
   lists the app's own album entries with no permission; iOS asks for full
   library access once, after saying why.
+  → 1.6.9 · 2026-10-10 · 03e2019
 - [x] **42.5 1999 Floppy Cam look**: tuned to Gabe's five reference shots:
   low contrast (blacks lifted ~L10, whites ~L84, barely any clipping),
   muted with a lavender/magenta lean, crisp (sharpened) edges, little

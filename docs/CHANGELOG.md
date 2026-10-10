@@ -949,3 +949,6 @@ Answers: turntable renders, no 2D/3D switch.
   periwinkle skies, 16 levels a channel (4096-colour banding), real JPEG
   at quality 30 for the blocks. Date stamp unchanged.
   → 1.6.14 · 2026-10-10
+- [x] **45.2 Closed testing**: 1.6.14 (build 117) promoted to the closed
+  track (promote-closed.yml); Play reviews it before testers get it.
+  → 1.6.14 · 2026-10-10

@@ -33,6 +33,7 @@ class Cfg:
     weekly_loss: float = 0.04
     max_dd: float = 0.15
     risk_limits: bool = True
+    loss_stop: float = None      # exit if open trade loses this fraction of equity at entry
 
 class Signals:
     """All causal series for one timeframe and lookback. Values at index t use data <= close t."""
@@ -126,8 +127,11 @@ def simulate(sig: Signals, cfg: Cfg, start, end, cost="base", fill_bps=None, fun
         last = (t >= end - 2) or (t + 1 >= len(df))
         if last and not side: break
         nxt = min(t + 1, len(df) - 1)
-        fe = oe[nxt] if delay == "open" else ce[nxt]
-        fbp = ob[nxt] if delay == "open" else cb[nxt]
+        if delay == "same":                               # fill at the signal bar's own close
+            nxt = t; fe, fbp = ce[t], cb[t]
+        else:
+            fe = oe[nxt] if delay == "open" else ce[nxt]
+            fbp = ob[nxt] if delay == "open" else cb[nxt]
         if leg_delay: fbp = cb[nxt]
         zt = z[t]; reason = None
         if cfg.risk_limits:
@@ -141,6 +145,7 @@ def simulate(sig: Signals, cfg: Cfg, start, end, cost="base", fill_bps=None, fun
                 if last: reason = "end_of_test"
                 elif (side == -1 and zt <= exit_lvl) or (side == 1 and zt >= -exit_lvl): reason = "converged"
                 elif stop is not None and ((side == -1 and zt >= stop) or (side == 1 and zt <= -stop)): reason = "stop"
+                elif cfg.loss_stop is not None and eq_now - tr["eq0"] <= -cfg.loss_stop * tr["eq0"]: reason = "loss_stop"
                 elif maxhold is not None and held >= maxhold: reason = "max_hold"
                 elif emerg: reason = "vol_emergency"
                 elif cp is not None and cp[t] > 0.5: reason = "relationship_break"

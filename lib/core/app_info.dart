@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.11';
+  static const version = '1.6.12';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The 90s Camcorder looks like real home video now: washed, soft colour, bright skies, edge halos, and '
-      'the odd tape dropout or torn line at random moments. The OSD is unchanged.';
+      'The "no longer in your photos" note on the corkboard goes away after 5 seconds and has a close button. '
+      'Close it and those prints are never mentioned again.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

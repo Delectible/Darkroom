@@ -214,7 +214,8 @@ Film Mode
   app's own MediaStore entries with no permission, iOS needs full/limited
   library access, asked once with the reason, `PrefKeys.galleryAsked`).
   The board marks such prints unsaved (`markUnsaved`) and offers "Save
-  again"; Win98 offers to copy missing C: files back (File > Copy to
+  again" (5 s snackbar with a close X; closed or swiped away, those prints
+  are never mentioned again: `PrefKeys.galleryDismissed`); Win98 offers to copy missing C: files back (File > Copy to
   Photos). Matching is by the saved name (`galleryNameFor`, numbered
   duplicates allowed).
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;

@@ -36,6 +36,10 @@ class PrefKeys {
   /// iOS: the reason for full photo-library access was shown (once).
   static const galleryAsked = 'gallery.asked';
 
+  /// Prints whose "no longer in your photos" note was dismissed: never
+  /// mentioned again.
+  static const galleryDismissed = 'gallery.dismissed';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -52,6 +56,7 @@ class PrefKeys {
     bodyFinish,
     win98Theme,
     galleryAsked,
+    galleryDismissed,
   };
 }
 

@@ -163,17 +163,25 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     final missing = await missingFromGallery(items, filmAlbum);
     if (missing == null || missing.isEmpty || !mounted) return;
     await repo.markUnsaved([for (final m in missing) m.id]);
-    if (!mounted) return;
-    final n = missing.length;
-    final what = n == 1 ? (missing.first.isVideo ? 'A reel' : 'A print') : '$n prints';
-    ScaffoldMessenger.of(context).showSnackBar(
+    // Ones the user already waved off stay quiet (Save still works on them).
+    final dismissed = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
+    final tell = [
+      for (final m in missing)
+        if (!dismissed.contains(m.id)) m,
+    ];
+    if (tell.isEmpty || !mounted) return;
+    final n = tell.length;
+    final what = n == 1 ? (tell.first.isVideo ? 'A reel' : 'A print') : '$n prints';
+    final bar = ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        duration: const Duration(seconds: 8),
+        duration: const Duration(seconds: 5),
+        persist: false,
+        showCloseIcon: true,
         content: Text("$what you saved ${n == 1 ? 'is' : 'are'} no longer in your photos."),
         action: SnackBarAction(
           label: 'Save again',
           onPressed: () async {
-            for (final m in missing) {
+            for (final m in tell) {
               final latest = (await repo.readyItems()).where((x) => x.id == m.id);
               if (latest.isEmpty) continue;
               await keepMedia(repo, latest.first, album: filmAlbum);
@@ -182,6 +190,13 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
         ),
       ),
     );
+    // Closed with the X (or swiped away): don't bring these up again. A
+    // time-out doesn't count.
+    final why = await bar.closed;
+    if (why == SnackBarClosedReason.dismiss || why == SnackBarClosedReason.swipe) {
+      final now = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
+      await prefs.setStringList(PrefKeys.galleryDismissed, {...now, for (final m in tell) m.id}.toList());
+    }
   }
 
   /// Shake the phone: every print and reel that hasn't been saved comes off

@@ -927,3 +927,11 @@ Answers: turntable renders, no 2D/3D switch.
 - [x] **43.3 Closed testing**: 1.6.11 (build 111) promoted to the closed
   track (promote-closed.yml); Play reviews it before testers get it.
   → 1.6.11 · 2026-10-10
+
+## 44. Gallery note (2026-10-10)
+
+- [x] **44.1 "No longer in your photos" note**: has a close button and
+  times out after 5 s (with its Save again action it never timed out).
+  Closing it (X or swipe) means those prints are never mentioned again;
+  a time-out doesn't count.
+  → 1.6.12 · 2026-10-10

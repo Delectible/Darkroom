@@ -878,11 +878,14 @@ Answers: turntable renders, no 2D/3D switch.
   got cut off mid-change. Now the knurled top clicks round while the
   printed format stays upright and fades over (its ink fades: an opacity
   layer round a lifted label flattens the lift or crops it).
+  → 1.6.7 · 2026-10-10 · 5535869
 - [x] **42.2 Key labels cut off as the body turns**: a flat clip round the
   whole face cut the tops off labels lifted onto the keys; gone.
+  → 1.6.7 · 2026-10-10 · 5535869
 - [x] **42.3 Instant print "tap to write"**: the keyboard came up and went
   again (the viewer's late tap-off check closed the write box once the
   keyboard had moved the print).
+  → 1.6.7 · 2026-10-10 · 5535869
 - [ ] **42.4 Copies deleted from the phone's gallery**: notice and offer to
   save again (asked Gabe how; digital too).
 - [~] **42.5 1999 Floppy Cam look**: tune to Gabe's reference photos.

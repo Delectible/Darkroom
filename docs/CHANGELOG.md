@@ -995,5 +995,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 
 - [x] **50.1 Debug password out of the repo**: now the repo secret
   `DEBUG_PASSWORD` (build `--dart-define`); notes no longer name it.
-- [x] **50.2 No public APKs**: Releases only carry the .ipa; artifacts
+- [x] **50.2 No public pre-2.0 APKs**: Releases carry the .ipa, plus the
+  .apk from 2.0 on (never the .aab); artifacts
   last a day; `prune-releases.yml` removes old releases and artifacts.

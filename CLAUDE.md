@@ -40,8 +40,9 @@ Read this first. It's the hand-off from the earlier development sessions
 - Pushes to `main` (only when the owner asks) build; work branches don't.
   Don't push half-done work to `main`.
 - Push to `main` → `.github/workflows/build-apk.yml` builds the APK/AAB (the
-  AAB goes to Play; neither is published) and an unsigned `Darkroom-N.ipa`,
-  the only file published under **Releases** (`build-N`). Workflow
+  AAB goes to Play, never published) and an unsigned `Darkroom-N.ipa`, and
+  publishes under **Releases** (`build-N`) the .ipa plus, from version 2.0
+  on, the .apk (earlier versions have no limits, so no public APK). Workflow
   artifacts live one day (public repo: anyone signed in can download them).
   `prune-releases.yml` (by hand, input `up_to`) deletes old releases, their
   files and all artifacts. The repo is public: never put anything in it

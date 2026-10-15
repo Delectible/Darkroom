@@ -107,6 +107,16 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with: { path: dist, merge-multiple: true }
+      # Public APKs from 2.0 on (the first version with the free limits
+      # finished); never the .aab (that goes to Play).
+      - uses: actions/checkout@v4
+        with: { path: src, sparse-checkout: pubspec.yaml, sparse-checkout-cone-mode: false }
+      - name: Pick the files to publish
+        run: |
+          major=$(sed -n 's/^version: *\([0-9]*\)\..*/\1/p' src/pubspec.yaml)
+          rm -f dist/*.aab
+          if [ "${major:-0}" -lt 2 ]; then rm -f dist/*.apk; echo "v$major: APK not published"; fi
+          ls -l dist
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
@@ -114,8 +124,7 @@ jobs:
           body: ${{ github.event.head_commit.message || 'Manual build' }}
           prerelease: ${{ github.ref_name != 'main' }}
           target_commitish: ${{ github.sha }}
-          # Only the iPhone sideload file: Android installs come from Play.
-          files: dist/*.ipa
+          files: dist/*
           fail_on_unmatched_files: false
 
   # Google Play internal testing. Needs the repo secret PLAY_SERVICE_ACCOUNT_JSON

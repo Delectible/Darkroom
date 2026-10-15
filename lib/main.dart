@@ -13,6 +13,7 @@ import 'app.dart';
 import 'core/background/background_worker.dart';
 import 'core/db/app_database.dart';
 import 'core/diagnostics/crash_log.dart';
+import 'core/monetization/pro.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/paths/app_paths.dart';
 import 'core/providers.dart';
@@ -86,6 +87,8 @@ Future<void> main() async {
   // The launch screen stays up until the 3D camera bodies have loaded, so
   // the camera never comes up half drawn.
   if (global.controls3d) await _warmBodies(container);
+  // Store: listen for purchases and quietly restore an earlier Pro.
+  unawaited(container.read(proStoreProvider).start());
   runApp(UncontrolledProviderScope(container: container, child: const DarkroomApp()));
   if (launchPayload != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => route(launchPayload));

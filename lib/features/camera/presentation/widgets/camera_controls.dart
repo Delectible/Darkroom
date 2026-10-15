@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/media_repository.dart';
+import '../../../../core/monetization/allowance.dart';
+import '../../../../core/monetization/pro.dart';
 import '../../../../core/device/physical_orientation.dart';
 import '../../../../core/device/upright.dart';
 import '../../../../core/processing/photo_pipeline.dart';
@@ -449,7 +451,11 @@ class StockLabel extends ConsumerWidget {
         child: KeyedSubtree(
           key: ValueKey(spec.isFilm ? spec.id : 'lcd'),
           child: spec.isFilm
-              ? _MemoHolder(spec: spec, art: ref.watch(photoBodyProvider(AppMode.film)))
+              ? _MemoHolder(
+                  spec: spec,
+                  art: ref.watch(photoBodyProvider(AppMode.film)),
+                  pro: ref.watch(proProvider),
+                )
               : _LcdPanel(spec: spec, art: ref.watch(photoBodyProvider(AppMode.digital))),
         ),
       ),
@@ -460,7 +466,10 @@ class StockLabel extends ConsumerWidget {
 /// Film bodies: the memo holder on the back door, with the end flap torn off
 /// the film box slipped in so you remember what's loaded.
 class _MemoHolder extends StatelessWidget {
-  const _MemoHolder({required this.spec, this.art});
+  const _MemoHolder({required this.spec, this.art, this.pro = true});
+
+  /// Pro shoots full rolls; the free version's daily roll is shorter.
+  final bool pro;
 
   /// Photoreal body: the card sits in the rendered clip.
   final BodyArt? art;
@@ -471,11 +480,12 @@ class _MemoHolder extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = RetroPalette.of(context);
     final paper = Color(spec.boxColor), ink = Color(spec.boxInk);
+    final size = pro ? null : Allowance.sizeOf(spec);
     final detail = spec.recordsVideo
-        ? '${spec.badge} · 50 FT'
+        ? '${spec.badge} · ${size == null ? 50 : size ~/ 4} FT'
         : spec.isInstant
         ? '${spec.badge} · ${spec.roll.frames} SHOTS'
-        : '${spec.badge} · ${spec.roll.frames} EXP';
+        : '${spec.badge} · ${size ?? spec.roll.frames} EXP';
     final card = Container(
       padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
       decoration: BoxDecoration(
@@ -593,7 +603,17 @@ class _LcdPanel extends ConsumerWidget {
     final items = ref.watch(sdCardItemsProvider).value ?? const <MediaItem>[];
     final bars = Battery.bars(ref.watch(batteryLevelProvider).value);
     final String status;
-    if (spec.storage == DigitalStorage.floppy) {
+    final pro = ref.watch(proProvider);
+    final today = ref.watch(allowanceProvider);
+    if (!pro) {
+      // The free version's daily battery, shared by the digital bodies.
+      final left = today.at(AllowanceNotifier.now()).left(spec);
+      status = left == 0
+          ? 'BATTERY FLAT'
+          : spec.recordsVideo
+          ? 'SP  TAPE ${left * Allowance.videoSecondsPerUnit}SEC'
+          : 'SD 128MB  $left LEFT';
+    } else if (spec.storage == DigitalStorage.floppy) {
       // A 60-minute tape, minus what's been shot and not yet copied off.
       final usedS =
           items

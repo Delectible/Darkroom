@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/monetization/allowance.dart';
+import '../../../core/monetization/pro.dart';
+
 import '../../../core/device/physical_orientation.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/processing/cine_strip.dart';
@@ -483,13 +486,25 @@ class _FilmCounter extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final capture = ref.watch(captureControllerProvider);
+    final pro = ref.watch(proProvider);
+    final today = ref.watch(allowanceProvider).at(AllowanceNotifier.now());
+    final blocked = pro ? null : today.check(spec);
     String text;
     if (spec.recordsVideo) {
       final elapsed = capture.isRecording ? DateTime.now().difference(capture.recordingSince!).inSeconds : 0;
       if (capture.isRecording) ref.watch(secondTickerProvider);
-      // 50 ft cartridge, 4 seconds per foot at 18 fps.
-      final feet = ((spec.videoMaxSeconds - elapsed) / 4).ceil().clamp(0, 50);
-      text = '$feet FT';
+      // 50 ft cartridge, 4 seconds per foot at 18 fps (the free version's
+      // daily cartridge is shorter).
+      final length = pro ? spec.videoMaxSeconds : today.left(spec);
+      final feet = ((length - elapsed) / 4).ceil().clamp(0, 50);
+      text = blocked == Blocked.otherRoll ? 'NOT LOADED' : '$feet FT';
+    } else if (!pro) {
+      final left = today.left(spec);
+      text = switch (blocked) {
+        Blocked.outOfFilm => 'NO FILM',
+        Blocked.otherRoll => 'NOT LOADED',
+        _ => spec.roll.countsDown ? '$left LEFT' : 'FRAME ${Allowance.sizeOf(spec) - left + 1}',
+      };
     } else {
       final roll = spec.roll;
       final shots = ref.watch(_filmFrameProvider(roll)).value ?? 0;

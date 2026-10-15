@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
 import '../../core/device/haptics.dart';
+import '../../core/monetization/pro.dart';
 import '../../core/providers.dart';
 import '../../core/theme/darkroom_mark.dart';
 import '../camera/application/camera_session_controller.dart';
@@ -38,7 +39,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _asking = false;
   final Map<_Ask, bool> _granted = {};
 
-  static const _count = 6;
+  static const _count = 7;
 
   @override
   void dispose() {
@@ -161,6 +162,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         'A floppy-disk camera, a CCD compact, a flip phone and a camcorder. Shots go onto a '
                         'pretend SD card, browsed on an extremely serious 1998 desktop.\n\n'
                         'Move them to C: to set them free. There may be games. We will deny everything.',
+                  ),
+                  const _Page(
+                    icon: Icons.wb_twilight_outlined,
+                    title: 'A roll a day.',
+                    body:
+                        'The free version comes with one roll of film and one battery charge for the digital '
+                        'cameras each day. Both are back every morning.\n\n'
+                        'If you ever want more, Darkroom Pro lifts the limits for a one-time ${ProStore.fallbackPrice}. '
+                        'No subscription, no ads.',
                   ),
                   const _Page(icon: Icons.swipe_outlined, title: 'Getting around', child: _Gestures()),
                   _Page(

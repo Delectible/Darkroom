@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/device/physical_orientation.dart';
+import '../../../core/monetization/allowance.dart';
 import '../../../core/processing/capture_processor.dart';
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
@@ -136,6 +138,7 @@ class CaptureController extends Notifier<CaptureState> {
     final c = _ready;
     if (c == null || state.busy || c.value.isTakingPicture) return;
     if (ref.read(activeSpecProvider).recordsVideo) return;
+    if (ref.read(allowanceProvider.notifier).check(ref.read(activeSpecProvider)) != null) return;
     final ctx = _context(c);
     unawaited(Haptics.mediumImpact());
     state = state.copyWith(
@@ -148,6 +151,7 @@ class CaptureController extends Notifier<CaptureState> {
       // Hand-off: moves the file into our cache + writes the queue row.
       // Processing then continues in the background isolate.
       await ref.read(captureProcessorProvider).enqueuePhoto(file.path, ctx);
+      ref.read(allowanceProvider.notifier).usePhoto(ctx.spec);
       state = state.copyWith(busy: false);
       unawaited(_maybeAskNotificationPermission(ctx));
     } on CameraException catch (e) {
@@ -162,6 +166,13 @@ class CaptureController extends Notifier<CaptureState> {
     if (c == null || state.isRecording || c.value.isRecordingVideo) return;
     final spec = ref.read(activeSpecProvider);
     if (!spec.recordsVideo) return;
+    final allowance = ref.read(allowanceProvider.notifier);
+    if (allowance.check(spec) != null) return;
+    // The free version's film / battery left caps the take.
+    final maxSeconds = math.max(
+      1,
+      math.min(spec.videoMaxSeconds, allowance.videoSecondsLeft(spec) ?? spec.videoMaxSeconds),
+    );
     final ctx = _context(c);
     unawaited(Haptics.heavyImpact());
     try {
@@ -178,7 +189,7 @@ class CaptureController extends Notifier<CaptureState> {
       state = state.copyWith(recordingSince: DateTime.now());
       _zoomTrack = spec.zoom == null ? null : [0, ref.read(zoomProvider).fraction];
       _maxLengthTimer?.cancel();
-      _maxLengthTimer = Timer(Duration(seconds: spec.videoMaxSeconds), stopRecording);
+      _maxLengthTimer = Timer(Duration(seconds: maxSeconds), stopRecording);
     } on CameraException catch (e) {
       state = state.copyWith(message: 'Could not start recording: ${e.description ?? e.code}');
     }
@@ -207,6 +218,7 @@ class CaptureController extends Notifier<CaptureState> {
     state = state.copyWith(clearRecording: true);
     try {
       final file = await c.stopVideoRecording();
+      ref.read(allowanceProvider.notifier).useVideo(ctx.spec, DateTime.now().difference(since));
       unawaited(Haptics.lightImpact());
       try {
         await c.setFlashMode(FlashMode.off);

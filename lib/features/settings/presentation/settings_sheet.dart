@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sfx.dart';
 import '../../../core/device/upright.dart';
+import '../../../core/monetization/pro.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../../core/settings/settings_repository.dart';
@@ -12,6 +13,7 @@ import '../../../core/theme/retro_theme.dart';
 import '../../camera/application/camera_ui_state.dart';
 import '../../cameras/domain/camera_catalog.dart';
 import '../../cameras/domain/camera_spec.dart';
+import '../../monetization/pro_sheet.dart';
 import '../application/settings_controllers.dart';
 
 Future<void> showSettingsSheet(BuildContext context) {
@@ -53,15 +55,7 @@ class _SettingsSheet extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         _Heading('GLOBAL', p),
-        _Toggle(
-          title: 'Darkroom development',
-          subtitle: global.darkroomEnabled
-              ? 'Film shots take ${CameraSpec.defaultDevelopTime.inMinutes} minutes to develop '
-                    '(instant prints: under a minute).'
-              : 'Film shots develop instantly.',
-          value: global.darkroomEnabled,
-          onChanged: (v) => unawaited(g.setDarkroomEnabled(v)),
-        ),
+        _ProRow(pro: ref.watch(proProvider)),
         _Toggle(
           title: 'Notifications',
           subtitle: 'Tell me when prints finish developing.',
@@ -124,6 +118,33 @@ class _SettingsSheet extends ConsumerWidget {
       initialChildSize: 0.7,
       maxChildSize: 0.92,
       builder: (context, scroll) => list(scroll),
+    );
+  }
+}
+
+/// Darkroom Pro: one quiet line; tap for what it adds.
+class _ProRow extends StatelessWidget {
+  const _ProRow({required this.pro});
+
+  final bool pro;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = RetroPalette.of(context);
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      title: Text(
+        'Darkroom Pro',
+        style: TextStyle(color: p.text, fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        pro
+            ? 'Unlocked: unlimited film and battery. Thank you!'
+            : 'One roll and one battery charge a day. Pro lifts the limits.',
+        style: TextStyle(color: p.textMuted, fontSize: 12),
+      ),
+      trailing: Icon(Icons.chevron_right, color: p.textMuted),
+      onTap: () => showProSheet(context),
     );
   }
 }

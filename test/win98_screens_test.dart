@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:darkroom/core/db/media_repository.dart';
+import 'package:darkroom/core/providers.dart';
+import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/debug_menu.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/win98_viewer.dart';
@@ -40,6 +42,7 @@ void main() {
   }
 
   Widget app(Widget home) => ProviderScope(
+    overrides: [initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings())],
     child: RepaintBoundary(
       key: boundary,
       child: MaterialApp(
@@ -110,13 +113,25 @@ void main() {
         ),
       ),
     );
+    // Locked behind a password.
     await tester.tap(find.text('go'));
     await tester.pumpAndSettle();
-    expect(find.text('Camera Log'), findsWidgets);
-    expect(find.text('Crash Reports'), findsOneWidget);
-    expect(find.text('Welcome Tour'), findsOneWidget);
-    expect(find.text('Performance Recorder'), findsWidgets);
-    // The first tool (the performance recorder) is picked: a switch.
+    await tester.enterText(find.byType(TextField), 'kitten');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.text('Incorrect password.'), findsOneWidget);
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('go'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'bunny');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.text('Darkroom Pro'), findsWidgets);
+    expect(find.text('Refill Film & Battery'), findsOneWidget);
+    expect(find.text('Darkroom Development'), findsOneWidget);
+    expect(find.text('Performance Recorder'), findsOneWidget);
+    // The first tool (Darkroom Pro) is picked: a switch.
     expect(find.text('Turn On'), findsOneWidget);
     await tester.tap(find.text('Turn On'));
     await tester.pump();

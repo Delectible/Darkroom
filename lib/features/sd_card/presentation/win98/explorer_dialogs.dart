@@ -359,11 +359,6 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
                         onChanged: (v) => unawaited(g.setNotificationsEnabled(v)),
                       ),
                       Win98Checkbox(
-                        value: global.darkroomEnabled,
-                        label: 'Develop film in the darkroom (5 min)',
-                        onChanged: (v) => unawaited(g.setDarkroomEnabled(v)),
-                      ),
-                      Win98Checkbox(
                         value: global.saveOriginalCopy,
                         label: 'Also save an unfiltered original',
                         onChanged: (v) => unawaited(g.setSaveOriginalCopy(v)),

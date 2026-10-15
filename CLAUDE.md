@@ -202,6 +202,25 @@ artwork, aspects, `developTime`, `printStyle` (print / instant), `roll`
 file should switch on a camera id. `test/catalog_contract_test.dart` fails if
 an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
 
+## Free and Pro (1.7)
+
+- Free: one roll a day (`Allowance`, `core/monetization/allowance.dart`):
+  any stock, fixed once its first frame is shot (24 frames 35mm, the
+  instant pack, 60 s of Super 8), plus one battery charge shared by the
+  digital bodies (10 units: a photo = 1, video 3 s = 1). Refills at 5am
+  local (`Allowance.dayOf`). Kept in prefs (`PrefKeys.allowance`).
+  `pressShutter` checks it (`limitHitProvider` -> `showLimitSheet`), the
+  capture controller consumes it and caps clip length. Counters, memo card
+  and LCD show the free numbers.
+- Pro (`proProvider`, `PrefKeys.pro`): one-time non-consumable
+  `darkroom_pro` via `in_app_purchase` (`ProStore`: listens from launch,
+  quietly restores). Pro ignores the allowance. `showProSheet` from
+  Settings > Darkroom Pro and the limit sheet; kept understated.
+- Debug (Win98 Help > Debug...) asks for the password "bunny" once per
+  run; it has Darkroom Pro on/off, Refill Film & Battery, and Darkroom
+  Development (the 5-minute timer; no longer in Settings).
+- Fancy graphics fades the camera out and back in (`GraphicsVeil`).
+
 ## Product rules agreed with the owner
 
 Film Mode

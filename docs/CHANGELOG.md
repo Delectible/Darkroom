@@ -963,10 +963,24 @@ Answers: turntable renders, no 2D/3D switch.
 12 closed testers opted in by 2026-10-14; production access can be applied
 for from 2026-10-28 (reminder set for 2026-10-29).
 
-- [ ] **47.1 Monetization**
+- [~] **47.1 Monetization**: built in 1.7.0 (48.x); Play product still to create
 - [ ] **47.2 Bug fixes and cleanup**
 - [ ] **47.3 Store page**: finish the listing, take new screenshots
 - [ ] **47.4 New films**
 - [ ] **47.5 In-app bug reports and feature requests** to the developer
 - [ ] **47.6 Google's publishing info**: the Play Console forms needed to
   publish (App content, production access questionnaire)
+
+## 48. Free and Pro (2026-10-15)
+
+- [x] **48.1 Free version limits**: one roll a day (any stock, fixed once
+  started; 24 frames 35mm, the instant pack, 60 s Super 8) and one battery
+  charge for the digital cameras (10 shots / 30 s), back every morning.
+- [x] **48.2 Darkroom Pro**: one-time $4.99 (`darkroom_pro`), lifts the
+  limits, swap film mid-roll, full Super 8. Settings row, limit sheet, Pro
+  sheet with restore. Needs the product created in Play Console.
+- [x] **48.3 Debug**: password "bunny"; Pro on/off, refill, darkroom
+  development switch (moved out of Settings and Win98 Options).
+- [x] **48.4 Fancy graphics** switch fades the camera out and in.
+- [x] **48.5 Welcome tour**: a quiet page on the free limits and Pro.
+  → 1.7.0 · 2026-10-15

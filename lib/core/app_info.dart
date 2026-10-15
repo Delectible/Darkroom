@@ -3,17 +3,19 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.6.14';
+  static const version = '1.7.0';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The Y2K Flip Phone is tuned to real 2000s phone photos: twice the resolution (VGA), a soft plastic lens, '
-      'cool washed colour and 4096-colour banding, with the JPEG blocks kept.';
+      'Free and Pro: the free version gives you one roll of film and one battery charge for the digital '
+      'cameras each day, back every morning. Darkroom Pro (one-time \$4.99) lifts the limits. Fancy graphics '
+      'now fades smoothly when switched.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
+    ('1.7', ['A roll a day free, Darkroom Pro for unlimited']),
     (
       '1.6',
       [

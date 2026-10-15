@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
@@ -8,8 +9,21 @@ import '../../../core/processing/film/film_profile.dart';
 import '../../../core/providers.dart';
 import '../../../core/shaders/shader_library.dart' show FilmUniforms;
 import '../../camera/presentation/photo_body.dart' show BodyArt;
+import '../../camera/presentation/whole_body.dart' show wholeArtProvider;
 import '../../../core/settings/settings_repository.dart';
 import '../../cameras/domain/camera_catalog.dart';
+
+/// Hides the camera while Fancy graphics switches, so the change fades
+/// instead of snapping (the settings on top stay put).
+class GraphicsVeil {
+  const GraphicsVeil._();
+
+  static final shown = ValueNotifier<bool>(true);
+  static const fade = Duration(milliseconds: 220);
+
+  /// Camera screens on screen that will fade.
+  static int cameras = 0;
+}
 
 class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
   @override
@@ -40,11 +54,28 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     await _repo.saveGlobal(state);
   }
 
-  /// 3D on, or off = performance mode (one switch).
+  /// 3D on, or off = performance mode (one switch). With the camera on
+  /// screen it fades out, switches, and fades back in.
   Future<void> setControls3d(bool enabled) async {
+    final veil = GraphicsVeil.cameras > 0;
+    if (veil) {
+      GraphicsVeil.shown.value = false;
+      await Future<void>.delayed(GraphicsVeil.fade);
+    }
     state = state.copyWith(controls3d: enabled);
     _apply(state);
     await _repo.saveGlobal(state);
+    if (!veil) return;
+    if (enabled) {
+      try {
+        await ref.read(wholeArtProvider.future).timeout(const Duration(seconds: 6));
+      } catch (_) {
+        // slow: the classic body shows until the models land
+      }
+    }
+    await WidgetsBinding.instance.endOfFrame;
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+    GraphicsVeil.shown.value = true;
   }
 
   SettingsRepository get _repo => ref.read(settingsRepositoryProvider);

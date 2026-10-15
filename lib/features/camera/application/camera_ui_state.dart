@@ -40,6 +40,12 @@ class PrefKeys {
   /// mentioned again.
   static const galleryDismissed = 'gallery.dismissed';
 
+  /// Darkroom Pro unlocked (bought, restored, or switched on in Debug).
+  static const pro = 'pro.unlocked';
+
+  /// The free version's film roll and battery for today (JSON).
+  static const allowance = 'allowance.today';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -57,6 +63,8 @@ class PrefKeys {
     win98Theme,
     galleryAsked,
     galleryDismissed,
+    pro,
+    allowance,
   };
 }
 

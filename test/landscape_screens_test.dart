@@ -124,7 +124,7 @@ void main() {
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      expect(find.text('Darkroom development'), findsOneWidget);
+      expect(find.text('Darkroom Pro'), findsOneWidget);
       await shoot(tester, 'settings_$name');
     });
 

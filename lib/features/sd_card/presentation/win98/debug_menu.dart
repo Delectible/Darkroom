@@ -11,9 +11,13 @@ import '../../../../core/device/battery.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/debug_flags.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
+import '../../../../core/monetization/allowance.dart';
+import '../../../../core/monetization/pro.dart';
 import '../../../../core/providers.dart';
 import '../../../camera/application/camera_session_controller.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys, bodyFinishProvider;
+import '../../../cameras/domain/camera_spec.dart';
+import '../../../settings/application/settings_controllers.dart';
 import '../../../onboarding/onboarding_screen.dart';
 import '../../application/sd_card_controller.dart';
 import 'explorer_dialogs.dart';
@@ -32,6 +36,33 @@ class _Tool {
 }
 
 final _tools = <_Tool>[
+  _Tool(
+    PixelIcon.rabbit,
+    'Darkroom Pro',
+    'On: unlimited film and battery, as if Pro was bought. Off: the free version with its daily roll '
+        'and battery. Only changes this phone.',
+    (_, ref) => ref.read(proProvider.notifier).set(!ref.read(proProvider)),
+    on: (ref) => ref.watch(proProvider),
+  ),
+  _Tool(
+    PixelIcon.camera,
+    'Refill Film & Battery',
+    "Gives the free version today's roll and a full battery again, as if it were tomorrow morning.",
+    (context, ref) async {
+      ref.read(allowanceProvider.notifier).refill();
+      if (context.mounted) await _done(context, 'A fresh roll and a full battery are waiting.');
+    },
+  ),
+  _Tool(
+    PixelIcon.hourglass,
+    'Darkroom Development',
+    'On: film takes ${CameraSpec.defaultDevelopTime.inMinutes} minutes to develop (instant prints under a minute). '
+        'Off: film develops instantly, and anything in the darkroom is finished now.',
+    (_, ref) => ref
+        .read(globalSettingsProvider.notifier)
+        .setDarkroomEnabled(!ref.read(globalSettingsProvider).darkroomEnabled),
+    on: (ref) => ref.watch(globalSettingsProvider).darkroomEnabled,
+  ),
   _Tool(
     PixelIcon.hourglass,
     'Performance Recorder',
@@ -212,13 +243,94 @@ Future<void> _systemInfo(BuildContext context, WidgetRef ref) async {
 
 /// Help > Debug: a scrolling list of developer tools (room for more), the
 /// picked one's description, and Run. Double-tap a tool to run it.
-Future<void> showDebugMenu(BuildContext context) => showWin98Window<void>(
-  context,
-  title: 'Debug',
-  width: 320,
-  icon: const PixelIconView(PixelIcon.computer),
-  builder: (context) => const _DebugMenu(),
-);
+/// Asked for once per app run.
+bool _debugUnlocked = false;
+
+Future<void> showDebugMenu(BuildContext context) async {
+  if (!_debugUnlocked) {
+    final typed = await _askPassword(context);
+    if (typed == null || !context.mounted) return;
+    if (typed.trim() != 'bunny') {
+      await showWin98MessageBox(
+        context,
+        title: 'Debug',
+        message: 'Incorrect password.',
+        icon: Win98MessageIcon.error,
+      );
+      return;
+    }
+    _debugUnlocked = true;
+  }
+  if (!context.mounted) return;
+  await showWin98Window<void>(
+    context,
+    title: 'Debug',
+    width: 320,
+    icon: const PixelIconView(PixelIcon.computer),
+    builder: (context) => const _DebugMenu(),
+  );
+}
+
+Future<String?> _askPassword(BuildContext context) {
+  final ctrl = TextEditingController();
+  return showWin98Window<String>(
+    context,
+    title: 'Enter Password',
+    width: 300,
+    icon: const PixelIconView(PixelIcon.computer),
+    builder: (context) => Padding(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Type the password for the Debug tools.'),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Text('Password:  '),
+              Expanded(
+                child: Win98Bevel(
+                  style: BevelStyle.sunken,
+                  color: W98.window,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    obscureText: true,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    style: W98.text,
+                    cursorColor: W98.windowInk,
+                    decoration: const InputDecoration(isDense: true, border: InputBorder.none),
+                    onSubmitted: (v) => Navigator.of(context).pop(v),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(ctrl.text),
+                child: const Text('OK'),
+              ),
+              const SizedBox(width: 6),
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
 class _DebugMenu extends ConsumerStatefulWidget {
   const _DebugMenu();

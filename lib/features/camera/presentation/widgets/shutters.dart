@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/audio/sfx.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
+import '../../../../core/monetization/allowance.dart';
 import '../../../cameras/domain/camera_spec.dart';
 import '../../application/camera_ui_state.dart';
 import '../../application/capture_controller.dart';
@@ -27,6 +28,15 @@ final shutterPulseProvider = NotifierProvider<ShutterPulse, int>(ShutterPulse.ne
 
 /// Fires the shutter: the button's stroke and sound, then the capture.
 void pressShutter(WidgetRef ref) {
+  // Free version out of film / battery: nothing fires, the screen explains.
+  if (!ref.read(captureControllerProvider).isRecording) {
+    final why = ref.read(allowanceProvider.notifier).check(ref.read(activeSpecProvider));
+    if (why != null) {
+      unawaited(Haptics.lightImpact());
+      ref.read(limitHitProvider.notifier).hit(why);
+      return;
+    }
+  }
   PerfRecorder.mark('shutter');
   ref.read(shutterPulseProvider.notifier).fire();
   unawaited(ref.read(captureControllerProvider.notifier).shutter());

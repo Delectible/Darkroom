@@ -957,3 +957,16 @@ Answers: turntable renders, no 2D/3D switch.
 
 - [x] **46.1 No personal name in the repo**: docs, code comments and test
   fixtures say "the owner" (or a placeholder name) instead.
+
+## 47. Before production (2026-10-15)
+
+12 closed testers opted in by 2026-10-14; production access can be applied
+for from 2026-10-28 (reminder set for 2026-10-29).
+
+- [ ] **47.1 Monetization**
+- [ ] **47.2 Bug fixes and cleanup**
+- [ ] **47.3 Store page**: finish the listing, take new screenshots
+- [ ] **47.4 New films**
+- [ ] **47.5 In-app bug reports and feature requests** to the developer
+- [ ] **47.6 Google's publishing info**: the Play Console forms needed to
+  publish (App content, production access questionnaire)

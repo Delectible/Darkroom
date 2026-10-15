@@ -979,7 +979,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **48.2 Darkroom Pro**: one-time $4.99 (`darkroom_pro`), lifts the
   limits, swap film mid-roll, full Super 8. Settings row, limit sheet, Pro
   sheet with restore. Needs the product created in Play Console.
-- [x] **48.3 Debug**: password "bunny"; Pro on/off, refill, darkroom
+- [x] **48.3 Debug**: password-protected; Pro on/off, refill, darkroom
   development switch (moved out of Settings and Win98 Options).
 - [x] **48.4 Fancy graphics** switch fades the camera out and in.
 - [x] **48.5 Welcome tour**: a quiet page on the free limits and Pro.
@@ -990,3 +990,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **49.1 Draft on a branch, build on main**: work branches no longer
   build; pushes to `main` happen when the owner says "push"; closed testing
   is promoted by hand once a build is stable.
+
+## 50. Lock-down (2026-10-15)
+
+- [x] **50.1 Debug password out of the repo**: now the repo secret
+  `DEBUG_PASSWORD` (build `--dart-define`); notes no longer name it.
+- [x] **50.2 No public APKs**: Releases only carry the .ipa; artifacts
+  last a day; `prune-releases.yml` removes old releases and artifacts.

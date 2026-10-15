@@ -100,6 +100,7 @@ void main() {
   });
 
   testWidgets('debug window lists its tools and switches', (tester) async {
+    DebugGate.password = 'test-password';
     await phone(tester);
     await tester.pumpWidget(
       app(
@@ -124,7 +125,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('go'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'bunny');
+    await tester.enterText(find.byType(TextField), 'test-password');
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
     expect(find.text('Darkroom Pro'), findsWidgets);

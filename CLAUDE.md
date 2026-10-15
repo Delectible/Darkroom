@@ -39,9 +39,13 @@ Read this first. It's the hand-off from the earlier development sessions
 
 - Pushes to `main` (only when the owner asks) build; work branches don't.
   Don't push half-done work to `main`.
-- Push to `main` → `.github/workflows/build-apk.yml` builds `Darkroom-N.apk` and, when
-  enabled, an unsigned `Darkroom-N.ipa`, and publishes them under **Releases**
-  (`build-N`; non-`main` branches are marked pre-release).
+- Push to `main` → `.github/workflows/build-apk.yml` builds the APK/AAB (the
+  AAB goes to Play; neither is published) and an unsigned `Darkroom-N.ipa`,
+  the only file published under **Releases** (`build-N`). Workflow
+  artifacts live one day (public repo: anyone signed in can download them).
+  `prune-releases.yml` (by hand, input `up_to`) deletes old releases, their
+  files and all artifacts. The repo is public: never put anything in it
+  that unlocks Pro.
 - iOS build runs on a macOS runner. On a private repo it only runs if the
   commit message contains `[ios]` or the workflow is started by hand (Mac
   minutes cost 10x). The .ipa is unsigned; the owner signs and installs it with
@@ -222,8 +226,10 @@ an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
   `darkroom_pro` via `in_app_purchase` (`ProStore`: listens from launch,
   quietly restores). Pro ignores the allowance. `showProSheet` from
   Settings > Darkroom Pro and the limit sheet; kept understated.
-- Debug (Win98 Help > Debug...) asks for the password "bunny" once per
-  run; it has Darkroom Pro on/off, Refill Film & Battery, and Darkroom
+- Debug (Win98 Help > Debug...) asks for a password once per run. It is
+  the repo secret `DEBUG_PASSWORD`, passed to the build with
+  `--dart-define` (`DebugGate`); never write it in the repo or the notes.
+  No secret = Debug stays shut. It has Darkroom Pro on/off, Refill Film & Battery, and Darkroom
   Development (the 5-minute timer; no longer in Settings).
 - Fancy graphics fades the camera out and back in (`GraphicsVeil`).
 

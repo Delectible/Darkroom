@@ -56,14 +56,16 @@ jobs:
         env:
           DARKROOM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          flutter build apk --release --build-number=${{ github.run_number }}
-          flutter build appbundle --release --build-number=${{ github.run_number }}
+          flutter build apk --release --build-number=${{ github.run_number }} --dart-define=DEBUG_PASSWORD=${{ secrets.DEBUG_PASSWORD }}
+          flutter build appbundle --release --build-number=${{ github.run_number }} --dart-define=DEBUG_PASSWORD=${{ secrets.DEBUG_PASSWORD }}
       - run: |
           mkdir dist
           cp build/app/outputs/flutter-apk/app-release.apk dist/Darkroom-${{ github.run_number }}.apk
           cp build/app/outputs/bundle/release/app-release.aab dist/Darkroom-${{ github.run_number }}.aab
+      # Kept a day, only for the Play upload below (artifacts on a public
+      # repo can be downloaded by anyone signed in to GitHub).
       - uses: actions/upload-artifact@v4
-        with: { name: android, path: dist/ }
+        with: { name: android, path: dist/, retention-days: 1 }
 
   # Mac build minutes are free on public repos but cost 10x on private ones,
   # so on a private repo the iPhone build only runs when asked for: put [ios]
@@ -79,7 +81,7 @@ jobs:
         run: |
           flutter create --org $ORG --project-name $APP --platforms ios .
           sed -i '' -E 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/' ios/Runner.xcodeproj/project.pbxproj
-      - run: flutter build ios --release --no-codesign
+      - run: flutter build ios --release --no-codesign --dart-define=DEBUG_PASSWORD=${{ secrets.DEBUG_PASSWORD }}
       - name: Package an unsigned .ipa (signed on your computer when sideloading)
         run: |
           mkdir -p dist/Payload
@@ -96,7 +98,7 @@ jobs:
           codesign --verify --deep --strict dist/Payload/Runner.app && echo "ad-hoc signed"
           cd dist && zip -qry Darkroom-${{ github.run_number }}.ipa Payload && rm -rf Payload
       - uses: actions/upload-artifact@v4
-        with: { name: ios, path: dist/ }
+        with: { name: ios, path: dist/, retention-days: 1 }
 
   release:
     needs: [check, android, ios]
@@ -112,7 +114,9 @@ jobs:
           body: ${{ github.event.head_commit.message || 'Manual build' }}
           prerelease: ${{ github.ref_name != 'main' }}
           target_commitish: ${{ github.sha }}
-          files: dist/*
+          # Only the iPhone sideload file: Android installs come from Play.
+          files: dist/*.ipa
+          fail_on_unmatched_files: false
 
   # Google Play internal testing. Needs the repo secret PLAY_SERVICE_ACCOUNT_JSON
   # (a service account invited in Play Console > Users and permissions);

@@ -243,14 +243,21 @@ Future<void> _systemInfo(BuildContext context, WidgetRef ref) async {
 
 /// Help > Debug: a scrolling list of developer tools (room for more), the
 /// picked one's description, and Run. Double-tap a tool to run it.
-/// Asked for once per app run.
-bool _debugUnlocked = false;
+/// The Debug password comes from the build (CI secret `DEBUG_PASSWORD`,
+/// `--dart-define`), never from the source. Without one the window stays
+/// shut. Asked for once per app run.
+class DebugGate {
+  const DebugGate._();
+
+  static String password = const String.fromEnvironment('DEBUG_PASSWORD');
+  static bool unlocked = false;
+}
 
 Future<void> showDebugMenu(BuildContext context) async {
-  if (!_debugUnlocked) {
+  if (!DebugGate.unlocked) {
     final typed = await _askPassword(context);
     if (typed == null || !context.mounted) return;
-    if (typed.trim() != 'bunny') {
+    if (DebugGate.password.isEmpty || typed.trim() != DebugGate.password) {
       await showWin98MessageBox(
         context,
         title: 'Debug',
@@ -259,7 +266,7 @@ Future<void> showDebugMenu(BuildContext context) async {
       );
       return;
     }
-    _debugUnlocked = true;
+    DebugGate.unlocked = true;
   }
   if (!context.mounted) return;
   await showWin98Window<void>(

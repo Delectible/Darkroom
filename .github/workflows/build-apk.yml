@@ -1,6 +1,8 @@
 name: Build
 on:
+  # Only main builds; work branches are for drafting (run by hand if needed).
   push:
+    branches: [main]
     paths-ignore: ['**.md', 'docs/**', 'fastlane/**', '.github/workflows/play-listing.yml']
   workflow_dispatch:
     inputs:

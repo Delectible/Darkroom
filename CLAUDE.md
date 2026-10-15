@@ -11,7 +11,13 @@ Read this first. It's the hand-off from the earlier development sessions
 - Usually works from a phone. Keep replies short and plain.
 - For big revisions, ask clarifying questions first, then implement.
 - He's often low on usage: keep changes focused, don't gold-plate.
-- After every push that builds, wait for the run; once its `play` job has
+- **How we work (since 2026-10-15):** draft on the session's work branch
+  (it doesn't build). Commit there freely while brainstorming. Only when
+  the owner says "push" does it go to `main` (fast-forward the work branch
+  onto `main`), which builds and uploads to Play internal testing. Closed
+  testing (later: production) is promoted by hand when the owner calls a
+  build stable (`promote-closed.yml`).
+- After every push to `main`, wait for the run; once its `play` job has
   uploaded, wait ~2 more minutes, then send the owner a push notification
   (PushNotification) that the build is on Google Play: version, build
   number, one-line what's new. If the build or the upload fails, notify
@@ -31,9 +37,9 @@ Read this first. It's the hand-off from the earlier development sessions
 
 ## Build & release pipeline
 
-- Unless the owner says otherwise, **commit and push finished changes straight to
-  `main`** so a new APK gets built. Don't push half-done work.
-- Push → `.github/workflows/build-apk.yml` builds `Darkroom-N.apk` and, when
+- Pushes to `main` (only when the owner asks) build; work branches don't.
+  Don't push half-done work to `main`.
+- Push to `main` → `.github/workflows/build-apk.yml` builds `Darkroom-N.apk` and, when
   enabled, an unsigned `Darkroom-N.ipa`, and publishes them under **Releases**
   (`build-N`; non-`main` branches are marked pre-release).
 - iOS build runs on a macOS runner. On a private repo it only runs if the

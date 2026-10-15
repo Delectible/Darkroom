@@ -984,3 +984,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **48.4 Fancy graphics** switch fades the camera out and in.
 - [x] **48.5 Welcome tour**: a quiet page on the free limits and Pro.
   → 1.7.0 · 2026-10-15
+
+## 49. Workflow (2026-10-15)
+
+- [x] **49.1 Draft on a branch, build on main**: work branches no longer
+  build; pushes to `main` happen when the owner says "push"; closed testing
+  is promoted by hand once a build is stable.

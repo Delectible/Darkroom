@@ -28,6 +28,8 @@ Read this first. It's the hand-off from the earlier development sessions
   plain words (it's Play's "What's new"), and when a main idea lands add a
   few-word bullet to the newest `AppInfo.revisions` entry (Help > About
   shows them as bullets; keep them short).
+- **Commit messages:** plain messages only, no Claude session links and no
+  Co-Authored-By trailers (the owner's wish, 2026-10-16).
 - **Release roadmap:** `docs/RELEASE.md` is the checklist to the public
   Play / App Store release; tick items as they land.
 - **Change log:** `docs/CHANGELOG.md` tracks every requested change by item
@@ -512,6 +514,10 @@ UI
   `memo_slide_test`).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
+- Accessibility: system text size is honoured up to 1.3x (`app.dart`,
+  `MediaQuery.withClampedTextScaling`); Darkroom 98 ignores it (fixed pixel
+  font, `Win98Scale`). The camera's controls carry `Semantics` labels; keep
+  that for new buttons. `onboarding_screens_test` runs at 1.0x and 1.3x.
 - Camera session: "inactive" does NOT close the camera (Android sends it on
   any focus blip; closing made the Pixel's viewfinder flap). Only hidden /
   paused do. `CameraLog` keeps recent session events: Win98 Help > Debug.

@@ -332,6 +332,8 @@ class Win98Scale extends StatelessWidget {
                   viewPadding: mq.viewPadding / factor,
                   viewInsets: mq.viewInsets / factor,
                   systemGestureInsets: mq.systemGestureInsets / factor,
+                  // A fixed pixel-font desktop: its own uniform scale only.
+                  textScaler: TextScaler.noScaling,
                 ),
                 // Anything without its own style still gets the pixel font.
                 child: DefaultTextStyle.merge(

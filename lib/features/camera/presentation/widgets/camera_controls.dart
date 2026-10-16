@@ -430,34 +430,39 @@ class StockLabel extends ConsumerWidget {
     final spec = ref.watch(activeSpecProvider);
     // On the 3D body it fills the memo holder's / LCD's window exactly.
     final fills = ref.watch(wholeBodyProvider(spec.mode)) != null;
-    return SwipeToCycle(
-      onTap: onOpen,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 220),
-        layoutBuilder: (current, previous) => Stack(
-          alignment: Alignment.centerLeft,
-          fit: fills ? StackFit.expand : StackFit.loose,
-          children: [...previous, ?current],
-        ),
-        transitionBuilder: (c, a) => FadeTransition(
-          opacity: a,
-          child: SlideTransition(
-            position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a),
-            child: c,
+    return Semantics(
+      button: true,
+      label: spec.isFilm ? 'Film: ${spec.name}' : 'Camera: ${spec.name}',
+      hint: 'Tap to choose, swipe sideways for the next one',
+      child: SwipeToCycle(
+        onTap: onOpen,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          layoutBuilder: (current, previous) => Stack(
+            alignment: Alignment.centerLeft,
+            fit: fills ? StackFit.expand : StackFit.loose,
+            children: [...previous, ?current],
           ),
-        ),
-        // The digital bodies' LCD is one screen that stays put: only what's
-        // on it changes. Film swaps the box end in the memo holder.
-        // Film keeps one holder: its card slides in the window (_MemoHolder).
-        child: KeyedSubtree(
-          key: ValueKey(spec.isFilm ? 'memo' : 'lcd'),
-          child: spec.isFilm
-              ? _MemoHolder(
-                  spec: spec,
-                  art: ref.watch(photoBodyProvider(AppMode.film)),
-                  pro: ref.watch(proProvider),
-                )
-              : _LcdPanel(spec: spec, art: ref.watch(photoBodyProvider(AppMode.digital))),
+          transitionBuilder: (c, a) => FadeTransition(
+            opacity: a,
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a),
+              child: c,
+            ),
+          ),
+          // The digital bodies' LCD is one screen that stays put: only what's
+          // on it changes. Film swaps the box end in the memo holder.
+          // Film keeps one holder: its card slides in the window (_MemoHolder).
+          child: KeyedSubtree(
+            key: ValueKey(spec.isFilm ? 'memo' : 'lcd'),
+            child: spec.isFilm
+                ? _MemoHolder(
+                    spec: spec,
+                    art: ref.watch(photoBodyProvider(AppMode.film)),
+                    pro: ref.watch(proProvider),
+                  )
+                : _LcdPanel(spec: spec, art: ref.watch(photoBodyProvider(AppMode.digital))),
+          ),
         ),
       ),
     );

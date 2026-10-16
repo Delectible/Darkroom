@@ -1023,3 +1023,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **53.1 Carousel first frame**: the unselected items are dimmed and
   smaller as soon as it opens (they drew full-size until the first scroll).
   → 1.7.4 · 2026-10-16
+
+## 54. Release prep (2026-10-16)
+
+- [x] **54.1 No session links in commits** from now on.
+- [x] **54.2 Accessibility basics**: screen-reader label on the film/camera
+  label; system text up to 1.3x; Darkroom 98 stays fixed.
+- [~] **54.3 Bug/robustness pass** (free/Pro code): review running.

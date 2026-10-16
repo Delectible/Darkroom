@@ -21,39 +21,44 @@ void main() {
   final shots = Platform.environment['SHOTS'];
   final boundary = GlobalKey();
 
-  testWidgets('welcome tour pages', (tester) async {
-    tester.view.physicalSize = const Size(1280, 2856);
-    tester.view.devicePixelRatio = 3.1;
-    addTearDown(tester.view.reset);
+  // Default text, and the biggest system text the app honours (1.3x).
+  for (final scale in [1.0, 1.3]) {
+    testWidgets('welcome tour pages, text x$scale', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2856);
+      tester.view.devicePixelRatio = 3.1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          userNameProvider.overrideWith(_NoName.new),
-          initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
-        ],
-        child: RepaintBoundary(
-          key: boundary,
-          child: MaterialApp(debugShowCheckedModeBanner: false, home: OnboardingScreen(onDone: () {})),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userNameProvider.overrideWith(_NoName.new),
+            initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+          ],
+          child: RepaintBoundary(
+            key: boundary,
+            child: MaterialApp(debugShowCheckedModeBanner: false, home: OnboardingScreen(onDone: () {})),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-    for (var page = 0; page < 7; page++) {
-      if (shots != null) {
-        await tester.runAsync(() async {
-          final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-          final image = await ro.toImage(pixelRatio: 1);
-          final png = await image.toByteData(format: ui.ImageByteFormat.png);
-          await File('$shots/onboarding_$page.png').writeAsBytes(png!.buffer.asUint8List());
-        });
+      );
+      await tester.pumpAndSettle();
+      for (var page = 0; page < 7; page++) {
+        if (shots != null) {
+          await tester.runAsync(() async {
+            final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+            final image = await ro.toImage(pixelRatio: 1);
+            final png = await image.toByteData(format: ui.ImageByteFormat.png);
+            await File('$shots/onboarding_${scale}_$page.png').writeAsBytes(png!.buffer.asUint8List());
+          });
+        }
+        if (page < 6) {
+          await tester.tap(find.byType(FilledButton));
+          await tester.pumpAndSettle();
+        }
       }
-      if (page < 6) {
-        await tester.tap(find.byType(FilledButton));
-        await tester.pumpAndSettle();
-      }
-    }
-    expect(find.text('Allow all'), findsOneWidget);
-    expect(find.text('A few quick yeses'), findsOneWidget);
-  });
+      expect(find.text('Allow all'), findsOneWidget);
+      expect(find.text('A few quick yeses'), findsOneWidget);
+    });
+  }
 }

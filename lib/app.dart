@@ -44,7 +44,10 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       home: const PortraitLock(child: _Home()),
       // The corkboard and Win98 turn to landscape with the phone.
       navigatorObservers: [UprightApp.observer],
-      builder: (context, child) => UprightApp(child: child!),
+      // Bigger system text is honoured up to 1.3x: past that the camera's
+      // printed labels and the sheets' layouts break.
+      builder: (context, child) =>
+          MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
     );
   }
 }

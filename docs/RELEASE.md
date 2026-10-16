@@ -15,8 +15,9 @@ the owner in a console / on a phone, C = Claude in the repo).
   Watch Help > Crash Reports. (O tests, C fixes)
 - [ ] Performance check on the S10+: viewfinder frame rate per camera,
   corkboard scroll, swap animation. (O, C)
-- [ ] Accessibility basics: screen-reader labels on the main buttons, large
-  text doesn't break the Win98 dialogs. (C)
+- [x] Accessibility basics (1.7.5): screen-reader labels on the camera's
+  buttons and film/camera label; system text honoured up to 1.3x
+  (Darkroom 98 keeps its fixed pixel font). (C)
 - [~] 3D bodies (1.5, 2026-10-08: the whole body and every control
   rendered in Blender; 3D on by default, Settings switch for the classic
   look); 1.6 draws each camera as a live 3D model

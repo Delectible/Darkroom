@@ -20,12 +20,19 @@ enum Blocked {
   /// Today's roll is still in its box: the first shot loads it, so ask
   /// first (the stock can't change until it's finished).
   unloaded,
+
+  /// A roll left unfinished yesterday is still in the camera and nobody has
+  /// said yet whether to keep shooting it or rewind and swap.
+  carriedOver,
 }
 
 /// The free version's daily allowance: one roll of film (any stock, fixed
 /// once its first frame is shot) and one charge of a battery the digital
 /// cameras share. Both come back every morning ([refillHour] local time).
-/// Darkroom Pro ignores all of it.
+/// A roll that isn't finished stays in the camera overnight ([carried]):
+/// the first film shot asks to keep it or rewind and swap (the rest is
+/// lost); finishing it brings today's fresh roll. Darkroom Pro ignores all
+/// of it.
 class Allowance {
   const Allowance({
     required this.day,
@@ -33,6 +40,8 @@ class Allowance {
     this.rollSize = 0,
     this.filmUsed = 0,
     this.batteryUsed = 0,
+    this.carried = false,
+    this.asked = false,
   });
 
   /// Local day of the last refill (see [dayOf]).
@@ -50,6 +59,12 @@ class Allowance {
   /// Battery units used today: a photo is one, video [videoSecondsPerUnit]
   /// seconds a unit.
   final int batteryUsed;
+
+  /// The loaded roll was left unfinished on an earlier day.
+  final bool carried;
+
+  /// Today's keep-or-swap question about a [carried] roll was answered.
+  final bool asked;
 
   static const refillHour = 5;
   static const frames35 = 24;
@@ -71,9 +86,15 @@ class Allowance {
     return frames35;
   }
 
-  /// Today's state at [now]: a new morning brings a fresh roll and a full
-  /// battery.
-  Allowance at(DateTime now) => dayOf(now) == day ? this : Allowance(day: dayOf(now));
+  /// Today's state at [now]: a new morning brings a full battery, and a
+  /// fresh roll unless one is still unfinished in the camera.
+  Allowance at(DateTime now) {
+    if (dayOf(now) == day) return this;
+    if (stock != null && filmUsed < rollSize) {
+      return Allowance(day: dayOf(now), stock: stock, rollSize: rollSize, filmUsed: filmUsed, carried: true);
+    }
+    return Allowance(day: dayOf(now));
+  }
 
   /// What's left for [spec]: frames (seconds for Super 8) of film, or battery
   /// units for digital bodies.
@@ -87,6 +108,7 @@ class Allowance {
   /// Null when [spec] may shoot.
   Blocked? check(CameraSpec spec) {
     if (spec.mode == AppMode.digital) return left(spec) > 0 ? null : Blocked.flatBattery;
+    if (carried && !asked) return Blocked.carriedOver;
     if (stock != null && filmUsed >= rollSize) return Blocked.outOfFilm;
     if (stock != null && stock != spec.id) return Blocked.otherRoll;
     if (stock == null) return Blocked.unloaded;
@@ -96,10 +118,16 @@ class Allowance {
   /// Today's roll, loaded with [spec] (nothing shot yet).
   Allowance load(CameraSpec spec) => _load(spec);
 
+  /// Keep shooting yesterday's roll.
+  Allowance keep() => copy(asked: true);
+
+  /// Rewind yesterday's roll (the rest is lost): today's fresh roll waits.
+  Allowance rewind() => Allowance(day: day, batteryUsed: batteryUsed);
+
   /// After a still on [spec].
   Allowance usePhoto(CameraSpec spec) => spec.mode == AppMode.digital
       ? copy(batteryUsed: batteryUsed + 1)
-      : _load(spec).copy(filmUsed: _load(spec).filmUsed + 1);
+      : _load(spec).copy(filmUsed: _load(spec).filmUsed + 1)._finishCarried();
 
   /// After a clip of [seconds] on [spec].
   Allowance useVideo(CameraSpec spec, int seconds) {
@@ -107,8 +135,11 @@ class Allowance {
       return copy(batteryUsed: batteryUsed + (seconds / videoSecondsPerUnit).ceil().clamp(1, battery));
     }
     final r = _load(spec);
-    return r.copy(filmUsed: r.filmUsed + seconds.clamp(1, super8Seconds));
+    return r.copy(filmUsed: r.filmUsed + seconds.clamp(1, super8Seconds))._finishCarried();
   }
+
+  /// A carried-over roll just finished: today's own roll is next.
+  Allowance _finishCarried() => carried && filmUsed >= rollSize ? rewind() : this;
 
   /// Today's roll, loaded with [spec] if it's still in its box.
   Allowance _load(CameraSpec spec) => stock == spec.id
@@ -119,12 +150,14 @@ class Allowance {
   int videoSecondsLeft(CameraSpec spec) =>
       spec.mode == AppMode.digital ? left(spec) * videoSecondsPerUnit : left(spec);
 
-  Allowance copy({int? filmUsed, int? batteryUsed}) => Allowance(
+  Allowance copy({int? filmUsed, int? batteryUsed, bool? asked}) => Allowance(
     day: day,
     stock: stock,
     rollSize: rollSize,
     filmUsed: filmUsed ?? this.filmUsed,
     batteryUsed: batteryUsed ?? this.batteryUsed,
+    carried: carried,
+    asked: asked ?? this.asked,
   );
 
   Map<String, Object?> toJson() => {
@@ -133,6 +166,8 @@ class Allowance {
     'size': rollSize,
     'film': filmUsed,
     'battery': batteryUsed,
+    'carried': carried,
+    'asked': asked,
   };
 
   static Allowance fromJson(Map<String, Object?> j) => Allowance(
@@ -141,6 +176,8 @@ class Allowance {
     rollSize: (j['size'] as num?)?.toInt() ?? 0,
     filmUsed: (j['film'] as num?)?.toInt() ?? 0,
     batteryUsed: (j['battery'] as num?)?.toInt() ?? 0,
+    carried: j['carried'] == true,
+    asked: j['asked'] == true,
   );
 }
 
@@ -188,6 +225,16 @@ class AllowanceNotifier extends Notifier<Allowance> {
   /// Loads today's roll with [spec] (the user said yes).
   void load(CameraSpec spec) {
     if (!_pro) _save(today.load(spec));
+  }
+
+  /// Keep shooting yesterday's roll today.
+  void keep() {
+    if (!_pro) _save(today.keep());
+  }
+
+  /// Rewind yesterday's roll; today's fresh roll waits.
+  void rewind() {
+    if (!_pro) _save(today.rewind());
   }
 
   /// A fresh roll and a full battery now (Debug).

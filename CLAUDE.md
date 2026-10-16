@@ -222,7 +222,10 @@ an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
   local (`Allowance.dayOf`). Kept in prefs (`PrefKeys.allowance`).
   The first film shot of the day asks first (`Blocked.unloaded` ->
   `showLoadRollSheet`: box art, shots/minutes, Pick another film / Load
-  it); the carousel tags the loaded stock LOADED (green).
+  it); the carousel tags the loaded stock LOADED (green). An unfinished
+  roll stays in overnight (`Allowance.carried`): the first film shot of
+  the day asks Keep shooting / Rewind & swap (`showCarriedRollSheet`;
+  rewinding loses the rest); finishing it brings that day's fresh roll.
   `pressShutter` checks it (`limitHitProvider` -> `showLimitSheet`), the
   capture controller consumes it and caps clip length. Counters, memo card
   and LCD show the free numbers.

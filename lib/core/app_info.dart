@@ -9,8 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Free version: before the first film shot of the day the camera asks which film to load, and shows how many '
-      'shots (or minutes) the roll holds. The carousel marks the loaded film.';
+      'Free version: the camera asks before loading the day\'s roll, and shows how many shots it holds. '
+      'An unfinished roll stays in overnight: keep shooting it, or rewind and swap. The carousel marks the loaded film.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

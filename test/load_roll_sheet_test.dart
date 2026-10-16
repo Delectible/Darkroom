@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -47,6 +48,18 @@ void main() {
       expect(find.text('Load ${spec.name}?'), findsOneWidget);
       expect(find.text(id == 'super8' ? '1 minute of film' : '24 shots'), findsOneWidget);
       expect(find.text('Pick another film'), findsOneWidget);
+      await tester.tap(find.text('Pick another film'));
+      await tester.pumpAndSettle();
+      // Next morning, the same roll still in.
+      await tester.tap(find.text('go'));
+      await tester.pumpAndSettle();
+      Navigator.of(tester.element(find.text('Load it'))).pop();
+      await tester.pumpAndSettle();
+      unawaited(showCarriedRollSheet(tester.element(find.text('go')), spec, id == 'super8' ? 40 : 12));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text("Yesterday's roll is still in"), findsOneWidget);
+      expect(find.text('Rewind & swap'), findsOneWidget);
       if (shots != null) {
         // Real image decoding only happens outside the fake clock.
         final el = tester.element(find.text('Pick another film'));

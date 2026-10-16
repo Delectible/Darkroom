@@ -28,32 +28,83 @@ Future<void> showLimitSheet(BuildContext context, Blocked why, CameraSpec spec) 
 /// What the user chose when asked to load today's roll.
 enum LoadChoice { load, pickOther }
 
+/// What to do with yesterday's unfinished roll.
+enum CarryChoice { keep, rewind }
+
+String _amount(CameraSpec spec, int size) => spec.recordsVideo
+    ? (size % 60 == 0 ? '${size ~/ 60} minute${size == 60 ? '' : 's'} of film' : '$size seconds of film')
+    : '$size shot${size == 1 ? '' : 's'}';
+
 /// Free version, first shot of the day on film: today's roll is [spec] once
 /// it's loaded, until it's finished. Shows the box and what the roll holds.
-Future<LoadChoice?> showLoadRollSheet(BuildContext context, CameraSpec spec) {
+Future<LoadChoice?> showLoadRollSheet(BuildContext context, CameraSpec spec) => _showRollSheet(
+  context,
+  spec: spec,
+  title: 'Load ${spec.name}?',
+  amount: _amount(spec, Allowance.sizeOf(spec)),
+  body:
+      "This is today's roll. Once it's in, it stays in the camera until it's finished, overnight too. "
+      'A new roll of anything comes each morning.',
+  other: ('Pick another film', LoadChoice.pickOther),
+  main: ('Load it', LoadChoice.load),
+);
+
+/// Free version, first film shot of a new day with yesterday's roll still
+/// in: keep shooting it, or rewind and swap (the rest is lost).
+Future<CarryChoice?> showCarriedRollSheet(BuildContext context, CameraSpec loaded, int left) =>
+    _showRollSheet(
+      context,
+      spec: loaded,
+      title: "Yesterday's roll is still in",
+      amount: '${loaded.name} · ${_amount(loaded, left)} left',
+      body:
+          'Keep shooting it, or rewind it and load a fresh roll of anything. '
+          'Rewinding throws away the rest of this roll. Finishing it brings today\'s fresh roll.',
+      other: ('Rewind & swap', CarryChoice.rewind),
+      main: ('Keep shooting', CarryChoice.keep),
+    );
+
+Future<T?> _showRollSheet<T>(
+  BuildContext context, {
+  required CameraSpec spec,
+  required String title,
+  required String amount,
+  required String body,
+  required (String, T) other,
+  required (String, T) main,
+}) {
   final palette = RetroPalette.of(context);
-  return showUprightSheet<LoadChoice>(
+  return showUprightSheet<T>(
     context,
     backgroundColor: palette.body,
     builder: (_, {required landscape}) => Theme(
       data: palette.toTheme(),
-      child: _LoadRollSheet(spec: spec),
+      child: _RollSheet<T>(spec: spec, title: title, amount: amount, body: body, other: other, main: main),
     ),
   );
 }
 
-class _LoadRollSheet extends StatelessWidget {
-  const _LoadRollSheet({required this.spec});
+/// The film box, a title, what the roll holds, why, and two choices.
+class _RollSheet<T> extends StatelessWidget {
+  const _RollSheet({
+    required this.spec,
+    required this.title,
+    required this.amount,
+    required this.body,
+    required this.other,
+    required this.main,
+  });
 
   final CameraSpec spec;
+  final String title;
+  final String amount;
+  final String body;
+  final (String, T) other;
+  final (String, T) main;
 
   @override
   Widget build(BuildContext context) {
     final p = RetroPalette.of(context);
-    final size = Allowance.sizeOf(spec);
-    final amount = spec.recordsVideo
-        ? (size % 60 == 0 ? '${size ~/ 60} minute${size == 60 ? '' : 's'} of film' : '$size seconds of film')
-        : '$size shots';
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 18, 24, 16),
@@ -70,19 +121,19 @@ class _LoadRollSheet extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Load ${spec.name}?',
+              title,
               textAlign: TextAlign.center,
               style: TextStyle(color: p.text, fontSize: 22, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 6),
             Text(
               amount,
+              textAlign: TextAlign.center,
               style: TextStyle(color: p.accent, fontSize: 17, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 12),
             Text(
-              "This is today's roll. Once it's in, it stays in the camera until it's finished. "
-              'A fresh roll of anything arrives tomorrow morning.',
+              body,
               textAlign: TextAlign.center,
               style: TextStyle(color: p.textMuted, fontSize: 14, height: 1.4),
             ),
@@ -96,8 +147,8 @@ class _LoadRollSheet extends StatelessWidget {
                       side: BorderSide(color: p.textMuted),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: () => Navigator.of(context).pop(LoadChoice.pickOther),
-                    child: const Text('Pick another film'),
+                    onPressed: () => Navigator.of(context).pop(other.$2),
+                    child: Text(other.$1),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -108,8 +159,8 @@ class _LoadRollSheet extends StatelessWidget {
                       foregroundColor: const Color(0xFF1A1714),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: () => Navigator.of(context).pop(LoadChoice.load),
-                    child: const Text('Load it'),
+                    onPressed: () => Navigator.of(context).pop(main.$2),
+                    child: Text(main.$1),
                   ),
                 ),
               ],
@@ -156,7 +207,8 @@ class _LimitSheet extends ConsumerWidget {
         'Battery flat',
         'The digital cameras have used today\'s charge. It will be full again tomorrow morning.',
       ),
-      Blocked.unloaded => ('', ''), // asked by showLoadRollSheet instead
+      // Asked by showLoadRollSheet / showCarriedRollSheet instead.
+      Blocked.unloaded || Blocked.carriedOver => ('', ''),
     };
     return SafeArea(
       child: Padding(
@@ -187,6 +239,14 @@ class _LimitSheet extends ConsumerWidget {
                   child: Text('About Pro', style: TextStyle(color: p.textMuted)),
                 ),
                 const Spacer(),
+                if (why == Blocked.otherRoll && today.carried)
+                  TextButton(
+                    onPressed: () {
+                      ref.read(allowanceProvider.notifier).rewind();
+                      Navigator.of(context).pop();
+                    },
+                    child: Text('Rewind & swap', style: TextStyle(color: p.textMuted)),
+                  ),
                 if (why == Blocked.otherRoll && loaded != null)
                   TextButton(
                     onPressed: () {

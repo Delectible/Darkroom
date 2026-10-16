@@ -69,4 +69,26 @@ void main() {
     expect(b.left(instant), instant.roll.frames - 1);
     expect(b.left(floppy), Allowance.battery - 1);
   });
+
+  test('an unfinished roll stays in overnight: keep it, or rewind and swap', () {
+    final yesterday = fresh.load(portra).usePhoto(portra).usePhoto(portra);
+    final morning = yesterday.at(DateTime(2026, 10, 16, 8));
+    expect(morning.carried, isTrue);
+    expect(morning.check(portra), Blocked.carriedOver, reason: 'asks first');
+    expect(morning.check(ektar), Blocked.carriedOver);
+    expect(morning.check(floppy), isNull, reason: 'the battery is fresh');
+    final kept = morning.keep();
+    expect(kept.check(portra), isNull);
+    expect(kept.left(portra), 22);
+    expect(kept.check(ektar), Blocked.otherRoll);
+    var a = kept;
+    for (var i = 0; i < 22; i++) {
+      a = a.usePhoto(portra);
+    }
+    expect(a.check(ektar), Blocked.unloaded, reason: "finishing it brings today's fresh roll");
+    final swapped = morning.rewind();
+    expect(swapped.check(ektar), Blocked.unloaded);
+    expect(swapped.carried, isFalse);
+    expect(Allowance.fromJson(kept.toJson()).asked, isTrue);
+  });
 }

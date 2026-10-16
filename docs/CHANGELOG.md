@@ -1004,4 +1004,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **51.1 Load-roll prompt**: the first film shot of the day asks
   (box art, 24 shots / 8 shots / 1 minute; Pick another film or Load it).
 - [x] **51.2 LOADED tag** (green) on the loaded stock in the carousel.
+- [x] **51.3 Rolls carry over**: an unfinished roll stays in overnight;
+  the next morning asks Keep shooting or Rewind & swap (the rest is lost).
+  Finishing a carried roll brings that day's fresh roll.
   → 1.7.2 · 2026-10-16

@@ -552,6 +552,20 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     ref.listen<(Blocked, int)?>(limitHitProvider, (_, hit) async {
       if (hit == null || ModalRoute.of(context)?.isCurrent != true) return;
       final spec = ref.read(activeSpecProvider);
+      final allowance = ref.read(allowanceProvider.notifier);
+      if (hit.$1 == Blocked.carriedOver) {
+        // A new day with yesterday's roll still in: keep it or swap.
+        final loaded = CameraCatalog.byId(allowance.today.stock!);
+        _releaseEdges();
+        final choice = await showCarriedRollSheet(context, loaded, allowance.today.left(loaded));
+        _claimEdges();
+        if (choice == CarryChoice.keep) allowance.keep();
+        if (choice != CarryChoice.rewind || !mounted) return;
+        allowance.rewind();
+        // Straight on to loading the fresh roll.
+        ref.read(limitHitProvider.notifier).hit(Blocked.unloaded);
+        return;
+      }
       if (hit.$1 == Blocked.unloaded) {
         // First film shot of the day: confirm the stock for today's roll.
         _releaseEdges();

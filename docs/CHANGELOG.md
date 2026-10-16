@@ -1042,3 +1042,5 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 
 - [x] **55.1** The LOADED tag in the film carousel says how much is left:
   "LOADED: 5 SHOTS LEFT" (Super 8: seconds).
+- [x] **55.2** Darkroom 98 closes with a swipe right (it slid in from the
+  right), like the corkboard's swipe left.

@@ -25,6 +25,7 @@ import 'games/solitaire.dart';
 import 'win98_programs.dart';
 import 'win98_shutdown.dart';
 import 'win98_widgets.dart';
+import '../../../../core/device/system_gestures.dart';
 import '../../../../core/device/upright.dart';
 
 /// Digital Mode's file manager, styled after the 9x Explorer.
@@ -44,7 +45,9 @@ class ExplorerScreen extends ConsumerStatefulWidget {
     settings: UprightApp.landscape,
     transitionDuration: slideDuration,
     reverseTransitionDuration: const Duration(milliseconds: 460),
-    pageBuilder: (context, _, _) => const UprightPage(child: ExplorerMonitor(child: ExplorerScreen())),
+    pageBuilder: (context, _, _) => const UprightPage(
+      child: _SwipeToClose(child: ExplorerMonitor(child: ExplorerScreen())),
+    ),
     transitionsBuilder: (context, a, _, child) => SlideTransition(
       position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
         CurvedAnimation(parent: a, curve: const Cubic(0.3, 0.0, 0.5, 0.94), reverseCurve: Curves.easeInCubic),
@@ -1121,6 +1124,41 @@ class _TaskbarState extends State<_Taskbar> {
       ),
     );
   }
+}
+
+/// Swipe right to put the explorer away (it slides back out to the right),
+/// like the corkboard's swipe left. A clear swipe triggers it; it doesn't
+/// follow the thumb. Sideways drags inside (scrollbars, sliders, games)
+/// win their own touch; touches from the side strips are left to the
+/// phone's back gesture.
+class _SwipeToClose extends StatefulWidget {
+  const _SwipeToClose({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_SwipeToClose> createState() => _SwipeToCloseState();
+}
+
+class _SwipeToCloseState extends State<_SwipeToClose> {
+  double? _from;
+  double _dx = 0;
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onHorizontalDragStart: (d) {
+      _dx = 0;
+      _from = SystemGestureZones.startsInEdge(context, d.globalPosition) ? null : d.globalPosition.dx;
+    },
+    onHorizontalDragUpdate: (d) => _dx += d.primaryDelta ?? 0,
+    onHorizontalDragEnd: (d) {
+      if (_from == null) return;
+      _from = null;
+      final v = d.primaryVelocity ?? 0;
+      if (v > 700 || (_dx > 110 && v > -200)) Navigator.of(context).maybePop();
+    },
+    child: widget.child,
+  );
 }
 
 /// The beige monitor round the explorer: a moulded plastic bezel with a

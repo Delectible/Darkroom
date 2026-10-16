@@ -292,7 +292,7 @@ Film Mode
   not dragged), a swipe left on the board closes it. Digital mode: a swipe
   left opens the Win98 explorer, which slides in from the right on a beige
   monitor (`ExplorerScreen.slideIn`, `ExplorerMonitor`) and slides back
-  out however it's closed. The body never moves the way with no camera.
+  out however it's closed; a clear swipe right closes it (`_SwipeToClose`). The body never moves the way with no camera.
 - The cork wall scrolls with the prints (shader tiles keyed to the scroll
   offset): granulated cork after the owner's sample, with wear: pin holes,
   coffee rings, water marks, faded patches. Easter eggs: tap a

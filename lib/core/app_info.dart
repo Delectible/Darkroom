@@ -8,7 +8,8 @@ class AppInfo {
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest = 'The film carousel shows how many shots are left on the loaded roll.';
+  static const latest =
+      'The film carousel shows how many shots are left on the loaded roll. Swipe right to close Darkroom 98.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -8,7 +8,9 @@ class AppInfo {
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest = 'Calmer camera straps: a flick swings the strap, it no longer flies across the screen.';
+  static const latest =
+      'Changing film slides the card through the film holder\'s window, toward the side the new film came from. '
+      'Calmer camera straps: a flick swings the strap, it no longer flies across the screen.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

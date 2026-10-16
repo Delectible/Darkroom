@@ -1013,4 +1013,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 
 - [x] **52.1 Calmer lanyard**: a flick swings it instead of pinging it over
   the screen (speed limit, less whip, kept outside the body).
+- [x] **52.2 Sliding memo card**: changing stock slides the box-end cards
+  through the holder's plastic window like an engaged/vacant sign, in the
+  direction of the step.
   → 1.7.3 · 2026-10-16

@@ -506,7 +506,10 @@ UI
   with its top: the old one away, the new one in (`_AspectDial`). Key
   labels stay well inside the cap (turned, its near edge shows). The
   memo card's text keeps its size in the holder (shrinks evenly only if
-  it can't fit).
+  it can't fit). Changing stock slides the cards through the holder's
+  window as one strip (`_MemoHolder`: old card out, new in, from the side
+  the new stock is on in the catalog; a fixed `_PlasticGlare` on top;
+  `memo_slide_test`).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
 - Camera session: "inactive" does NOT close the camera (Android sends it on

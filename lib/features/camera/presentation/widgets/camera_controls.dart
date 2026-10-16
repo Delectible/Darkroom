@@ -448,8 +448,9 @@ class StockLabel extends ConsumerWidget {
         ),
         // The digital bodies' LCD is one screen that stays put: only what's
         // on it changes. Film swaps the box end in the memo holder.
+        // Film keeps one holder: its card slides in the window (_MemoHolder).
         child: KeyedSubtree(
-          key: ValueKey(spec.isFilm ? spec.id : 'lcd'),
+          key: ValueKey(spec.isFilm ? 'memo' : 'lcd'),
           child: spec.isFilm
               ? _MemoHolder(
                   spec: spec,
@@ -464,8 +465,11 @@ class StockLabel extends ConsumerWidget {
 }
 
 /// Film bodies: the memo holder on the back door, with the end flap torn off
-/// the film box slipped in so you remember what's loaded.
-class _MemoHolder extends StatelessWidget {
+/// the film box slipped in so you remember what's loaded. Changing stock
+/// slides the cards through the holder's plastic window like an engaged /
+/// vacant slider: the old card and the new one butt together and travel as
+/// one strip, toward the side the new stock came from.
+class _MemoHolder extends StatefulWidget {
   const _MemoHolder({required this.spec, this.art, this.pro = true});
 
   /// Pro shoots full rolls; the free version's daily roll is shorter.
@@ -477,72 +481,88 @@ class _MemoHolder extends StatelessWidget {
   final CameraSpec spec;
 
   @override
+  State<_MemoHolder> createState() => _MemoHolderState();
+}
+
+class _MemoHolderState extends State<_MemoHolder> with SingleTickerProviderStateMixin {
+  late final AnimationController _slide = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 380),
+    value: 1,
+  );
+  CameraSpec? _old;
+
+  /// +1: the strip travels left (the next stock enters from the right).
+  int _dir = 1;
+
+  @override
+  void didUpdateWidget(_MemoHolder old) {
+    super.didUpdateWidget(old);
+    if (old.spec.id == widget.spec.id) return;
+    final list = CameraCatalog.forMode(AppMode.film);
+    final n = list.length;
+    var diff = list.indexWhere((c) => c.id == widget.spec.id) - list.indexWhere((c) => c.id == old.spec.id);
+    if (diff.abs() > n / 2) diff -= diff.sign * n; // wrapped round the end
+    _dir = diff >= 0 ? 1 : -1;
+    _old = old.spec;
+    unawaited(_slide.forward(from: 0).then((_) => mounted ? setState(() => _old = null) : null));
+  }
+
+  @override
+  void dispose() {
+    _slide.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final p = RetroPalette.of(context);
-    final paper = Color(spec.boxColor), ink = Color(spec.boxInk);
-    final size = pro ? null : Allowance.sizeOf(spec);
-    final detail = spec.recordsVideo
-        ? '${spec.badge} · ${size == null ? 50 : size ~/ 4} FT'
-        : spec.isInstant
-        ? '${spec.badge} · ${spec.roll.frames} SHOTS'
-        : '${spec.badge} · ${size ?? spec.roll.frames} EXP';
-    final card = Container(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-      decoration: BoxDecoration(
-        color: paper,
-        borderRadius: BorderRadius.circular(2),
-        // The holder's lips overlap the card a little.
-        border: Border.symmetric(
-          horizontal: BorderSide(color: Colors.black.withValues(alpha: 0.25), width: 1.5),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
+    final clip = widget.art?.part(AppMode.film, 'memo');
+    final fills = clip?.layers != null;
+    // The window: the cards slide behind it, clipped, under a faint glare.
+    // Both cards fill it, so they travel as one strip with no gap.
+    final window = ClipRect(
+      child: Stack(
+        fit: fills ? StackFit.expand : StackFit.loose,
         children: [
-          Text(
-            spec.name.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: ink,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
-              fontSize: 13,
-              height: 1.1,
+          // Sizes the window (the current card); the moving cards fill it.
+          Visibility.maintain(
+            visible: false,
+            child: _MemoCard(spec: widget.spec, pro: widget.pro, fills: fills),
+          ),
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _slide,
+              builder: (context, _) {
+                final t = Curves.easeInOutCubic.transform(_slide.value);
+                final old = _old;
+                Widget at(CameraSpec s, double dx) => Positioned.fill(
+                  child: FractionalTranslation(
+                    translation: Offset(dx, 0),
+                    child: _MemoCard(spec: s, pro: widget.pro, fills: fills),
+                  ),
+                );
+                return Stack(
+                  children: [
+                    if (old != null && _slide.value < 1) ...[
+                      at(old, -_dir * t),
+                      at(widget.spec, _dir * (1 - t)),
+                    ] else
+                      at(widget.spec, 0),
+                  ],
+                );
+              },
             ),
           ),
-          Text(
-            detail,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: ink.withValues(alpha: 0.75),
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1,
-              height: 1.2,
-            ),
-          ),
+          const Positioned.fill(child: IgnorePointer(child: _PlasticGlare())),
         ],
       ),
     );
-    final clip = art?.part(AppMode.film, 'memo');
-    if (clip?.layers != null) {
-      // Whole-body render: the card fills the rendered holder's opening,
-      // its text at its own size (never squeezed to the opening's width;
-      // only if it can't fit does it shrink, evenly).
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
-        decoration: card.decoration,
-        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: card.child),
-      );
-    }
+    if (fills) return window;
     if (clip != null) {
       return Stack(
         children: [
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6), child: card),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6), child: window),
           Positioned.fill(child: BodySlice(clip)),
         ],
       );
@@ -558,9 +578,114 @@ class _MemoHolder extends StatelessWidget {
         ),
         boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 3, offset: Offset(0, 1))],
       ),
-      child: card,
+      child: window,
     );
   }
+}
+
+/// One box-end card: the stock's name and what the roll holds, in the box's
+/// own colours.
+class _MemoCard extends StatelessWidget {
+  const _MemoCard({required this.spec, required this.pro, required this.fills});
+
+  final CameraSpec spec;
+  final bool pro;
+
+  /// Fills the 3D holder's opening (text at its own size, shrunk evenly
+  /// only if it can't fit).
+  final bool fills;
+
+  @override
+  Widget build(BuildContext context) {
+    final paper = Color(spec.boxColor), ink = Color(spec.boxInk);
+    final size = pro ? null : Allowance.sizeOf(spec);
+    final detail = spec.recordsVideo
+        ? '${spec.badge} · ${size == null ? 50 : size ~/ 4} FT'
+        : spec.isInstant
+        ? '${spec.badge} · ${spec.roll.frames} SHOTS'
+        : '${spec.badge} · ${size ?? spec.roll.frames} EXP';
+    final decoration = BoxDecoration(
+      color: paper,
+      borderRadius: BorderRadius.circular(2),
+      // The holder's lips overlap the card a little.
+      border: Border.symmetric(
+        horizontal: BorderSide(color: Colors.black.withValues(alpha: 0.25), width: 1.5),
+      ),
+    );
+    final text = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          spec.name.toUpperCase(),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: ink,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+            fontSize: 13,
+            height: 1.1,
+          ),
+        ),
+        Text(
+          detail,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: ink.withValues(alpha: 0.75),
+            fontSize: 9,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1,
+            height: 1.2,
+          ),
+        ),
+      ],
+    );
+    if (fills) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
+        decoration: decoration,
+        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: text),
+      );
+    }
+    return Container(padding: const EdgeInsets.fromLTRB(8, 4, 8, 4), decoration: decoration, child: text);
+  }
+}
+
+/// The holder's clear plastic front: a soft diagonal sheen and a little
+/// shade under the top lip. It stays put while the cards move behind it.
+class _PlasticGlare extends StatelessWidget {
+  const _PlasticGlare();
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment(-1, -1),
+        end: Alignment(1, 1),
+        stops: [0, 0.35, 0.36, 0.55, 1],
+        colors: [
+          Color(0x26FFFFFF),
+          Color(0x0FFFFFFF),
+          Color(0x00FFFFFF),
+          Color(0x00FFFFFF),
+          Color(0x14FFFFFF),
+        ],
+      ),
+    ),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          stops: [0, 0.18, 0.85, 1],
+          colors: [Color(0x33000000), Color(0x00000000), Color(0x00000000), Color(0x1A000000)],
+        ),
+      ),
+    ),
+  );
 }
 
 /// Digital bodies: a little segment-LCD status panel, like the top plate of

@@ -59,6 +59,7 @@ jobs:
         run: |
           # Only a salted hash of the Debug password goes into the app.
           KEY=""; if [ -n "$DEBUG_PASSWORD" ]; then KEY=$(printf 'darkroom-debug:%s' "$DEBUG_PASSWORD" | shasum -a 256 | cut -d' ' -f1); fi
+          if [ -z "$KEY" ]; then echo "::warning::DEBUG_PASSWORD secret arrived empty: Debug stays shut in this build."; else echo "Debug password: set"; fi
           flutter build apk --release --build-number=${{ github.run_number }} --dart-define=DEBUG_KEY=$KEY
           flutter build appbundle --release --build-number=${{ github.run_number }} --dart-define=DEBUG_KEY=$KEY
       - run: |

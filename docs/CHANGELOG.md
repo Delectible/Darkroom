@@ -1008,3 +1008,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the next morning asks Keep shooting or Rewind & swap (the rest is lost).
   Finishing a carried roll brings that day's fresh roll.
   → 1.7.2 · 2026-10-16
+
+## 52. Strap (2026-10-16)
+
+- [x] **52.1 Calmer lanyard**: a flick swings it instead of pinging it over
+  the screen (speed limit, less whip, kept outside the body).
+  → 1.7.3 · 2026-10-16

@@ -1072,18 +1072,21 @@ class _HangingStrapState extends State<_HangingStrap> with SingleTickerProviderS
     _g = Offset.lerp(_g, _gRaw, 1 - math.exp(-dt / 0.25))!;
     // Drag: heavy at rest (a gentle sway that dies quickly), light while
     // flung so it whips round.
-    final keep = math.pow(_lerp(0.86, 0.985, _excite), dt * 60).toDouble();
+    final keep = math.pow(_lerp(0.86, 0.95, _excite), dt * 60).toDouble();
     // Pull back toward its resting hang (along gravity, a slight curve).
     final down = _g / _g.distance;
     final across = Offset(-down.dy, down.dx) * widget.side.toDouble();
     final pull = (1 - math.exp(-dt * _lerp(5.0, 0.3, _excite))).toDouble();
     for (var i = 1; i < _p.length; i++) {
-      final v = (_p[i] - _was[i]) * keep;
+      var v = (_p[i] - _was[i]) * keep;
+      // A speed limit: a flick swings it, never pings it across the screen.
+      final vMax = _maxSpeed * dt;
+      if (v.distance > vMax) v = v * (vMax / v.distance);
       _was[i] = _p[i];
       final t = i / _links;
       final rest = anchor + down * (i * _seg * 0.97) + across * (math.sin(t * math.pi) * _seg * 1.2);
-      // the rope lags the lug's jump (more toward the tail): it whips
-      final lag = -moved * (0.35 * t * _excite);
+      // the rope lags the lug's jump a little (more toward the tail)
+      final lag = -moved * (0.15 * t * _excite);
       _p[i] = _p[i] + v + _g * (dt * dt) + (rest - _p[i]) * pull + lag;
     }
     _p[0] = anchor;
@@ -1104,8 +1107,20 @@ class _HangingStrapState extends State<_HangingStrap> with SingleTickerProviderS
         }
       }
     }
+    // It hangs off the outside of the body: never swings in over the
+    // viewfinder (a little past the lug at most).
+    for (var i = 1; i < _p.length; i++) {
+      final inward = (anchor.dx - _p[i].dx) * widget.side;
+      if (inward > _maxInward) _p[i] = Offset(anchor.dx - widget.side * _maxInward, _p[i].dy);
+    }
     _frame.value++;
   }
+
+  /// Fastest a link may move, dp/s.
+  static const _maxSpeed = 1600.0;
+
+  /// How far past the lug, toward the screen, the rope may swing, dp.
+  static const _maxInward = 14.0;
 
   static double _lerp(double a, double b, double t) => a + (b - a) * t;
 

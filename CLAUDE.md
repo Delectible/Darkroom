@@ -393,7 +393,9 @@ UI
   side wall with strap lug, neck strap (film) / wrist cord (digital): a
   verlet rope (`_HangingStrap`): heavy drag and a pull back to its resting
   hang at rest (a gentle sway from the smoothed tilt), light drag and extra
-  lag while the body is flung (`_excite`), so a toss whips it. Until
+  lag while the body is flung (`_excite`), so a toss swings it; links are
+  speed-limited (`_maxSpeed`) and never swing in over the viewfinder more
+  than `_maxInward` past the lug. Until
   the toss commits the arriving body is a picture of it from last time
   (`_lastLook`, or `BodyStandIn`); on commit the leaving body becomes a
   picture and the live UI switches mode. Flutter flattens nested 3D

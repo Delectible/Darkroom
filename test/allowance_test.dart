@@ -26,7 +26,8 @@ void main() {
 
   test('one roll a day, fixed to its stock once the first frame is shot', () {
     var a = fresh;
-    expect(a.check(ektar), isNull, reason: 'any stock until the roll is loaded');
+    expect(a.check(ektar), Blocked.unloaded, reason: 'asks before loading; any stock until then');
+    expect(a.load(ektar).check(ektar), isNull);
     a = a.usePhoto(portra);
     expect(a.left(portra), 23);
     expect(a.check(ektar), Blocked.otherRoll);
@@ -35,7 +36,11 @@ void main() {
     }
     expect(a.check(portra), Blocked.outOfFilm);
     expect(a.check(ektar), Blocked.outOfFilm, reason: 'one roll a day, whatever the stock');
-    expect(a.at(DateTime(2026, 10, 16, 6)).check(ektar), isNull, reason: 'a fresh roll next morning');
+    expect(
+      a.at(DateTime(2026, 10, 16, 6)).check(ektar),
+      Blocked.unloaded,
+      reason: 'a fresh roll next morning',
+    );
   });
 
   test('Super 8 counts seconds of film', () {
@@ -54,7 +59,7 @@ void main() {
     expect(a.videoSecondsLeft(camcorder), 3);
     a = a.useVideo(camcorder, 2);
     expect(a.check(floppy), Blocked.flatBattery);
-    expect(a.check(portra), isNull, reason: 'film is separate');
+    expect(a.check(portra), Blocked.unloaded, reason: 'film is separate');
   });
 
   test('survives a round trip through prefs', () {

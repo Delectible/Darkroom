@@ -998,3 +998,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **50.2 No public pre-2.0 APKs**: Releases carry the .ipa, plus the
   .apk from 2.0 on (never the .aab); artifacts
   last a day; `prune-releases.yml` removes old releases and artifacts.
+
+## 51. Loading the roll (2026-10-16)
+
+- [x] **51.1 Load-roll prompt**: the first film shot of the day asks
+  (box art, 24 shots / 8 shots / 1 minute; Pick another film or Load it).
+- [x] **51.2 LOADED tag** (green) on the loaded stock in the carousel.
+  → 1.7.2 · 2026-10-16

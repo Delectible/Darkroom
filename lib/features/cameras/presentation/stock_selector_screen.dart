@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/device/physical_orientation.dart';
 import '../../../core/device/system_gestures.dart';
 import '../../../core/device/upright.dart';
+import '../../../core/monetization/allowance.dart';
+import '../../../core/monetization/pro.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../camera/application/camera_ui_state.dart';
 import '../../settings/application/settings_controllers.dart';
@@ -263,6 +265,14 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
     final grain = spec?.film == null
         ? GrainStrength.normal
         : ref.watch(cameraSettingsProvider)[spec!.id]?.grain ?? GrainStrength.normal;
+    // Free version: the roll in the camera today (finished rolls aren't).
+    final today = ref.watch(allowanceProvider).at(AllowanceNotifier.now());
+    final loaded =
+        spec != null &&
+        !ref.watch(proProvider) &&
+        spec.mode == AppMode.film &&
+        today.stock == spec.id &&
+        today.left(spec) > 0;
     // Held sideways the hero flight from the camera screen would be worked
     // out in the unrotated frame (it flew sideways, then snapped): skip it.
     final upright = uprightQuarterTurns(ref.watch(uprightOrientationProvider)).isEven;
@@ -407,7 +417,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                         ),
                       ),
                       child: Column(
-                        key: ValueKey('${spec?.id}$grain'),
+                        key: ValueKey('${spec?.id}$grain$loaded'),
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SizedBox(
@@ -444,6 +454,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                               mainAxisSize: MainAxisSize.min,
                               spacing: 6,
                               children: [
+                                if (loaded) const _Tag('LOADED', Color(0xFF81C784)),
                                 if (spec?.pickerTag case final tag?) _Tag(tag, const Color(0xFFE57373)),
                                 if (grain != GrainStrength.normal)
                                   _Tag(

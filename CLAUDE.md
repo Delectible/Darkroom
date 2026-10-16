@@ -220,6 +220,9 @@ an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
   instant pack, 60 s of Super 8), plus one battery charge shared by the
   digital bodies (10 units: a photo = 1, video 3 s = 1). Refills at 5am
   local (`Allowance.dayOf`). Kept in prefs (`PrefKeys.allowance`).
+  The first film shot of the day asks first (`Blocked.unloaded` ->
+  `showLoadRollSheet`: box art, shots/minutes, Pick another film / Load
+  it); the carousel tags the loaded stock LOADED (green).
   `pressShutter` checks it (`limitHitProvider` -> `showLimitSheet`), the
   capture controller consumes it and caps clip length. Counters, memo card
   and LCD show the free numbers.

@@ -551,8 +551,18 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // Free version out of film / battery: say so (once per press).
     ref.listen<(Blocked, int)?>(limitHitProvider, (_, hit) async {
       if (hit == null || ModalRoute.of(context)?.isCurrent != true) return;
+      final spec = ref.read(activeSpecProvider);
+      if (hit.$1 == Blocked.unloaded) {
+        // First film shot of the day: confirm the stock for today's roll.
+        _releaseEdges();
+        final choice = await showLoadRollSheet(context, spec);
+        _claimEdges();
+        if (choice == LoadChoice.load) ref.read(allowanceProvider.notifier).load(spec);
+        if (choice == LoadChoice.pickOther && mounted) unawaited(_openSelector());
+        return;
+      }
       _releaseEdges();
-      await showLimitSheet(context, hit.$1, ref.read(activeSpecProvider));
+      await showLimitSheet(context, hit.$1, spec);
       _claimEdges();
     });
 

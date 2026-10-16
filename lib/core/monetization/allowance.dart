@@ -16,6 +16,10 @@ enum Blocked {
 
   /// The digital cameras' shared battery is flat for today.
   flatBattery,
+
+  /// Today's roll is still in its box: the first shot loads it, so ask
+  /// first (the stock can't change until it's finished).
+  unloaded,
 }
 
 /// The free version's daily allowance: one roll of film (any stock, fixed
@@ -85,8 +89,12 @@ class Allowance {
     if (spec.mode == AppMode.digital) return left(spec) > 0 ? null : Blocked.flatBattery;
     if (stock != null && filmUsed >= rollSize) return Blocked.outOfFilm;
     if (stock != null && stock != spec.id) return Blocked.otherRoll;
+    if (stock == null) return Blocked.unloaded;
     return null;
   }
+
+  /// Today's roll, loaded with [spec] (nothing shot yet).
+  Allowance load(CameraSpec spec) => _load(spec);
 
   /// After a still on [spec].
   Allowance usePhoto(CameraSpec spec) => spec.mode == AppMode.digital
@@ -175,6 +183,11 @@ class AllowanceNotifier extends Notifier<Allowance> {
 
   void useVideo(CameraSpec spec, Duration length) {
     if (!_pro) _save(today.useVideo(spec, (length.inMilliseconds / 1000).ceil()));
+  }
+
+  /// Loads today's roll with [spec] (the user said yes).
+  void load(CameraSpec spec) {
+    if (!_pro) _save(today.load(spec));
   }
 
   /// A fresh roll and a full battery now (Debug).

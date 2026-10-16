@@ -1017,3 +1017,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   through the holder's plastic window like an engaged/vacant sign, in the
   direction of the step.
   → 1.7.3 · 2026-10-16
+
+## 53. Carousel (2026-10-16)
+
+- [x] **53.1 Carousel first frame**: the unselected items are dimmed and
+  smaller as soon as it opens (they drew full-size until the first scroll).
+  → 1.7.4 · 2026-10-16

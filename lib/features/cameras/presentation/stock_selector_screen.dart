@@ -519,7 +519,10 @@ class _Item extends StatelessWidget {
       animation: controller,
       child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: child),
       builder: (context, child) {
-        var page = index.toDouble();
+        // Before the first layout the page isn't known yet: the carousel
+        // opens on its initial page (not on this item, which would draw
+        // every item full-size and bright until the first scroll).
+        var page = controller.initialPage.toDouble();
         if (controller.hasClients && controller.position.haveDimensions) {
           page = controller.page ?? page;
         }

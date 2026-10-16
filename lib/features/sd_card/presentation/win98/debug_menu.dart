@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -243,21 +245,26 @@ Future<void> _systemInfo(BuildContext context, WidgetRef ref) async {
 
 /// Help > Debug: a scrolling list of developer tools (room for more), the
 /// picked one's description, and Run. Double-tap a tool to run it.
-/// The Debug password comes from the build (CI secret `DEBUG_PASSWORD`,
-/// `--dart-define`), never from the source. Without one the window stays
-/// shut. Asked for once per app run.
+/// The Debug password comes from the build (CI secret `DEBUG_PASSWORD`),
+/// never from the source, and only as a salted hash (`--dart-define
+/// DEBUG_KEY`), so the app itself doesn't hold it. Without one the window
+/// stays shut. Asked for once per app run.
 class DebugGate {
   const DebugGate._();
 
-  static String password = const String.fromEnvironment('DEBUG_PASSWORD');
+  static String key = const String.fromEnvironment('DEBUG_KEY');
   static bool unlocked = false;
+
+  static String hashOf(String password) => sha256.convert(utf8.encode('darkroom-debug:$password')).toString();
+
+  static bool accepts(String typed) => key.isNotEmpty && hashOf(typed.trim()) == key.toLowerCase();
 }
 
 Future<void> showDebugMenu(BuildContext context) async {
   if (!DebugGate.unlocked) {
     final typed = await _askPassword(context);
     if (typed == null || !context.mounted) return;
-    if (DebugGate.password.isEmpty || typed.trim() != DebugGate.password) {
+    if (!DebugGate.accepts(typed)) {
       await showWin98MessageBox(
         context,
         title: 'Debug',

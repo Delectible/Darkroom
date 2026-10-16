@@ -88,8 +88,9 @@ class Allowance {
 
   /// Today's state at [now]: a new morning brings a full battery, and a
   /// fresh roll unless one is still unfinished in the camera.
+  /// A clock set back to an earlier day changes nothing (no free refill).
   Allowance at(DateTime now) {
-    if (dayOf(now) == day) return this;
+    if (dayOf(now).compareTo(day) <= 0) return this;
     if (stock != null && filmUsed < rollSize) {
       return Allowance(day: dayOf(now), stock: stock, rollSize: rollSize, filmUsed: filmUsed, carried: true);
     }

@@ -8,7 +8,9 @@ class AppInfo {
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest = 'Accessibility: screen-reader labels on the camera, and bigger system text is honoured (up to 1.3x).';
+  static const latest =
+      'Accessibility: screen-reader labels on the camera, and bigger system text is honoured (up to 1.3x). '
+      'Sturdier purchases and daily limits.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

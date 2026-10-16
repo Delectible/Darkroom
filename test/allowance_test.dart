@@ -91,4 +91,10 @@ void main() {
     expect(swapped.carried, isFalse);
     expect(Allowance.fromJson(kept.toJson()).asked, isTrue);
   });
+
+  test('setting the clock back gives nothing back', () {
+    final spent = fresh.load(portra).usePhoto(portra);
+    expect(spent.at(DateTime(2026, 10, 14, 9)).left(portra), 23);
+    expect(spent.at(DateTime(2026, 10, 14, 9)).day, spent.day);
+  });
 }

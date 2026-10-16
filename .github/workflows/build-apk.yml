@@ -55,9 +55,12 @@ jobs:
       - name: Build the APK (sideloading) and app bundle (Play Store)
         env:
           DARKROOM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          DEBUG_PASSWORD: ${{ secrets.DEBUG_PASSWORD }}
         run: |
-          flutter build apk --release --build-number=${{ github.run_number }} --dart-define=DEBUG_PASSWORD=${{ secrets.DEBUG_PASSWORD }}
-          flutter build appbundle --release --build-number=${{ github.run_number }} --dart-define=DEBUG_PASSWORD=${{ secrets.DEBUG_PASSWORD }}
+          # Only a salted hash of the Debug password goes into the app.
+          KEY=""; if [ -n "$DEBUG_PASSWORD" ]; then KEY=$(printf 'darkroom-debug:%s' "$DEBUG_PASSWORD" | shasum -a 256 | cut -d' ' -f1); fi
+          flutter build apk --release --build-number=${{ github.run_number }} --dart-define=DEBUG_KEY=$KEY
+          flutter build appbundle --release --build-number=${{ github.run_number }} --dart-define=DEBUG_KEY=$KEY
       - run: |
           mkdir dist
           cp build/app/outputs/flutter-apk/app-release.apk dist/Darkroom-${{ github.run_number }}.apk
@@ -81,7 +84,11 @@ jobs:
         run: |
           flutter create --org $ORG --project-name $APP --platforms ios .
           sed -i '' -E 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/' ios/Runner.xcodeproj/project.pbxproj
-      - run: flutter build ios --release --no-codesign --dart-define=DEBUG_PASSWORD=${{ secrets.DEBUG_PASSWORD }}
+      - env:
+          DEBUG_PASSWORD: ${{ secrets.DEBUG_PASSWORD }}
+        run: |
+          KEY=""; if [ -n "$DEBUG_PASSWORD" ]; then KEY=$(printf 'darkroom-debug:%s' "$DEBUG_PASSWORD" | shasum -a 256 | cut -d' ' -f1); fi
+          flutter build ios --release --no-codesign --dart-define=DEBUG_KEY=$KEY
       - name: Package an unsigned .ipa (signed on your computer when sideloading)
         run: |
           mkdir -p dist/Payload

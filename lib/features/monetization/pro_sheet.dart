@@ -224,9 +224,12 @@ class _LimitSheet extends ConsumerWidget {
             const SizedBox(height: 8),
             Text(body, style: TextStyle(color: p.text, fontSize: 15, height: 1.35)),
             const SizedBox(height: 14),
-            Text(
-              'Darkroom Pro removes the daily limits, for a one-time ${ProStore.fallbackPrice}.',
-              style: TextStyle(color: p.textMuted, fontSize: 13, height: 1.35),
+            FutureBuilder(
+              future: ref.read(proStoreProvider).price(),
+              builder: (_, price) => Text(
+                'Darkroom Pro removes the daily limits, for a one-time ${price.data ?? ProStore.fallbackPrice}.',
+                style: TextStyle(color: p.textMuted, fontSize: 13, height: 1.35),
+              ),
             ),
             const SizedBox(height: 12),
             Row(

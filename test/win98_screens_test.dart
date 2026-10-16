@@ -100,7 +100,7 @@ void main() {
   });
 
   testWidgets('debug window lists its tools and switches', (tester) async {
-    DebugGate.password = 'test-password';
+    DebugGate.key = DebugGate.hashOf('test-password');
     await phone(tester);
     await tester.pumpWidget(
       app(

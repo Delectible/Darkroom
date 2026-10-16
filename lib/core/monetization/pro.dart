@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/camera/application/camera_ui_state.dart' show PrefKeys;
@@ -16,10 +17,16 @@ class ProNotifier extends Notifier<bool> {
   @override
   bool build() => prefsOf(ref)?.getBool(PrefKeys.pro) ?? false;
 
-  Future<void> set(bool on) async {
+  /// [bought]: the store granted it (true) or took it back (false); null
+  /// = Debug's switch, which the store leaves alone.
+  Future<void> set(bool on, {bool? bought}) async {
     state = on;
-    await prefsOf(ref)?.setBool(PrefKeys.pro, on);
+    final prefs = prefsOf(ref);
+    await prefs?.setBool(PrefKeys.pro, on);
+    if (bought != null) await prefs?.setBool(PrefKeys.proBought, bought);
   }
+
+  bool get bought => prefsOf(ref)?.getBool(PrefKeys.proBought) ?? false;
 }
 
 /// The app's prefs, or null where there are none (widget tests).
@@ -47,24 +54,45 @@ class ProStore {
   static const fallbackPrice = r'$4.99';
 
   StreamSubscription<List<PurchaseDetails>>? _sub;
+  Future<void>? _started;
   Completer<StoreResult>? _waiting;
   bool _restoring = false;
   ProductDetails? _product;
 
   /// Listens to purchase updates (must start early: a purchase can finish
   /// after the app was closed) and quietly restores an earlier purchase.
-  Future<void> start() async {
-    if (_sub != null) return;
+  /// Safe to call again: later calls wait for the first.
+  Future<void> start() => _started ??= _start();
+
+  Future<void> _start() async {
     try {
       if (!await InAppPurchase.instance.isAvailable()) return;
       _sub = InAppPurchase.instance.purchaseStream.listen(
         _onUpdates,
         onError: (Object e) => _finish(StoreResult.failed),
       );
+      await _checkRefund();
       await InAppPurchase.instance.restorePurchases();
     } catch (e) {
       debugPrint('Store unavailable: $e');
     }
+  }
+
+  /// A refunded purchase disappears from Google Play's list: take Pro back
+  /// (only Pro the store gave, and only when Play actually answered).
+  Future<void> _checkRefund() async {
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    final pro = _ref.read(proProvider.notifier);
+    if (!_ref.read(proProvider) || !pro.bought) return;
+    final r = await InAppPurchase.instance
+        .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>()
+        .queryPastPurchases();
+    if (r.error != null) return;
+    final owned = r.pastPurchases.any(
+      (p) =>
+          p.productID == productId && p.status != PurchaseStatus.error && p.status != PurchaseStatus.pending,
+    );
+    if (!owned) await pro.set(false, bought: false);
   }
 
   /// The local price, e.g. "$4.99", once the store has answered.
@@ -85,7 +113,7 @@ class ProStore {
     await start();
     final p = await _details();
     if (p == null) return StoreResult.unavailable;
-    _waiting = Completer();
+    final waiting = _waiting = Completer<StoreResult>();
     try {
       final ok = await InAppPurchase.instance.buyNonConsumable(
         purchaseParam: PurchaseParam(productDetails: p),
@@ -94,13 +122,13 @@ class ProStore {
     } catch (_) {
       _finish(StoreResult.failed);
     }
-    return _waiting!.future.timeout(const Duration(minutes: 5), onTimeout: () => StoreResult.pending);
+    return waiting.future.timeout(const Duration(minutes: 5), onTimeout: () => StoreResult.pending);
   }
 
   Future<StoreResult> restore() async {
     await start();
     if (_sub == null) return StoreResult.unavailable;
-    _waiting = Completer();
+    final waiting = _waiting = Completer<StoreResult>();
     _restoring = true;
     try {
       await InAppPurchase.instance.restorePurchases();
@@ -108,10 +136,7 @@ class ProStore {
       _finish(StoreResult.failed);
     }
     // Restores arrive on the stream; none at all means nothing was bought.
-    return _waiting!.future.timeout(
-      const Duration(seconds: 8),
-      onTimeout: () => StoreResult.nothingToRestore,
-    );
+    return waiting.future.timeout(const Duration(seconds: 8), onTimeout: () => StoreResult.nothingToRestore);
   }
 
   Future<void> _onUpdates(List<PurchaseDetails> updates) async {
@@ -119,16 +144,23 @@ class ProStore {
       if (u.productID != productId) continue;
       switch (u.status) {
         case PurchaseStatus.purchased || PurchaseStatus.restored:
-          await _ref.read(proProvider.notifier).set(true);
+          await _ref.read(proProvider.notifier).set(true, bought: true);
           _finish(
             u.status == PurchaseStatus.purchased && !_restoring ? StoreResult.bought : StoreResult.restored,
           );
         case PurchaseStatus.pending:
-          break;
+          // Paid later (cash, slow card): Pro arrives on this stream then.
+          _finish(StoreResult.pending);
         case PurchaseStatus.canceled:
           _finish(StoreResult.cancelled);
         case PurchaseStatus.error:
-          _finish(StoreResult.failed);
+          if (u.error?.message.contains('itemAlreadyOwned') ?? false) {
+            // Bought before (another phone, a reinstall): that's a restore.
+            await _ref.read(proProvider.notifier).set(true, bought: true);
+            _finish(StoreResult.restored);
+          } else {
+            _finish(StoreResult.failed);
+          }
       }
       if (u.pendingCompletePurchase) await InAppPurchase.instance.completePurchase(u);
     }

@@ -236,8 +236,9 @@ an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
   quietly restores). Pro ignores the allowance. `showProSheet` from
   Settings > Darkroom Pro and the limit sheet; kept understated.
 - Debug (Win98 Help > Debug...) asks for a password once per run. It is
-  the repo secret `DEBUG_PASSWORD`, passed to the build with
-  `--dart-define` (`DebugGate`); never write it in the repo or the notes.
+  the repo secret `DEBUG_PASSWORD`; CI passes only a salted SHA-256 of it
+  (`--dart-define=DEBUG_KEY`, `DebugGate.hashOf`); never write it in the
+  repo or the notes.
   No secret = Debug stays shut. It has Darkroom Pro on/off, Refill Film & Battery, and Darkroom
   Development (the 5-minute timer; no longer in Settings).
 - Fancy graphics fades the camera out and back in (`GraphicsVeil`).

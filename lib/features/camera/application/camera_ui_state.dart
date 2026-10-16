@@ -43,6 +43,10 @@ class PrefKeys {
   /// Darkroom Pro unlocked (bought, restored, or switched on in Debug).
   static const pro = 'pro.unlocked';
 
+  /// Pro came from the store (so a refund can take it back; Debug's switch
+  /// is left alone).
+  static const proBought = 'pro.bought';
+
   /// The free version's film roll and battery for today (JSON).
   static const allowance = 'allowance.today';
 
@@ -64,6 +68,7 @@ class PrefKeys {
     galleryAsked,
     galleryDismissed,
     pro,
+    proBought,
     allowance,
   };
 }

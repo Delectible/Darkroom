@@ -489,6 +489,8 @@ class _FilmCounter extends ConsumerWidget {
     final pro = ref.watch(proProvider);
     final today = ref.watch(allowanceProvider).at(AllowanceNotifier.now());
     final blocked = pro ? null : today.check(spec);
+    // Another stock's roll is in the camera (today's or yesterday's).
+    final elsewhere = !pro && today.stock != null && today.stock != spec.id && blocked != Blocked.outOfFilm;
     String text;
     if (spec.recordsVideo) {
       final elapsed = capture.isRecording ? DateTime.now().difference(capture.recordingSince!).inSeconds : 0;
@@ -497,12 +499,12 @@ class _FilmCounter extends ConsumerWidget {
       // daily cartridge is shorter).
       final length = pro ? spec.videoMaxSeconds : today.left(spec);
       final feet = ((length - elapsed) / 4).ceil().clamp(0, 50);
-      text = blocked == Blocked.otherRoll ? 'NOT LOADED' : '$feet FT';
+      text = elsewhere ? 'NOT LOADED' : '$feet FT';
     } else if (!pro) {
       final left = today.left(spec);
       text = switch (blocked) {
         Blocked.outOfFilm => 'NO FILM',
-        Blocked.otherRoll => 'NOT LOADED',
+        _ when elsewhere => 'NOT LOADED',
         _ => spec.roll.countsDown ? '$left LEFT' : 'FRAME ${Allowance.sizeOf(spec) - left + 1}',
       };
     } else {

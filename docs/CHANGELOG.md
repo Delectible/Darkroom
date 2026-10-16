@@ -1029,4 +1029,11 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **54.1 No session links in commits** from now on.
 - [x] **54.2 Accessibility basics**: screen-reader label on the film/camera
   label; system text up to 1.3x; Darkroom 98 stays fixed.
-- [~] **54.3 Bug/robustness pass** (free/Pro code): review running.
+- [x] **54.3 Bug/robustness pass** (free/Pro code): Debug password only
+  in the app as a salted hash (`DEBUG_KEY`, made by CI from the secret);
+  setting the clock back no longer refills the day; buy/restore can't
+  crash on a late store reply; pending purchases say so; a refunded
+  purchase takes Pro back (Play only, only store-given Pro, only when Play
+  answers); buying something already owned counts as a restore; store
+  start-up runs once; counter says NOT LOADED for another stock's
+  carried roll; limit sheet shows the store's price.

@@ -93,6 +93,8 @@ Read this first. It's the hand-off from the earlier development sessions
   private-key build. versionCode = CI run number. CI also builds
   `Darkroom-N.aab` for the Play Console internal testing track (Play App
   Signing; once installed from Play, the phone only takes updates from Play).
+- Manifest has `android:allowBackup="false"` (a reinstall starts clean;
+  Auto Backup's 25 MB cap only restored part of the prints).
 - Manifest already has `tools:replace="android:maxSdkVersion"` on
   `WRITE_EXTERNAL_STORAGE` (merger conflict with camera_android_camerax).
 - Checks: `flutter analyze` and `flutter test` (CI runs both and won't

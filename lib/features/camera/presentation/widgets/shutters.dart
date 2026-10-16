@@ -201,12 +201,19 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
               switchOutCurve: Curves.easeIn,
               // (the live model swaps its own shutter: one sinks, the other
               // rises; only its lamp fades here)
-              transitionBuilder: (child, a) => FadeTransition(
-                opacity: a,
-                child: art != null
-                    ? child
-                    : ScaleTransition(scale: Tween(begin: 0.6, end: 1.0).animate(a), child: child),
-              ),
+              // With the live model the face sits under its 3D pose, and an
+              // opacity layer would flatten it (the lamp jumped sideways as it
+              // faded): fade the lamp's own ink instead.
+              transitionBuilder: (child, a) => art != null
+                  ? AnimatedBuilder(
+                      animation: a,
+                      child: child,
+                      builder: (_, child) => _LampFade(fade: a.value, child: child!),
+                    )
+                  : FadeTransition(
+                      opacity: a,
+                      child: ScaleTransition(scale: Tween(begin: 0.6, end: 1.0).animate(a), child: child),
+                    ),
               child: face,
             ),
           ),
@@ -424,7 +431,8 @@ class _SpriteShutter extends StatelessWidget {
                   child: TweenAnimationBuilder<double>(
                     tween: Tween(end: l.lit ? 1 : 0),
                     duration: const Duration(milliseconds: 180),
-                    builder: (context, on, _) => CustomPaint(painter: _LampPainter(l, on)),
+                    builder: (context, on, _) =>
+                        CustomPaint(painter: _LampPainter(l, on, fade: _LampFade.of(context))),
                   ),
                 ),
               ),
@@ -437,16 +445,38 @@ class _SpriteShutter extends StatelessWidget {
 
 /// A small domed lamp: a dark red lens when off, a hot core with a soft
 /// halo when lit ([on] 0..1 between them).
+/// How far a shutter face's lamp has faded in while the faces swap.
+class _LampFade extends InheritedWidget {
+  const _LampFade({required this.fade, required super.child});
+
+  final double fade;
+
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_LampFade>()?.fade ?? 1;
+
+  @override
+  bool updateShouldNotify(_LampFade old) => old.fade != fade;
+}
+
 class _LampPainter extends CustomPainter {
-  _LampPainter(this.lamp, this.on);
+  _LampPainter(this.lamp, this.on, {this.fade = 1});
 
   final _Lamp lamp;
   final double on;
+  final double fade;
 
   @override
   void paint(Canvas canvas, Size size) {
+    if (fade <= 0) return;
     final c = size.center(Offset.zero);
     final r = size.shortestSide / 2;
+    // faded in the canvas, not with a compositing layer (see _LampFade)
+    if (fade < 1) {
+      canvas.saveLayer(
+        Rect.fromCircle(center: c, radius: r * 2.7),
+        Paint()..color = Color.fromRGBO(0, 0, 0, fade),
+      );
+    }
     final col = lamp.color;
     if (on > 0) {
       // halo past the lens (a gradient, no blur pass)
@@ -486,8 +516,9 @@ class _LampPainter extends CustomPainter {
       r * 0.22,
       Paint()..color = Colors.white.withValues(alpha: 0.55 * math.max(off, on)),
     );
+    if (fade < 1) canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_LampPainter o) => o.on != on || o.lamp != lamp;
+  bool shouldRepaint(_LampPainter o) => o.on != on || o.lamp != lamp || o.fade != fade;
 }

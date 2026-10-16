@@ -1047,3 +1047,5 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **55.3** Reinstalling is always a clean start: Android's automatic
   backup is off (`allowBackup="false"`; its 25 MB cap restored only part
   of the prints). Store listing says unsaved prints live only in the app.
+- [x] **55.4** Leaving Super 8: the RUN lamp fades out in place (it jumped
+  left: the swap's opacity layer flattened the 3D pose; now the lamp's ink fades).

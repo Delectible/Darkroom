@@ -3,15 +3,12 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.7.0';
+  static const version = '1.7.1';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest =
-      'Free and Pro: the free version gives you one roll of film and one battery charge for the digital '
-      'cameras each day, back every morning. Darkroom Pro (one-time \$4.99) lifts the limits. Fancy graphics '
-      'now fades smoothly when switched.';
+  static const latest = 'Behind-the-scenes housekeeping: no changes to how the app works.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

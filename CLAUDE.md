@@ -224,7 +224,8 @@ an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
   local (`Allowance.dayOf`). Kept in prefs (`PrefKeys.allowance`).
   The first film shot of the day asks first (`Blocked.unloaded` ->
   `showLoadRollSheet`: box art, shots/minutes, Pick another film / Load
-  it); the carousel tags the loaded stock LOADED (green). An unfinished
+  it); the carousel tags the loaded stock LOADED: n SHOTS LEFT (green;
+  Super 8: SEC). An unfinished
   roll stays in overnight (`Allowance.carried`): the first film shot of
   the day asks Keep shooting / Rewind & swap (`showCarriedRollSheet`;
   rewinding loses the rest); finishing it brings that day's fresh roll.

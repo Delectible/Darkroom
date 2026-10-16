@@ -1037,3 +1037,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   answers); buying something already owned counts as a restore; store
   start-up runs once; counter says NOT LOADED for another stock's
   carried roll; limit sheet shows the store's price.
+
+## 55. Shots left in the carousel (2026-10-16)
+
+- [x] **55.1** The LOADED tag in the film carousel says how much is left:
+  "LOADED: 5 SHOTS LEFT" (Super 8: seconds).

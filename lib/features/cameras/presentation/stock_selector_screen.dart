@@ -273,6 +273,10 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
         spec.mode == AppMode.film &&
         today.stock == spec.id &&
         today.left(spec) > 0;
+    final left = spec == null ? 0 : today.left(spec);
+    final loadedTag = spec?.recordsVideo ?? false
+        ? 'LOADED: $left SEC LEFT'
+        : 'LOADED: $left ${left == 1 ? 'SHOT' : 'SHOTS'} LEFT';
     // Held sideways the hero flight from the camera screen would be worked
     // out in the unrotated frame (it flew sideways, then snapped): skip it.
     final upright = uprightQuarterTurns(ref.watch(uprightOrientationProvider)).isEven;
@@ -417,7 +421,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                         ),
                       ),
                       child: Column(
-                        key: ValueKey('${spec?.id}$grain$loaded'),
+                        key: ValueKey('${spec?.id}$grain$loaded$left'),
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           SizedBox(
@@ -450,20 +454,24 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                           const SizedBox(height: 8),
                           SizedBox(
                             height: 22,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              spacing: 6,
-                              children: [
-                                if (loaded) const _Tag('LOADED', Color(0xFF81C784)),
-                                if (spec?.pickerTag case final tag?) _Tag(tag, const Color(0xFFE57373)),
-                                if (grain != GrainStrength.normal)
-                                  _Tag(
-                                    'GRAIN: ${grain.name.toUpperCase()}',
-                                    grain == GrainStrength.strong
-                                        ? const Color(0xFFFFB74D)
-                                        : const Color(0xFF90CAF9),
-                                  ),
-                              ],
+                            // Several tags at large text: shrink rather than overflow.
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                spacing: 6,
+                                children: [
+                                  if (loaded) _Tag(loadedTag, const Color(0xFF81C784)),
+                                  if (spec?.pickerTag case final tag?) _Tag(tag, const Color(0xFFE57373)),
+                                  if (grain != GrainStrength.normal)
+                                    _Tag(
+                                      'GRAIN: ${grain.name.toUpperCase()}',
+                                      grain == GrainStrength.strong
+                                          ? const Color(0xFFFFB74D)
+                                          : const Color(0xFF90CAF9),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ],

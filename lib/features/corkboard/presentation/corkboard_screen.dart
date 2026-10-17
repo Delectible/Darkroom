@@ -91,6 +91,26 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     if (v < -700 || (_swipeDx < -110 && v < 200)) Navigator.of(context).maybePop();
   }
 
+  /// Held sideways, the swipe that opened the board runs along the phone's
+  /// long side, which is now up/down: pulling on past the top (or the
+  /// bottom) of the board puts it away again. Only a finger's pull counts,
+  /// not a fling that runs into the end.
+  double _pull = 0;
+
+  bool _pullToClose(ScrollNotification n) {
+    final mq = MediaQuery.of(context);
+    if (mq.size.width <= mq.size.height) return false;
+    if (n is ScrollStartNotification) _pull = 0;
+    if (n is OverscrollNotification && n.dragDetails != null) {
+      _pull += n.overscroll.abs();
+      if (_pull > 110) {
+        _pull = double.negativeInfinity;
+        Navigator.of(context).maybePop();
+      }
+    }
+    return false;
+  }
+
   @override
   void dispose() {
     _galleryTimer?.cancel();
@@ -467,101 +487,104 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                       // bar, rather than vanishing a strip short of the edges.
                       Padding(
                         padding: EdgeInsets.only(left: leftInset, right: rightInset),
-                        child: ScrollConfiguration(
-                          behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
-                          child: CustomScrollView(
-                            controller: _scroll,
-                            physics: const ClampingScrollPhysics(),
-                            // Build (and decode) prints well before they scroll into view.
-                            scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
-                            slivers: [
-                              SliverToBoxAdapter(child: SizedBox(height: topInset)),
-                              SliverToBoxAdapter(
-                                child: _Header(
-                                  onBack: () => Navigator.of(context).pop(),
-                                  unsaved: unsaved,
-                                  total: developed.length,
-                                  saving: _saving,
-                                  onSaveAll: () => _saveAll(developed),
-                                ),
-                              ),
-                              if (inDarkroom.isNotEmpty)
+                        child: NotificationListener<ScrollNotification>(
+                          onNotification: _pullToClose,
+                          child: ScrollConfiguration(
+                            behavior: ScrollConfiguration.of(context).copyWith(overscroll: false),
+                            child: CustomScrollView(
+                              controller: _scroll,
+                              physics: const ClampingScrollPhysics(),
+                              // Build (and decode) prints well before they scroll into view.
+                              scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
+                              slivers: [
+                                SliverToBoxAdapter(child: SizedBox(height: topInset)),
                                 SliverToBoxAdapter(
-                                  child: _DarkroomStrip(items: inDarkroom, now: now),
-                                ),
-                              if (shown.isEmpty)
-                                const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
-                              else
-                                SliverFadeTransition(
-                                  opacity: _gridFade,
-                                  sliver: SliverPadding(
-                                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
-                                    sliver: SliverGrid(
-                                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                        maxCrossAxisExtent: 220,
-                                        mainAxisSpacing: 26,
-                                        crossAxisSpacing: 22,
-                                        childAspectRatio: 0.78,
-                                      ),
-                                      delegate: SliverChildBuilderDelegate(childCount: shown.length, (
-                                        context,
-                                        i,
-                                      ) {
-                                        final m = shown[i];
-                                        void open() => _open(context, shown, m);
-                                        void unpin() => _unpin(m);
-                                        final falling = _falling.contains(m.id);
-                                        final pinned = m.isVideo
-                                            ? PinnedReel(
-                                                item: m,
-                                                onOpen: open,
-                                                onPinTap: unpin,
-                                                showPin: !falling,
-                                              )
-                                            : CameraCatalog.byId(m.cameraId).isInstant
-                                            ? PinnedInstant(
-                                                item: m,
-                                                onOpen: open,
-                                                onPinTap: unpin,
-                                                showPin: !falling,
-                                              )
-                                            : PinnedPrint(
-                                                item: m,
-                                                onOpen: open,
-                                                onPinTap: unpin,
-                                                showPin: !falling,
-                                              );
-                                        final child = _Falling(
-                                          falling: falling,
-                                          pinColor:
-                                              _pinColors[math.Random(
-                                                m.id.hashCode,
-                                              ).nextInt(_pinColors.length)],
-                                          pinAt: m.isVideo
-                                              ? const Alignment(-0.5, 0.72)
-                                              : Alignment.topCenter,
-                                          onFallen: () {
-                                            if (!_batch.contains(m.id)) unawaited(_discard(m));
-                                          },
-                                          child: KeyedSubtree(
-                                            key: _keys.putIfAbsent(m.id, GlobalKey.new),
-                                            child: pinned,
-                                          ),
-                                        );
-                                        if (!_animatePin(m, i)) {
-                                          return KeyedSubtree(key: ValueKey(m.id), child: child);
-                                        }
-                                        return _PinIn(
-                                          key: ValueKey(m.id),
-                                          delay: Duration(milliseconds: 40 * math.min(i, 8)),
-                                          child: child,
-                                        );
-                                      }),
-                                    ),
+                                  child: _Header(
+                                    onBack: () => Navigator.of(context).pop(),
+                                    unsaved: unsaved,
+                                    total: developed.length,
+                                    saving: _saving,
+                                    onSaveAll: () => _saveAll(developed),
                                   ),
                                 ),
-                              SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
-                            ],
+                                if (inDarkroom.isNotEmpty)
+                                  SliverToBoxAdapter(
+                                    child: _DarkroomStrip(items: inDarkroom, now: now),
+                                  ),
+                                if (shown.isEmpty)
+                                  const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
+                                else
+                                  SliverFadeTransition(
+                                    opacity: _gridFade,
+                                    sliver: SliverPadding(
+                                      padding: const EdgeInsets.fromLTRB(18, 18, 18, 40),
+                                      sliver: SliverGrid(
+                                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                          maxCrossAxisExtent: 220,
+                                          mainAxisSpacing: 26,
+                                          crossAxisSpacing: 22,
+                                          childAspectRatio: 0.78,
+                                        ),
+                                        delegate: SliverChildBuilderDelegate(childCount: shown.length, (
+                                          context,
+                                          i,
+                                        ) {
+                                          final m = shown[i];
+                                          void open() => _open(context, shown, m);
+                                          void unpin() => _unpin(m);
+                                          final falling = _falling.contains(m.id);
+                                          final pinned = m.isVideo
+                                              ? PinnedReel(
+                                                  item: m,
+                                                  onOpen: open,
+                                                  onPinTap: unpin,
+                                                  showPin: !falling,
+                                                )
+                                              : CameraCatalog.byId(m.cameraId).isInstant
+                                              ? PinnedInstant(
+                                                  item: m,
+                                                  onOpen: open,
+                                                  onPinTap: unpin,
+                                                  showPin: !falling,
+                                                )
+                                              : PinnedPrint(
+                                                  item: m,
+                                                  onOpen: open,
+                                                  onPinTap: unpin,
+                                                  showPin: !falling,
+                                                );
+                                          final child = _Falling(
+                                            falling: falling,
+                                            pinColor:
+                                                _pinColors[math.Random(
+                                                  m.id.hashCode,
+                                                ).nextInt(_pinColors.length)],
+                                            pinAt: m.isVideo
+                                                ? const Alignment(-0.5, 0.72)
+                                                : Alignment.topCenter,
+                                            onFallen: () {
+                                              if (!_batch.contains(m.id)) unawaited(_discard(m));
+                                            },
+                                            child: KeyedSubtree(
+                                              key: _keys.putIfAbsent(m.id, GlobalKey.new),
+                                              child: pinned,
+                                            ),
+                                          );
+                                          if (!_animatePin(m, i)) {
+                                            return KeyedSubtree(key: ValueKey(m.id), child: child);
+                                          }
+                                          return _PinIn(
+                                            key: ValueKey(m.id),
+                                            delay: Duration(milliseconds: 40 * math.min(i, 8)),
+                                            child: child,
+                                          );
+                                        }),
+                                      ),
+                                    ),
+                                  ),
+                                SliverToBoxAdapter(child: SizedBox(height: bottomInset)),
+                              ],
+                            ),
                           ),
                         ),
                       ),

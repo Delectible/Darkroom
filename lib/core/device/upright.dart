@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'dart:ui' show DisplayFeatureType;
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -379,6 +381,16 @@ class UprightPage extends ConsumerWidget {
             3 => EdgeInsets.fromLTRB(e.bottom, e.left, e.top, e.right),
             _ => e,
           };
+          var cutTop = 0.0, cutBottom = 0.0;
+          for (final f in mq.displayFeatures) {
+            if (f.type != DisplayFeatureType.cutout) continue;
+            if (f.bounds.center.dy < mq.size.height / 2) {
+              cutTop = math.max(cutTop, f.bounds.bottom);
+            } else {
+              cutBottom = math.max(cutBottom, mq.size.height - f.bounds.top);
+            }
+          }
+          final cutout = EdgeInsets.only(top: cutTop, bottom: cutBottom);
           return RotatedBox(
             quarterTurns: q,
             child: MediaQuery(
@@ -386,9 +398,10 @@ class UprightPage extends ConsumerWidget {
                   ? mq
                   : mq.copyWith(
                       size: mq.size.flipped,
-                      // as it will be, turned: no status / nav bars
-                      padding: turn(mq.padding.copyWith(top: 0, bottom: 0)),
-                      viewPadding: turn(mq.viewPadding.copyWith(top: 0, bottom: 0)),
+                      // as it will be, turned: no status / nav bars, only the
+                      // camera cutout (or the layout shifts once it really turns)
+                      padding: turn(cutout),
+                      viewPadding: turn(cutout),
                       viewInsets: turn(mq.viewInsets),
                       systemGestureInsets: turn(mq.systemGestureInsets),
                     ),

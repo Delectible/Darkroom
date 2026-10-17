@@ -92,17 +92,17 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
   }
 
   /// Held sideways, the swipe that opened the board runs along the phone's
-  /// long side, which is now up/down: pulling on past the top (or the
-  /// bottom) of the board puts it away again. Only a finger's pull counts,
-  /// not a fling that runs into the end.
+  /// long side, which is now up/down: pulling down past the top of the
+  /// board puts it away again. Only a finger's pull at the top counts, not
+  /// a fling that runs into an end.
   double _pull = 0;
 
   bool _pullToClose(ScrollNotification n) {
     final mq = MediaQuery.of(context);
     if (mq.size.width <= mq.size.height) return false;
     if (n is ScrollStartNotification) _pull = 0;
-    if (n is OverscrollNotification && n.dragDetails != null) {
-      _pull += n.overscroll.abs();
+    if (n is OverscrollNotification && n.dragDetails != null && n.overscroll < 0) {
+      _pull -= n.overscroll;
       if (_pull > 110) {
         _pull = double.negativeInfinity;
         Navigator.of(context).maybePop();

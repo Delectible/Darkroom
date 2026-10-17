@@ -25,6 +25,7 @@ import 'games/solitaire.dart';
 import 'win98_programs.dart';
 import 'win98_shutdown.dart';
 import 'win98_widgets.dart';
+import '../../../../core/device/physical_orientation.dart';
 import '../../../../core/device/system_gestures.dart';
 import '../../../../core/device/upright.dart';
 
@@ -1131,34 +1132,51 @@ class _TaskbarState extends State<_Taskbar> {
 /// follow the thumb. Sideways drags inside (scrollbars, sliders, games)
 /// win their own touch; touches from the side strips are left to the
 /// phone's back gesture.
-class _SwipeToClose extends StatefulWidget {
+class _SwipeToClose extends ConsumerStatefulWidget {
   const _SwipeToClose({required this.child});
 
   final Widget child;
 
   @override
-  State<_SwipeToClose> createState() => _SwipeToCloseState();
+  ConsumerState<_SwipeToClose> createState() => _SwipeToCloseState();
 }
 
-class _SwipeToCloseState extends State<_SwipeToClose> {
+class _SwipeToCloseState extends ConsumerState<_SwipeToClose> {
   double? _from;
-  double _dx = 0;
+  double _d = 0;
+
+  void _start(DragStartDetails d) {
+    _d = 0;
+    _from = SystemGestureZones.startsInEdge(context, d.globalPosition) ? null : 0;
+  }
+
+  /// [sign] is the closing direction along the drag's axis.
+  void _end(DragEndDetails d, double sign) {
+    if (_from == null) return;
+    _from = null;
+    final v = (d.primaryVelocity ?? 0) * sign;
+    if (v > 700 || (_d * sign > 110 && v > -200)) Navigator.of(context).maybePop();
+  }
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-    onHorizontalDragStart: (d) {
-      _dx = 0;
-      _from = SystemGestureZones.startsInEdge(context, d.globalPosition) ? null : d.globalPosition.dx;
-    },
-    onHorizontalDragUpdate: (d) => _dx += d.primaryDelta ?? 0,
-    onHorizontalDragEnd: (d) {
-      if (_from == null) return;
-      _from = null;
-      final v = d.primaryVelocity ?? 0;
-      if (v > 700 || (_dx > 110 && v > -200)) Navigator.of(context).maybePop();
-    },
-    child: widget.child,
-  );
+  Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    // Held sideways, the swipe that opened it runs along the phone's long
+    // side, now up/down: the reverse closes it. Lists that can scroll keep
+    // their own vertical drags (the innermost recogniser wins the touch), so
+    // this only fires on the parts that don't scroll.
+    final land = mq.size.width > mq.size.height;
+    final up = ref.watch(physicalOrientationProvider) == DeviceOrientation.landscapeLeft;
+    return GestureDetector(
+      onHorizontalDragStart: _start,
+      onHorizontalDragUpdate: (d) => _d += d.primaryDelta ?? 0,
+      onHorizontalDragEnd: (d) => _end(d, 1),
+      onVerticalDragStart: land ? _start : null,
+      onVerticalDragUpdate: land ? (d) => _d += d.primaryDelta ?? 0 : null,
+      onVerticalDragEnd: land ? (d) => _end(d, up ? -1 : 1) : null,
+      child: widget.child,
+    );
+  }
 }
 
 /// The beige monitor round the explorer: a moulded plastic bezel with a

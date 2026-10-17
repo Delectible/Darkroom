@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Corkboard held sideways: pull down past the top to put it away, and no more jump when it lands.';
+      'Held sideways: pull the corkboard down from the top, or swipe Darkroom 98 back the way it came, to put them away. No more jump when they land.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

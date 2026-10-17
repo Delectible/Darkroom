@@ -1049,7 +1049,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   of the prints). Store listing says unsaved prints live only in the app.
 - [x] **55.4** Leaving Super 8: the RUN lamp fades out in place (it jumped
   left: the swap's opacity layer flattened the 3D pose; now the lamp's ink fades).
-- [x] **55.5** Corkboard in landscape: pulling on past the top (or bottom)
-  of the board closes it (the open swipe runs up/down when held sideways);
+- [x] **55.5** Corkboard in landscape: pulling down past the top of the board
+  closes it (only at the top) (the open swipe runs up/down when held sideways);
   the turned layout keeps the camera cutout inset, so it no longer shifts
   when the app really rotates.
+- [x] **55.6** Darkroom 98 held sideways: the reverse of the opening swipe
+  (now up/down) closes it, on parts that don't scroll only.

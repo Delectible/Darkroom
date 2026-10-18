@@ -21,8 +21,22 @@ import 'core/settings/settings_repository.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/whole_body.dart';
 
+/// The start-up step under way, shown if launching fails or hangs.
+String _stage = 'starting';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // A hang or a throw before the first frame used to leave the launch screen
+  // up for good: show what got stuck instead (if the start finishes late,
+  // the app replaces this screen).
+  try {
+    await _start().timeout(const Duration(seconds: 25));
+  } catch (e, s) {
+    runApp(_StartupFailed(stage: _stage, error: '$e', stack: '$s'));
+  }
+}
+
+Future<void> _start() async {
   // Bundled fonts (instant-print notes, Win98 pixel text) ship under the SIL OFL.
   LicenseRegistry.addLicense(() async* {
     yield LicenseEntryWithLineBreaks([
@@ -32,8 +46,10 @@ Future<void> main() async {
   });
   // The camera UI is portrait-locked; landscape shots are still captured in
   // landscape (EXIF orientation follows the physical device).
+  _stage = 'orientation';
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
+  _stage = 'storage';
   final (paths, db, prefs) = await (
     AppPaths.resolve(),
     AppDatabase.open(),
@@ -43,9 +59,11 @@ Future<void> main() async {
   ).wait;
 
   // Crash reports stay on the phone (Win98 Help > Crash Reports).
+  _stage = 'crash log';
   await CrashLog.install(paths.supportDir);
 
   final settingsRepo = SettingsRepository(db);
+  _stage = 'settings';
   final (global, cameraSettings) = await (settingsRepo.loadGlobal(), settingsRepo.loadCameraSettings()).wait;
 
   final notifications = NotificationService(FlutterLocalNotificationsPlugin());
@@ -67,7 +85,9 @@ Future<void> main() async {
     }
   }
 
+  _stage = 'notifications';
   await notifications.init(onTap: route);
+  _stage = 'background worker';
   if (Platform.isAndroid) {
     await Workmanager().initialize(backgroundDispatcher);
   }
@@ -83,12 +103,15 @@ Future<void> main() async {
     await container.read(darkroomEngineProvider).reschedule();
   }());
 
+  _stage = 'launch payload';
   final launchPayload = await notifications.launchPayload();
   // The launch screen stays up until the 3D camera bodies have loaded, so
   // the camera never comes up half drawn.
+  _stage = '3D cameras';
   if (global.controls3d) await _warmBodies(container);
   // Store: listen for purchases and quietly restore an earlier Pro.
   unawaited(container.read(proStoreProvider).start());
+  _stage = 'first frame';
   runApp(UncontrolledProviderScope(container: container, child: const DarkroomApp()));
   if (launchPayload != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => route(launchPayload));
@@ -101,5 +124,50 @@ Future<void> _warmBodies(ProviderContainer container) async {
     await container.read(wholeArtProvider.future).timeout(const Duration(seconds: 8));
   } catch (_) {
     // too slow: the camera comes up with the classic body until they land
+  }
+}
+
+/// Launch failed or hung: say where, with a report to copy.
+class _StartupFailed extends StatelessWidget {
+  const _StartupFailed({required this.stage, required this.error, required this.stack});
+
+  final String stage, error, stack;
+
+  @override
+  Widget build(BuildContext context) {
+    final report = 'Darkroom failed to start at: $stage\n$error\n$stack';
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF111111),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'The darkroom door is stuck.',
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                Text('Stuck at: $stage', style: const TextStyle(color: Colors.white70, fontSize: 15)),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Text(error, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: () => Clipboard.setData(ClipboardData(text: report)),
+                  child: const Text('Copy error report'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

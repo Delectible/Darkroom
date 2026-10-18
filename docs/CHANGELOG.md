@@ -1055,3 +1055,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   when the app really rotates.
 - [x] **55.6** Darkroom 98 held sideways: the reverse of the opening swipe
   (now up/down) closes it, on parts that don't scroll only.
+- [~] **55.7** 1.7.8 stuck on the launch screen on the owner's Pixel. 1.7.9:
+  start-up watchdog (25 s) shows the step that hung/threw with a copyable
+  report instead of hanging forever (`_StartupFailed` in main.dart).

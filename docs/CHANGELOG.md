@@ -1055,6 +1055,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   when the app really rotates.
 - [x] **55.6** Darkroom 98 held sideways: the reverse of the opening swipe
   (now up/down) closes it, on parts that don't scroll only.
-- [~] **55.7** 1.7.8 stuck on the launch screen on the owner's Pixel. 1.7.9:
+- [x] **55.7** 1.7.8 stuck on the launch screen on the owner's Pixel. 1.7.9:
   start-up watchdog (25 s) shows the step that hung/threw with a copyable
   report instead of hanging forever (`_StartupFailed` in main.dart).
+  Cause: CI's `flutter create` re-resolved dependencies, ignoring
+  pubspec.lock, and pulled in shared_preferences_android 2.5.0 (JNI calls
+  that R8 strips: NoSuchMethodError on getAll). 1.7.10: CI restores the
+  lock after `flutter create` (`pub get --enforce-lockfile`).

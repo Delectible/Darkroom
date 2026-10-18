@@ -67,7 +67,10 @@ Read this first. It's the hand-off from the earlier development sessions
   in AppDelegate.swift). No battery-optimisation prompts on either.
 - `android/` and `ios/` only contain the files we customised. CI runs
   `flutter create --org com.dingo --project-name darkroom --platforms android .`
-  to fill in the rest (it never overwrites existing files). Don't delete
+  to fill in the rest (it never overwrites existing files, but it does
+  re-resolve dependencies past pubspec.lock, so CI restores the lock and
+  runs `flutter pub get --enforce-lockfile` after it: an unpinned
+  shared_preferences_android 2.5.0 once hung the app at launch). Don't delete
   `AndroidManifest.xml` or `android/app/build.gradle.kts`.
 - `applicationId` / `namespace` = `com.dingo.darkroom` (the id registered on
   Google Play; was `com.darkroom.darkroom` until 1.3.16); must match the
@@ -100,6 +103,8 @@ Read this first. It's the hand-off from the earlier development sessions
 - Checks: `flutter analyze` and `flutter test` (CI runs both and won't
   publish a release unless they pass). If the session has no Flutter SDK,
   just push and read the GitHub Actions result. `pubspec.lock` is committed.
+  Start-up runs under a 25 s watchdog (main.dart `_StartupFailed`): a hang
+  or throw shows the step and a copyable report instead of the splash.
 - UI checks without a phone: `test/*_screens_test.dart` pump screens at
   Pixel 9 Pro size (fail on overflow); `SHOTS=dir FLUTTER_ROOT=<sdk>` also
   saves PNGs with real fonts. `camcorder_osd_ffmpeg_test` runs the camcorder

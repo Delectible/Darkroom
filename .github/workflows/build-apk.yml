@@ -39,7 +39,13 @@ jobs:
         with: { distribution: temurin, java-version: '17' }
       - uses: subosito/flutter-action@v2
         with: { channel: stable, cache: true }
-      - run: flutter create --org $ORG --project-name $APP --platforms android .
+      # flutter create re-resolves dependencies and ignores pubspec.lock (it
+      # pulled in shared_preferences_android 2.5.0, whose JNI calls R8 strips:
+      # the app hung at launch). Put the locked versions back.
+      - run: |
+          flutter create --org $ORG --project-name $APP --platforms android .
+          git checkout -- pubspec.lock
+          flutter pub get --enforce-lockfile
       - name: Unpack the private upload key (repo secrets)
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -84,6 +90,8 @@ jobs:
       - name: Fill in the Xcode project
         run: |
           flutter create --org $ORG --project-name $APP --platforms ios .
+          git checkout -- pubspec.lock
+          flutter pub get --enforce-lockfile
           sed -i '' -E 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/' ios/Runner.xcodeproj/project.pbxproj
       - env:
           DEBUG_PASSWORD: ${{ secrets.DEBUG_PASSWORD }}

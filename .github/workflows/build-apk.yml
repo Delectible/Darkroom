@@ -46,6 +46,7 @@ jobs:
           flutter create --org $ORG --project-name $APP --platforms android .
           git checkout -- pubspec.lock
           flutter pub get --enforce-lockfile
+          git diff --exit-code pubspec.lock || { echo "::error::Dependencies drifted from pubspec.lock"; exit 1; }
       - name: Unpack the private upload key (repo secrets)
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -92,6 +93,7 @@ jobs:
           flutter create --org $ORG --project-name $APP --platforms ios .
           git checkout -- pubspec.lock
           flutter pub get --enforce-lockfile
+          git diff --exit-code pubspec.lock || { echo "::error::Dependencies drifted from pubspec.lock"; exit 1; }
           sed -i '' -E 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/' ios/Runner.xcodeproj/project.pbxproj
       - env:
           DEBUG_PASSWORD: ${{ secrets.DEBUG_PASSWORD }}

@@ -69,7 +69,8 @@ Read this first. It's the hand-off from the earlier development sessions
   `flutter create --org com.dingo --project-name darkroom --platforms android .`
   to fill in the rest (it never overwrites existing files, but it does
   re-resolve dependencies past pubspec.lock, so CI restores the lock and
-  runs `flutter pub get --enforce-lockfile` after it: an unpinned
+  runs `flutter pub get --enforce-lockfile` after it, then fails the build if
+  the lock still differs: an unpinned
   shared_preferences_android 2.5.0 once hung the app at launch). Don't delete
   `AndroidManifest.xml` or `android/app/build.gradle.kts`.
 - `applicationId` / `namespace` = `com.dingo.darkroom` (the id registered on

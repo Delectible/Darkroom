@@ -375,6 +375,10 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                               height: itemH,
                               child: PageView.builder(
                                 controller: _pages,
+                                // build the next item before its slot shows: the
+                                // neighbours are drawn pulled in (see _Item), so
+                                // they'd pop in half visible otherwise
+                                allowImplicitScrolling: true,
                                 physics: const _ExternalDragPhysics(),
                                 itemCount: _specs.length,
                                 onPageChanged: _select,

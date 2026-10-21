@@ -1065,3 +1065,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **55.8** Carousel: neighbours pulled a third of a page toward the
   middle (more of them shows in portrait); the 35mm box art (and instant)
   was ~3% left of centre in its image: recentred the .webp files.
+- [x] **55.9** 35mm art moved another 55 px right (centred nearer the
+  canister than the film tail); carousel builds the next item early
+  (`allowImplicitScrolling`) so pulled-in neighbours don't pop in.

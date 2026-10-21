@@ -93,6 +93,20 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
 
   bool get _film => widget.mode == AppMode.film;
 
+  /// Decodes every item's artwork up front, at the size it's drawn
+  /// (CameraArtwork's cacheWidth), so neighbours sliding in never appear a
+  /// frame or two late.
+  int _precachedPx = 0;
+
+  void _precacheArt(BuildContext context, double side) {
+    final px = (side * MediaQuery.devicePixelRatioOf(context)).round().clamp(64, 1024);
+    if (px == _precachedPx) return;
+    _precachedPx = px;
+    for (final spec in _specs) {
+      unawaited(precacheImage(ResizeImage(AssetImage(spec.artwork), width: px), context));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -371,6 +385,8 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                               _pages = PageController(viewportFraction: frac, initialPage: _index);
                               WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
                             }
+                            final pageW = box.maxWidth * _pages.viewportFraction;
+                            _precacheArt(context, math.min(pageW, itemH));
                             return SizedBox(
                               height: itemH,
                               child: PageView.builder(
@@ -385,6 +401,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                                 itemBuilder: (context, i) => _Item(
                                   controller: _pages,
                                   index: i,
+                                  pageWidth: pageW,
                                   onTap: () {
                                     if (i == _index) {
                                       Navigator.of(context).pop();
@@ -518,10 +535,17 @@ class _Tag extends StatelessWidget {
 /// One carousel slot: full size and bright in the centre, smaller and dimmer
 /// as it moves away.
 class _Item extends StatelessWidget {
-  const _Item({required this.controller, required this.index, required this.onTap, required this.child});
+  const _Item({
+    required this.controller,
+    required this.index,
+    required this.pageWidth,
+    required this.onTap,
+    required this.child,
+  });
 
   final PageController controller;
   final int index;
+  final double pageWidth;
   final VoidCallback onTap;
   final Widget child;
 
@@ -542,11 +566,8 @@ class _Item extends StatelessWidget {
         final d = offset.abs().clamp(0.0, 1.0);
         // Neighbours are pulled in toward the middle (by a third of a page)
         // so more of them shows beside the current one.
-        final width = controller.hasClients && controller.position.haveDimensions
-            ? controller.position.viewportDimension * controller.viewportFraction
-            : 0.0;
         return Transform.translate(
-          offset: Offset(-offset * width * 0.33, 0),
+          offset: Offset(-offset * pageWidth * 0.33, 0),
           child: Opacity(
             opacity: 1 - 0.55 * d,
             child: Transform.scale(scale: 1 - 0.32 * d, child: child),

@@ -1068,3 +1068,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **55.9** 35mm art moved another 55 px right (centred nearer the
   canister than the film tail); carousel builds the next item early
   (`allowImplicitScrolling`) so pulled-in neighbours don't pop in.
+- [x] **55.10** Carousel neighbours: the pull-in now uses the laid-out page
+  width (they sat off screen until the first scroll), and all artwork is
+  decoded up front at the drawn size (`_precacheArt`), so items no longer
+  pop in late while sliding.

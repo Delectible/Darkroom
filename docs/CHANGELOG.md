@@ -1062,3 +1062,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   pubspec.lock, and pulled in shared_preferences_android 2.5.0 (JNI calls
   that R8 strips: NoSuchMethodError on getAll). 1.7.10: CI restores the
   lock after `flutter create` (`pub get --enforce-lockfile`).
+- [x] **55.8** Carousel: neighbours pulled a third of a page toward the
+  middle (more of them shows in portrait); the 35mm box art (and instant)
+  was ~3% left of centre in its image: recentred the .webp files.

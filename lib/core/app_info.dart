@@ -3,12 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.7.10';
+  static const version = '1.7.11';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest = 'Fixes the app getting stuck on the launch screen.';
+  static const latest =
+      'Carousel: more of the neighbouring films and cameras show, and the film boxes sit centred.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

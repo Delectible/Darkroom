@@ -534,10 +534,19 @@ class _Item extends StatelessWidget {
         if (controller.hasClients && controller.position.haveDimensions) {
           page = controller.page ?? page;
         }
-        final d = (page - index).abs().clamp(0.0, 1.0);
-        return Opacity(
-          opacity: 1 - 0.55 * d,
-          child: Transform.scale(scale: 1 - 0.32 * d, child: child),
+        final offset = (index - page).clamp(-1.5, 1.5);
+        final d = offset.abs().clamp(0.0, 1.0);
+        // Neighbours are pulled in toward the middle (by a third of a page)
+        // so more of them shows beside the current one.
+        final width = controller.hasClients && controller.position.haveDimensions
+            ? controller.position.viewportDimension * controller.viewportFraction
+            : 0.0;
+        return Transform.translate(
+          offset: Offset(-offset * width * 0.33, 0),
+          child: Opacity(
+            opacity: 1 - 0.55 * d,
+            child: Transform.scale(scale: 1 - 0.32 * d, child: child),
+          ),
         );
       },
     );

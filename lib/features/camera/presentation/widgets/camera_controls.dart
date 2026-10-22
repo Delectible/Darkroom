@@ -525,16 +525,13 @@ class _MemoHolderState extends State<_MemoHolder> with SingleTickerProviderState
     final clip = widget.art?.part(AppMode.film, 'memo');
     final fills = clip?.layers != null;
     // The window: the cards slide behind it, clipped, under a faint glare.
-    // Both cards fill it, so they travel as one strip with no gap.
+    // Both cards fill it, so they travel as one strip with no gap. It's one
+    // fixed size (the 3D holder's opening, or [_window] on the drawn
+    // bodies): the card's text shrinks to fit, the holder never resizes.
     final window = ClipRect(
       child: Stack(
-        fit: fills ? StackFit.expand : StackFit.loose,
+        fit: StackFit.expand,
         children: [
-          // Sizes the window (the current card); the moving cards fill it.
-          Visibility.maintain(
-            visible: false,
-            child: _MemoCard(spec: widget.spec, pro: widget.pro, fills: fills),
-          ),
           Positioned.fill(
             child: AnimatedBuilder(
               animation: _slide,
@@ -544,7 +541,7 @@ class _MemoHolderState extends State<_MemoHolder> with SingleTickerProviderState
                 Widget at(CameraSpec s, double dx) => Positioned.fill(
                   child: FractionalTranslation(
                     translation: Offset(dx, 0),
-                    child: _MemoCard(spec: s, pro: widget.pro, fills: fills),
+                    child: _MemoCard(spec: s, pro: widget.pro),
                   ),
                 );
                 return Stack(
@@ -564,10 +561,11 @@ class _MemoHolderState extends State<_MemoHolder> with SingleTickerProviderState
       ),
     );
     if (fills) return window;
+    final sized = SizedBox.fromSize(size: _window, child: window);
     if (clip != null) {
       return Stack(
         children: [
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6), child: window),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6), child: sized),
           Positioned.fill(child: BodySlice(clip)),
         ],
       );
@@ -583,22 +581,21 @@ class _MemoHolderState extends State<_MemoHolder> with SingleTickerProviderState
         ),
         boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 3, offset: Offset(0, 1))],
       ),
-      child: window,
+      child: sized,
     );
   }
+
+  /// The drawn bodies' holder opening.
+  static const _window = Size(150, 34);
 }
 
 /// One box-end card: the stock's name and what the roll holds, in the box's
 /// own colours.
 class _MemoCard extends StatelessWidget {
-  const _MemoCard({required this.spec, required this.pro, required this.fills});
+  const _MemoCard({required this.spec, required this.pro});
 
   final CameraSpec spec;
   final bool pro;
-
-  /// Fills the 3D holder's opening (text at its own size, shrunk evenly
-  /// only if it can't fit).
-  final bool fills;
 
   @override
   Widget build(BuildContext context) {
@@ -648,14 +645,13 @@ class _MemoCard extends StatelessWidget {
         ),
       ],
     );
-    if (fills) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
-        decoration: decoration,
-        child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: text),
-      );
-    }
-    return Container(padding: const EdgeInsets.fromLTRB(8, 4, 8, 4), decoration: decoration, child: text);
+    // Fills its window: text at its own size, shrunk evenly only if it
+    // can't fit.
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1.5),
+      decoration: decoration,
+      child: FittedBox(fit: BoxFit.scaleDown, alignment: Alignment.centerLeft, child: text),
+    );
   }
 }
 

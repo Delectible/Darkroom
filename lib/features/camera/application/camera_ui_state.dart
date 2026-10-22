@@ -103,20 +103,6 @@ class UserNameNotifier extends Notifier<String?> {
 
 final userNameProvider = NotifierProvider<UserNameNotifier, String?>(UserNameNotifier.new);
 
-/// The digital body's finish (null: the plain silver). Picked in the Debug
-/// menu for now.
-class BodyFinishNotifier extends Notifier<String?> {
-  @override
-  String? build() => ref.read(sharedPrefsProvider).getString(PrefKeys.bodyFinish);
-
-  Future<void> set(String name) async {
-    state = name;
-    await ref.read(sharedPrefsProvider).setString(PrefKeys.bodyFinish, name);
-  }
-}
-
-final bodyFinishProvider = NotifierProvider<BodyFinishNotifier, String?>(BodyFinishNotifier.new);
-
 /// The Win98 colour scheme's name (null: Standard).
 class Win98ThemeNotifier extends Notifier<String?> {
   @override

@@ -16,8 +16,10 @@ import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/skins/camera_skins.dart';
+import '../../../skins/presentation/camera_shop_screen.dart';
 import '../../../camera/application/camera_session_controller.dart';
-import '../../../camera/application/camera_ui_state.dart' show PrefKeys, bodyFinishProvider;
+import '../../../camera/application/camera_ui_state.dart' show PrefKeys, appModeProvider;
 import '../../../cameras/domain/camera_spec.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../onboarding/onboarding_screen.dart';
@@ -136,16 +138,19 @@ final _tools = <_Tool>[
   ),
   _Tool(
     PixelIcon.camera,
-    'Camera Finish',
-    'Pick the digital camera\'s finish: silver, silver with a black grip, gunmetal, champagne, '
-        'two-tone. (Later they can be won in the games.)',
-    (context, ref) => showWin98Window<void>(
-      context,
-      title: 'Camera Finish',
-      width: 260,
-      icon: const PixelIconView(PixelIcon.camera),
-      builder: (context) => const _FinishPicker(),
-    ),
+    'Camera Shop',
+    'The camera skins (film and digital) in the shop, as Settings > Camera Shop opens it.',
+    (context, ref) => showCameraShop(context, mode: ref.read(appModeProvider)),
+  ),
+  _Tool(
+    PixelIcon.camera,
+    'Unlock All Skins',
+    'Every camera skin owned (or none again), until the mini games award them.',
+    (_, ref) async {
+      final n = ref.read(unlockedSkinsProvider.notifier);
+      ref.read(unlockedSkinsProvider).isEmpty ? await n.unlockAll() : await n.lockAll();
+    },
+    on: (ref) => ref.watch(unlockedSkinsProvider).isNotEmpty,
   ),
   _Tool(
     PixelIcon.computer,
@@ -451,57 +456,6 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
                 child: const Text('Close'),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Debug > Camera Finish: the digital body's finishes as a list to pick
-/// from; the camera changes as soon as one is picked.
-class _FinishPicker extends ConsumerWidget {
-  const _FinishPicker();
-
-  static const _finishes = {
-    'silver': 'Silver',
-    'grip': 'Silver, black grip',
-    'gunmetal': 'Gunmetal',
-    'champagne': 'Champagne',
-    'twotone': 'Two-tone',
-  };
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final now = ref.watch(bodyFinishProvider) ?? 'silver';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Win98GroupBox(
-            label: 'Finish',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final f in _finishes.entries)
-                  Win98Radio(
-                    selected: f.key == now,
-                    label: f.value,
-                    onTap: () => unawaited(ref.read(bodyFinishProvider.notifier).set(f.key)),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Win98Button(
-              minWidth: 76,
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
           ),
         ],
       ),

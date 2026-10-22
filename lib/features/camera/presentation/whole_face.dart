@@ -12,6 +12,7 @@ import '../application/capture_controller.dart';
 import '../../settings/application/settings_controllers.dart';
 import 'photo_body.dart';
 import 'viewport.dart';
+import '../../../core/skins/camera_skins.dart';
 import 'whole_body.dart';
 import 'widgets/camera_controls.dart';
 
@@ -84,7 +85,7 @@ class WholeFace extends ConsumerWidget {
         final shutterAt = part('shutter') - shutterHub(spec);
         final live = body.live
           ?..showShutter(spec.recordsVideo)
-          ..setFinish(ref.watch(bodyFinishProvider));
+          ..setFinish(ref.watch(cameraSkinProvider.select((m) => m[mode])));
         // (Not clipped: labels lifted onto the keys' tops sit out from the
         // face, and a flat clip at the face's edge cut off their tops as
         // the body turned. Nothing else reaches past the face.)

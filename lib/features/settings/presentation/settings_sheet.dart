@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../skins/presentation/camera_shop_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sfx.dart';
@@ -56,6 +58,19 @@ class _SettingsSheet extends ConsumerWidget {
         const SizedBox(height: 16),
         _Heading('GLOBAL', p),
         _ProRow(pro: ref.watch(proProvider)),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            'Camera Shop',
+            style: TextStyle(color: p.text, fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text(
+            'Skins for your cameras. Win them in the games in Darkroom 98.',
+            style: TextStyle(color: p.textMuted, fontSize: 12),
+          ),
+          trailing: Icon(Icons.chevron_right, color: p.textMuted),
+          onTap: () => showCameraShop(context, mode: mode),
+        ),
         _Toggle(
           title: 'Notifications',
           subtitle: 'Tell me when prints finish developing.',

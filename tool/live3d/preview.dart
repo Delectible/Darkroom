@@ -13,6 +13,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
+import 'package:darkroom/core/skins/camera_skins.dart';
 import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/device/battery.dart';
 import 'package:darkroom/core/device/physical_orientation.dart';
@@ -72,9 +73,11 @@ class _Name extends UserNameNotifier {
   String? build() => null;
 }
 
-class _Finish extends BodyFinishNotifier {
+class _Skin extends CameraSkinNotifier {
   @override
-  String? build() => Platform.environment['FINISH'];
+  Map<AppMode, String> build() => {
+    for (final m in AppMode.values) m: CameraSkins.byId(m, Platform.environment['FINISH']).id,
+  };
 }
 
 class _Session extends CameraSessionController {
@@ -106,7 +109,7 @@ Future<void> main() async {
         lensProvider.overrideWith(_Lens.new),
         userNameProvider.overrideWith(_Name.new),
         flashProvider.overrideWith(_Flash.new),
-        bodyFinishProvider.overrideWith(_Finish.new),
+        cameraSkinProvider.overrideWith(_Skin.new),
         cameraSessionProvider.overrideWith(_Session.new),
         filmItemsProvider.overrideWith((ref) => Stream.value(const <MediaItem>[])),
         sdCardItemsProvider.overrideWith((ref) => Stream.value(const <MediaItem>[])),

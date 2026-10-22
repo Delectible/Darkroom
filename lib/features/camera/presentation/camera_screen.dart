@@ -597,6 +597,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
     final skinIds = ref.watch(cameraSkinProvider);
     final skins = {for (final m in AppMode.values) m: CameraSkins.byId(m, skinIds[m])};
+    // Both 3D bodies wear their skins (the other one shows as it swaps in).
+    for (final m in AppMode.values) {
+      ref.read(wholeBodyProvider(m))?.live?.setFinish(skins[m]!.id);
+    }
     // The drawn body wears its skin; the 3D model wears its own.
     final palette = whole == null
         ? RetroPalette.forMode(mode).skinned(skins[mode]!)

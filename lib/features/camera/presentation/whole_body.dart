@@ -259,7 +259,8 @@ class LiveBody extends ChangeNotifier {
       if (n.name.endsWith('.slide')) _parentScale(n);
     }
     showShutter(false);
-    setFinish('silver');
+    // the default skins (film's finishes come out of the exporter sorted)
+    setFinish(finishes.contains('classic') ? 'classic' : 'silver');
   }
 
   /// Model to scene: z turned round.

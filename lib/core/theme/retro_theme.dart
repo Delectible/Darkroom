@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/cameras/domain/camera_spec.dart';
+import '../skins/camera_skins.dart';
 
 /// The two skins. Film = dark pebbled leatherette + brass; Digital = brushed
 /// silver plastic + backlit LCD.
@@ -68,6 +69,34 @@ class RetroPalette extends ThemeExtension<RetroPalette> {
 
   static RetroPalette forMode(AppMode mode) => mode == AppMode.film ? film : digital;
 
+  /// The drawn camera body's colours for [mode] wearing its picked skin
+  /// (see [BodySkins]); the default skin keeps the original palette.
+  static RetroPalette ofBody(BuildContext context, AppMode mode) {
+    final skin = context.dependOnInheritedWidgetOfExactType<BodySkins>()?.skins[mode];
+    return skin == null ? forMode(mode) : forMode(mode).skinned(skin);
+  }
+
+  /// This palette with a skin's body colours (text kept readable on it).
+  RetroPalette skinned(CameraSkin skin) {
+    if (skin.id == CameraSkins.forMode(mode).first.id) return this;
+    Color mix(Color a, Color b, double t) => Color.lerp(a, b, t)!;
+    final light = skin.covering.computeLuminance() > 0.3;
+    return RetroPalette(
+      mode: mode,
+      body: skin.covering,
+      bodyHighlight: mix(skin.covering, Colors.white, 0.16),
+      bodyShadow: mix(skin.covering, Colors.black, 0.45),
+      metal: skin.trim,
+      metalDark: mix(skin.trim, Colors.black, 0.42),
+      text: light ? const Color(0xFF22262B) : const Color(0xFFF1E7D2),
+      textMuted: light ? const Color(0xFF4A5058) : const Color(0xFFB8AE9C),
+      accent: accent,
+      danger: danger,
+      screen: screen,
+      screenInk: screenInk,
+    );
+  }
+
   @override
   RetroPalette copyWith() => this;
 
@@ -119,4 +148,15 @@ class RetroPalette extends ThemeExtension<RetroPalette> {
       extensions: [this],
     );
   }
+}
+
+/// The skins the camera bodies wear, for [RetroPalette.ofBody] below the
+/// camera screen.
+class BodySkins extends InheritedWidget {
+  const BodySkins({super.key, required this.skins, required super.child});
+
+  final Map<AppMode, CameraSkin> skins;
+
+  @override
+  bool updateShouldNotify(BodySkins old) => AppMode.values.any((m) => old.skins[m]?.id != skins[m]?.id);
 }

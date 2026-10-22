@@ -253,7 +253,7 @@ class SwapBody extends StatelessWidget {
     // Corners round off as the body leaves the screen's frame.
     final r = Radius.circular(30 * (pose.tilt * 3).clamp(0.0, 1.0));
     final faceRadius = capSide > 0 ? BorderRadius.horizontal(left: r) : BorderRadius.horizontal(right: r);
-    final p = RetroPalette.forMode(mode);
+    final p = RetroPalette.ofBody(context, mode);
     final capLeft = capSide > 0 ? w : -geo.cap;
     final end = capSide > 0 ? w + geo.cap : -geo.cap;
     final lugY = h * 0.24;
@@ -364,7 +364,7 @@ class _BodyEnd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = RetroPalette.forMode(mode);
+    final p = RetroPalette.ofBody(context, mode);
     final film = mode == AppMode.film;
     const r = Radius.circular(34);
     final radius = side > 0
@@ -446,7 +446,7 @@ class _SideWall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = RetroPalette.forMode(mode);
+    final p = RetroPalette.ofBody(context, mode);
     final film = mode == AppMode.film;
     return CustomPaint(
       painter: _SideWallPainter(
@@ -840,7 +840,7 @@ class BodyStandIn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = RetroPalette.forMode(mode);
+    final p = RetroPalette.ofBody(context, mode);
     final film = mode == AppMode.film;
     final pad = MediaQuery.paddingOf(context);
     return Stack(
@@ -918,7 +918,7 @@ extension on SwapBody {
     live.showShutter(r.shutter != 'shutter');
     final camera = fit.camera;
     final film = mode == AppMode.film;
-    final p = RetroPalette.forMode(mode);
+    final p = RetroPalette.ofBody(context, mode);
     final geo = SwapGeometry(size.width);
     final lug = live.lugAt(m, camera, fit.s);
     return Stack(

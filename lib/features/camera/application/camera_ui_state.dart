@@ -30,6 +30,12 @@ class PrefKeys {
   /// The digital body's finish (the live 3D model's skins).
   static const bodyFinish = 'ui.body.finish';
 
+  /// The film body's finish (see CameraSkins).
+  static const filmFinish = 'ui.film.finish';
+
+  /// Camera skins earned in the mini games.
+  static const skinsUnlocked = 'skins.unlocked';
+
   /// The Win98 colour scheme's name (View > Options > Themes).
   static const win98Theme = 'ui.win98.theme';
 
@@ -64,6 +70,8 @@ class PrefKeys {
     onboarded,
     userName,
     bodyFinish,
+    filmFinish,
+    skinsUnlocked,
     win98Theme,
     galleryAsked,
     galleryDismissed,

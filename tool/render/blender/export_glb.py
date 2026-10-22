@@ -307,11 +307,32 @@ BAND = 120.0  # dp each side of cutY: the stretch band (inside the viewfinder)
 # into its own small atlas; the app shows one (`finish.<name>.*`).
 FINISH_Y = (120.0, 742.0)
 FINISHES = {
-    'silver': ('alu', 'alu', 'alu', 'aluDark'),
-    'grip': ('alu', 'alu', 'grip', 'aluDark'),
-    'gunmetal': ('gunAlu', 'gunAlu', 'gunAlu', 'gunDark'),
-    'champagne': ('champAlu', 'champAlu', 'champAlu', 'champDark'),
-    'twotone': ('alu', 'blueAnod', 'blueAnod', 'blueDark'),
+    'digital': {
+        'silver': ('alu', 'alu', 'alu', 'aluDark'),
+        'grip': ('alu', 'alu', 'grip', 'aluDark'),
+        'gunmetal': ('gunAlu', 'gunAlu', 'gunAlu', 'gunDark'),
+        'champagne': ('champAlu', 'champAlu', 'champAlu', 'champDark'),
+        'twotone': ('alu', 'blueAnod', 'blueAnod', 'blueDark'),
+    },
+}
+
+
+def _film(skin, shell, plate, ink):
+    # the film body's finish pieces: skin (three bands), shell, the two top /
+    # bottom plates, the plate's ink (rabbit, lettering), the rabbit's eyes
+    return (skin, skin, skin, shell, plate, plate, ink, ink, ink, plate, plate)
+
+
+# The film body's finishes: leatherette, shell paint, plates and their ink.
+FINISHES['film'] = {
+    'classic': _film('leather', 'blackPaint', 'brushed', 'ink'),
+    'black': _film('leather', 'blackPaint', 'satinBlack', 'whiteInk'),
+    'brassed': _film('leather', 'brassed', 'brassed', 'whiteInk'),
+    'red': _film('leatherRed', 'blackPaint', 'brushed', 'ink'),
+    'tan': _film('leatherTan', 'blackPaint', 'brushed', 'ink'),
+    'green': _film('leatherGreen', 'blackPaint', 'brushed', 'ink'),
+    'mint': _film('leatherMint', 'paintCream', 'brushed', 'ink'),
+    'cream': _film('leatherCream', 'paintMint', 'brushed', 'ink'),
 }
 
 
@@ -393,6 +414,20 @@ def export(mode, out, size, draft):
         shell = next(o for o in meshes if o.name.startswith('shell'))
         finish = [*split_y(skin, FINISH_Y), shell]
         meshes = [o for o in all_objects(root) if o.type == 'MESH']
+    else:
+        def on_shell(o):
+            return o.parent is not None and (o.parent.name.startswith('shell') or (
+                o.parent.parent is not None and o.parent.parent.name.startswith('shell')))
+        body = [o for o in meshes if owner(o) is None and on_shell(o)]
+        skin = next(o for o in body if o.name.startswith('skin'))
+        shell = next(o for o in body if o.name.startswith('shell'))
+        plates = sorted((o for o in body if o.name.startswith('plate')), key=lambda o: o.name)
+        ink = sorted((o for o in body if o.name.startswith(('txt', 'rabbit'))), key=lambda o: o.name)
+        eyes = sorted((o for o in body if o.name.startswith('eye')), key=lambda o: o.name)
+        assert len(plates) == 2 and len(ink) == 3 and len(eyes) == 2, (plates, ink, eyes)
+        lay = WB.LAYOUT[mode]
+        finish = [*split_y(skin, (lay['plateTop'], lay['plateBottom'])), shell, *plates, *ink, *eyes]
+        meshes = [o for o in all_objects(root) if o.type == 'MESH']
     static = [o for o in meshes if owner(o) is None and o not in finish]
     moving = [o for o in meshes if owner(o) is not None]
     tmp = os.path.join(out, f'.{mode}')
@@ -413,7 +448,8 @@ def export(mode, out, size, draft):
     part_files = bake_atlas(moving, f'{mode}-parts', size // 2, tmp, draft, passes(moving))
     print(f'{mode}: parts baked', flush=True)
     finish_mats = {}
-    for key, mats in FINISHES.items() if finish else ():
+    for key, mats in FINISHES[mode].items() if finish else ():
+        assert len(mats) == len(finish), (key, len(mats), len(finish))
         for o, m in zip(finish, mats):
             o.data.materials.clear()
             o.data.materials.append(kit.mat(m))

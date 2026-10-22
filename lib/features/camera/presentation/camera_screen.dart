@@ -169,7 +169,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// digital keeps the film body to its left.
   int _dirFor(AppMode mode) => mode == AppMode.film ? -1 : 1;
 
-  double _travel() => SwapGeometry(MediaQuery.sizeOf(context).width).travel;
+  double _travel() => SwapGeometry(
+    SwapStage.bodyWidth(
+      MediaQuery.sizeOf(context),
+      whole: ref.read(wholeBodyProvider(ref.read(appModeProvider))) != null,
+    ),
+  ).travel;
 
   @override
   void initState() {

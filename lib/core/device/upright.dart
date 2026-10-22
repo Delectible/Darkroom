@@ -130,6 +130,13 @@ class UprightApp extends ConsumerStatefulWidget {
   /// The way the app was last turned to landscape.
   static DeviceOrientation lastLandscape = DeviceOrientation.landscapeLeft;
 
+  /// Android hides its status and navigation bars everywhere (immersive);
+  /// iOS only when turned.
+  static SystemUiMode systemUi({required bool turned}) =>
+      turned || defaultTargetPlatform == TargetPlatform.android
+      ? SystemUiMode.immersiveSticky
+      : SystemUiMode.edgeToEdge;
+
   /// While a landscape page fades out before the app turns: the
   /// orientation it keeps its layout for ([UprightPage]); null otherwise.
   static final held = ValueNotifier<DeviceOrientation?>(null);
@@ -302,12 +309,11 @@ class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObse
     _asked = want;
     if (want.length == 1 && want.first != DeviceOrientation.portraitUp) UprightApp.lastLandscape = want.first;
     unawaited(SystemChrome.setPreferredOrientations(want));
-    // Turned, the screens get the whole display: the status and nav bars
-    // hide (a swipe from the edge brings them back for a moment).
+    // Turned (and on Android always), the screens get the whole display:
+    // the status and nav bars hide (a swipe from the edge brings them back
+    // for a moment).
     final turned = want.length > 1 || want.first != DeviceOrientation.portraitUp;
-    unawaited(
-      SystemChrome.setEnabledSystemUIMode(turned ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge),
-    );
+    unawaited(SystemChrome.setEnabledSystemUIMode(UprightApp.systemUi(turned: turned)));
   }
 
   @override

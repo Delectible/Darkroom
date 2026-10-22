@@ -54,8 +54,35 @@ class SwapStage extends StatelessWidget {
 
   static const liveKey = ValueKey('live-body');
 
+  /// How wide the held body is on a screen of [screen]: the full width,
+  /// except on wide screens (tablets) with the 3D bodies, where the body is
+  /// fitted to the height instead (the controls would grow with the width
+  /// and squeeze the viewfinder) and sits centred on the desk.
+  static double bodyWidth(Size screen, {required bool whole}) =>
+      whole ? math.min(screen.width, screen.height * _designAspect) : screen.width;
+
+  /// Design width over the shortest height the 3D face looks right at.
+  static const _designAspect = 412 / (968 * 0.9);
+
   @override
   Widget build(BuildContext context) {
+    final mq = MediaQuery.of(context);
+    final bw = bodyWidth(mq.size, whole: rendered != null);
+    if (bw < mq.size.width - 0.5) {
+      return Center(
+        child: SizedBox(
+          width: bw,
+          child: MediaQuery(
+            data: mq.copyWith(size: Size(bw, mq.size.height)),
+            child: _stage(context),
+          ),
+        ),
+      );
+    }
+    return _stage(context);
+  }
+
+  Widget _stage(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
     final w = size.width, h = size.height;
     final geo = SwapGeometry(w);

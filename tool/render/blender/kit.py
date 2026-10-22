@@ -167,6 +167,24 @@ _FINISHES = {
 }
 
 
+# leatherette colours: valleys, pebble tops (linear)
+_LEATHERS = {
+    'leather': ((0.008, 0.007, 0.006), (0.02, 0.017, 0.014)),
+    'leatherRed': ((0.09, 0.008, 0.007), (0.2, 0.02, 0.016)),
+    'leatherTan': ((0.11, 0.055, 0.025), (0.24, 0.13, 0.06)),
+    'leatherGreen': ((0.012, 0.035, 0.018), (0.03, 0.08, 0.042)),
+    'leatherMint': ((0.18, 0.32, 0.25), (0.34, 0.52, 0.42)),
+    'leatherCream': ((0.36, 0.32, 0.24), (0.6, 0.54, 0.42)),
+}
+
+# painted plates and shells for the film body: base (linear), roughness
+_PAINTS = {
+    'satinBlack': ((0.014, 0.014, 0.015), 0.3),
+    'paintMint': ((0.42, 0.66, 0.54), 0.3),
+    'paintCream': ((0.78, 0.71, 0.56), 0.3),
+}
+
+
 def mat(name):
     if name in _mats:
         return _mats[name]
@@ -229,8 +247,9 @@ def mat(name):
         n.inputs['Scale'].default_value = 2.5
         nt.links.new(_coords(nt), n.inputs['Vector'])
         _bump(m, b, n.outputs['Fac'], 0.08, 0.1)
-    elif name == 'leather':    # pebbled leatherette: ~5 dp pebbles, crisp valleys, fine grain
-        m, b = _principled(name, (0.017, 0.014, 0.012), 0.0, 0.6)
+    elif name in _LEATHERS:    # pebbled leatherette: ~5 dp pebbles, crisp valleys, fine grain
+        valley_col, top_col = _LEATHERS[name]
+        m, b = _principled(name, top_col, 0.0, 0.6)
         nt = m.node_tree
         co = _coords(nt)
         # warp the cells a little so the pebbles aren't a perfect lattice
@@ -286,8 +305,8 @@ def mat(name):
         nt.links.new(rr.outputs['Result'], b.inputs['Roughness'])
         col = nt.nodes.new('ShaderNodeMix')
         col.data_type = 'RGBA'
-        col.inputs['A'].default_value = (0.008, 0.007, 0.006, 1)
-        col.inputs['B'].default_value = (0.02, 0.017, 0.014, 1)
+        col.inputs['A'].default_value = (*valley_col, 1)
+        col.inputs['B'].default_value = (*top_col, 1)
         nt.links.new(dome.outputs['Value'], col.inputs['Factor'])
         nt.links.new(col.outputs['Result'], b.inputs['Base Color'])
     elif name == 'glass':      # coated lens element
@@ -306,6 +325,76 @@ def mat(name):
             n.inputs['Detail'].default_value = 6
             nt.links.new(_coords(nt, (0.004, 1.6, 1)), n.inputs['Vector'])
             _bump(m, b, n.outputs['Fac'], 0.09, 0.2)
+    elif name in _PAINTS:      # the film body's painted finishes
+        base, rough = _PAINTS[name]
+        m, b = _principled(name, base, 0.0, rough, **{'Coat Weight': 0.5, 'Coat Roughness': 0.18})
+    elif name == 'brassed':    # black paint worn through to brass on edges and corners
+        m, b = _principled(name, (0.012, 0.012, 0.013), 0.0, 0.34, **{'Coat Weight': 0.5, 'Coat Roughness': 0.2})
+        nt = m.node_tree
+        geo = nt.nodes.new('ShaderNodeNewGeometry')
+        noise = nt.nodes.new('ShaderNodeTexNoise')
+        noise.inputs['Scale'].default_value = 0.08
+        noise.inputs['Detail'].default_value = 8
+        nt.links.new(_coords(nt), noise.inputs['Vector'])
+        # wear: worn through where hands rub, toward the plate's ends and
+        # edges (generated coords: 0..1 across the piece), in ragged
+        # patches from noise, plus the bevels themselves (pointiness)
+        gen = nt.nodes.new('ShaderNodeTexCoord')
+        sep = nt.nodes.new('ShaderNodeSeparateXYZ')
+        nt.links.new(gen.outputs['Generated'], sep.inputs['Vector'])
+        def dist(sock):
+            inv = nt.nodes.new('ShaderNodeMath')
+            inv.operation = 'SUBTRACT'
+            inv.inputs[0].default_value = 1.0
+            nt.links.new(sock, inv.inputs[1])
+            mn = nt.nodes.new('ShaderNodeMath')
+            mn.operation = 'MINIMUM'
+            nt.links.new(sock, mn.inputs[0])
+            nt.links.new(inv.outputs[0], mn.inputs[1])
+            return mn.outputs[0]
+        border = nt.nodes.new('ShaderNodeMath')
+        border.operation = 'MINIMUM'
+        nt.links.new(dist(sep.outputs['X']), border.inputs[0])
+        nt.links.new(dist(sep.outputs['Y']), border.inputs[1])
+        near = nt.nodes.new('ShaderNodeMapRange')
+        near.inputs['From Min'].default_value = 0.0
+        near.inputs['From Max'].default_value = 0.1
+        near.inputs['To Min'].default_value = 0.3
+        near.inputs['To Max'].default_value = 0.0
+        nt.links.new(border.outputs[0], near.inputs['Value'])
+        rub = nt.nodes.new('ShaderNodeTexNoise')
+        rub.inputs['Scale'].default_value = 0.035
+        rub.inputs['Detail'].default_value = 12
+        rub.inputs['Roughness'].default_value = 0.65
+        nt.links.new(_coords(nt), rub.inputs['Vector'])
+        v = nt.nodes.new('ShaderNodeMath')
+        v.operation = 'ADD'
+        nt.links.new(rub.outputs['Fac'], v.inputs[0])
+        nt.links.new(near.outputs['Result'], v.inputs[1])
+        v2 = nt.nodes.new('ShaderNodeMath')
+        v2.operation = 'MULTIPLY_ADD'
+        v2.inputs[1].default_value = 0.6
+        nt.links.new(geo.outputs['Pointiness'], v2.inputs[0])
+        nt.links.new(v.outputs[0], v2.inputs[2])
+        wear = nt.nodes.new('ShaderNodeMapRange')
+        wear.inputs['From Min'].default_value = 1.06
+        wear.inputs['From Max'].default_value = 1.09
+        nt.links.new(v2.outputs[0], wear.inputs['Value'])
+        for socket, paint, brass in (
+            ('Base Color', (0.012, 0.012, 0.013, 1), (0.72, 0.52, 0.24, 1)),
+        ):
+            mix = nt.nodes.new('ShaderNodeMix')
+            mix.data_type = 'RGBA'
+            mix.inputs['A'].default_value = paint
+            mix.inputs['B'].default_value = brass
+            nt.links.new(wear.outputs['Result'], mix.inputs['Factor'])
+            nt.links.new(mix.outputs['Result'], b.inputs[socket])
+        nt.links.new(wear.outputs['Result'], b.inputs['Metallic'])
+        rough = nt.nodes.new('ShaderNodeMapRange')
+        rough.inputs['To Min'].default_value = 0.34
+        rough.inputs['To Max'].default_value = 0.28
+        nt.links.new(wear.outputs['Result'], rough.inputs['Value'])
+        nt.links.new(rough.outputs['Result'], b.inputs['Roughness'])
     elif name == 'grip':       # a black rubber grip: fine pebbles
         m, b = _principled(name, (0.02, 0.02, 0.021), 0.0, 0.7)
         nt = m.node_tree

@@ -12,6 +12,7 @@ import 'package:workmanager/workmanager.dart';
 import 'app.dart';
 import 'core/background/background_worker.dart';
 import 'core/db/app_database.dart';
+import 'core/device/upright.dart';
 import 'core/diagnostics/crash_log.dart';
 import 'core/monetization/pro.dart';
 import 'core/notifications/notification_service.dart';
@@ -48,6 +49,7 @@ Future<void> _start() async {
   // landscape (EXIF orientation follows the physical device).
   _stage = 'orientation';
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  await SystemChrome.setEnabledSystemUIMode(UprightApp.systemUi(turned: false));
 
   _stage = 'storage';
   final (paths, db, prefs) = await (

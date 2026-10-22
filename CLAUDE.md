@@ -152,7 +152,7 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   `darkroom/rotation`, Android setting + changes); iOS (null) asks for
   portrait + landscape and lets the system turn within its lock. iOS
   Info.plist allows landscape. Turned, the system bars hide
-  (immersiveSticky; edgeToEdge back in portrait). Win98: the window
+  (immersiveSticky; on Android always, `UprightApp.systemUi`). Win98: the window
   sits on a strip of desktop; the monitor bezel (`ExplorerMonitor.bezelOf`) takes the system
   insets (status bar, gesture strip; landscape 24 dp sides for the cutout
   and the rounded corners, 4 dp top/bottom; `Win98Safe` the same for
@@ -514,9 +514,16 @@ UI
   clipped (a flat clip cut off lifted labels near the top edge). The video/photo shutter swap sinks one and raises
   the other (`showShutter`, 420 ms). Digital finishes (silver, grip,
   gunmetal, champagne, two-tone) are baked as `finish.<key>.*` nodes
-  (`export_glb.py` FINISHES), picked by `bodyFinishProvider`
-  (`PrefKeys.bodyFinish`); Debug > Camera Finish is a list to pick from
-  (later: unlocked by mini games). The film format dial's label turns
+  (`export_glb.py` FINISHES['digital']); the film body has its own
+  (FINISHES['film']: classic, black, brassed, red, tan, green, mint,
+  cream: leatherette, shell, plates and plate ink). Skins
+  (`core/skins/camera_skins.dart`: catalogue, `cameraSkinProvider` per
+  body in `PrefKeys.bodyFinish` / `filmFinish`, `unlockedSkinsProvider`)
+  are picked in the Camera Exchange (Settings > Camera Shop,
+  `features/skins/presentation/camera_shop_screen.dart`); one choice drives
+  the 3D model and the drawn body (`RetroPalette.skinned` via `BodySkins`).
+  Locked skins name the game that wins them (unlock hooks still to wire;
+  Debug > Unlock All Skins). The film format dial's label turns
   with its top: the old one away, the new one in (`_AspectDial`). Key
   labels stay well inside the cap (turned, its near edge shows). The
   memo card's text keeps its size in the holder (shrinks evenly only if
@@ -526,6 +533,10 @@ UI
   `memo_slide_test`).
   Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
 - `AppInfo.version` must match pubspec (test/app_info_test.dart).
+- Tablets / wide screens: with the 3D bodies the held body is fitted to the
+  screen height (`SwapStage.bodyWidth`, design aspect 412 / (968 x 0.9))
+  and centred, its rounded ends on the desk at the sides; phones keep the
+  full width. Drag travel uses the same width.
 - Accessibility: system text size is honoured up to 1.3x (`app.dart`,
   `MediaQuery.withClampedTextScaling`); Darkroom 98 ignores it (fixed pixel
   font, `Win98Scale`). The camera's controls carry `Semantics` labels; keep

@@ -1076,3 +1076,23 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   only paints while its own slot is visible, and they were only drawn
   pulled in. Now the slots really are closer (viewportFraction x 0.67,
   `_slot`) and each item overflows its slot at full width (OverflowBox).
+
+## 56. Skins, tablets, low graphics (2026-10-22)
+
+- [x] **56.1** Film memo holder on the drawn bodies keeps one size
+  (`_MemoHolder._window`); the card text shrinks to fit.
+- [x] **56.2** Film skins baked into the 3D film body (export_glb.py
+  FINISHES['film']: classic, black, brassed, red, tan, green, mint, cream;
+  leatherette / shell / plates / plate ink) next to the digital ones.
+- [x] **56.3** Camera Exchange (Settings > Camera Shop): skins in a glass
+  display case, price tags say which game wins a locked one
+  (`core/skins/camera_skins.dart`, `features/skins/`). One skin choice per
+  body (`cameraSkinProvider`) drives the 3D model and the drawn body
+  (`RetroPalette.skinned`, `BodySkins`). Debug: Camera Shop, Unlock All
+  Skins. Unlocks from the games: still to wire.
+- [x] **56.4** Tablets: the 3D body fits the screen height on wide screens
+  and sits centred on the desk (`SwapStage.bodyWidth`).
+- [x] **56.5** Android: immersive everywhere (`UprightApp.systemUi`).
+- [x] **56.6** Drawn bodies: soft studio lighting over the leather/metal.
+- [ ] **56.7** Tablet swap frame rate: needs the tablet's model and a
+  Performance Recorder report.

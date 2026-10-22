@@ -3,16 +3,17 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.7.14';
+  static const version = '1.8.0';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Carousel: neighbouring films and cameras stay drawn right to the edge of the screen.';
+      'Camera skins and the Camera Exchange shop (Settings). Tablets: the camera fits the screen. Full-screen on Android.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
+    ('1.8', ['Camera skins and the Camera Exchange', 'Tablet-friendly camera, full screen on Android']),
     ('1.7', ['A roll a day free, Darkroom Pro for unlimited']),
     (
       '1.6',

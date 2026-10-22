@@ -1072,3 +1072,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   width (they sat off screen until the first scroll), and all artwork is
   decoded up front at the drawn size (`_precacheArt`), so items no longer
   pop in late while sliding.
+- [x] **55.11** Carousel neighbours vanished while still on screen: a page
+  only paints while its own slot is visible, and they were only drawn
+  pulled in. Now the slots really are closer (viewportFraction x 0.67,
+  `_slot`) and each item overflows its slot at full width (OverflowBox).

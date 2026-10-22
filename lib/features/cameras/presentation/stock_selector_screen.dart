@@ -93,6 +93,9 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
 
   bool get _film => widget.mode == AppMode.film;
 
+  /// How far apart the pages sit, as a share of an item's drawn width.
+  static const _slot = 0.67;
+
   /// Decodes every item's artwork up front, at the size it's drawn
   /// (CameraArtwork's cacheWidth), so neighbours sliding in never appear a
   /// frame or two late.
@@ -379,13 +382,19 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                         LayoutBuilder(
                           builder: (context, box) {
                             final itemH = math.min(box.maxHeight * 0.78, 360.0);
-                            final frac = (itemH / box.maxWidth * 0.95).clamp(0.24, 0.62);
+                            // Each item is drawn [pageW] wide, but the pages sit
+                            // closer than that (_slot), so more of the neighbours
+                            // shows; items overflow their slot (see _Item). A
+                            // page only paints while its slot is on screen, so
+                            // the slots themselves must be close, not just the
+                            // drawings.
+                            final pageW = box.maxWidth * (itemH / box.maxWidth * 0.95).clamp(0.24, 0.62);
+                            final frac = (pageW * _slot / box.maxWidth).clamp(0.16, 0.62);
                             if ((_pages.viewportFraction - frac).abs() > 0.01) {
                               final old = _pages;
                               _pages = PageController(viewportFraction: frac, initialPage: _index);
                               WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
                             }
-                            final pageW = box.maxWidth * _pages.viewportFraction;
                             _precacheArt(context, math.min(pageW, itemH));
                             return SizedBox(
                               height: itemH,
@@ -562,12 +571,10 @@ class _Item extends StatelessWidget {
         if (controller.hasClients && controller.position.haveDimensions) {
           page = controller.page ?? page;
         }
-        final offset = (index - page).clamp(-1.5, 1.5);
-        final d = offset.abs().clamp(0.0, 1.0);
-        // Neighbours are pulled in toward the middle (by a third of a page)
-        // so more of them shows beside the current one.
-        return Transform.translate(
-          offset: Offset(-offset * pageWidth * 0.33, 0),
+        final d = (page - index).abs().clamp(0.0, 1.0);
+        return OverflowBox(
+          minWidth: pageWidth,
+          maxWidth: pageWidth,
           child: Opacity(
             opacity: 1 - 0.55 * d,
             child: Transform.scale(scale: 1 - 0.32 * d, child: child),

@@ -90,6 +90,13 @@ Read this first. It's the hand-off from the earlier development sessions
   (secret `PLAY_SERVICE_ACCOUNT_JSON`, repo variable `PLAY_RELEASE_STATUS`,
   default `completed`). Play's "What's new" = version + **`AppInfo.latest`**
   (`tool/play/whats_new.py`).
+  **App Store** (once the first version is approved): every main build is
+  on TestFlight; `appstore-release.yml` (run by hand or by Claude when the
+  owner says "release to iPhone"; input `build`, empty = newest) submits
+  it to App Review as a new version with "What's new" from AppInfo.latest
+  and auto-releases on approval (fastlane deliver, the App Store Connect
+  key secrets). **Remind the owner every ~3 main builds** that the iPhone
+  App Store is behind if it hasn't been released since.
   **Closed testing** (for other testers) is the slow path: the
   `promote-closed.yml` workflow (Actions tab, run by hand) promotes a build
   already on internal testing to the closed track (`alpha`), which Play

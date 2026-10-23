@@ -69,7 +69,7 @@ the owner in a console / on a phone, C = Claude in the repo).
   = false (no export paperwork). (C)
 - [~] TestFlight: internal testers, then external testers (external group in beta review, 2026-10-23) (needs a light
   beta review). (O)
-- [ ] App Review submission, then release. (O)
+- [ ] App Review submission, then release. (O) After the first version: `appstore-release.yml` submits later builds (C runs it on "release to iPhone").
 
 ## Log
 

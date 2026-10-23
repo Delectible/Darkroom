@@ -1,0 +1,98 @@
+name: Release to the App Store
+# The iPhone counterpart of promote-closed.yml. Every push to main already
+# uploads to TestFlight (build-apk.yml); this sends one of those builds to
+# App Review as a new App Store version, with "What's new" from that
+# build's AppInfo.latest, and releases it automatically once approved.
+#
+# Run it from the Actions tab: "Release to the App Store" > Run workflow.
+# Leave the build number empty for the newest main build. The version
+# number must be higher than the one on the App Store (we bump it with
+# every change, so any newer build is fine).
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Build number (CI run) to release (empty = newest successful main build)'
+        required: false
+        default: ''
+      language:
+        description: "App Store Connect's primary language for What's new"
+        required: false
+        default: 'en-US'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: appstore-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      KEY: ${{ secrets.APPSTORE_KEY }}
+      KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+      ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+    steps:
+      - name: Look for the App Store Connect key
+        run: |
+          if [ -z "$KEY" ] || [ -z "$KEY_ID" ] || [ -z "$ISSUER" ]; then
+            echo "::error::App Store Connect key secrets missing."; exit 1
+          fi
+      - name: Find the build
+        id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WANT: ${{ inputs.build }}
+        run: |
+          runs=$(gh api "repos/${{ github.repository }}/actions/workflows/build-apk.yml/runs?branch=main&status=success&per_page=50")
+          if [ -n "$WANT" ]; then
+            sha=$(echo "$runs" | jq -r --argjson n "$WANT" '.workflow_runs[] | select(.run_number == $n) | .head_sha' | head -1)
+            num=$WANT
+          else
+            sha=$(echo "$runs" | jq -r '.workflow_runs[0].head_sha')
+            num=$(echo "$runs" | jq -r '.workflow_runs[0].run_number')
+          fi
+          if [ -z "$sha" ] || [ "$sha" = null ]; then echo "::error::No successful main build $WANT found."; exit 1; fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "num=$num" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with: { ref: '${{ steps.build.outputs.sha }}' }
+      - name: Version and What's new
+        id: meta
+        env:
+          LANG_CODE: ${{ inputs.language }}
+        run: |
+          version=$(sed -n 's/^version: *\([0-9.]*\)+.*/\1/p' pubspec.yaml)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/meta/$LANG_CODE"
+          # AppInfo.latest without the "1.2.3: " prefix Play uses.
+          python3 -I tool/play/whats_new.py | sed 's/^[0-9.]*: //' > "$RUNNER_TEMP/meta/$LANG_CODE/release_notes.txt"
+          echo "Build ${{ steps.build.outputs.num }}, version $version:"; cat "$RUNNER_TEMP/meta/$LANG_CODE/release_notes.txt"
+      - run: sudo gem install fastlane --no-document --quiet
+      - name: Submit for review (released automatically once approved)
+        run: |
+          python3 -I - <<'PY' > "$RUNNER_TEMP/asc.json"
+          import json, os
+          print(json.dumps({"key_id": os.environ["KEY_ID"], "issuer_id": os.environ["ISSUER"],
+                            "key": os.environ["KEY"], "in_house": False}))
+          PY
+          fastlane run deliver \
+            api_key_path:"$RUNNER_TEMP/asc.json" \
+            app_identifier:com.dingo.darkroom \
+            platform:ios \
+            app_version:"${{ steps.meta.outputs.version }}" \
+            build_number:"${{ steps.build.outputs.num }}" \
+            metadata_path:"$RUNNER_TEMP/meta" \
+            skip_binary_upload:true \
+            skip_screenshots:true \
+            skip_app_version_update:false \
+            submit_for_review:true \
+            automatic_release:true \
+            reject_if_possible:true \
+            run_precheck_before_submit:false \
+            force:true \
+            submission_information:'{"export_compliance_uses_encryption":false,"add_id_info_uses_idfa":false}'
+      - name: Forget the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc.json"

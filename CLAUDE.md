@@ -471,7 +471,8 @@ UI
   the look shader can't run under the 3D turn). Off = **performance mode**
   (`GlobalSettings.performance` is just `!controls3d` since 1.5.1): the
   classic drawn bodies, one frozen viewfinder still, the body swapped as
-  one picture, no halation.
+  one picture, no halation, and 60 Hz on Android (else the screen's
+  fastest rate: `darkroom/display`, MainActivity `refreshRate`).
 - **Live 3D bodies (1.6.2, Flutter Scene)**: each camera is a real 3D model
   drawn live (`flutter_scene` on Flutter GPU; enabled in the Android
   manifest meta-data `EnableFlutterGPU` and iOS Info.plist

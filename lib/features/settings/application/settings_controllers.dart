@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
@@ -39,6 +42,18 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     Haptics.enabled = s.haptics;
     FilmUniforms.lite = s.performance;
     BodyArt.faceOnly = s.performance;
+    _refreshRate(fast: !s.performance);
+  }
+
+  static const _display = MethodChannel('darkroom/display');
+  static bool? _fast;
+
+  /// Android: the screen's full refresh rate (90/120 Hz), or 60 Hz in
+  /// performance mode (MainActivity).
+  static void _refreshRate({required bool fast}) {
+    if (_fast == fast) return;
+    _fast = fast;
+    unawaited(_display.invokeMethod<void>('fast', fast).catchError((Object _) {}));
   }
 
   /// Sound effects level, 0 (off) .. 1; saved when the slider is let go.

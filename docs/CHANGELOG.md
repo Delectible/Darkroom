@@ -1120,4 +1120,5 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   To confirm on the Pixel.
 - [~] **56.12** Smoother: Android asks for the screen's fastest refresh
   rate (MainActivity `preferredDisplayModeId`; it ran at 60 Hz on the 90/120
-  Hz Pixel). To confirm on the Pixel.
+  Hz Pixel); performance mode (Fancy graphics off) asks for 60 Hz
+  (channel `darkroom/display`). To confirm on the Pixel.

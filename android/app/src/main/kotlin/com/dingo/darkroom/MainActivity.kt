@@ -14,6 +14,7 @@ import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import kotlin.math.abs
 
 // Kept in the repo (flutter create only fills in a plain one) for its
 // channels:
@@ -45,18 +46,22 @@ class MainActivity : FlutterActivity() {
         // else Android cross-fades).
         window.attributes = window.attributes.also {
             it.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS
-            // Ask for the screen's fastest refresh rate (90/120 Hz): left
-            // alone, Android often keeps an app at 60.
-            @Suppress("DEPRECATION")
-            val screen = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
-            screen?.let { d ->
-                val now = d.mode
-                d.supportedModes
-                    .filter { m -> m.physicalWidth == now.physicalWidth && m.physicalHeight == now.physicalHeight }
-                    .maxByOrNull { m -> m.refreshRate }
-                    ?.let { m -> it.preferredDisplayModeId = m.modeId }
-            }
         }
+        refreshRate(fast = true)
+    }
+
+    /// Fast: the screen's fastest refresh rate (90/120 Hz; left alone,
+    /// Android often keeps an app at 60). Else 60 Hz (performance mode).
+    private fun refreshRate(fast: Boolean) {
+        @Suppress("DEPRECATION")
+        val screen = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay)
+            ?: return
+        val now = screen.mode
+        val modes = screen.supportedModes.filter { m ->
+            m.physicalWidth == now.physicalWidth && m.physicalHeight == now.physicalHeight
+        }
+        val pick = if (fast) modes.maxByOrNull { it.refreshRate } else modes.minByOrNull { abs(it.refreshRate - 60f) }
+        pick?.let { m -> window.attributes = window.attributes.also { it.preferredDisplayModeId = m.modeId } }
     }
 
     override fun onDestroy() {
@@ -109,6 +114,18 @@ class MainActivity : FlutterActivity() {
                 Settings.System.getUriFor(Settings.System.ACCELEROMETER_ROTATION), false, it,
             )
         }
+        // darkroom/display: "fast" (bool): full refresh rate, or 60 Hz in
+        // performance mode.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/display")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "fast" -> {
+                        refreshRate(call.arguments == true)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/gestures")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

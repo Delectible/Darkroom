@@ -99,7 +99,7 @@ jobs:
           DEBUG_PASSWORD: ${{ secrets.DEBUG_PASSWORD }}
         run: |
           KEY=""; if [ -n "$DEBUG_PASSWORD" ]; then KEY=$(printf 'darkroom-debug:%s' "$DEBUG_PASSWORD" | shasum -a 256 | cut -d' ' -f1); fi
-          flutter build ios --release --no-codesign --dart-define=DEBUG_KEY=$KEY
+          flutter build ios --release --no-codesign --build-number=${{ github.run_number }} --dart-define=DEBUG_KEY=$KEY
       - name: Package an unsigned .ipa (signed on your computer when sideloading)
         run: |
           mkdir -p dist/Payload
@@ -117,6 +117,58 @@ jobs:
           cd dist && zip -qry Darkroom-${{ github.run_number }}.ipa Payload && rm -rf Payload
       - uses: actions/upload-artifact@v4
         with: { name: ios, path: dist/, retention-days: 1 }
+      # TestFlight (main only). Needs the repo secrets APPSTORE_KEY_ID,
+      # APPSTORE_ISSUER_ID, APPSTORE_KEY (the .p8 file's text; an App Store
+      # Connect API key with the Admin role, so Xcode can make the signing
+      # certificate and profile itself) and APPLE_TEAM_ID, plus the app made
+      # in App Store Connect with bundle id com.dingo.darkroom. Without them
+      # the job just says so. Signs with the same build as the .ipa above.
+      - name: Look for the App Store Connect key
+        id: asc
+        if: github.ref == 'refs/heads/main'
+        env:
+          KEY: ${{ secrets.APPSTORE_KEY }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$KEY" ] && [ -n "$KEY_ID" ] && [ -n "$ISSUER" ] && [ -n "$TEAM" ]; then
+            mkdir -p "$RUNNER_TEMP/asc"
+            printf '%s\n' "$KEY" > "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::No App Store Connect key secrets: not uploading to TestFlight."
+          fi
+      - name: Sign and upload to TestFlight
+        if: steps.asc.outputs.ok == 'true'
+        env:
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey_$KEY_ID.p8"
+                -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER")
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM="$TEAM" TARGETED_DEVICE_FAMILY=1 "${AUTH[@]}" archive | tail -n 40
+          test -d "$RUNNER_TEMP/Runner.xcarchive"
+          cat > "$RUNNER_TEMP/export.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/export.plist" -exportPath "$RUNNER_TEMP/export" "${AUTH[@]}"
+      - name: Forget the key
+        if: always() && steps.asc.outputs.ok == 'true'
+        run: rm -rf "$RUNNER_TEMP/asc"
 
   release:
     needs: [check, android, ios]

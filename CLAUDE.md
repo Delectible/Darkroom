@@ -58,7 +58,11 @@ Read this first. It's the hand-off from the earlier development sessions
   one makes Flutter run CocoaPods and the build dies with "sandbox is not in
   sync with the Podfile.lock". CI ad-hoc signs the frameworks and app
   before zipping the .ipa (Sideloadly's signer fails on never-signed
-  FFmpeg frameworks). `ios/` holds only Info.plist,
+  FFmpeg frameworks). On `main`, once the App Store Connect secrets exist
+  (APPSTORE_KEY_ID, APPSTORE_ISSUER_ID, APPSTORE_KEY = the .p8 text, Admin
+  role; APPLE_TEAM_ID), the same job archives with automatic signing
+  (`-allowProvisioningUpdates` + the API key, iPhone only) and uploads to
+  TestFlight; CFBundleVersion = run number. `ios/` holds only Info.plist,
   AppDelegate.swift and the AppIcon set; CI generates the rest.
   Developing never needs the app running: prints store an absolute
   `ready_at`. Android re-arms notifications with WorkManager; iOS schedules

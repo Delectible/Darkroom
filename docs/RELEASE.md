@@ -54,17 +54,18 @@ the owner in a console / on a phone, C = Claude in the repo).
 - [ ] First proper run on the owner's iPhone (sideloaded .ipa): camera, film
   develop while closed, notifications, save / share, Win98. Fix what breaks.
   (O tests, C fixes)
-- [ ] Apple Developer Program membership (US$99 / A$149 a year): needed
-  for TestFlight and the App Store. (O)
+- [~] Apple Developer Program membership (US$99 / A$149 a year): needed
+  for TestFlight and the App Store. (O; bought 2026-10-23, processing)
 - [ ] App ID `com.dingo.darkroom` and signing for CI: an App Store Connect
   API key as repo secrets; CI signs and uploads builds to TestFlight from
   the macOS runner (instead of the unsigned .ipa). (O creates the key, C
-  wires CI)
+  wires CI: done, build-apk.yml ios job, secrets APPSTORE_KEY_ID /
+  APPSTORE_ISSUER_ID / APPSTORE_KEY / APPLE_TEAM_ID; iPhone only)
 - [ ] App Store Connect listing: name, subtitle, description, keywords,
   support + privacy URLs, screenshots (6.9" and 6.5" iPhone), age rating,
   App Privacy = "Data Not Collected". iPhone only (no iPad) to start. (O / C
   drafts the text)
-- [ ] Info.plist: permission texts reviewed; `ITSAppUsesNonExemptEncryption`
+- [x] Info.plist: permission texts reviewed; `ITSAppUsesNonExemptEncryption`
   = false (no export paperwork). (C)
 - [ ] TestFlight: internal testers, then external testers (needs a light
   beta review). (O)

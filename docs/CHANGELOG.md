@@ -1118,3 +1118,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   flickered upright for a frame as the app really turned. Android's
   jump-cut showed the last portrait frame turned; now seamless rotation.
   To confirm on the Pixel.
+- [~] **56.12** Smoother: Android asks for the screen's fastest refresh
+  rate (MainActivity `preferredDisplayModeId`; it ran at 60 Hz on the 90/120
+  Hz Pixel). To confirm on the Pixel.

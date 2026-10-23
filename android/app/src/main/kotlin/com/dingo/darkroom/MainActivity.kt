@@ -45,6 +45,17 @@ class MainActivity : FlutterActivity() {
         // else Android cross-fades).
         window.attributes = window.attributes.also {
             it.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS
+            // Ask for the screen's fastest refresh rate (90/120 Hz): left
+            // alone, Android often keeps an app at 60.
+            @Suppress("DEPRECATION")
+            val screen = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
+            screen?.let { d ->
+                val now = d.mode
+                d.supportedModes
+                    .filter { m -> m.physicalWidth == now.physicalWidth && m.physicalHeight == now.physicalHeight }
+                    .maxByOrNull { m -> m.refreshRate }
+                    ?.let { m -> it.preferredDisplayModeId = m.modeId }
+            }
         }
     }
 

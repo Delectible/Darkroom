@@ -8,7 +8,7 @@ class AppInfo {
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest = 'No more flicker when Darkroom 98 or the corkboard turns to landscape.';
+  static const latest = 'Runs at your screen'"'"'s full refresh rate, and no flicker when Darkroom 98 or the corkboard turns to landscape.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

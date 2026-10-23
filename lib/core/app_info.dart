@@ -8,11 +8,12 @@ class AppInfo {
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest = 'Film skins: the flash switch lettering is readable on Black Paint and Brassed.';
+  static const latest =
+      'Camera skins are won in the Darkroom 98 games. The Camera Exchange looks more like a real camera shop.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
-    ('1.8', ['Camera skins and the Camera Exchange', 'Tablet-friendly camera, full screen on Android']),
+    ('1.8', ['Camera skins, won in the games', 'Tablet-friendly camera, full screen on Android']),
     ('1.7', ['A roll a day free, Darkroom Pro for unlimited']),
     (
       '1.6',

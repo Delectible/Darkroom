@@ -6,7 +6,9 @@ import 'package:flutter/scheduler.dart';
 
 import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
+import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'skin_awards.dart';
 import '../../../../../core/device/haptics.dart';
 
 /// BRICKS.EXE: brick breaker. Drag anywhere on the field to move the bat,
@@ -192,6 +194,7 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
         _served = false;
         _banner = 'You win! $_score points. Tap to play again';
         Sfx.gameWin.play();
+        awardSkins(context, SkinStats.bricksWalls);
         unawaited(Haptics.mediumImpact());
       }
       break;

@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
+import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'skin_awards.dart';
 import '../../../../../core/device/haptics.dart';
 
 /// MINES.EXE: Minefield, the way it came with the machine: mine counter,
@@ -156,6 +158,8 @@ class _MinesweeperGameState extends State<MinesweeperGame> {
         if (_field.mine[i]) _field.flag[i] = true;
       }
       Sfx.gameWin.play();
+      awardSkins(context, SkinStats.minesWins);
+      if (_level == MineLevel.intermediate) awardSkins(context, SkinStats.minesHard);
     } else {
       Sfx.w98Click.play();
     }

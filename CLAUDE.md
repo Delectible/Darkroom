@@ -522,8 +522,12 @@ UI
   are picked in the Camera Exchange (Settings > Camera Shop,
   `features/skins/presentation/camera_shop_screen.dart`); one choice drives
   the 3D model and the drawn body (`RetroPalette.skinned` via `BodySkins`).
-  Locked skins name the game that wins them (unlock hooks still to wire;
-  Debug > Unlock All Skins). The film format dial's label turns
+  Locked skins are won in the Win98 games: each has a `SkinUnlock` (game,
+  goal, `SkinStats` stat, target); the games call `awardSkins(context,
+  stat)` (`win98/games/skin_awards.dart`: counts in `skinProgressProvider`,
+  `PrefKeys.skinProgress`, unlocks and shows a "you won" box). Shop icons
+  are `SkinCameraPainter`; its labels pick dark/light ink by the colour
+  under them. Debug > Unlock All Skins. The film format dial's label turns
   with its top: the old one away, the new one in (`_AspectDial`). Key
   labels stay well inside the cap (turned, its near edge shows). The
   memo card's text keeps its size in the holder (shrinks evenly only if

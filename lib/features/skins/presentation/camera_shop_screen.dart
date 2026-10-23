@@ -8,11 +8,14 @@ import '../../../core/audio/sfx.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/skins/camera_skins.dart';
 import '../../cameras/domain/camera_spec.dart';
+import 'skin_camera_painter.dart';
 
-/// Settings > Camera Shop: the skins in a glass display case. The one you
-/// look at sits on the counter under a spotlight; the rest wait on the
-/// shelf with paper price tags. Skins you haven't earned say which mini
-/// game wins them.
+/// Settings > Camera Shop: a little camera shop at the back of the
+/// darkroom. Red safelight, prints drying on a line, film on the back
+/// shelf; on the counter a glass case with the skin you're looking at lit
+/// on a velvet pad, the rest on the glass shelf below with paper price
+/// tags. Skins you haven't earned say which game wins them, and how far
+/// along you are.
 Future<void> showCameraShop(BuildContext context, {AppMode? mode}) => Navigator.of(context).push(
   PageRouteBuilder<void>(
     transitionDuration: const Duration(milliseconds: 320),
@@ -71,45 +74,51 @@ class _CameraShopScreenState extends ConsumerState<CameraShopScreen> {
     final skin = CameraSkins.byId(_mode, _looking);
     final has = owned.owns(skin);
     final inUse = skin.id == wearing;
+    final progress = ref.watch(skinProgressProvider);
     return Scaffold(
       backgroundColor: _Shop.wall,
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.35),
-            radius: 1.1,
-            colors: [Color(0xFF3B2A1E), _Shop.wall],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _TopBar(onClose: () => Navigator.of(context).pop()),
-              const SizedBox(height: 6),
-              const _Sign(),
-              const SizedBox(height: 14),
-              _ModeTags(mode: _mode, onPick: _setMode),
-              Expanded(
-                child: _Counter(skin: skin, locked: !has),
-              ),
-              _Caption(skin: skin, has: has, inUse: inUse),
-              const SizedBox(height: 12),
-              _Case(skins: _skins, looking: _looking, wearing: wearing, owns: owned.owns, onLook: _look),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-                child: _BrassButton(
-                  label: inUse
-                      ? 'ON YOUR CAMERA'
-                      : has
-                      ? 'PUT IT ON'
-                      : 'LOCKED',
-                  enabled: has && !inUse,
-                  onTap: () => unawaited(_use(skin)),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const RepaintBoundary(child: CustomPaint(painter: _Backdrop())),
+          SafeArea(
+            child: Column(
+              children: [
+                _TopBar(onClose: () => Navigator.of(context).pop()),
+                const _Sign(),
+                const SizedBox(height: 12),
+                _ModeTags(mode: _mode, onPick: _setMode),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: _Cabinet(
+                    top: _Display(skin: skin, locked: !has),
+                    shelf: _Case(
+                      skins: _skins,
+                      looking: _looking,
+                      wearing: wearing,
+                      owns: owned.owns,
+                      onLook: _look,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                _Caption(skin: skin, has: has, progress: progress),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                  child: _BrassButton(
+                    label: inUse
+                        ? 'ON YOUR CAMERA'
+                        : has
+                        ? 'PUT IT ON'
+                        : 'LOCKED',
+                    enabled: has && !inUse,
+                    onTap: () => unawaited(_use(skin)),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -209,9 +218,173 @@ class _ModeTags extends StatelessWidget {
   );
 }
 
-/// The counter top: the skin you're looking at, under a spotlight.
-class _Counter extends StatelessWidget {
-  const _Counter({required this.skin, required this.locked});
+/// The back of the darkroom behind the counter: a dark panelled wall, the
+/// red safelight and its glow, prints drying on a line, film boxes and an
+/// old camera or two on the back shelf. Drawn once (it never changes).
+class _Backdrop extends CustomPainter {
+  const _Backdrop();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final all = Offset.zero & size;
+    canvas.drawRect(
+      all,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF1C110C), Color(0xFF140D09), Color(0xFF0C0806)],
+        ).createShader(all),
+    );
+    // panelling
+    final seam = Paint()
+      ..color = Colors.black.withValues(alpha: 0.35)
+      ..strokeWidth = 1;
+    final edge = Paint()
+      ..color = Colors.white.withValues(alpha: 0.025)
+      ..strokeWidth = 1;
+    for (var x = w / 9; x < w; x += w / 4.5) {
+      canvas.drawLine(Offset(x, 0), Offset(x, h * 0.72), seam);
+      canvas.drawLine(Offset(x + 1.5, 0), Offset(x + 1.5, h * 0.72), edge);
+    }
+    // the back shelf, with film boxes and a camera on it
+    final shelfY = h * 0.27;
+    canvas.drawRect(Rect.fromLTWH(0, shelfY, w, 6), Paint()..color = const Color(0xFF3A2414));
+    canvas.drawRect(Rect.fromLTWH(0, shelfY + 6, w, 4), Paint()..color = Colors.black.withValues(alpha: 0.4));
+    final boxes = [
+      (0.02, const Color(0xFF8C2A1E), 26.0, 34.0),
+      (0.1, const Color(0xFFB8862B), 22.0, 30.0),
+      (0.17, const Color(0xFF2D4F7A), 24.0, 32.0),
+      (0.8, const Color(0xFF3F6B3A), 22.0, 30.0),
+      (0.87, const Color(0xFFB8862B), 26.0, 36.0),
+      (0.94, const Color(0xFF8C2A1E), 20.0, 28.0),
+    ];
+    for (final (fx, c, bw, bh) in boxes) {
+      final r = Rect.fromLTWH(w * fx, shelfY - bh, bw, bh);
+      canvas.drawRect(r, Paint()..color = Color.lerp(c, Colors.black, 0.45)!);
+      canvas.drawRect(
+        Rect.fromLTWH(r.left, r.top + bh * 0.35, bw, bh * 0.18),
+        Paint()..color = const Color(0x22FFFFFF),
+      );
+    }
+    // red safelight hanging top right, and the room's red glow
+    final lamp = Offset(w * 0.86, h * 0.07);
+    canvas.drawLine(Offset(lamp.dx, 0), lamp - const Offset(0, 10), Paint()..color = const Color(0xFF2A2A2A));
+    canvas.drawCircle(
+      lamp,
+      h * 0.42,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [const Color(0xFFFF2A14).withValues(alpha: 0.2), const Color(0x00FF2A14)],
+        ).createShader(Rect.fromCircle(center: lamp, radius: h * 0.42)),
+    );
+    final shade = Path()
+      ..moveTo(lamp.dx - 16, lamp.dy)
+      ..lineTo(lamp.dx - 7, lamp.dy - 10)
+      ..lineTo(lamp.dx + 7, lamp.dy - 10)
+      ..lineTo(lamp.dx + 16, lamp.dy)
+      ..close();
+    canvas.drawPath(shade, Paint()..color = const Color(0xFF26201C));
+    canvas.drawOval(
+      Rect.fromCenter(center: lamp + const Offset(0, 1), width: 26, height: 7),
+      Paint()..color = const Color(0xFFFF4A2A),
+    );
+    // prints drying on a line, with pegs
+    final lineY = h * 0.035;
+    canvas.drawLine(
+      Offset(0, lineY),
+      Offset(w * 0.74, lineY + 6),
+      Paint()
+        ..color = const Color(0xFF5A4A3A)
+        ..strokeWidth = 1,
+    );
+    final rnd = math.Random(3);
+    for (final fx in [0.04, 0.16, 0.6]) {
+      final x = w * fx, y = lineY + 6 * fx / 0.74;
+      final pw = 30.0 + rnd.nextDouble() * 8, ph = pw * 1.25;
+      final print = Rect.fromLTWH(x, y + 3, pw, ph);
+      canvas.save();
+      canvas.translate(print.center.dx, print.top);
+      canvas.rotate((rnd.nextDouble() - 0.5) * 0.12);
+      canvas.translate(-print.center.dx, -print.top);
+      canvas.drawRect(print, Paint()..color = const Color(0xFFD9CFC0).withValues(alpha: 0.55));
+      canvas.drawRect(
+        print.deflate(3),
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF4A3A30).withValues(alpha: 0.8),
+              const Color(0xFF1E1612).withValues(alpha: 0.8),
+            ],
+          ).createShader(print),
+      );
+      canvas.restore();
+      canvas.drawRect(
+        Rect.fromLTWH(print.center.dx - 2, y - 2, 4, 9),
+        Paint()..color = const Color(0xFF8A6A48),
+      );
+    }
+    // the counter top the cabinet stands on, and the floor of shadow
+    final counter = Rect.fromLTWH(0, h * 0.8, w, h * 0.2);
+    canvas.drawRect(
+      counter,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF3B2617), Color(0xFF1E130B)],
+        ).createShader(counter),
+    );
+    canvas.drawLine(
+      counter.topLeft,
+      counter.topRight,
+      Paint()
+        ..color = const Color(0xFFCFA85E).withValues(alpha: 0.35)
+        ..strokeWidth = 1.5,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Backdrop old) => false;
+}
+
+/// The glass cabinet on the counter: a lit display box on top, the shelf
+/// of every skin below, in a dark wood frame with brass corners.
+class _Cabinet extends StatelessWidget {
+  const _Cabinet({required this.top, required this.shelf});
+
+  final Widget top;
+  final Widget shelf;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.symmetric(horizontal: 10),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: _Shop.wood, width: 7),
+      color: const Color(0xFF120C08),
+      boxShadow: const [BoxShadow(color: Colors.black87, blurRadius: 18, offset: Offset(0, 8))],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(2),
+      child: Column(
+        children: [
+          Expanded(child: top),
+          Container(height: 6, color: _Shop.wood),
+          shelf,
+        ],
+      ),
+    ),
+  );
+}
+
+/// The top of the cabinet: the skin you're looking at on a velvet pad
+/// under a spotlight, behind glass.
+class _Display extends StatelessWidget {
+  const _Display({required this.skin, required this.locked});
 
   final CameraSkin skin;
   final bool locked;
@@ -219,85 +392,168 @@ class _Counter extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
-      final w = math.min(box.maxWidth * 0.72, box.maxHeight * 1.25);
+      final w = math.min(box.maxWidth * 0.9, box.maxHeight * 1.5);
       return Stack(
         alignment: Alignment.center,
         children: [
-          // spotlight on the counter
+          // back of the case: dark velvet with the spotlight falling on it
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: RadialGradient(
-                  center: const Alignment(0, 0.25),
-                  radius: 0.7,
-                  colors: [const Color(0xFFFFE2B0).withValues(alpha: 0.16), Colors.transparent],
+                  center: const Alignment(0, -0.2),
+                  radius: 0.85,
+                  colors: [
+                    const Color(0xFF4A1E1A),
+                    const Color(0xFF1C0D0B),
+                    Colors.black.withValues(alpha: 0.9),
+                  ],
+                  stops: const [0, 0.55, 1],
                 ),
               ),
             ),
           ),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 260),
-            transitionBuilder: (c, a) => FadeTransition(
-              opacity: a,
-              child: ScaleTransition(scale: Tween(begin: 0.94, end: 1.0).animate(a), child: c),
+          // the pad
+          Positioned(
+            bottom: box.maxHeight * 0.1,
+            child: Container(
+              width: w * 0.95,
+              height: box.maxHeight * 0.12,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(100),
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFF5E2420), Color(0xFF2E100E)],
+                ),
+              ),
             ),
-            child: SizedBox(
-              key: ValueKey('${skin.mode.name}.${skin.id}'),
-              width: w,
-              height: w * 0.62,
-              child: CustomPaint(painter: SkinCameraPainter(skin, dim: locked)),
+          ),
+          Positioned(
+            bottom: box.maxHeight * 0.13,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              transitionBuilder: (c, a) => FadeTransition(
+                opacity: a,
+                child: ScaleTransition(scale: Tween(begin: 0.95, end: 1.0).animate(a), child: c),
+              ),
+              child: SizedBox(
+                key: ValueKey('${skin.mode.name}.${skin.id}'),
+                width: w,
+                height: math.min(w * 0.62, box.maxHeight * 0.8),
+                child: CustomPaint(painter: SkinCameraPainter(skin, dim: locked)),
+              ),
+            ),
+          ),
+          // spotlight cone from the top of the case
+          const Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0, -1.2),
+                    radius: 1.1,
+                    colors: [Color(0x26FFE8C4), Color(0x00FFE8C4)],
+                  ),
+                ),
+              ),
             ),
           ),
           if (locked)
-            Positioned(
-              top: box.maxHeight * 0.1,
-              child: const Icon(Icons.lock_outline, color: Color(0x99F1E6CC), size: 22),
+            const Positioned(
+              top: 12,
+              right: 14,
+              child: Icon(Icons.lock_outline, color: Color(0xAAF1E6CC), size: 20),
             ),
+          // the glass front: a sheen and a bright top edge
+          const Positioned.fill(child: IgnorePointer(child: _Glass())),
         ],
       );
     },
   );
 }
 
+/// A pane of glass: a couple of diagonal reflections and a lit top edge.
+class _Glass extends StatelessWidget {
+  const _Glass();
+
+  @override
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment(-1, -1),
+        end: Alignment(1, 1),
+        stops: [0, 0.22, 0.23, 0.3, 0.31, 0.62, 0.63, 0.66, 0.67, 1],
+        colors: [
+          Color(0x12FFFFFF),
+          Color(0x06FFFFFF),
+          Color(0x14FFFFFF),
+          Color(0x14FFFFFF),
+          Color(0x00FFFFFF),
+          Color(0x00FFFFFF),
+          Color(0x0CFFFFFF),
+          Color(0x0CFFFFFF),
+          Color(0x00FFFFFF),
+          Color(0x00FFFFFF),
+        ],
+      ),
+      border: Border(top: BorderSide(color: Color(0x40FFFFFF), width: 1.5)),
+    ),
+  );
+}
+
+/// The skin's name and what it is, or what wins it: always two lines'
+/// room, so the cabinet above never moves.
 class _Caption extends StatelessWidget {
-  const _Caption({required this.skin, required this.has, required this.inUse});
+  const _Caption({required this.skin, required this.has, required this.progress});
 
   final CameraSkin skin;
   final bool has;
-  final bool inUse;
+  final Map<String, int> progress;
 
   @override
   Widget build(BuildContext context) {
     final unlock = skin.unlock;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
-        children: [
-          Text(
-            skin.name.toUpperCase(),
-            style: const TextStyle(
-              color: _Shop.paper,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2,
+    String text;
+    if (has || unlock == null) {
+      text = skin.blurb;
+    } else {
+      final done = math.min(progress[unlock.stat] ?? 0, unlock.target);
+      final count = unlock.target > 1 ? ' ($done of ${unlock.target})' : '';
+      text = '${unlock.goal}$count. Darkroom 98 > Start > Run > ${unlock.game}';
+    }
+    return SizedBox(
+      height: 70,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          children: [
+            Text(
+              skin.name.toUpperCase(),
+              style: const TextStyle(
+                color: _Shop.paper,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 2,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            has || unlock == null
-                ? skin.blurb
-                : 'Win it: ${unlock.goal}. (Darkroom 98 > Run > ${unlock.game})',
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            style: TextStyle(color: _Shop.paper.withValues(alpha: 0.7), fontSize: 13, height: 1.3),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: _Shop.paper.withValues(alpha: 0.72), fontSize: 13, height: 1.3),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// The glass display case: a shelf of every skin with a price tag each.
+/// The glass shelf in the bottom of the cabinet: every skin, with a price
+/// tag each.
 class _Case extends StatelessWidget {
   const _Case({
     required this.skins,
@@ -315,73 +571,52 @@ class _Case extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 150,
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: _Shop.wood, width: 6),
-        gradient: const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF2A1F18), Color(0xFF15100C)],
+    return SizedBox(
+      height: 132,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF241812), Color(0xFF110B08)],
+          ),
         ),
-        boxShadow: const [BoxShadow(color: Colors.black54, blurRadius: 10, offset: Offset(0, 4))],
-      ),
-      child: Stack(
-        children: [
-          // the glass shelf
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 40,
-            child: Container(
-              height: 5,
-              decoration: BoxDecoration(
-                color: const Color(0x55BFE3E0),
-                boxShadow: [BoxShadow(color: const Color(0xFFBFE3E0).withValues(alpha: 0.2), blurRadius: 4)],
-              ),
-            ),
-          ),
-          ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-            itemCount: skins.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (context, i) {
-              final s = skins[i];
-              return _ShelfItem(
-                skin: s,
-                selected: s.id == looking,
-                wearing: s.id == wearing,
-                owned: owns(s),
-                onTap: () => onLook(s),
-              );
-            },
-          ),
-          // glass front: a diagonal sheen over everything
-          const Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
+        child: Stack(
+          children: [
+            // the glass shelf and its lit edge
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 36,
+              child: Container(
+                height: 4,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment(-1, -1),
-                    end: Alignment(1, 1),
-                    stops: [0, 0.3, 0.31, 0.5, 0.51, 1],
-                    colors: [
-                      Color(0x14FFFFFF),
-                      Color(0x08FFFFFF),
-                      Color(0x00FFFFFF),
-                      Color(0x00FFFFFF),
-                      Color(0x0AFFFFFF),
-                      Color(0x00FFFFFF),
-                    ],
-                  ),
+                  color: const Color(0x66BFE3E0),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFFBFE3E0).withValues(alpha: 0.25), blurRadius: 5),
+                  ],
                 ),
               ),
             ),
-          ),
-        ],
+            ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+              itemCount: skins.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final s = skins[i];
+                return _ShelfItem(
+                  skin: s,
+                  selected: s.id == looking,
+                  wearing: s.id == wearing,
+                  owned: owns(s),
+                  onTap: () => onLook(s),
+                );
+              },
+            ),
+            const Positioned.fill(child: IgnorePointer(child: _Glass())),
+          ],
+        ),
       ),
     );
   }
@@ -520,247 +755,4 @@ class _BrassButton extends StatelessWidget {
       ),
     ),
   );
-}
-
-/// A camera seen from the front in a skin's colours: a rangefinder for
-/// film, a compact for digital. Used on the shop shelf and the counter.
-class SkinCameraPainter extends CustomPainter {
-  SkinCameraPainter(this.skin, {this.dim = false});
-
-  final CameraSkin skin;
-
-  /// Locked: drawn in shadow.
-  final bool dim;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height;
-    final film = skin.mode == AppMode.film;
-    // body: ~1.6:1 rounded block
-    final bodyH = math.min(h * 0.82, w / 1.75);
-    final bodyW = bodyH * 1.75;
-    final body = Rect.fromCenter(center: Offset(w / 2, h * 0.56), width: bodyW, height: bodyH);
-    final r = Radius.circular(bodyH * (film ? 0.1 : 0.16));
-    // shadow on the shelf
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(w / 2, body.bottom + bodyH * 0.04),
-        width: bodyW * 0.95,
-        height: bodyH * 0.12,
-      ),
-      Paint()..color = Colors.black.withValues(alpha: 0.45),
-    );
-    canvas.saveLayer(Offset.zero & size, Paint());
-    // shell (sides) as a darker rim
-    canvas.drawRRect(RRect.fromRectAndRadius(body.inflate(bodyH * 0.02), r), Paint()..color = skin.shell);
-    if (film) {
-      _filmFront(canvas, body, r);
-    } else {
-      _digitalFront(canvas, body, r);
-    }
-    if (dim) {
-      canvas.drawPaint(
-        Paint()
-          ..color = const Color(0xFF0E0A07).withValues(alpha: 0.6)
-          ..blendMode = BlendMode.srcATop,
-      );
-    }
-    canvas.restore();
-  }
-
-  void _filmFront(Canvas canvas, Rect b, Radius r) {
-    final plateH = b.height * 0.22;
-    final top = Rect.fromLTWH(b.left, b.top, b.width, plateH);
-    final bottom = Rect.fromLTWH(b.left, b.bottom - plateH * 0.6, b.width, plateH * 0.6);
-    // leatherette band
-    canvas.drawRRect(RRect.fromRectAndRadius(b, r), Paint()..color = skin.covering);
-    _pebbles(canvas, Rect.fromLTRB(b.left, top.bottom, b.right, bottom.top), skin.covering);
-    // plates (brushed: a vertical gradient)
-    for (final plate in [top, bottom]) {
-      final shape = RRect.fromRectAndCorners(
-        plate,
-        topLeft: plate == top ? r : Radius.zero,
-        topRight: plate == top ? r : Radius.zero,
-        bottomLeft: plate == bottom ? r : Radius.zero,
-        bottomRight: plate == bottom ? r : Radius.zero,
-      );
-      canvas.drawRRect(
-        shape,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [_shade(skin.trim, 0.25), skin.trim, _shade(skin.trim, -0.25)],
-          ).createShader(plate),
-      );
-    }
-    if (skin.id == 'brassed') {
-      // brass showing through on the plate edges
-      final brass = Paint()..color = const Color(0xFFB8913F);
-      for (var i = 0; i < 7; i++) {
-        final x = b.left + b.width * (0.06 + i * 0.14);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(x, top.bottom - 2.2, b.width * 0.06, 2.2),
-            const Radius.circular(1),
-          ),
-          brass,
-        );
-      }
-    }
-    // shutter dial and rewind knob on top
-    final dial = Paint()..color = _shade(skin.trim, -0.1);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(b.left + b.width * 0.68, b.top - b.height * 0.08, b.width * 0.14, b.height * 0.1),
-        const Radius.circular(2),
-      ),
-      dial,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(b.left + b.width * 0.12, b.top - b.height * 0.06, b.width * 0.1, b.height * 0.08),
-        const Radius.circular(2),
-      ),
-      dial,
-    );
-    // rangefinder windows
-    final glass = Paint()..color = const Color(0xFF1C2630);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(b.left + b.width * 0.08, top.top + plateH * 0.25, b.width * 0.16, plateH * 0.5),
-        const Radius.circular(2),
-      ),
-      glass,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(b.left + b.width * 0.76, top.top + plateH * 0.3, b.width * 0.1, plateH * 0.42),
-        const Radius.circular(2),
-      ),
-      glass,
-    );
-    // nameplate
-    _label(canvas, 'DARKROOM', Offset(b.center.dx, top.center.dy), plateH * 0.32, skin.ink);
-    // lens
-    _lens(canvas, Offset(b.center.dx, b.center.dy + b.height * 0.06), b.height * 0.34);
-  }
-
-  void _digitalFront(Canvas canvas, Rect b, Radius r) {
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(b, r),
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [_shade(skin.covering, 0.18), skin.covering, _shade(skin.covering, -0.18)],
-        ).createShader(b),
-    );
-    // brushing: faint horizontal lines
-    final line = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05)
-      ..strokeWidth = 0.6;
-    for (var y = b.top + 3; y < b.bottom - 2; y += 2.2) {
-      canvas.drawLine(Offset(b.left + 4, y), Offset(b.right - 4, y), line);
-    }
-    // trim: a band across the top (two-tone) or a grip on the left
-    if (skin.id == 'grip') {
-      final grip = RRect.fromRectAndCorners(
-        Rect.fromLTWH(b.left, b.top, b.width * 0.2, b.height),
-        topLeft: r,
-        bottomLeft: r,
-      );
-      canvas.drawRRect(grip, Paint()..color = skin.trim);
-      _pebbles(canvas, grip.outerRect, skin.trim);
-    } else {
-      canvas.drawRRect(
-        RRect.fromRectAndCorners(
-          Rect.fromLTWH(b.left, b.top, b.width, b.height * 0.16),
-          topLeft: r,
-          topRight: r,
-        ),
-        Paint()..color = skin.trim,
-      );
-    }
-    // flash window and label
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(b.left + b.width * 0.28, b.top + b.height * 0.24, b.width * 0.16, b.height * 0.13),
-        const Radius.circular(2),
-      ),
-      Paint()..color = const Color(0xFFEDEBE3),
-    );
-    _label(
-      canvas,
-      'DARKROOM',
-      Offset(b.left + b.width * 0.36, b.bottom - b.height * 0.16),
-      b.height * 0.1,
-      skin.ink,
-    );
-    _lens(canvas, Offset(b.left + b.width * 0.7, b.center.dy + b.height * 0.04), b.height * 0.3);
-  }
-
-  void _lens(Canvas canvas, Offset c, double radius) {
-    canvas.drawCircle(
-      c,
-      radius,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFEDEEF0), Color(0xFF8E9298), Color(0xFF2B2D30)],
-        ).createShader(Rect.fromCircle(center: c, radius: radius)),
-    );
-    canvas.drawCircle(c, radius * 0.82, Paint()..color = const Color(0xFF141517));
-    canvas.drawCircle(
-      c,
-      radius * 0.62,
-      Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(-0.3, -0.3),
-          colors: [Color(0xFF3F4F6A), Color(0xFF0B0E14)],
-        ).createShader(Rect.fromCircle(center: c, radius: radius * 0.62)),
-    );
-    canvas.drawCircle(
-      c + Offset(-radius * 0.22, -radius * 0.22),
-      radius * 0.12,
-      Paint()..color = Colors.white.withValues(alpha: 0.55),
-    );
-  }
-
-  void _pebbles(Canvas canvas, Rect area, Color base) {
-    final dot = Paint()..color = _shade(base, 0.12).withValues(alpha: 0.55);
-    final rnd = math.Random(area.width.round() * 31 + area.height.round());
-    final n = (area.width * area.height / 14).clamp(0, 900).toInt();
-    for (var i = 0; i < n; i++) {
-      canvas.drawCircle(
-        Offset(area.left + rnd.nextDouble() * area.width, area.top + rnd.nextDouble() * area.height),
-        0.6,
-        dot,
-      );
-    }
-  }
-
-  void _label(Canvas canvas, String text, Offset centre, double size, Color color) {
-    if (size < 4) return;
-    final tp = TextPainter(
-      text: TextSpan(
-        text: text,
-        style: TextStyle(
-          color: color,
-          fontSize: size,
-          fontWeight: FontWeight.w800,
-          letterSpacing: size * 0.25,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    tp.paint(canvas, centre - Offset(tp.width / 2, tp.height / 2));
-  }
-
-  static Color _shade(Color c, double amount) =>
-      amount >= 0 ? Color.lerp(c, Colors.white, amount)! : Color.lerp(c, Colors.black, -amount)!;
-
-  @override
-  bool shouldRepaint(SkinCameraPainter old) => old.skin != skin || old.dim != dim;
 }

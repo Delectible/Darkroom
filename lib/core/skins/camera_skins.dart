@@ -5,16 +5,38 @@ import '../../features/camera/application/camera_ui_state.dart' show PrefKeys;
 import '../../features/cameras/domain/camera_spec.dart';
 import '../monetization/pro.dart' show prefsOf;
 
-/// How a skin is earned (the mini games; not wired up yet).
+/// How a skin is earned in the Darkroom 98 games: reach [target] on the
+/// [stat] the games record (see [SkinStats], [SkinAwards]).
 @immutable
 class SkinUnlock {
-  const SkinUnlock(this.game, this.goal);
+  const SkinUnlock(this.game, this.goal, this.stat, [this.target = 1]);
 
   /// The Win98 program that gives it (Run name: SOL, BRICKS, PINBALL, MINES).
   final String game;
 
   /// What to do there, as the shop's price tag says it.
   final String goal;
+
+  /// The [SkinStats] count it needs, and how much of it.
+  final String stat;
+  final int target;
+}
+
+/// What the games count toward the skins.
+abstract final class SkinStats {
+  /// Minefield games won (any level) / on Intermediate.
+  static const minesWins = 'mines.wins';
+  static const minesHard = 'mines.wins.intermediate';
+
+  /// Bricks walls cleared, over all games.
+  static const bricksWalls = 'bricks.walls';
+
+  /// Highest Space Rabbit rank reached (0 Cadet .. 5 Admiral).
+  static const pinballRank = 'pinball.rank';
+
+  /// Solitaire games won / won within 5 minutes of the deal.
+  static const solWins = 'sol.wins';
+  static const solFast = 'sol.wins.fast';
 }
 
 /// A camera body's finish. The live 3D model shows its `finish.<id>` nodes
@@ -77,7 +99,7 @@ abstract final class CameraSkins {
       trim: Color(0xFF1A1A1C),
       shell: Color(0xFF111111),
       ink: Color(0xFFE8E6E0),
-      unlock: SkinUnlock('MINES', 'Clear a Minefield'),
+      unlock: SkinUnlock('MINES', 'Win a game of Minefield', SkinStats.minesWins),
     ),
     CameraSkin(
       id: 'brassed',
@@ -88,7 +110,7 @@ abstract final class CameraSkins {
       trim: Color(0xFF6E5530),
       shell: Color(0xFF3A2E1C),
       ink: Color(0xFFE8E6E0),
-      unlock: SkinUnlock('PINBALL', 'Reach Commander in Space Rabbit'),
+      unlock: SkinUnlock('PINBALL', 'Reach Commander in Space Rabbit', SkinStats.pinballRank, 4),
     ),
     CameraSkin(
       id: 'red',
@@ -99,7 +121,7 @@ abstract final class CameraSkins {
       trim: Color(0xFFD9DADC),
       shell: Color(0xFF111111),
       ink: Color(0xFF151515),
-      unlock: SkinUnlock('BRICKS', 'Clear 3 walls in Bricks'),
+      unlock: SkinUnlock('BRICKS', 'Clear 3 walls in Bricks', SkinStats.bricksWalls, 3),
     ),
     CameraSkin(
       id: 'tan',
@@ -110,7 +132,7 @@ abstract final class CameraSkins {
       trim: Color(0xFFD9DADC),
       shell: Color(0xFF111111),
       ink: Color(0xFF151515),
-      unlock: SkinUnlock('SOL', 'Win a game of Solitaire'),
+      unlock: SkinUnlock('SOL', 'Win a game of Solitaire', SkinStats.solWins),
     ),
     CameraSkin(
       id: 'green',
@@ -121,7 +143,7 @@ abstract final class CameraSkins {
       trim: Color(0xFFD9DADC),
       shell: Color(0xFF111111),
       ink: Color(0xFF151515),
-      unlock: SkinUnlock('MINES', 'Win Minefield on Expert'),
+      unlock: SkinUnlock('MINES', 'Win Minefield on Intermediate', SkinStats.minesHard),
     ),
     CameraSkin(
       id: 'mint',
@@ -132,7 +154,7 @@ abstract final class CameraSkins {
       trim: Color(0xFFD9DADC),
       shell: Color(0xFFE6DAC0),
       ink: Color(0xFF151515),
-      unlock: SkinUnlock('SOL', 'Win 5 games of Solitaire'),
+      unlock: SkinUnlock('SOL', 'Win 5 games of Solitaire', SkinStats.solWins, 5),
     ),
     CameraSkin(
       id: 'cream',
@@ -143,7 +165,7 @@ abstract final class CameraSkins {
       trim: Color(0xFFD9DADC),
       shell: Color(0xFFA9D4BE),
       ink: Color(0xFF151515),
-      unlock: SkinUnlock('BRICKS', 'Score 5,000 in Bricks'),
+      unlock: SkinUnlock('BRICKS', 'Clear 6 walls in Bricks', SkinStats.bricksWalls, 6),
     ),
     CameraSkin(
       id: 'silver',
@@ -164,7 +186,7 @@ abstract final class CameraSkins {
       trim: Color(0xFF1F2023),
       shell: Color(0xFF737A83),
       ink: Color(0xFF22262B),
-      unlock: SkinUnlock('BRICKS', 'Clear a wall in Bricks'),
+      unlock: SkinUnlock('BRICKS', 'Clear a wall in Bricks', SkinStats.bricksWalls),
     ),
     CameraSkin(
       id: 'gunmetal',
@@ -175,7 +197,7 @@ abstract final class CameraSkins {
       trim: Color(0xFF2A2B2E),
       shell: Color(0xFF242528),
       ink: Color(0xFFDADDE2),
-      unlock: SkinUnlock('PINBALL', 'Score 100,000 in Space Rabbit'),
+      unlock: SkinUnlock('PINBALL', 'Reach Captain in Space Rabbit', SkinStats.pinballRank, 3),
     ),
     CameraSkin(
       id: 'champagne',
@@ -186,7 +208,7 @@ abstract final class CameraSkins {
       trim: Color(0xFF8F7B5E),
       shell: Color(0xFF7A684F),
       ink: Color(0xFF3A2F22),
-      unlock: SkinUnlock('SOL', 'Win Solitaire in under 3 minutes'),
+      unlock: SkinUnlock('SOL', 'Win Solitaire in under 5 minutes', SkinStats.solFast),
     ),
     CameraSkin(
       id: 'twotone',
@@ -197,7 +219,7 @@ abstract final class CameraSkins {
       trim: Color(0xFFC5CAD1),
       shell: Color(0xFF162A55),
       ink: Color(0xFFE3E6EA),
-      unlock: SkinUnlock('MINES', 'Win Minefield on Intermediate'),
+      unlock: SkinUnlock('MINES', 'Win 3 games of Minefield', SkinStats.minesWins, 3),
     ),
   ];
 
@@ -252,3 +274,51 @@ class UnlockedSkinsNotifier extends Notifier<Set<String>> {
 }
 
 final unlockedSkinsProvider = NotifierProvider<UnlockedSkinsNotifier, Set<String>>(UnlockedSkinsNotifier.new);
+
+/// The games' counts toward the skins ([SkinStats] -> value), kept in prefs.
+class SkinProgressNotifier extends Notifier<Map<String, int>> {
+  @override
+  Map<String, int> build() {
+    final raw = prefsOf(ref)?.getStringList(PrefKeys.skinProgress) ?? const [];
+    return {
+      for (final e in raw)
+        if (e.split('=') case [final k, final v]) k: int.tryParse(v) ?? 0,
+    };
+  }
+
+  /// Adds [by] to [stat] (or, with [atLeast], raises it to that).
+  Future<void> bump(String stat, {int by = 1, int? atLeast}) async {
+    final now = state[stat] ?? 0;
+    final next = atLeast != null ? (atLeast > now ? atLeast : now) : now + by;
+    if (next == now) return;
+    state = {...state, stat: next};
+    await prefsOf(
+      ref,
+    )?.setStringList(PrefKeys.skinProgress, [for (final e in state.entries) '${e.key}=${e.value}']);
+  }
+}
+
+final skinProgressProvider = NotifierProvider<SkinProgressNotifier, Map<String, int>>(
+  SkinProgressNotifier.new,
+);
+
+/// The games call this as you play: records the stat, unlocks every skin
+/// whose goal is now met, and returns the skins newly won (for a "you won
+/// a skin" note).
+abstract final class SkinAwards {
+  static Future<List<CameraSkin>> record(ProviderContainer c, String stat, {int by = 1, int? atLeast}) async {
+    await c.read(skinProgressProvider.notifier).bump(stat, by: by, atLeast: atLeast);
+    final progress = c.read(skinProgressProvider);
+    final owned = c.read(unlockedSkinsProvider.notifier);
+    final won = <CameraSkin>[];
+    for (final s in CameraSkins.all) {
+      final u = s.unlock;
+      if (u == null || u.stat != stat || owned.owns(s)) continue;
+      if ((progress[stat] ?? 0) >= u.target) {
+        await owned.unlock(s);
+        won.add(s);
+      }
+    }
+    return won;
+  }
+}

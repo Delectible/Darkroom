@@ -36,6 +36,9 @@ class PrefKeys {
   /// Camera skins earned in the mini games.
   static const skinsUnlocked = 'skins.unlocked';
 
+  /// The games' counts toward the skins (`stat=value` strings).
+  static const skinProgress = 'skins.progress';
+
   /// The Win98 colour scheme's name (View > Options > Themes).
   static const win98Theme = 'ui.win98.theme';
 
@@ -72,6 +75,7 @@ class PrefKeys {
     bodyFinish,
     filmFinish,
     skinsUnlocked,
+    skinProgress,
     win98Theme,
     galleryAsked,
     galleryDismissed,

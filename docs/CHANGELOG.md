@@ -1103,3 +1103,14 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the dial / key labels sit on chrome parts, the digital face has no
   printed lettering, and the drawn bodies pick dark or light text by the
   skin's brightness.
+- [x] **56.9** Shop: the caption under the cameras has a fixed height, so
+  a two-line goal no longer moves the display. Camera icons redrawn with
+  more detail (dials, windows, brushed plates, flash, stepped lens); the
+  DARKROOM label picks dark or light ink so it reads on every skin and
+  clears the grip/lens. More darkroom: safelight, prints drying on a line,
+  film boxes on the back shelf, velvet display under a spotlight, glass
+  over the counter.
+- [x] **56.10** Skin unlocks wired into the games (progress kept, a note
+  when one is won, the caption shows "n of m"). Goals adjusted to what the
+  games can do: Minefield has no Expert level (now Intermediate / 3 wins)
+  and Bricks has no 5000 score (now walls cleared).

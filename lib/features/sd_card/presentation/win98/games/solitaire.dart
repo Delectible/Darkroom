@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
+import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'skin_awards.dart';
 
 /// SOL.EXE: Klondike, draw one, made for a phone: tap a card and it goes
 /// where it can (home to the foundations first, else onto a column). Tap
@@ -177,16 +179,31 @@ class _SolitaireGameState extends State<SolitaireGame> {
     Sfx.cardRiffle.play();
   }
 
+  /// When this hand was dealt, and whether its win has been counted.
+  DateTime _dealt = DateTime.now();
+  bool _counted = false;
+
   void _redeal() {
     Sfx.cardRiffle.play();
-    setState(() => _game = Klondike());
+    setState(() {
+      _game = Klondike();
+      _dealt = DateTime.now();
+      _counted = false;
+    });
   }
 
   void _act(bool Function() move) {
     final ok = move();
     if (ok) {
       Sfx.cardSnap.play();
-      if (_game.won) Sfx.gameWin.play();
+      if (_game.won && !_counted) {
+        _counted = true;
+        Sfx.gameWin.play();
+        awardSkins(context, SkinStats.solWins);
+        if (DateTime.now().difference(_dealt) < const Duration(minutes: 5)) {
+          awardSkins(context, SkinStats.solFast);
+        }
+      }
     } else {
       Sfx.w98Ding.play();
     }

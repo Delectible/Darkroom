@@ -6,7 +6,9 @@ import 'package:flutter/scheduler.dart';
 
 import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
+import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'skin_awards.dart';
 import '../../../../../core/device/haptics.dart';
 
 /// PINBALL.EXE: "Space Rabbit", a small space table in the spirit of the
@@ -247,6 +249,7 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     Sfx.gameWin.play();
     unawaited(Haptics.mediumImpact());
     _say('Mission complete! Promoted to ${_ranks[_rank]}', 3);
+    awardSkins(context, SkinStats.pinballRank, atLeast: _rank);
   }
 
   // ---- input -----------------------------------------------------------------

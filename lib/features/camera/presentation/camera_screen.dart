@@ -273,6 +273,37 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// again straight away; only a toss in flight can't.
   bool _canSwap() => !_committing && !_selectorOpen && !ref.read(captureControllerProvider).isRecording;
 
+  /// Fancy graphics: the other camera's 3D model loads after the app opens
+  /// (whole_body.dart). Until it's in, the camera stays in your hands and a
+  /// note says what's happening.
+  bool _otherReady() {
+    final mode = ref.read(appModeProvider);
+    final art = ref.read(wholeArtProvider).value;
+    if (art == null || ref.read(wholeBodyProvider(mode)) == null) return true;
+    final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
+    if (art.isReady(other)) return true;
+    final now = DateTime.now();
+    if (now.difference(_notedLoading) > const Duration(seconds: 2)) {
+      _notedLoading = now;
+      unawaited(Haptics.selectionClick());
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(milliseconds: 1400),
+            content: Text(other == AppMode.digital ? 'Putting in SD card…' : 'Loading film…'),
+          ),
+        );
+    }
+    return false;
+  }
+
+  DateTime _notedLoading = DateTime(2000);
+
+  /// The other camera's model, once it's in: rebuild so it wears its skin.
+  AppMode? _awaiting;
+
   void _onDragStart(DragStartDetails d) {
     if (!_canSwap()) return;
     PerfRecorder.mark('camera swap', hold: const Duration(milliseconds: 1600));
@@ -304,6 +335,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // The way with no camera is the corkboard (film) / explorer (digital)
     // swipe: the body doesn't move at all that way, so nothing twitches
     // before the swipe triggers.
+    if (_raw > 0 && was == 0 && !_otherReady()) {
+      // Not loaded yet: the camera stays put (the other way still opens
+      // the corkboard / explorer).
+      _raw = 0;
+      _tossing = true;
+      return;
+    }
     if (_raw > 0) _tossing = true;
     if (was == 0 && _raw > 0) {
       _startMoving();
@@ -348,7 +386,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   /// Tap on the other camera: toss without a drag.
   void _tossByTap() {
-    if (!_canSwap()) return;
+    if (!_canSwap() || !_otherReady()) return;
     PerfRecorder.mark('camera swap', hold: const Duration(milliseconds: 1600));
     _swap.value = 0;
     _startMoving();
@@ -534,6 +572,16 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     if (mode == null) return;
     // Whatever was open closes first.
     Navigator.of(context).popUntil((r) => r.isFirst);
+    final art = ref.read(wholeArtProvider).value;
+    if (art != null && !art.isReady(mode)) {
+      // That camera's 3D model is still loading: switch once it's in.
+      unawaited(
+        art.ready(mode).timeout(const Duration(seconds: 8), onTimeout: () {}).then((_) {
+          if (mounted) _follow(route);
+        }),
+      );
+      return;
+    }
     unawaited(ref.read(appModeProvider.notifier).set(mode));
     if (route == AppShortcuts.corkboard) unawaited(_push(const CorkboardScreen()));
     if (route == AppShortcuts.explorer) unawaited(_push(const ExplorerScreen()));
@@ -611,6 +659,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       _claimEdges();
     }
 
+    if (wholeArt != null && whole != null) {
+      final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
+      if (!wholeArt.isReady(other) && _awaiting != other) {
+        _awaiting = other;
+        unawaited(
+          wholeArt.ready(other).then((_) {
+            if (mounted) setState(() => _awaiting = null);
+          }),
+        );
+      }
+    }
     final skinIds = ref.watch(cameraSkinProvider);
     final skins = {for (final m in AppMode.values) m: CameraSkins.byId(m, skinIds[m])};
     // Both 3D bodies wear their skins (the other one shows as it swaps in).
@@ -665,8 +724,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                 // Fades out and back in while Fancy graphics switches.
                 body: ValueListenableBuilder<bool>(
                   valueListenable: GraphicsVeil.shown,
-                  builder: (context, shown, child) =>
+                  builder: (context, shown, child) => Stack(
+                    fit: StackFit.expand,
+                    children: [
                       AnimatedOpacity(opacity: shown ? 1 : 0, duration: GraphicsVeil.fade, child: child),
+                      // Loading the 3D cameras can take a moment: say so if
+                      // the fade lasts (a quick switch never shows it).
+                      IgnorePointer(
+                        child: AnimatedOpacity(
+                          opacity: shown ? 0 : 1,
+                          duration: shown ? GraphicsVeil.fade : const Duration(milliseconds: 900),
+                          curve: shown ? Curves.linear : const Interval(0.6, 1),
+                          child: const Center(
+                            child: Text(
+                              'Loading cameras…',
+                              style: TextStyle(color: Color(0x99E8E2D6), fontSize: 13, letterSpacing: 0.6),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   child: Stack(
                     children: [
                       // The desk the cameras rest on (seen between them mid-swap).

@@ -510,8 +510,14 @@ UI
   tree at rest and mid-swap, so nothing remounts); mid-swap the face is
   drawn under `camera x pose`, the strap from the projected lug. Snapshots
   for the other camera (`_lastLook`) are of the face's widgets only
-  (`WholeFace.overlayKey`). Loaded (and shaders warmed) behind the launch
-  screen (main.dart `_warmBodies`). No Flutter GPU (old phones, tests): the
+  (`WholeFace.overlayKey`). Only with Fancy graphics on (`_want3dProvider`:
+  on at launch or switched on since; then kept): the camera in hand loads
+  (and warms its shaders) behind the launch screen (main.dart
+  `_warmBodies`, `WholeArt.load(first:)`), the other right after
+  (`loadRest`). Until it's in (`WholeArt.isReady`), a toss doesn't move the
+  body and a snackbar says "Putting in SD card…" / "Loading film…"
+  (camera_screen `_otherReady`); shortcuts wait for it. Switching Fancy
+  graphics on shows "Loading cameras…" behind the veil if it lasts. No Flutter GPU (old phones, tests): the
   classic drawn bodies. Desktop check without a phone:
   `tool/live3d/preview.dart` (see its header; Linux + software Vulkan/GL
   under Xvfb). Tests: `whole_face_test` (layout on phone sizes),

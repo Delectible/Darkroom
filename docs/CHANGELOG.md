@@ -1133,3 +1133,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   Corkboard, Darkroom 98, last film, last digital camera (named after them).
 - [x] **56.17** Print ready while in the app: a soft tick and a light tap
   with the banner; the gallery thumb already fades to the new print.
+- [x] **56.18** Faster start: with Fancy graphics on, only the camera in
+  hand loads behind the launch screen; the other loads right after, and
+  until it's in a toss doesn't move the camera and a note says "Putting in
+  SD card…" / "Loading film…". With Fancy graphics off nothing 3D loads
+  (until it's switched on; then "Loading cameras…" shows if it takes a
+  moment).

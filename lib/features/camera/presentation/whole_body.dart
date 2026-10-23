@@ -12,6 +12,7 @@ import 'package:vector_math/vector_math.dart' as vm;
 import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
 
 import '../../cameras/domain/camera_spec.dart';
+import '../application/camera_ui_state.dart' show appModeProvider;
 import '../../settings/application/settings_controllers.dart';
 
 /// The 3D cameras (1.6): each body is a real 3D model (made in Blender by
@@ -43,9 +44,23 @@ class WholeArt {
   final double band;
   final Map<AppMode, WholeBody> bodies;
 
-  /// The layout and, with [scenes] (needs Flutter GPU: not in tests or on
-  /// phones without it, which get the classic bodies), the models.
-  static Future<WholeArt?> load({bool scenes = true}) async {
+  // What the bodies still to load need (see [loadRest]).
+  Map<String, dynamic>? _manifest;
+  fs.EnvironmentMap? _env;
+  final _ready = <AppMode, Completer<void>>{};
+
+  /// Whether [mode]'s model is loaded (or failed to). Until then it can't
+  /// be swapped to.
+  bool isReady(AppMode mode) => _ready[mode]?.isCompleted ?? true;
+
+  /// Completes once [mode]'s model is loaded (or given up on).
+  Future<void> ready(AppMode mode) => _ready[mode]?.future ?? Future<void>.value();
+
+  /// The layout of both bodies and, with [scenes] (needs Flutter GPU: not in
+  /// tests or on phones without it, which get the classic bodies), the
+  /// model of [first] (the camera in hand). The other model loads after,
+  /// with [loadRest], so the app opens sooner.
+  static Future<WholeArt?> load({bool scenes = true, AppMode first = AppMode.film}) async {
     try {
       final j = jsonDecode(await rootBundle.loadString('$root/manifest.json')) as Map<String, dynamic>;
       final d = j['design'] as Map<String, dynamic>;
@@ -73,7 +88,7 @@ class WholeArt {
         final lay = (j['layout'] as Map<String, dynamic>?)?[mode.name] as Map<String, dynamic>?;
         if (b == null || lay == null) continue;
         final lug = (b['lug'] as List<dynamic>).cast<num>();
-        final body = WholeBody._(
+        bodies[mode] = WholeBody._(
           layout: WholeLayout._fromJson(lay),
           alt: b['alt'] as String,
           press: {
@@ -82,45 +97,78 @@ class WholeArt {
           },
           lug: vm.Vector3(lug[0].toDouble(), lug[1].toDouble(), lug[2].toDouble()),
         );
-        if (scenes) {
-          final node = await fs.loadScene('$root/${b['scene']}');
-          body.live = LiveBody._(
-            node,
-            body,
-            env!,
-            exposure: (studio['exposure'] as num).toDouble(),
-            design: design,
-            cutY: (d['cutY'] as num).toDouble(),
-            dist: (d['dist'] as num).toDouble(),
-            band: (d['band'] as num).toDouble(),
-          );
-          // Compile its shaders now (behind the launch screen), not on the
-          // first frame it's seen.
-          try {
-            await body.live!.scene.warmUp([
-              fs.RenderView(
-                camera: fs.PerspectiveCamera(
-                  position: vm.Vector3(0, 0, -(d['dist'] as num).toDouble()),
-                  target: vm.Vector3.zero(),
-                ),
-              ),
-            ]);
-          } catch (_) {}
-        }
-        bodies[mode] = body;
       }
       if (bodies.isEmpty) return null;
-      return WholeArt._(
+      final art = WholeArt._(
         design,
         (d['cutY'] as num).toDouble(),
         (d['dist'] as num).toDouble(),
         (d['band'] as num).toDouble(),
         bodies,
       );
+      if (!scenes) return art;
+      art
+        .._manifest = j
+        .._env = env;
+      for (final mode in bodies.keys) {
+        art._ready[mode] = Completer<void>();
+      }
+      final hand = bodies.containsKey(first) ? first : bodies.keys.first;
+      await art._loadModel(hand);
+      // Without its model the camera in hand can't be drawn in 3D at all.
+      if (bodies[hand]?.live == null) return null;
+      return art;
     } catch (e, s) {
       // Not bundled, or no Flutter GPU here: the classic bodies.
       debugPrint('3D bodies unavailable: $e\n$s');
       return null;
+    }
+  }
+
+  /// Loads the models [load] left for later (the camera not in hand).
+  Future<void> loadRest() async {
+    for (final mode in [...bodies.keys]) {
+      if (!isReady(mode)) await _loadModel(mode);
+    }
+  }
+
+  Future<void> _loadModel(AppMode mode) async {
+    final done = _ready[mode];
+    if (done == null || done.isCompleted) return;
+    final body = bodies[mode]!;
+    try {
+      final j = _manifest!;
+      final d = j['design'] as Map<String, dynamic>;
+      final studio = j['studio'] as Map<String, dynamic>;
+      final b = j[mode.name] as Map<String, dynamic>;
+      final node = await fs.loadScene('$root/${b['scene']}');
+      body.live = LiveBody._(
+        node,
+        body,
+        _env!,
+        exposure: (studio['exposure'] as num).toDouble(),
+        design: design,
+        cutY: cutY,
+        dist: dist,
+        band: band,
+      );
+      // Compile its shaders now, not on the first frame it's seen.
+      try {
+        await body.live!.scene.warmUp([
+          fs.RenderView(
+            camera: fs.PerspectiveCamera(
+              position: vm.Vector3(0, 0, -(d['dist'] as num).toDouble()),
+              target: vm.Vector3.zero(),
+            ),
+          ),
+        ]);
+      } catch (_) {}
+    } catch (e, s) {
+      // (Both models come from the same pipeline: if the first loaded,
+      // this one does too. Kept swappable rather than stuck.)
+      debugPrint('3D body $mode unavailable: $e\n$s');
+    } finally {
+      done.complete();
     }
   }
 }
@@ -207,7 +255,33 @@ class DesignFit {
   }
 }
 
-final wholeArtProvider = FutureProvider<WholeArt?>((ref) => WholeArt.load());
+/// Whether the 3D bodies are wanted this run: Fancy graphics was on at
+/// launch or has been switched on since (then they stay loaded).
+class _Want3d extends Notifier<bool> {
+  @override
+  bool build() {
+    ref.listen(globalSettingsProvider.select((s) => s.controls3d), (_, on) {
+      if (on) state = true;
+    });
+    return ref.read(globalSettingsProvider).controls3d;
+  }
+}
+
+final _want3dProvider = NotifierProvider<_Want3d, bool>(_Want3d.new);
+
+/// The 3D bodies: none with Fancy graphics off (nothing loads). On, the
+/// camera in hand first (the launch screen waits for it, main.dart), the
+/// other right after; it can't be swapped to until it's in
+/// ([WholeArt.isReady]).
+final wholeArtProvider = FutureProvider<WholeArt?>((ref) async {
+  if (!ref.watch(_want3dProvider)) return null;
+  final art = await WholeArt.load(first: ref.read(appModeProvider));
+  if (art != null) {
+    // After the first frames, so the opening stays smooth.
+    unawaited(Future<void>.delayed(const Duration(milliseconds: 400), art.loadRest));
+  }
+  return art;
+});
 
 /// The 3D body for [mode] when 3D is on and it can be drawn here.
 final wholeBodyProvider = Provider.family<WholeBody?, AppMode>((ref, mode) {

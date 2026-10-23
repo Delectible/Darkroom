@@ -38,10 +38,13 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // The app turns its own screens (they already look landscape when
-        // Android rotates): cut straight to the new orientation instead of
-        // Android's rotate animation.
+        // Android rotates), so no rotate animation. Seamless, not jump-cut:
+        // a jump cut shows the last portrait frame turned for a frame (the
+        // page flickered upright as it landed); seamless keeps showing it
+        // as it was until the first landscape frame (full screen windows;
+        // else Android cross-fades).
         window.attributes = window.attributes.also {
-            it.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_JUMPCUT
+            it.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS
         }
     }
 

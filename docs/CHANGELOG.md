@@ -1114,3 +1114,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   when one is won, the caption shows "n of m"). Goals adjusted to what the
   games can do: Minefield has no Expert level (now Intermediate / 3 wins)
   and Bricks has no 5000 score (now walls cleared).
+- [~] **56.11** Landing in landscape (Darkroom 98, corkboard): the page
+  flickered upright for a frame as the app really turned. Android's
+  jump-cut showed the last portrait frame turned; now seamless rotation.
+  To confirm on the Pixel.

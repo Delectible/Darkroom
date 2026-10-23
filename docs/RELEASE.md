@@ -39,7 +39,7 @@ the owner in a console / on a phone, C = Claude in the repo).
 - [ ] Content rating (IARC questionnaire) and Target audience: confirm done
   in App content. (O)
 - [ ] Screenshots uploaded (from section 1). (O / C via fastlane)
-- [ ] **12+ testers opted in to closed testing for 14 days in a row**
+- [~] **12+ testers opted in to closed testing for 14 days in a row** (12 in; 7 days left on 2026-10-23, ends ~30 Oct)
   (Google's rule for new personal developer accounts). Then Dashboard >
   "Apply for production access" (a short questionnaire about the test). (O)
 - [ ] Optional: open testing (anyone can join from the store page).

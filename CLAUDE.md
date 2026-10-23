@@ -64,7 +64,11 @@ Read this first. It's the hand-off from the earlier development sessions
   time wants a registered device) and the export signs for the App Store
   (`-allowProvisioningUpdates` + the API key, cloud-managed cert; iPhone only) and uploads to
   TestFlight; CFBundleVersion = run number. `ios/` holds only Info.plist,
-  AppDelegate.swift and the AppIcon set; CI generates the rest.
+  AppDelegate.swift, the AppIcon set and the launch screen
+  (`Base.lproj/LaunchScreen.storyboard` + `LaunchImage`: the rabbit on
+  #0E0E12); CI generates the rest. Android's launch screen is ours too
+  (`res/values*/styles.xml`, `drawable*/launch_background.xml`, v31
+  splash attrs): dark, never white.
   Developing never needs the app running: prints store an absolute
   `ready_at`. Android re-arms notifications with WorkManager; iOS schedules
   them ahead (`scheduleIosBatches`) and holds a ~30 s background task while

@@ -1122,3 +1122,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   rate (MainActivity `preferredDisplayModeId`; it ran at 60 Hz on the 90/120
   Hz Pixel); performance mode (Fancy graphics off) asks for 60 Hz
   (channel `darkroom/display`). To confirm on the Pixel.
+- [x] **56.13** Launch screen: the rabbit on near-black on both phones
+  (it flashed white before the dark app).
+- [x] **56.14** Release sweep: store description mentions Free / Pro and
+  the skins; privacy policy covers purchases and the iPhone album check.

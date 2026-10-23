@@ -1,9 +1,9 @@
 # Darkroom privacy policy
 
-_Last updated: 8 October 2026_
+_Last updated: 23 October 2026_
 
 Darkroom is a camera app. It does not collect, send or sell any personal
-data. It has no accounts, no ads, no analytics and no internet access.
+data. It has no accounts, no ads, no analytics and no servers of its own.
 
 **Camera and microphone.** Used only to take the photos and videos you
 shoot in the app. They are processed on your phone.
@@ -12,6 +12,16 @@ shoot in the app. They are processed on your phone.
 They are copied to your phone's gallery only when you tap Save (Film Mode) or
 move them to C: (Digital Mode), and they leave your phone only when you share
 them yourself through the system share sheet.
+
+**Saved copies.** To notice when you delete a saved print from your
+phone's photos (so the app can offer to save it again), Darkroom checks
+the file names in its own albums ("Darkroom Film", "Darkroom"). On iPhone
+this needs photo library access, which it asks for once; it only looks at
+its own albums and never uploads anything.
+
+**Darkroom Pro.** The one-time purchase is handled entirely by Google Play
+or the App Store. Darkroom only learns whether you own Pro; it never sees
+your payment details.
 
 **Your name**, if you give one in the welcome tour or under User Profile,
 is kept on your phone and only used inside the app (for example on the back

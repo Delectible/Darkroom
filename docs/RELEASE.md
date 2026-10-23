@@ -61,7 +61,7 @@ the owner in a console / on a phone, C = Claude in the repo).
   the macOS runner (instead of the unsigned .ipa). (O creates the key, C
   wires CI: done, build-apk.yml ios job, secrets APPSTORE_KEY_ID /
   APPSTORE_ISSUER_ID / APPSTORE_KEY / APPLE_TEAM_ID; iPhone only)
-- [ ] App Store Connect listing: name, subtitle, description, keywords,
+- [ ] App Store Connect listing: name ("Darkroom: Film Camera"; "Darkroom" was taken; Play stays "Darkroom"), subtitle, description, keywords,
   support + privacy URLs, screenshots (6.9" and 6.5" iPhone), age rating,
   App Privacy = "Data Not Collected". iPhone only (no iPad) to start. (O / C
   drafts the text)

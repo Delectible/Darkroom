@@ -255,7 +255,8 @@ an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
   (`--dart-define=DEBUG_KEY`, `DebugGate.hashOf`); never write it in the
   repo or the notes.
   No secret = Debug stays shut. It has Darkroom Pro on/off, Refill Film & Battery, and Darkroom
-  Development (the 5-minute timer; no longer in Settings).
+  Development (the 5-minute timer; no longer in Settings), Unlock All
+  Skins (the shop itself is only in Settings).
 - Fancy graphics fades the camera out and back in (`GraphicsVeil`).
 
 ## Product rules agreed with the owner

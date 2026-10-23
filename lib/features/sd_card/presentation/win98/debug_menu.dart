@@ -17,9 +17,8 @@ import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/skins/camera_skins.dart';
-import '../../../skins/presentation/camera_shop_screen.dart';
 import '../../../camera/application/camera_session_controller.dart';
-import '../../../camera/application/camera_ui_state.dart' show PrefKeys, appModeProvider;
+import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 import '../../../cameras/domain/camera_spec.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../onboarding/onboarding_screen.dart';
@@ -138,14 +137,8 @@ final _tools = <_Tool>[
   ),
   _Tool(
     PixelIcon.camera,
-    'Camera Shop',
-    'The camera skins (film and digital) in the shop, as Settings > Camera Shop opens it.',
-    (context, ref) => showCameraShop(context, mode: ref.read(appModeProvider)),
-  ),
-  _Tool(
-    PixelIcon.camera,
     'Unlock All Skins',
-    'Every camera skin owned (or none again), until the mini games award them.',
+    'Every camera skin owned (or none again, game progress kept).',
     (_, ref) async {
       final n = ref.read(unlockedSkinsProvider.notifier);
       ref.read(unlockedSkinsProvider).isEmpty ? await n.unlockAll() : await n.lockAll();

@@ -319,8 +319,9 @@ FINISHES = {
 
 def _film(skin, shell, plate, ink):
     # the film body's finish pieces: skin (three bands), shell, the two top /
-    # bottom plates, the plate's ink (rabbit, lettering), the rabbit's eyes
-    return (skin, skin, skin, shell, plate, plate, ink, ink, ink, plate, plate)
+    # bottom plates, the plate's ink (rabbit, lettering; the flash switch's
+    # A / ON / OFF and bolt), the rabbit's eyes
+    return (skin, skin, skin, shell, plate, plate, *[ink] * 7, plate, plate)
 
 
 # The film body's finishes: leatherette, shell paint, plates and their ink.
@@ -424,7 +425,11 @@ def export(mode, out, size, draft):
         plates = sorted((o for o in body if o.name.startswith('plate')), key=lambda o: o.name)
         ink = sorted((o for o in body if o.name.startswith(('txt', 'rabbit'))), key=lambda o: o.name)
         eyes = sorted((o for o in body if o.name.startswith('eye')), key=lambda o: o.name)
-        assert len(plates) == 2 and len(ink) == 3 and len(eyes) == 2, (plates, ink, eyes)
+        # the flash switch's printed labels sit on the top plate too
+        ink += sorted((o for o in meshes if owner(o) is None and part_name(o) == 'flash'
+                       and o.active_material is not None and o.active_material.name == 'ink'),
+                      key=lambda o: o.name)
+        assert len(plates) == 2 and len(ink) == 7 and len(eyes) == 2, (plates, ink, eyes)
         lay = WB.LAYOUT[mode]
         finish = [*split_y(skin, (lay['plateTop'], lay['plateBottom'])), shell, *plates, *ink, *eyes]
         meshes = [o for o in all_objects(root) if o.type == 'MESH']

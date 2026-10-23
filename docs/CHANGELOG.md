@@ -1096,3 +1096,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **56.6** Drawn bodies: soft studio lighting over the leather/metal.
 - [ ] **56.7** Tablet swap frame rate: needs the tablet's model and a
   Performance Recorder report.
+- [x] **56.8** Skin contrast: the film flash switch's A / ON / OFF and bolt
+  were baked into the body in black ink (unreadable on Black Paint /
+  Brassed); they're part of each film finish now, in its plate ink.
+  Checked the rest: the other plate lettering already followed the skin,
+  the dial / key labels sit on chrome parts, the digital face has no
+  printed lettering, and the drawn bodies pick dark or light text by the
+  skin's brightness.

@@ -3,13 +3,12 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.8.0';
+  static const version = '1.8.1';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest =
-      'Camera skins and the Camera Exchange shop (Settings). Tablets: the camera fits the screen. Full-screen on Android.';
+  static const latest = 'Film skins: the flash switch lettering is readable on Black Paint and Brassed.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

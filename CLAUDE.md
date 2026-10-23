@@ -562,6 +562,17 @@ UI
   paused do. `CameraLog` keeps recent session events: Win98 Help > Debug.
   While the camera is closed the viewport keeps the last stream's aspect
   (`_lastPreviewAspect`), so the frozen still never squashes.
+- App icon shortcuts (`core/device/app_shortcuts.dart`, quick_actions):
+  Corkboard, Darkroom 98, the last film and last digital camera (titled
+  after them, refreshed when the selection changes). Taps and notification
+  taps are `pendingRouteProvider` routes; camera_screen `_follow` closes
+  what's open, sets the mode and pushes the screen (also read once after
+  the first frame, for a cold launch).
+- Store rating prompt (`core/review/review_prompt.dart`, in_app_review):
+  asked once, after the 5th launch and the 10th developed print, 3 s after
+  a print comes out (`PrefKeys.launches` / `developed` / `reviewAsked`);
+  Debug > Rating Prompt. A print coming out in the app also plays a soft
+  tick (`Sfx.keyUp`) and a light haptic with the banner.
 - Swipe up on the camera opens the film/camera carousel; swipe down closes it.
 - Phone gestures win at the edges (`core/device/system_gestures.dart`): our
   drags (the camera toss too) ignore touches that start in the home strip (bottom ~56dp), the

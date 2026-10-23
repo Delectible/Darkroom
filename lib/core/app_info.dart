@@ -3,17 +3,24 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.8.2';
+  static const version = '1.8.3';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      "Dark launch screen, your screen's full refresh rate, and no flicker when Darkroom 98 or the corkboard turns.";
+      'Long-press the app icon for the corkboard, Darkroom 98 or your last cameras. A soft tick when a print is ready.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
-    ('1.8', ['Camera skins, won in the games', 'Tablet-friendly camera, full screen on Android']),
+    (
+      '1.8',
+      [
+        'Camera skins, won in the games',
+        'Tablet-friendly camera, full screen on Android',
+        'App icon shortcuts',
+      ],
+    ),
     ('1.7', ['A roll a day free, Darkroom Pro for unlimited']),
     (
       '1.6',

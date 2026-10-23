@@ -17,6 +17,7 @@ import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/skins/camera_skins.dart';
+import '../../../../core/review/review_prompt.dart';
 import '../../../camera/application/camera_session_controller.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 import '../../../cameras/domain/camera_spec.dart';
@@ -134,6 +135,13 @@ final _tools = <_Tool>[
     'Every animation runs 5x slower: swaps, slide-ins, the shutter. Good for checking how they move.',
     (_, _) async => timeDilation = timeDilation == 1 ? 5 : 1,
     on: (_) => timeDilation != 1,
+  ),
+  _Tool(
+    PixelIcon.rabbit,
+    'Rating Prompt',
+    'Asks the store to show its rating prompt now (normally once, after the 5th launch and the 10th '
+        'developed print). Google only shows it to installs from Play; Apple never shows it in TestFlight.',
+    (_, _) => ReviewPrompt.show(),
   ),
   _Tool(
     PixelIcon.camera,

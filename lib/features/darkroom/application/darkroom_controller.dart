@@ -3,8 +3,11 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/audio/sfx.dart';
 import '../../../core/db/media_repository.dart';
+import '../../../core/device/haptics.dart';
 import '../../../core/providers.dart';
+import '../../../core/review/review_prompt.dart';
 
 @immutable
 class DarkroomBanner {
@@ -91,6 +94,15 @@ class DarkroomController extends Notifier<DarkroomBanner?> {
         final fresh = await engine.announceDeveloped(foreground: foreground);
         if (!ref.mounted) return;
         if (fresh.isNotEmpty && foreground) {
+          // A small moment: a soft tick and a light tap as the banner drops
+          // (the gallery button's print swaps in on its own).
+          Sfx.keyUp.play();
+          unawaited(Haptics.lightImpact());
+          final now = DateTime.now();
+          final total = (ref.read(filmItemsProvider).value ?? const <MediaItem>[])
+              .where((m) => m.isDevelopedAt(now))
+              .length;
+          ref.read(reviewPromptProvider).developed(fresh.length, total: total);
           state = DarkroomBanner(fresh);
           _bannerTimer?.cancel();
           _bannerTimer = Timer(const Duration(seconds: 4), dismissBanner);

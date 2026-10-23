@@ -12,12 +12,14 @@ import 'package:workmanager/workmanager.dart';
 import 'app.dart';
 import 'core/background/background_worker.dart';
 import 'core/db/app_database.dart';
+import 'core/device/app_shortcuts.dart';
 import 'core/device/upright.dart';
 import 'core/diagnostics/crash_log.dart';
 import 'core/monetization/pro.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/paths/app_paths.dart';
 import 'core/providers.dart';
+import 'core/review/review_prompt.dart';
 import 'core/settings/settings_repository.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/whole_body.dart';
@@ -113,8 +115,10 @@ Future<void> _start() async {
   if (global.controls3d) await _warmBodies(container);
   // Store: listen for purchases and quietly restore an earlier Pro.
   unawaited(container.read(proStoreProvider).start());
+  container.read(reviewPromptProvider).launched();
   _stage = 'first frame';
   runApp(UncontrolledProviderScope(container: container, child: const DarkroomApp()));
+  AppShortcuts.start(container);
   if (launchPayload != null) {
     WidgetsBinding.instance.addPostFrameCallback((_) => route(launchPayload));
   }

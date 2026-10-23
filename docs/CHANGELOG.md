@@ -1126,3 +1126,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   (it flashed white before the dark app).
 - [x] **56.14** Release sweep: store description mentions Free / Pro and
   the skins; privacy policy covers purchases and the iPhone album check.
+- [x] **56.15** Store rating prompt (`ReviewPrompt`, in_app_review): once,
+  after the 5th launch and the 10th developed print, 3 s after a print
+  comes out; Debug > Rating Prompt shows it now.
+- [x] **56.16** App icon shortcuts (`AppShortcuts`, quick_actions):
+  Corkboard, Darkroom 98, last film, last digital camera (named after them).
+- [x] **56.17** Print ready while in the app: a soft tick and a light tap
+  with the banner; the gallery thumb already fades to the new print.

@@ -59,6 +59,12 @@ class PrefKeys {
   /// The free version's film roll and battery for today (JSON).
   static const allowance = 'allowance.today';
 
+  /// The store rating prompt: app launches, prints developed, and whether
+  /// it was asked (once, ever).
+  static const launches = 'review.launches';
+  static const developed = 'review.developed';
+  static const reviewAsked = 'review.asked';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -82,6 +88,9 @@ class PrefKeys {
     pro,
     proBought,
     allowance,
+    launches,
+    developed,
+    reviewAsked,
   };
 }
 

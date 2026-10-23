@@ -9,6 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sfx.dart';
+import '../../../core/device/app_shortcuts.dart';
 import '../../../core/device/system_gestures.dart';
 import '../../../core/device/volume_keys.dart';
 import '../../../core/device/upright.dart';
@@ -186,6 +187,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     VolumeKeys.listen(_volume);
     // (The 3D bodies load behind the launch screen: main.dart.)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // A shortcut or notification that launched the app before this
+      // screen was listening.
+      _follow(ref.read(pendingRouteProvider));
       // Paint the corkboard's cork while nothing is happening, so its first
       // slide-in doesn't have to.
       Future<void>.delayed(const Duration(seconds: 2), () async {
@@ -518,6 +522,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     _dropWhenLive();
   }
 
+  /// A route from a notification tap or an app icon shortcut.
+  void _follow(String? route) {
+    if (route == null || !mounted) return;
+    ref.read(pendingRouteProvider.notifier).consume();
+    final mode = switch (route) {
+      AppShortcuts.corkboard || AppShortcuts.film => AppMode.film,
+      AppShortcuts.explorer || AppShortcuts.digital => AppMode.digital,
+      _ => null,
+    };
+    if (mode == null) return;
+    // Whatever was open closes first.
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    unawaited(ref.read(appModeProvider.notifier).set(mode));
+    if (route == AppShortcuts.corkboard) unawaited(_push(const CorkboardScreen()));
+    if (route == AppShortcuts.explorer) unawaited(_push(const ExplorerScreen()));
+  }
+
   void _openGallery() {
     final mode = ref.read(appModeProvider);
     unawaited(_push(mode == AppMode.film ? const CorkboardScreen() : const ExplorerScreen()));
@@ -539,13 +560,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       }
     });
 
-    ref.listen<String?>(pendingRouteProvider, (_, route) {
-      if (route == 'corkboard') {
-        ref.read(pendingRouteProvider.notifier).consume();
-        unawaited(ref.read(appModeProvider.notifier).set(AppMode.film));
-        unawaited(_push(const CorkboardScreen()));
-      }
-    });
+    // Notification taps and the app icon's shortcuts (AppShortcuts).
+    ref.listen<String?>(pendingRouteProvider, (_, route) => _follow(route));
     ref.listen<CaptureState>(captureControllerProvider, (prev, next) {
       final msg = next.message;
       if (msg != null && msg != prev?.message) {

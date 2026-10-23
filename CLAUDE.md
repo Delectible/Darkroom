@@ -60,8 +60,9 @@ Read this first. It's the hand-off from the earlier development sessions
   before zipping the .ipa (Sideloadly's signer fails on never-signed
   FFmpeg frameworks). On `main`, once the App Store Connect secrets exist
   (APPSTORE_KEY_ID, APPSTORE_ISSUER_ID, APPSTORE_KEY = the .p8 text, Admin
-  role; APPLE_TEAM_ID), the same job archives with automatic signing
-  (`-allowProvisioningUpdates` + the API key, iPhone only) and uploads to
+  role; APPLE_TEAM_ID), the same job archives unsigned (signing at archive
+  time wants a registered device) and the export signs for the App Store
+  (`-allowProvisioningUpdates` + the API key, cloud-managed cert; iPhone only) and uploads to
   TestFlight; CFBundleVersion = run number. `ios/` holds only Info.plist,
   AppDelegate.swift and the AppIcon set; CI generates the rest.
   Developing never needs the app running: prints store an absolute

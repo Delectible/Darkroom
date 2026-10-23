@@ -72,7 +72,9 @@ class ProStore {
         onError: (Object e) => _finish(StoreResult.failed),
       );
       await _checkRefund();
-      await InAppPurchase.instance.restorePurchases();
+      // iOS can ask for the Apple ID password on a restore, so there it
+      // only happens from the Restore button.
+      if (defaultTargetPlatform == TargetPlatform.android) await InAppPurchase.instance.restorePurchases();
     } catch (e) {
       debugPrint('Store unavailable: $e');
     }

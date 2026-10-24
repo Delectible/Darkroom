@@ -167,7 +167,7 @@ def status_glyph(px):
 
 def social_preview(w=1280, h=640):
     """Banner: the rabbit, the name in the app's pixel font with the same
-    colour split, and the one-line pitch. 1280x640 for GitHub's social
+    colour split, and the tagline. 1280x640 for GitHub's social
     preview, 1024x500 for the Play Store feature graphic."""
     S = 2
     k = h / 640
@@ -186,7 +186,7 @@ def social_preview(w=1280, h=640):
 
     # Name: three offset copies of the text, added like light.
     font = ImageFont.truetype(os.path.join(ROOT, 'assets', 'fonts', 'DotGothic16-Regular.ttf'), round(150 * k * S))
-    small = ImageFont.truetype(os.path.join(ROOT, 'assets', 'fonts', 'DotGothic16-Regular.ttf'), round(34 * k * S))
+    small = ImageFont.truetype(os.path.join(ROOT, 'assets', 'fonts', 'DotGothic16-Regular.ttf'), round(52 * k * S))
     tx, ty = round(W * 0.47), round(H * 0.30)
 
     def text_mask(txt, f, dx=0, dy=0):
@@ -199,7 +199,7 @@ def social_preview(w=1280, h=640):
                       text_mask('Darkroom', font, off)], -1)
     glow = split.max(-1)
     img = img * (1 - glow[..., None]) + split * 255 * _scanlines(H, D)[:, :, :1]
-    lines = ['A camera app that makes you', 'wait for your photos.']
+    lines = ['Shoot like film.']
     for i, line in enumerate(lines):
         m = text_mask(line, small, round(6 * k * S), round(H * 0.33) + round(i * 48 * k * S))
         img = img * (1 - m[..., None]) + m[..., None] * np.array((200, 196, 188), np.float32)

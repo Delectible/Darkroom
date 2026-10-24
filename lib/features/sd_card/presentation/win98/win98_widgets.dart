@@ -1410,28 +1410,47 @@ Future<T?> showWin98Window<T>(
     barrierColor: Colors.transparent,
     transitionDuration: const Duration(milliseconds: 140),
     transitionBuilder: (context, a, _, child) => Win98ZoomTransition(animation: a, child: child),
-    pageBuilder: (context, _, _) => Win98Scale(
-      child: Center(
-        child: Material(
-          type: MaterialType.transparency,
-          child: SizedBox(
-            width: math.min(width, MediaQuery.sizeOf(context).width - 24),
-            child: Win98Bevel(
-              style: BevelStyle.window,
-              padding: const EdgeInsets.all(3),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Win98TitleBar(title: title, icon: icon, onClose: () => Navigator.of(context).pop()),
-                  DefaultTextStyle(style: W98.text, child: builder(context)),
-                ],
+    // Centred in the space above the keyboard (Run, User Profile...).
+    pageBuilder: (context, _, _) => AnimatedPadding(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Win98Scale(
+        child: _CentredFit(
+          child: Material(
+            type: MaterialType.transparency,
+            child: SizedBox(
+              width: math.min(width, MediaQuery.sizeOf(context).width - 24),
+              child: Win98Bevel(
+                style: BevelStyle.window,
+                padding: const EdgeInsets.all(3),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Win98TitleBar(title: title, icon: icon, onClose: () => Navigator.of(context).pop()),
+                    DefaultTextStyle(style: W98.text, child: builder(context)),
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
     ),
+  );
+}
+
+/// Centred, and scaled down if the space left (above the keyboard, phone
+/// sideways) is too short for the window.
+class _CentredFit extends StatelessWidget {
+  const _CentredFit({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: FittedBox(fit: BoxFit.scaleDown, child: child),
   );
 }
 

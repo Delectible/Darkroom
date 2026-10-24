@@ -3,12 +3,12 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.8.4';
+  static const version = '1.8.5';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest = 'Behind the scenes: iPhone testers now get every update automatically.';
+  static const latest = 'Darkroom 98: the Run window moves up above the keyboard.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

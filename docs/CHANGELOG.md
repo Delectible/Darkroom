@@ -1139,3 +1139,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   SD card…" / "Loading film…". With Fancy graphics off nothing 3D loads
   (until it's switched on; then "Loading cameras…" shows if it takes a
   moment).
+- [x] **56.19** Darkroom 98 windows (Run, User Profile) centre above the
+  keyboard (`showWin98Window`: padding by the keyboard, scaled down if
+  short).

@@ -1,0 +1,26 @@
+name: TestFlight external testers
+# Hands one TestFlight build to the external testers by hand (main builds
+# do this on their own in build-apk.yml's testflight job).
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Build number (CI run)'
+        required: true
+permissions:
+  contents: read
+jobs:
+  external:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hand the build to the external testers
+        env:
+          KEY: ${{ secrets.APPSTORE_KEY }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          pip install --quiet pyjwt cryptography
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/key.p8"
+          KEY_FILE="$RUNNER_TEMP/key.p8" python3 tool/appstore/testflight_external.py "${{ inputs.build }}"
+          rm -f "$RUNNER_TEMP/key.p8"

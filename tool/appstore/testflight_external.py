@@ -89,8 +89,11 @@ def main(build_number):
     print('what to test:', s, notes, flush=True)
 
     # Every external group.
-    _, groups = call('GET', f'/apps/{app}/betaGroups?filter[isInternalGroup]=false&limit=50')
-    for g in groups.get('data', []):
+    s, groups = call('GET', f'/betaGroups?filter[app]={app}&limit=50')
+    external = [g for g in groups.get('data', []) if not g['attributes'].get('isInternalGroup')]
+    if not external:
+        sys.exit(f'no external beta groups found ({s}: {json.dumps(groups)[:400]})')
+    for g in external:
         s, r = call('POST', f"/betaGroups/{g['id']}/relationships/builds",
                     {'data': [{'type': 'builds', 'id': bid}]})
         print('group', g['attributes']['name'], s, '' if s < 300 else r, flush=True)

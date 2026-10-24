@@ -90,6 +90,11 @@ Read this first. It's the hand-off from the earlier development sessions
   (secret `PLAY_SERVICE_ACCOUNT_JSON`, repo variable `PLAY_RELEASE_STATUS`,
   default `completed`). Play's "What's new" = version + **`AppInfo.latest`**
   (`tool/play/whats_new.py`).
+  **External TestFlight** (approved 2026-10-24): the `testflight` job
+  (`tool/appstore/testflight_external.py`, App Store Connect API) waits for
+  Apple to process each main build, sets "What to Test" from
+  AppInfo.latest, adds it to every external group and submits beta review
+  when Apple wants it (up to an hour; the run finishes after it).
   **App Store** (once the first version is approved): every main build is
   on TestFlight; `appstore-release.yml` (run by hand or by Claude when the
   owner says "release to iPhone"; input `build`, empty = newest) submits

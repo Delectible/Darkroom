@@ -173,6 +173,38 @@ jobs:
         if: always() && steps.asc.outputs.ok == 'true'
         run: rm -rf "$RUNNER_TEMP/asc"
 
+  # External TestFlight testers get each main build too: once Apple has
+  # processed the upload, it joins every external group with its "What to
+  # Test" (AppInfo.latest) and goes to beta review if Apple wants one
+  # (tool/appstore/testflight_external.py). Waits up to an hour.
+  testflight:
+    needs: [ios]
+    if: github.ref == 'refs/heads/main' && needs.ios.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look for the App Store Connect key
+        id: asc
+        env:
+          KEY: ${{ secrets.APPSTORE_KEY }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          if [ -n "$KEY" ] && [ -n "$KEY_ID" ] && [ -n "$ISSUER" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::No App Store Connect key secrets: external testers not updated."; fi
+      - uses: actions/checkout@v4
+        if: steps.asc.outputs.ok == 'true'
+      - name: Hand the build to the external testers
+        if: steps.asc.outputs.ok == 'true'
+        env:
+          KEY: ${{ secrets.APPSTORE_KEY }}
+          KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          pip install --quiet pyjwt cryptography
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/key.p8"
+          KEY_FILE="$RUNNER_TEMP/key.p8" python3 tool/appstore/testflight_external.py ${{ github.run_number }}
+          rm -f "$RUNNER_TEMP/key.p8"
+
   release:
     needs: [check, android, ios]
     if: always() && needs.check.result == 'success' && needs.android.result == 'success'

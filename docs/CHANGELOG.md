@@ -1205,7 +1205,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   grain); Strong grain also takes fewer crystals by its resolution.
 - [ ] **57.17** Picker: Pro films / cameras darkened until Pro, the Pro group
   set a little apart; Pro sheet, settings and intro mention the 9 extras.
-- [~] **57.18** New artwork for the Pro films and cameras (`tool/render/items`:
+- [x] **57.18** New artwork for the Pro films and cameras (`tool/render/items`:
   canister gold / night / chrome, disposable, filmcan, webcam, dslr,
   toycam, minidv); low-res samples sent for approval.
 - [ ] **57.19** Film descriptions lead with the ISO and what it's good /

@@ -44,7 +44,7 @@ export async function build(THREE) {
     drawRabbit(c, w * 0.07, h * 0.3, h * 0.42, '#2b2e33');
     c.font = `800 ${h * 0.34}px "DejaVu Sans"`; c.strokeStyle = '#2b2e33'; c.lineWidth = h * 0.05;
     c.strokeRect(w * 0.02, h * 0.56, w * 0.24, h * 0.38); c.fillText('miniDV', w * 0.035, h * 0.76);
-    c.font = `700 ${h * 0.22}px "DejaVu Sans Condensed"`; c.fillText('HANDYCAM 800K', w * 0.32, h * 0.76);
+    c.font = `700 ${h * 0.22}px "DejaVu Sans Condensed"`; c.fillText('DIGITAL 800K', w * 0.32, h * 0.76);
   }, { px: 24, rough: 0.35 });
   logo.rotation.y = -Math.PI / 2; logo.position.set(-Wd / 2 - 0.15, -14, 22); root.add(logo);
 

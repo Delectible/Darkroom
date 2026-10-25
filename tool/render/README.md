@@ -34,4 +34,7 @@ item at 128 spp takes roughly 9 minutes on a CPU.
 `ektar100.webp`, `canister_portra` -> `portra400`, `canister_hp5` ->
 `hp5plus400`, `cartridge` -> `super8`, `instant` -> `polaroid600`,
 `floppy` -> `floppy99`, `ccd` -> `ccd2003`, `flip` -> `flipphone`,
-`camcorder` -> `camcorder90`.
+`camcorder` -> `camcorder90`; Pro (1.9.5): `canister_gold` -> `gold200`,
+`canister_night` -> `cinestill800t`, `canister_chrome` -> `velvia50`, `disposable` ->
+`superia400`, `filmcan` -> `vision70`, `webcam` -> `webcam05`, `dslr` -> `dslr08`,
+`toycam` -> `toycam`, `minidv` -> `minidv04` (1024 px, 48 spp: ~8 min each).

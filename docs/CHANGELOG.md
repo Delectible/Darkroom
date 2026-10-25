@@ -1159,7 +1159,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   reuse existing renders): 3 canisters, a disposable, a 70mm can, webcam,
   DSLR, toy cam, MiniDV camcorder.
 - [ ] **57.6** Epic 70: a wider frame (2.2:1 / 2.76:1) than 16:9.
-- [~] **57.7** The developing process (stills, `FilmProcess` in
+- [x] **57.7** → 1.9.1 · 2026-10-25 · The developing process (stills, `FilmProcess` in
   `film_process.dart`): the camera meters the frame itself (centre-weighted),
   so frames land over or under; the lab scan rescues most of it, leaving the
   stock's character (Portrait: creamy and pastel over, muddy teal shadows and

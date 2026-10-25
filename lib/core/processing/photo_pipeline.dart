@@ -140,6 +140,7 @@ class PhotoPipeline {
       throw const FormatException('Capture could not be decoded');
     }
     final orientation = decoded.exif.imageIfd.orientation ?? 1;
+    final sceneEv = sceneEvOf(decoded.exif);
     final swap = orientation >= 5 && orientation <= 8;
     final ow = swap ? decoded.height : decoded.width;
     final oh = swap ? decoded.width : decoded.height;
@@ -202,6 +203,7 @@ class PhotoPipeline {
         seed: job.seed,
         rollSeed: Development.rollSeedFor(job.cameraId, job.capturedAtMs),
         grain: job.grain,
+        sceneEv: sceneEv,
         throttle: 0.5,
       ).render(data, w, h, flash: flash);
     } else {
@@ -368,4 +370,15 @@ class PhotoPipeline {
     tmp.writeAsBytesSync(bytes, flush: true);
     tmp.renameSync(path);
   }
+}
+
+/// The scene's brightness (EV at ISO 100) from the phone's own exposure:
+/// shutter time, aperture and ISO in the capture's EXIF. Null if missing.
+double? sceneEvOf(img.ExifData exif) {
+  final ifd = exif.exifIfd;
+  final t = ifd[0x829A]?.toDouble(); // ExposureTime (s)
+  final n = ifd[0x829D]?.toDouble() ?? 1.8; // FNumber (phones: ~f/1.8)
+  final iso = ifd[0x8827]?.toInt().toDouble(); // ISOSpeedRatings (a short)
+  if (t == null || iso == null || t <= 0 || iso <= 0 || n <= 0) return null;
+  return math.log(n * n / t) / math.ln2 - math.log(iso / 100) / math.ln2;
 }

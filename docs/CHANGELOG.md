@@ -1189,3 +1189,12 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   frame lines (viewfinder, mask and export share `CineStrip`).
 - [ ] **57.12** Portrait 400 grain scaled back (~0.63x: 15 crystals, was
   6); same grain size, softness and colour; Weak/Strong scale from it.
+- [ ] **57.13** Film speed: the scene's real brightness comes from the
+  phone's EXIF (shutter, aperture, ISO: `sceneEvOf`); each stock has an ISO
+  and the camera a dark limit (35 mm f/2.8 at 1/30 s; instant f/14.6 1/4 s;
+  single-use f/10 1/125 s), so slow film comes out under in the dark
+  (`FilmProcess.underFor`, up to 4 stops; never with flash). Formed grain
+  sees the full error (fewer developed grains), the scan pulls brightness
+  back.
+- [ ] **57.14** Settings: each stock / camera folds up to its name (plus
+  what's set); a dropdown arrow opens its ratio / grain / timestamp.

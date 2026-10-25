@@ -173,6 +173,7 @@ class FilmProfile {
       defects: 0.6,
       // Little latitude below box speed: shadows block up and go cold.
       process: FilmProcess(
+        iso: 100,
         meter: 0.5,
         scanFix: 0.7,
         crystal: 0.4,
@@ -217,6 +218,7 @@ class FilmProfile {
       // underexposed the shadows go muddy green-teal and the grain climbs.
       // Metered a little over (rated nearer 200, as Portra shooters do).
       process: FilmProcess(
+        iso: 400,
         meter: 0.4,
         meterKey: 0.12,
         grainGain: 1.48,
@@ -258,6 +260,7 @@ class FilmProfile {
       defects: 1.0,
       // Silver grain, coarse in thin shadows; home-developed, so rolls vary.
       process: FilmProcess(
+        iso: 400,
         meter: 0.55,
         scanFix: 0.8,
         crystal: 0.7,
@@ -308,6 +311,9 @@ class FilmProfile {
       // are (dark and murky, or washed out), and temperature swings the
       // chemistry from pack to pack.
       process: FilmProcess(
+        iso: 640,
+        // Instant cameras: f/14.6, 1/4 s at the slowest.
+        darkLimit: 9.7,
         meter: 0.7,
         scanFix: 0.0,
         crystal: 0.2,
@@ -354,6 +360,7 @@ class FilmProfile {
       vignette: 0.2,
       defects: 1.0,
       process: FilmProcess(
+        iso: 200,
         meter: 0.5,
         crystal: 0.5,
         shadowCoarse: 1.7,
@@ -394,6 +401,7 @@ class FilmProfile {
       defects: 1.0,
       // No anti-halation backing: a wide red skirt and a glow on every lamp.
       process: FilmProcess(
+        iso: 800,
         meter: 0.5,
         crystal: 0.6,
         shadowCoarse: 1.6,
@@ -434,6 +442,7 @@ class FilmProfile {
       // Slide film: what you shoot is what you get (no scan rescue), dense
       // black when under, washed out when over; E-6 labs are tightly run.
       process: FilmProcess(
+        iso: 50,
         meter: 0.5,
         scanFix: 0.15,
         crystal: 0.3,
@@ -477,6 +486,9 @@ class FilmProfile {
       // Fixed shutter and aperture: it exposes by the scene, not the phone.
       // The minilab rescues most of it, with green mud in the shadows.
       process: FilmProcess(
+        iso: 400,
+        // Fixed f/10 at 1/125 s: needs daylight (or the flash).
+        darkLimit: 13.6,
         meter: 0.9,
         scanFix: 0.85,
         crystal: 0.55,

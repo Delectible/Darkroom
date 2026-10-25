@@ -253,19 +253,33 @@ class _VolumeSlider extends StatelessWidget {
   }
 }
 
-class _CameraSettingsTile extends ConsumerWidget {
+class _CameraSettingsTile extends ConsumerStatefulWidget {
   const _CameraSettingsTile({required this.spec, required this.settings});
 
   final CameraSpec spec;
   final CameraLocalSettings settings;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CameraSettingsTile> createState() => _CameraSettingsTileState();
+}
+
+/// One stock / camera: just its name (and what's set) until tapped open.
+class _CameraSettingsTileState extends ConsumerState<_CameraSettingsTile> {
+  bool _open = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = widget.spec, settings = widget.settings;
     final p = RetroPalette.of(context);
     final n = ref.read(cameraSettingsProvider.notifier);
+    final ratio = spec.aspectLocked ? spec.defaultAspect : settings.aspect;
+    final summary = [
+      ratio.label,
+      if (spec.film != null && settings.grain != GrainStrength.normal) '${_grainName(settings.grain)} grain',
+      if (spec.supportsTimestamp && settings.timestamp) 'Timestamp',
+    ].join(' · ');
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: p.bodyHighlight.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(10),
@@ -274,57 +288,97 @@ class _CameraSettingsTile extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            spec.name,
-            style: TextStyle(color: p.text, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          _ChoiceRow<AspectRatioOption>(
-            label: 'Default ratio',
-            locked: spec.aspectLocked,
-            values: spec.aspects,
-            selected: spec.aspectLocked ? spec.defaultAspect : settings.aspect,
-            name: (a) => a.label,
-            onSelected: (a) => unawaited(n.setAspect(spec.id, a)),
-          ),
-          if (spec.film != null) ...[
-            const SizedBox(height: 6),
-            _ChoiceRow<GrainStrength>(
-              label: 'Grain',
-              values: GrainStrength.values,
-              selected: settings.grain,
-              name: (g) => switch (g) {
-                GrainStrength.weak => 'Weak',
-                GrainStrength.normal => 'Normal',
-                GrainStrength.strong => 'Strong',
-              },
-              onSelected: (g) => unawaited(n.setGrain(spec.id, g)),
-            ),
-          ],
-          if (spec.supportsTimestamp)
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: Text('Timestamp overlay', style: TextStyle(color: p.text)),
-              subtitle: Text(
-                _tsDescription(spec.timestampStyle),
-                style: TextStyle(color: p.textMuted, fontSize: 11),
+          Semantics(
+            button: true,
+            expanded: _open,
+            label: '${spec.name} settings',
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => setState(() => _open = !_open),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        spec.name,
+                        style: TextStyle(color: p.text, fontWeight: FontWeight.w800),
+                      ),
+                    ),
+                    Text(summary, style: TextStyle(color: p.textMuted, fontSize: 11)),
+                    AnimatedRotation(
+                      turns: _open ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(Icons.expand_more, color: p.textMuted),
+                    ),
+                  ],
+                ),
               ),
-              value: settings.timestamp,
-              onChanged: (v) => unawaited(n.setTimestamp(spec.id, v)),
             ),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: !_open
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _ChoiceRow<AspectRatioOption>(
+                          label: 'Default ratio',
+                          locked: spec.aspectLocked,
+                          values: spec.aspects,
+                          selected: ratio,
+                          name: (a) => a.label,
+                          onSelected: (a) => unawaited(n.setAspect(spec.id, a)),
+                        ),
+                        if (spec.film != null) ...[
+                          const SizedBox(height: 6),
+                          _ChoiceRow<GrainStrength>(
+                            label: 'Grain',
+                            values: GrainStrength.values,
+                            selected: settings.grain,
+                            name: _grainName,
+                            onSelected: (g) => unawaited(n.setGrain(spec.id, g)),
+                          ),
+                        ],
+                        if (spec.supportsTimestamp)
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
+                            title: Text('Timestamp overlay', style: TextStyle(color: p.text)),
+                            subtitle: Text(
+                              _tsDescription(spec.timestampStyle),
+                              style: TextStyle(color: p.textMuted, fontSize: 11),
+                            ),
+                            value: settings.timestamp,
+                            onChanged: (v) => unawaited(n.setTimestamp(spec.id, v)),
+                          ),
+                      ],
+                    ),
+                  ),
+          ),
         ],
       ),
     );
   }
 
-  static String _tsDescription(TimestampStyle s) => switch (s) {
-    TimestampStyle.ledDate => "Orange LED date imprint ('26 10 05)",
-    TimestampStyle.phone => 'Date & time in the corner',
-    TimestampStyle.camcorderOsd => 'Tape OSD burned in: clock, REC, battery and zoom bar',
-    TimestampStyle.none => '',
+  static String _grainName(GrainStrength g) => switch (g) {
+    GrainStrength.weak => 'Weak',
+    GrainStrength.normal => 'Normal',
+    GrainStrength.strong => 'Strong',
   };
 }
+
+String _tsDescription(TimestampStyle s) => switch (s) {
+  TimestampStyle.ledDate => "Orange LED date imprint ('26 10 05)",
+  TimestampStyle.phone => 'Date & time in the corner',
+  TimestampStyle.camcorderOsd => 'Tape OSD burned in: clock, REC, battery and zoom bar',
+  TimestampStyle.none => '',
+};
 
 /// Label + chips that wrap onto the next line on narrow phones.
 class _ChoiceRow<T> extends StatelessWidget {

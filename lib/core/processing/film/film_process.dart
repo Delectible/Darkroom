@@ -42,7 +42,23 @@ class FilmProcess {
     this.halationSpread = 0.45,
     this.bloom = 0,
     this.formation,
+    this.iso = 400,
+    this.darkLimit = 7.9,
   });
+
+  /// Film speed (ISO). With the scene's real brightness (from the phone's
+  /// exposure), a slow film runs out of light long before a fast one.
+  final int iso;
+
+  /// The darkest scene (EV at ISO 100) the camera can still expose fully:
+  /// its widest aperture at its slowest hand-held shutter (35 mm: f/2.8 at
+  /// 1/30 s = 7.9). Darker scenes come out under by the difference, less
+  /// the film's speed (log2(iso / 100)).
+  final double darkLimit;
+
+  /// Stops under for a scene at [sceneEv] (EV at ISO 100); 0 if it's fine,
+  /// at most 4 (past that the frame is just black).
+  double underFor(double sceneEv) => (darkLimit - math.log(iso / 100) / math.ln2 - sceneEv).clamp(0.0, 4.0);
 
   /// How much the camera's own meter reading moves exposure (0 = trust
   /// the phone's exposure completely).

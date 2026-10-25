@@ -54,6 +54,7 @@ class FilmRenderer {
     this.grain = GrainStrength.normal,
     this.nominal = false,
     this.forceEv,
+    this.sceneEv,
     this.throttle = 0,
   }) : dev = nominal ? const Development() : Development.roll(rollSeed ?? seed, profile.process.chemistry),
        field = GrainField.generate() {
@@ -70,6 +71,11 @@ class FilmRenderer {
 
   /// Exposure in stops from the phone's, instead of metering (previews).
   final double? forceEv;
+
+  /// The scene's real brightness (EV at ISO 100, from the phone's shutter,
+  /// ISO and aperture); null = unknown. Too dark for the film's speed and
+  /// the frame comes out under (no flash).
+  final double? sceneEv;
 
   /// Grain formation rests this fraction of its work time after each strip
   /// so a develop never pins a core (the app passes 0.5; tools 0).
@@ -104,6 +110,7 @@ class FilmRenderer {
       ev = forceEv!;
     } else if (!nominal) {
       ev = drift + dev.density + pr.meter * (1 - flash) * _meterEv(data, w, h, toLin, pr.meterKey);
+      if (sceneEv != null && flash == 0) ev -= pr.underFor(sceneEv!);
     }
     lastEv = ev;
     // The lab scan pulls most of an exposure error back; the film's curve
@@ -161,6 +168,10 @@ class FilmRenderer {
     // Image made of grains (stocks with a GrainFormation): formed at the
     // film's resolution, read back bilinearly. Replaces the grain texture.
     final form = pr.formation;
+    // The negative is exposed by the full error (an underexposed frame has
+    // few developed grains, so it's grainy); the scan then pulls most of
+    // the brightness back (the rest is in gainE above).
+    final negGain = math.pow(2, ev * pr.scanFix).toDouble();
     GrainFormer? former;
     var wh = 0, ww = 0, keep = 1, done = 0;
     Uint8List? ring;
@@ -184,7 +195,7 @@ class FilmRenderer {
         wh: wh,
         seed: seed,
         sizeScale: size,
-        crystals: form.crystals / (grain.factor * grain.factor * expoGrain * expoGrain * size * size),
+        crystals: form.crystals / (grain.factor * grain.factor * size * size),
         throttle: throttle,
         exposureRow: (wy, er, eg, eb) {
           final y = wy < 0 ? 0 : (wy >= wh ? wh - 1 : wy);
@@ -208,7 +219,7 @@ class FilmRenderer {
             final dx = (((xa + xb) * 0.5) / w - 0.5) * 2.0;
             var qi = ((dx * dx * 0.5 + dy2) * (expoN - 1)).toInt();
             if (qi > expoN - 1) qi = expoN - 1;
-            final e = expo[qi] / ((yb - ya) * (xb - xa));
+            final e = expo[qi] * negGain / ((yb - ya) * (xb - xa));
             er[x] = r * e * tint[0];
             eg[x] = g * e * tint[1];
             eb[x] = b * e * tint[2];
@@ -260,7 +271,7 @@ class FilmRenderer {
           double at(int c) {
             final a = former!.at(c, x0, wy0), b = former.at(c, x1, wy0);
             final cc = former.at(c, x0, wy1), d = former.at(c, x1, wy1);
-            return (a + (b - a) * tx) * (1 - wty) + (cc + (d - cc) * tx) * wty;
+            return ((a + (b - a) * tx) * (1 - wty) + (cc + (d - cc) * tx) * wty) / negGain;
           }
 
           sr = shape[math.min(shapeN, (at(0) * shapeScale).toInt())];

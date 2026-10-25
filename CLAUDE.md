@@ -212,7 +212,8 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   photo seen at that size.
 - Grain strength scales amount and size: weak 0.4x / 1.35x finer, normal,
   strong 2.4x / 0.55x (coarser). Set **per film stock, only in the settings
-  menu**. When not "normal", the carousel shows a small tag. Digital cameras
+  menu** (each stock folds up to its name; the arrow opens it). When not
+  "normal", the carousel shows a small tag. Digital cameras
   have no grain setting.
 - Ektar 100 (clean, punchy), Portra 400 (the obviously-film stock: soft,
   green-teal shadows, cream highlights, visible grain) and HP5 (neutral,
@@ -241,6 +242,10 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   (`throttle: 0.5`). Instant 600 too (1800 px, smooth); while an instant
   print is still processing the darkroom shows it developing on the raw
   photo (`_instantPicture`). Other stocks: next.
+  Film speed (1.9.5): `sceneEvOf` reads the scene's EV from the phone's
+  EXIF; `FilmProcess.iso` + `darkLimit` (the camera's widest aperture at
+  its slowest shutter) give `underFor` stops under (no flash); formed grain
+  is exposed by the full error and the scan pulls it back (`negGain`).
   `FilmRenderer(nominal: true)` = none of it (tests); `EV=` in
   film_preview forces an exposure.
 - Defects (`film_defects.dart`): developed stills only (never the

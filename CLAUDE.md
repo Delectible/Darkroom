@@ -232,6 +232,13 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   the LUT) + dye part (after), coarser in the shadows, per-layer cloud
   sizes; `grainGain` calibrates stills to the scans (the viewfinder keeps
   `grainAmount`). Halation = core + wide skirt (`halationSpread`), `bloom`.
+  Portrait 400 (1.9.2) is *made of grains* (`GrainFormation`,
+  `grain_formation.dart`): crystals develop into soft round dye clouds and
+  the scan inverts the density, formed in strips at the film's resolution
+  (`frameHeight` = short side, Weak/Strong scale it and the crystal count)
+  and scaled up; detail stops at the grain. It replaces the texture grain
+  for that stock (calibration test still pins it); the app throttles it
+  (`throttle: 0.5`). Other stocks: next.
   `FilmRenderer(nominal: true)` = none of it (tests); `EV=` in
   film_preview forces an exposure.
 - Defects (`film_defects.dart`): developed stills only (never the

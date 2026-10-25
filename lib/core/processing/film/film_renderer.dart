@@ -7,6 +7,7 @@ import 'film_lut.dart';
 import 'film_process.dart';
 import 'film_profile.dart';
 import 'grain_field.dart';
+import 'grain_formation.dart';
 
 /// Shared spatial maths (vignette, flash fall-off, grain weighting). The
 /// GLSL in shaders/film.frag mirrors these line for line.
@@ -53,6 +54,7 @@ class FilmRenderer {
     this.grain = GrainStrength.normal,
     this.nominal = false,
     this.forceEv,
+    this.throttle = 0,
   }) : dev = nominal ? const Development() : Development.roll(rollSeed ?? seed, profile.process.chemistry),
        field = GrainField.generate() {
     lut = FilmLut.build(profile, dev: dev);
@@ -68,6 +70,10 @@ class FilmRenderer {
 
   /// Exposure in stops from the phone's, instead of metering (previews).
   final double? forceEv;
+
+  /// Grain formation rests this fraction of its work time after each strip
+  /// so a develop never pins a core (the app passes 0.5; tools 0).
+  final double throttle;
   final Development dev;
   late final FilmLut lut;
   final GrainField field;
@@ -152,11 +158,85 @@ class FilmRenderer {
     final out = List<double>.filled(3, 0);
     final n = List<double>.filled(3, 0);
 
+    // Image made of grains (stocks with a GrainFormation): formed at the
+    // film's resolution, read back bilinearly. Replaces the grain texture.
+    final form = pr.formation;
+    GrainFormer? former;
+    var wh = 0, ww = 0;
+    Int32List? wxi;
+    Float64List? wtx;
+    if (form != null && amount > 0) {
+      // The frame's short side is the film's frame height.
+      final hn = form.frameHeight * grain.resolution;
+      final short = math.min(w, h).toDouble();
+      final k = math.min(1.0, hn / short);
+      wh = math.max(1, (h * k).round());
+      ww = math.max(1, (w * k).round());
+      final size = short * k / hn;
+      final sx = Int32List(ww + 1);
+      for (var i = 0; i <= ww; i++) {
+        sx[i] = math.min(w, (i * w / ww).floor());
+      }
+      former = GrainFormer(
+        form,
+        ww: ww,
+        wh: wh,
+        seed: seed,
+        sizeScale: size,
+        crystals: form.crystals / (grain.factor * grain.factor * expoGrain * expoGrain * size * size),
+        throttle: throttle,
+        exposureRow: (wy, er, eg, eb) {
+          final y = wy < 0 ? 0 : (wy >= wh ? wh - 1 : wy);
+          final ya = math.min(h - 1, (y * h / wh).floor());
+          final yb = math.max(ya + 1, math.min(h, ((y + 1) * h / wh).floor()));
+          final dy = (((ya + yb) * 0.5) / h - 0.5) * 2.0;
+          final dy2 = dy * dy * 0.5;
+          for (var x = 0; x < ww; x++) {
+            final xa = math.min(w - 1, sx[x]), xb = math.max(xa + 1, sx[x + 1]);
+            var r = 0.0, g = 0.0, b = 0.0;
+            for (var yy = ya; yy < yb; yy++) {
+              var q = (yy * w + xa) * 3;
+              for (var xx = xa; xx < xb; xx++, q += 3) {
+                r += toLin[data[q]];
+                g += toLin[data[q + 1]];
+                b += toLin[data[q + 2]];
+              }
+            }
+            final dx = (((xa + xb) * 0.5) / w - 0.5) * 2.0;
+            var qi = ((dx * dx * 0.5 + dy2) * (expoN - 1)).toInt();
+            if (qi > expoN - 1) qi = expoN - 1;
+            final e = expo[qi] / ((yb - ya) * (xb - xa));
+            er[x] = r * e * tint[0];
+            eg[x] = g * e * tint[1];
+            eb[x] = b * e * tint[2];
+          }
+        },
+      );
+      wxi = Int32List(w);
+      wtx = Float64List(w);
+      for (var x = 0; x < w; x++) {
+        final f = ((x + 0.5) * ww / w - 0.5).clamp(0.0, ww - 1.0);
+        final i = math.min(ww - 2, f.floor());
+        wxi[x] = math.max(0, i);
+        wtx[x] = ww < 2 ? 0 : (f - wxi[x]).clamp(0.0, 1.0);
+      }
+    }
+    final formed = former != null;
+
     for (var y = 0; y < h; y++) {
       final dy = ((y + 0.5) / h - 0.5) * 2.0;
       final dy2 = dy * dy * 0.5;
       final gy = y * inv + oy;
       final hy = (y + 0.5) / 8 - 0.5;
+      var wy0 = 0, wy1 = 0;
+      var wty = 0.0;
+      if (formed) {
+        final f = ((y + 0.5) * wh / h - 0.5).clamp(0.0, wh - 1.0);
+        wy0 = f.floor();
+        wy1 = math.min(wh - 1, wy0 + 1);
+        wty = f - wy0;
+        former.ensure(wy0, wy1);
+      }
       for (var x = 0; x < w; x++) {
         final p = (y * w + x) * 3;
         var qi = ((dx2[x] + dy2) * (expoN - 1)).toInt();
@@ -165,12 +245,24 @@ class FilmRenderer {
         var sr = shape[math.min(shapeN, (toLin[data[p]] * e * tint[0] * shapeScale).toInt())];
         var sg = shape[math.min(shapeN, (toLin[data[p + 1]] * e * tint[1] * shapeScale).toInt())];
         var sb = shape[math.min(shapeN, (toLin[data[p + 2]] * e * tint[2] * shapeScale).toInt())];
+        if (formed) {
+          final x0 = wxi![x], x1 = math.min(ww - 1, x0 + 1), tx = wtx![x];
+          double at(int c) {
+            final a = former!.at(c, x0, wy0), b = former.at(c, x1, wy0);
+            final cc = former.at(c, x0, wy1), d = former.at(c, x1, wy1);
+            return (a + (b - a) * tx) * (1 - wty) + (cc + (d - cc) * tx) * wty;
+          }
+
+          sr = shape[math.min(shapeN, (at(0) * shapeScale).toInt())];
+          sg = shape[math.min(shapeN, (at(1) * shapeScale).toInt())];
+          sb = shape[math.min(shapeN, (at(2) * shapeScale).toInt())];
+        }
 
         // One grain pattern per pixel: the big, fast crystals (coarse) win
         // in the shadows, the fine ones in the highlights; each dye layer
         // clouds at its own size.
         final tone = 0.2126 * sr + 0.7152 * sg + 0.0722 * sb; // ~log exposure, 0..1
-        if (amount > 0) {
+        if (amount > 0 && !formed) {
           final gx = x * inv + ox;
           final cw = 1 - ColorMath.smoothstep(0.35, 0.75, tone);
           var m = field.sample(gx, gy, 0);
@@ -215,7 +307,7 @@ class FilmRenderer {
           }
         }
 
-        if (dye > 0) {
+        if (dye > 0 && !formed) {
           final l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
           final a = dye * FilmSpatial.grainWeight(l, hi);
           r += n[0] * a;

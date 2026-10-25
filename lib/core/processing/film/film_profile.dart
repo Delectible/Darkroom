@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'color_math.dart';
 import 'film_process.dart';
+import 'grain_formation.dart';
 
 /// A hue-selective adjustment applied in OKLCh after the film curve.
 class HueTweak {
@@ -230,6 +231,7 @@ class FilmProfile {
         overSaturation: -0.06,
         overWarmth: 0.012,
         halationSpread: 0.5,
+        formation: GrainFormation(),
       ),
     ),
     // Tuned against the owner's HP5 scans: strictly neutral, deep blacks, strong

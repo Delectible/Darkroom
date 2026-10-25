@@ -1,5 +1,7 @@
 import 'dart:math' as math;
 
+import 'grain_formation.dart';
+
 /// How a stock behaves in the camera, the developer and the scanner: the
 /// part of the look that isn't a fixed colour curve. Used by the still
 /// renderer while a print develops (the live viewfinder shows the curve and
@@ -39,6 +41,7 @@ class FilmProcess {
     this.chemistry = 1.0,
     this.halationSpread = 0.45,
     this.bloom = 0,
+    this.formation,
   });
 
   /// How much the camera's own meter reading moves exposure (0 = trust
@@ -90,6 +93,10 @@ class FilmProcess {
   /// Neutral glow round the brightest highlights (0..1): diffusion in a
   /// soft or cheap lens.
   final double bloom;
+
+  /// The image is built out of grains (stills): detail stops at the grain.
+  /// Null = the grain texture over a sharp image.
+  final GrainFormation? formation;
 
   /// Most stops the meter may move the frame either way.
   static const double maxMeterEv = 1.5;

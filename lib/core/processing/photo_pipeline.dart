@@ -202,6 +202,7 @@ class PhotoPipeline {
         seed: job.seed,
         rollSeed: Development.rollSeedFor(job.cameraId, job.capturedAtMs),
         grain: job.grain,
+        throttle: 0.5,
       ).render(data, w, h, flash: flash);
     } else {
       final look = spec.look!;

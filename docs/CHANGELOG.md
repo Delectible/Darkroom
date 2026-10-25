@@ -1168,3 +1168,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   (blue coarsest); every roll (stock + day) shares one trip through the
   chemistry (contrast, density, colour); halation core + wide skirt, bloom.
   Each stock has its own process. Portrait 400 first, tuned hard.
+- [x] **57.8** → 1.9.2 · 2026-10-25 · Image made of grains (`GrainFormation`,
+  `grain_formation.dart`; Portrait 400 first): crystals with their own
+  sensitivity develop into soft round dye clouds (Poisson per pixel,
+  Gaussian clouds, 92% shared between layers, base fog), the scan inverts
+  the expected density. Formed at the film's resolution (3000 px short
+  side at Normal), in strips, read back bilinearly; detail stops at the
+  grain. Throttled (rests half its work time). Viewfinder unchanged.

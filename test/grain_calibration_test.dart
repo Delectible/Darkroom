@@ -14,8 +14,9 @@ double _skyGrain(
   String stock = 'ektar100',
   List<int> rgb = const [150, 205, 240],
   int target = 1612,
+  int w = 300,
 }) {
-  const w = 300, h = 3000;
+  const h = 3000;
   final data = Uint8List(w * h * 3);
   for (var i = 0; i < data.length; i += 3) {
     data[i] = rgb[0];
@@ -72,6 +73,9 @@ void main() {
       stock: 'portra400',
       rgb: const [57, 120, 164],
       target: 1353,
+      // A whole frame: Portra's image is formed from grains at the frame's
+      // short side.
+      w: 3000,
     );
     expect(normal, inInclusiveRange(0.027, 0.041)); // scans: ~0.034
   });

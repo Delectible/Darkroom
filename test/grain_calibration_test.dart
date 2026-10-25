@@ -79,6 +79,7 @@ void main() {
   test('HP5 grain matches the scans: heaviest in the highlights', () {
     double at(int v) => _skyGrain(GrainStrength.normal, stock: 'hp5plus400', rgb: [v, v, v], target: 1622);
     final mid = at(95), bright = at(215);
+    printOnFailure("hp5 mid $mid bright $bright");
     expect(mid, inInclusiveRange(0.019, 0.031)); // scans: ~0.025 at mid-grey
     expect(bright, inInclusiveRange(0.042, 0.066)); // scans: ~0.047-0.061 in a bright sky
     expect(bright, greaterThan(mid * 1.7));

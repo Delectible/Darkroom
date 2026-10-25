@@ -45,6 +45,7 @@ void main(List<String> args) {
         seed: int.parse(Platform.environment['SEED'] ?? '42'),
         grain: strength,
         nominal: Platform.environment['NOMINAL'] == '1',
+        forceEv: double.tryParse(Platform.environment['EV'] ?? ''),
       );
       r.render(data, copy.width, copy.height, flash: 0);
       sw.stop();

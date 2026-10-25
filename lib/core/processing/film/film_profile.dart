@@ -175,6 +175,7 @@ class FilmProfile {
         meter: 0.5,
         scanFix: 0.7,
         crystal: 0.4,
+        grainGain: 1.0,
         shadowCoarse: 1.3,
         layerScale: [1.1, 1.0, 1.35],
         underGrain: 0.3,
@@ -213,16 +214,19 @@ class FilmProfile {
       defects: 1.0,
       // Famous latitude: overexposed it goes creamy, pastel and finer;
       // underexposed the shadows go muddy green-teal and the grain climbs.
+      // Metered a little over (rated nearer 200, as Portra shooters do).
       process: FilmProcess(
-        meter: 0.6,
+        meter: 0.4,
+        meterKey: 0.12,
+        grainGain: 1.48,
         scanFix: 0.82,
         crystal: 0.6,
         shadowCoarse: 1.5,
         layerScale: [1.1, 1.0, 1.5],
-        underGrain: 0.35,
+        underGrain: 0.4,
         overGrain: 0.18,
         underFog: 0.03,
-        underTint: [-0.014, 0.012, 0.004],
+        underTint: [-0.008, 0.006, 0.002],
         overSaturation: -0.06,
         overWarmth: 0.012,
         halationSpread: 0.5,
@@ -253,6 +257,7 @@ class FilmProfile {
         meter: 0.55,
         scanFix: 0.8,
         crystal: 0.7,
+        grainGain: 1.3,
         shadowCoarse: 1.8,
         layerScale: [1.0, 1.0, 1.0],
         underGrain: 0.45,

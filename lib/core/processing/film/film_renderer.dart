@@ -52,6 +52,7 @@ class FilmRenderer {
     int? rollSeed,
     this.grain = GrainStrength.normal,
     this.nominal = false,
+    this.forceEv,
   }) : dev = nominal ? const Development() : Development.roll(rollSeed ?? seed, profile.process.chemistry),
        field = GrainField.generate() {
     lut = FilmLut.build(profile, dev: dev);
@@ -64,6 +65,9 @@ class FilmRenderer {
   /// Exactly as metered by the phone: no camera meter, no exposure drift,
   /// no roll-to-roll development (calibration and tests).
   final bool nominal;
+
+  /// Exposure in stops from the phone's, instead of metering (previews).
+  final double? forceEv;
   final Development dev;
   late final FilmLut lut;
   final GrainField field;
@@ -90,11 +94,16 @@ class FilmRenderer {
 
     // --- exposure: the camera's meter, the roll, the frame ---------------
     var ev = 0.0;
-    if (!nominal) {
+    if (forceEv != null) {
+      ev = forceEv!;
+    } else if (!nominal) {
       ev = drift + dev.density + pr.meter * (1 - flash) * _meterEv(data, w, h, toLin, pr.meterKey);
     }
     lastEv = ev;
-    final gainE = math.pow(2, ev).toDouble();
+    // The lab scan pulls most of an exposure error back; the film's curve
+    // only sees what's left. What the scan can't undo is the character of
+    // a thin or dense negative (fog, tint, grain, saturation, below).
+    final gainE = math.pow(2, ev * (1 - pr.scanFix)).toDouble();
     final under = math.max(0.0, -ev), over = math.max(0.0, ev);
 
     // linear [0, maxLinear] -> shaper coordinate
@@ -116,20 +125,10 @@ class FilmRenderer {
       dx2[x] = d * d * 0.5;
     }
 
-    // --- the lab scan: pulls most of an exposure error back --------------
-    // sRGB in -> linear x scan gain -> sRGB out, as a table.
-    const scanN = 1024;
-    final scanK = math.pow(2, -ev * pr.scanFix).toDouble();
-    final scan = Float64List(scanN + 1);
-    for (var i = 0; i <= scanN; i++) {
-      final lin = ColorMath.srgbToLinear(i / scanN) * scanK;
-      scan[i] = ColorMath.linearToSrgb(lin.clamp(0.0, 1.0));
-    }
     final fog = pr.underFog * under;
     final ut = [pr.underTint[0] * under, pr.underTint[1] * under, pr.underTint[2] * under];
     final sat = math.max(0.4, 1 + pr.overSaturation * over);
     final warm = pr.overWarmth * over;
-    final scanning = ev != 0;
 
     final halo = profile.halation > 0 ? _halationMaps(data, w, h, toLin, gainE, flashAmt) : null;
     final hw = (w + 7) ~/ 8, hh = (h + 7) ~/ 8;
@@ -139,7 +138,7 @@ class FilmRenderer {
     // --- grain ------------------------------------------------------------
     final (texel, gain) = FilmSpatial.grainTexel(h.toDouble(), profile.grainResolution * grain.resolution);
     final expoGrain = (1 + pr.underGrain * under) * math.max(0.4, 1 - pr.overGrain * over);
-    final amount = profile.grainAmount * grain.factor * gain * expoGrain;
+    final amount = profile.grainAmount * pr.grainGain * grain.factor * gain * expoGrain;
     final chroma = profile.grainChroma;
     final inv = 1 / texel; // grain texels per image px
     final coarse = 1 / math.max(1.0, pr.shadowCoarse);
@@ -188,7 +187,9 @@ class FilmRenderer {
             n[0] = n[1] = n[2] = m;
           }
           if (crystal > 0) {
-            final j = crystal * (1 + hi * tone * tone);
+            // Shaped like the dye grain: quiet in the deep shadows and the
+            // brightest highlights, so skies stay clean.
+            final j = crystal * FilmSpatial.grainWeight(tone, hi);
             sr += n[0] * j;
             sg += n[1] * j;
             sb += n[2] * j;
@@ -222,10 +223,7 @@ class FilmRenderer {
           b += n[2] * a;
         }
 
-        if (scanning) {
-          r = scan[(r <= 0 ? 0 : (r >= 1 ? 1.0 : r)) * scanN ~/ 1];
-          g = scan[(g <= 0 ? 0 : (g >= 1 ? 1.0 : g)) * scanN ~/ 1];
-          b = scan[(b <= 0 ? 0 : (b >= 1 ? 1.0 : b)) * scanN ~/ 1];
+        if (ev != 0) {
           final l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
           if (sat != 1) {
             r = l + (r - l) * sat;

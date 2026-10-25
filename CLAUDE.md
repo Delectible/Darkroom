@@ -221,6 +221,19 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   the owner's reference scans; `grain_calibration_test` pins their Normal grain
   to the scans (Ektar ~0.0076, Portra ~0.034, HP5 ~0.025 mid / ~0.055
   bright).
+- Developing process (stills only, `FilmProcess` in `film_process.dart`,
+  one per stock on `FilmProfile.process`): the camera meters the frame
+  itself (centre-weighted log average vs `meterKey`, weight `meter`), plus
+  the frame's drift and the roll's `Development` (stock + 5am day:
+  contrast, density, lab tint; `Development.rollSeedFor`). The scan fixes
+  `scanFix` of the error; the curve sees the rest, and the full error
+  drives fog / tint / grain (under) and pastel / warmth / finer grain
+  (over). Grain = crystal part (noise in the shaper's log exposure, before
+  the LUT) + dye part (after), coarser in the shadows, per-layer cloud
+  sizes; `grainGain` calibrates stills to the scans (the viewfinder keeps
+  `grainAmount`). Halation = core + wide skirt (`halationSpread`), `bloom`.
+  `FilmRenderer(nominal: true)` = none of it (tests); `EV=` in
+  film_preview forces an exposure.
 - Defects (`film_defects.dart`): developed stills only (never the
   viewfinder), rolled per frame from the shot's seed: a few dust specks
   (white on negative, dark on instant), sometimes a hair, a faint scratch

@@ -23,10 +23,11 @@ import 'dart:math' as math;
 ///     from the film base, and an optional neutral bloom.
 class FilmProcess {
   const FilmProcess({
-    this.meter = 0.5,
-    this.meterKey = 0.11,
+    this.meter = 0.35,
+    this.meterKey = 0.16,
     this.scanFix = 0.75,
     this.crystal = 0.55,
+    this.grainGain = 1.4,
     this.shadowCoarse = 1.6,
     this.layerScale = const [1.15, 1.0, 1.45],
     this.underGrain = 0.25,
@@ -54,6 +55,11 @@ class FilmProcess {
   /// Share of the grain that comes from crystal sensitivity (log exposure,
   /// before the curve); the rest is dye-cloud texture added after it.
   final double crystal;
+
+  /// Stills grain relative to [FilmProfile.grainAmount] (the viewfinder's):
+  /// coarse shadow grain and dye clouds carry less fine detail, so the
+  /// still needs more to read the same (calibrated to the scans).
+  final double grainGain;
 
   /// Grain size in deep shadows relative to the highlights.
   final double shadowCoarse;

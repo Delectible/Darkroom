@@ -40,7 +40,13 @@ void main(List<String> args) {
       final copy = src.clone();
       final data = copy.toUint8List();
       final sw = Stopwatch()..start();
-      FilmRenderer(p, seed: 42, grain: strength).render(data, copy.width, copy.height, flash: 0);
+      final r = FilmRenderer(
+        p,
+        seed: int.parse(Platform.environment['SEED'] ?? '42'),
+        grain: strength,
+        nominal: Platform.environment['NOMINAL'] == '1',
+      );
+      r.render(data, copy.width, copy.height, flash: 0);
       sw.stop();
       final done = img.Image.fromBytes(
         width: copy.width,
@@ -54,7 +60,7 @@ void main(List<String> args) {
           img.copyCrop(done, x: done.width ~/ 2 - cell ~/ 2, y: done.height ~/ 3, width: cell, height: cell),
         );
       }
-      stderr.writeln('$path $id ${sw.elapsedMilliseconds}ms');
+      stderr.writeln('$path $id ${sw.elapsedMilliseconds}ms ev ${r.lastEv.toStringAsFixed(2)}');
     }
     rows.add(row);
   }

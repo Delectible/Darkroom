@@ -1159,3 +1159,12 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   reuse existing renders): 3 canisters, a disposable, a 70mm can, webcam,
   DSLR, toy cam, MiniDV camcorder.
 - [ ] **57.6** Epic 70: a wider frame (2.2:1 / 2.76:1) than 16:9.
+- [~] **57.7** The developing process (stills, `FilmProcess` in
+  `film_process.dart`): the camera meters the frame itself (centre-weighted),
+  so frames land over or under; the lab scan rescues most of it, leaving the
+  stock's character (Portrait: creamy and pastel over, muddy teal shadows and
+  more grain under; slide film: no rescue); per-crystal grain in log exposure
+  (shaped by the curve), coarser grain in the shadows, dye clouds per layer
+  (blue coarsest); every roll (stock + day) shares one trip through the
+  chemistry (contrast, density, colour); halation core + wide skirt, bloom.
+  Each stock has its own process. Portrait 400 first, tuned hard.

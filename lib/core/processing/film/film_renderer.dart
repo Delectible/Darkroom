@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'color_math.dart';
 import 'film_defects.dart';
 import 'film_lut.dart';
+import 'film_process.dart';
 import 'film_profile.dart';
 import 'grain_field.dart';
 
@@ -40,23 +41,40 @@ class FilmSpatial {
   static const double halRadius = 0.014;
 }
 
-/// Full-resolution film renderer for stills (runs in the photo isolate).
-/// In place on an interleaved RGB8 buffer; scratch memory is the LUT, one
-/// 512^2 grain tile and a 1/8-resolution halation map.
+/// Full-resolution film renderer for stills (runs in the photo isolate while
+/// the print develops). In place on an interleaved RGB8 buffer; scratch
+/// memory is the LUT, one 512^2 grain tile and two 1/8-resolution halation
+/// maps. See [FilmProcess] for what happens beyond the colour curve.
 class FilmRenderer {
-  FilmRenderer(this.profile, {required this.seed, this.grain = GrainStrength.normal})
-    : lut = FilmLut.build(profile),
-      field = GrainField.generate();
+  FilmRenderer(
+    this.profile, {
+    required this.seed,
+    int? rollSeed,
+    this.grain = GrainStrength.normal,
+    this.nominal = false,
+  }) : dev = nominal ? const Development() : Development.roll(rollSeed ?? seed, profile.process.chemistry),
+       field = GrainField.generate() {
+    lut = FilmLut.build(profile, dev: dev);
+  }
 
   final FilmProfile profile;
   final int seed;
   final GrainStrength grain;
-  final FilmLut lut;
+
+  /// Exactly as metered by the phone: no camera meter, no exposure drift,
+  /// no roll-to-roll development (calibration and tests).
+  final bool nominal;
+  final Development dev;
+  late final FilmLut lut;
   final GrainField field;
 
+  /// Exposure the last [render] gave the frame, in stops from the phone's.
+  double lastEv = 0;
+
   void render(Uint8List data, int w, int h, {required double flash}) {
+    final pr = profile.process;
     final rnd = math.Random(seed);
-    final drift = math.pow(2, (rnd.nextDouble() * 2 - 1) * profile.exposureDrift).toDouble();
+    final drift = (rnd.nextDouble() * 2 - 1) * profile.exposureDrift;
     final tint = [
       (1 + (rnd.nextDouble() - 0.5) * 0.02) * (1 - 0.03 * flash),
       1.0,
@@ -69,6 +87,16 @@ class FilmRenderer {
     for (var i = 0; i < 256; i++) {
       toLin[i] = ColorMath.srgbToLinear(i / 255);
     }
+
+    // --- exposure: the camera's meter, the roll, the frame ---------------
+    var ev = 0.0;
+    if (!nominal) {
+      ev = drift + dev.density + pr.meter * (1 - flash) * _meterEv(data, w, h, toLin, pr.meterKey);
+    }
+    lastEv = ev;
+    final gainE = math.pow(2, ev).toDouble();
+    final under = math.max(0.0, -ev), over = math.max(0.0, ev);
+
     // linear [0, maxLinear] -> shaper coordinate
     const shapeN = 4096;
     final shape = Float64List(shapeN + 1);
@@ -80,7 +108,7 @@ class FilmRenderer {
     const expoN = 1024;
     final expo = Float64List(expoN);
     for (var i = 0; i < expoN; i++) {
-      expo[i] = FilmSpatial.exposure(math.sqrt(i / (expoN - 1)), profile.vignette, flashAmt) * drift;
+      expo[i] = FilmSpatial.exposure(math.sqrt(i / (expoN - 1)), profile.vignette, flashAmt) * gainE;
     }
     final dx2 = Float64List(w);
     for (var x = 0; x < w; x++) {
@@ -88,16 +116,42 @@ class FilmRenderer {
       dx2[x] = d * d * 0.5;
     }
 
-    final hal = profile.halation > 0 ? _halationMap(data, w, h, toLin, drift, flashAmt) : null;
+    // --- the lab scan: pulls most of an exposure error back --------------
+    // sRGB in -> linear x scan gain -> sRGB out, as a table.
+    const scanN = 1024;
+    final scanK = math.pow(2, -ev * pr.scanFix).toDouble();
+    final scan = Float64List(scanN + 1);
+    for (var i = 0; i <= scanN; i++) {
+      final lin = ColorMath.srgbToLinear(i / scanN) * scanK;
+      scan[i] = ColorMath.linearToSrgb(lin.clamp(0.0, 1.0));
+    }
+    final fog = pr.underFog * under;
+    final ut = [pr.underTint[0] * under, pr.underTint[1] * under, pr.underTint[2] * under];
+    final sat = math.max(0.4, 1 + pr.overSaturation * over);
+    final warm = pr.overWarmth * over;
+    final scanning = ev != 0;
+
+    final halo = profile.halation > 0 ? _halationMaps(data, w, h, toLin, gainE, flashAmt) : null;
     final hw = (w + 7) ~/ 8, hh = (h + 7) ~/ 8;
     final hc = profile.halationColor;
+    final spread = pr.halationSpread, bloom = pr.bloom;
 
+    // --- grain ------------------------------------------------------------
     final (texel, gain) = FilmSpatial.grainTexel(h.toDouble(), profile.grainResolution * grain.resolution);
-    final amount = profile.grainAmount * grain.factor * gain;
+    final expoGrain = (1 + pr.underGrain * under) * math.max(0.4, 1 - pr.overGrain * over);
+    final amount = profile.grainAmount * grain.factor * gain * expoGrain;
     final chroma = profile.grainChroma;
     final inv = 1 / texel; // grain texels per image px
+    final coarse = 1 / math.max(1.0, pr.shadowCoarse);
+    final ls = [1 / pr.layerScale[0], 1 / pr.layerScale[1], 1 / pr.layerScale[2]];
     final ox = rnd.nextDouble() * field.size, oy = rnd.nextDouble() * field.size;
+    // Crystal grain is noise in log exposure: scale it so that at mid-grey
+    // it shows as [amount] once the curve has shaped it.
+    final crystal = pr.crystal * amount / _slope();
+    final dye = (1 - pr.crystal) * amount;
+    final hi = profile.grainHighlights;
     final out = List<double>.filled(3, 0);
+    final n = List<double>.filled(3, 0);
 
     for (var y = 0; y < h; y++) {
       final dy = ((y + 0.5) / h - 0.5) * 2.0;
@@ -109,39 +163,85 @@ class FilmRenderer {
         var qi = ((dx2[x] + dy2) * (expoN - 1)).toInt();
         if (qi > expoN - 1) qi = expoN - 1;
         final e = expo[qi];
-        final lr = toLin[data[p]] * e * tint[0];
-        final lg = toLin[data[p + 1]] * e * tint[1];
-        final lb = toLin[data[p + 2]] * e * tint[2];
-        lut.sample(
-          shape[math.min(shapeN, (lr * shapeScale).toInt())],
-          shape[math.min(shapeN, (lg * shapeScale).toInt())],
-          shape[math.min(shapeN, (lb * shapeScale).toInt())],
-          out,
-        );
+        var sr = shape[math.min(shapeN, (toLin[data[p]] * e * tint[0] * shapeScale).toInt())];
+        var sg = shape[math.min(shapeN, (toLin[data[p + 1]] * e * tint[1] * shapeScale).toInt())];
+        var sb = shape[math.min(shapeN, (toLin[data[p + 2]] * e * tint[2] * shapeScale).toInt())];
+
+        // One grain pattern per pixel: the big, fast crystals (coarse) win
+        // in the shadows, the fine ones in the highlights; each dye layer
+        // clouds at its own size.
+        final tone = 0.2126 * sr + 0.7152 * sg + 0.0722 * sb; // ~log exposure, 0..1
+        if (amount > 0) {
+          final gx = x * inv + ox;
+          final cw = 1 - ColorMath.smoothstep(0.35, 0.75, tone);
+          var m = field.sample(gx, gy, 0);
+          if (cw > 0.01) {
+            final c = field.sample(gx * coarse + 97.0, gy * coarse + 41.0, 0);
+            m = (m * (1 - cw) + c * cw) / math.sqrt((1 - cw) * (1 - cw) + cw * cw);
+          }
+          if (chroma > 0) {
+            for (var c = 0; c < 3; c++) {
+              n[c] =
+                  m * (1 - chroma) + field.sample(gx * ls[c] + 31.0 * c, gy * ls[c] + 17.0 * c, c) * chroma;
+            }
+          } else {
+            n[0] = n[1] = n[2] = m;
+          }
+          if (crystal > 0) {
+            final j = crystal * (1 + hi * tone * tone);
+            sr += n[0] * j;
+            sg += n[1] * j;
+            sb += n[2] * j;
+          }
+        }
+        lut.sample(sr, sg, sb, out);
         var r = out[0], g = out[1], b = out[2];
 
-        if (hal != null) {
-          final hv = _bilinear(hal, hw, hh, (x + 0.5) / 8 - 0.5, hy) * profile.halation;
+        if (halo != null) {
+          final fx = (x + 0.5) / 8 - 0.5;
+          final core = _bilinear(halo.$1, hw, hh, fx, hy), wide = _bilinear(halo.$2, hw, hh, fx, hy);
+          final hv = (core * (1 - spread) + wide * spread) * profile.halation;
           if (hv > 0) {
             r += hc[0] * hv * (1 - r);
             g += hc[1] * hv * (1 - g);
             b += hc[2] * hv * (1 - b);
           }
+          final bv = wide * bloom;
+          if (bv > 0) {
+            r += bv * (1 - r);
+            g += bv * (1 - g);
+            b += bv * (1 - b);
+          }
         }
 
-        if (amount > 0) {
+        if (dye > 0) {
           final l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-          final a = amount * FilmSpatial.grainWeight(l, profile.grainHighlights);
-          final gx = x * inv + ox;
-          final n0 = field.sample(gx, gy, 0);
-          if (chroma > 0) {
-            r += (n0 * (1 - chroma) + n0 * chroma) * a;
-            g += (n0 * (1 - chroma) + field.sample(gx, gy, 1) * chroma) * a;
-            b += (n0 * (1 - chroma) + field.sample(gx, gy, 2) * chroma) * a;
-          } else {
-            r += n0 * a;
-            g += n0 * a;
-            b += n0 * a;
+          final a = dye * FilmSpatial.grainWeight(l, hi);
+          r += n[0] * a;
+          g += n[1] * a;
+          b += n[2] * a;
+        }
+
+        if (scanning) {
+          r = scan[(r <= 0 ? 0 : (r >= 1 ? 1.0 : r)) * scanN ~/ 1];
+          g = scan[(g <= 0 ? 0 : (g >= 1 ? 1.0 : g)) * scanN ~/ 1];
+          b = scan[(b <= 0 ? 0 : (b >= 1 ? 1.0 : b)) * scanN ~/ 1];
+          final l = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          if (sat != 1) {
+            r = l + (r - l) * sat;
+            g = l + (g - l) * sat;
+            b = l + (b - l) * sat;
+          }
+          if (under > 0) {
+            final sh = (1 - l) * (1 - l);
+            r = fog + (1 - fog) * r + ut[0] * sh;
+            g = fog + (1 - fog) * g + ut[1] * sh;
+            b = fog + (1 - fog) * b + ut[2] * sh;
+          }
+          if (warm != 0) {
+            final hl = l * l;
+            r += warm * hl;
+            b -= warm * hl;
           }
         }
 
@@ -158,8 +258,48 @@ class FilmRenderer {
     ).apply(data, w, h);
   }
 
-  /// Blurred highlight energy at 1/8 resolution, values ~0..1.
-  Float32List _halationMap(Uint8List data, int w, int h, Float64List toLin, double drift, double flashAmt) {
+  /// Stops the camera's centre-weighted meter would move this frame from
+  /// the phone's exposure (its log-average luminance against [key]).
+  static double _meterEv(Uint8List data, int w, int h, Float64List toLin, double key) {
+    final step = math.max(1, math.max(w, h) ~/ 160);
+    var sum = 0.0, wsum = 0.0;
+    for (var y = step ~/ 2; y < h; y += step) {
+      final dy = ((y + 0.5) / h - 0.5) * 2.0;
+      for (var x = step ~/ 2; x < w; x += step) {
+        final dx = ((x + 0.5) / w - 0.5) * 2.0;
+        final r = math.sqrt((dx * dx + dy * dy) * 0.5);
+        final wt = 1 + 2 * (1 - ColorMath.smoothstep(0.25, 0.7, r));
+        final p = (y * w + x) * 3;
+        final l = 0.2126 * toLin[data[p]] + 0.7152 * toLin[data[p + 1]] + 0.0722 * toLin[data[p + 2]];
+        sum += wt * math.log(math.max(l, 1e-3));
+        wsum += wt;
+      }
+    }
+    if (wsum == 0) return 0;
+    final ev = math.log(key / math.exp(sum / wsum)) / math.ln2;
+    return ev.clamp(-FilmProcess.maxMeterEv, FilmProcess.maxMeterEv);
+  }
+
+  /// Output luminance per unit of shaper coordinate at mid-grey.
+  double _slope() {
+    final s0 = LutShaper.encode(0.18), d = 0.02;
+    final a = List<double>.filled(3, 0), b = List<double>.filled(3, 0);
+    lut.sample(s0 - d, s0 - d, s0 - d, a);
+    lut.sample(s0 + d, s0 + d, s0 + d, b);
+    double l(List<double> v) => 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+    return math.max(0.05, (l(b) - l(a)) / (2 * d));
+  }
+
+  /// Blurred highlight energy at 1/8 resolution, values ~0..1: a tight
+  /// core and a wide skirt (light bounced back from the film base).
+  (Float32List, Float32List) _halationMaps(
+    Uint8List data,
+    int w,
+    int h,
+    Float64List toLin,
+    double gainE,
+    double flashAmt,
+  ) {
     final bw = (w + 7) ~/ 8, bh = (h + 7) ~/ 8;
     final m = Float32List(bw * bh);
     final cnt = Int32List(bw * bh);
@@ -170,7 +310,7 @@ class FilmRenderer {
         final p = (y * w + x) * 3;
         final dx = ((x + 0.5) / w - 0.5) * 2.0;
         final e =
-            FilmSpatial.exposure(math.sqrt((dx * dx + dy * dy) * 0.5), profile.vignette, flashAmt) * drift;
+            FilmSpatial.exposure(math.sqrt((dx * dx + dy * dy) * 0.5), profile.vignette, flashAmt) * gainE;
         final l = (0.2126 * toLin[data[p]] + 0.7152 * toLin[data[p + 1]] + 0.0722 * toLin[data[p + 2]]) * e;
         m[row + x ~/ 8] += math.max(0, l - FilmSpatial.halThreshold) * FilmSpatial.halGain;
         cnt[row + x ~/ 8]++;
@@ -179,12 +319,14 @@ class FilmRenderer {
     for (var i = 0; i < m.length; i++) {
       if (cnt[i] > 0) m[i] /= cnt[i];
     }
-    final sigma = math.max(0.6, FilmSpatial.halRadius * h / 8);
-    _gauss(m, bw, bh, sigma);
+    final wide = Float32List.fromList(m);
+    _gauss(m, bw, bh, math.max(0.6, FilmSpatial.halRadius * h / 8));
+    _gauss(wide, bw, bh, math.max(1.5, FilmSpatial.halRadius * 3.5 * h / 8));
     for (var i = 0; i < m.length; i++) {
       m[i] = math.min(1.0, m[i] * 2.5);
+      wide[i] = math.min(1.0, wide[i] * 6.0);
     }
-    return m;
+    return (m, wide);
   }
 
   static void _gauss(Float32List a, int w, int h, double sigma) {

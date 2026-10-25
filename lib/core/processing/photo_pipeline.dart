@@ -9,6 +9,7 @@ import '../../features/cameras/domain/camera_spec.dart';
 import '../utils/pixel_font.dart';
 import 'crop_math.dart';
 import 'film/film_profile.dart';
+import 'film/film_process.dart';
 import 'film/film_renderer.dart';
 import 'look_renderer.dart';
 import 'look_spec.dart';
@@ -196,7 +197,12 @@ class PhotoPipeline {
 
     final film = spec.film;
     if (film != null) {
-      FilmRenderer(film, seed: job.seed, grain: job.grain).render(data, w, h, flash: flash);
+      FilmRenderer(
+        film,
+        seed: job.seed,
+        rollSeed: Development.rollSeedFor(job.cameraId, job.capturedAtMs),
+        grain: job.grain,
+      ).render(data, w, h, flash: flash);
     } else {
       final look = spec.look!;
       final renderer = LookRenderer(look, seed: job.seed);

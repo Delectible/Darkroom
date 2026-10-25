@@ -22,7 +22,7 @@ double _skyGrain(
     data[i + 1] = rgb[1];
     data[i + 2] = rgb[2];
   }
-  FilmRenderer(FilmProfile.forStock(stock)!, seed: 3, grain: g).render(data, w, h, flash: 0);
+  FilmRenderer(FilmProfile.forStock(stock)!, seed: 3, grain: g, nominal: true).render(data, w, h, flash: 0);
   final s = h / target;
   final tw = (w / s).floor();
   final y = Float64List(tw * target);

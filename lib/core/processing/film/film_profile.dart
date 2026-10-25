@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'color_math.dart';
+import 'film_process.dart';
 
 /// A hue-selective adjustment applied in OKLCh after the film curve.
 class HueTweak {
@@ -57,6 +58,7 @@ class FilmProfile {
     this.defects = 0,
     this.negative = true,
     this.grainHighlights = 0,
+    this.process = const FilmProcess(),
   });
 
   final String id;
@@ -134,6 +136,9 @@ class FilmProfile {
   /// Negative film (dust scans white); false for positive / instant.
   final bool negative;
 
+  /// Camera, developer and scanner behaviour of the developed still.
+  final FilmProcess process;
+
   bool get isCine => weave > 0 || flicker > 0 || gate > 0;
 
   static FilmProfile? forStock(String id) => _profiles[id];
@@ -165,6 +170,19 @@ class FilmProfile {
       halation: 0.08,
       vignette: 0.14,
       defects: 0.6,
+      // Little latitude below box speed: shadows block up and go cold.
+      process: FilmProcess(
+        meter: 0.5,
+        scanFix: 0.7,
+        crystal: 0.4,
+        shadowCoarse: 1.3,
+        layerScale: [1.1, 1.0, 1.35],
+        underGrain: 0.3,
+        overGrain: 0.08,
+        underFog: 0.02,
+        underTint: [-0.006, -0.004, 0.016],
+        overSaturation: -0.03,
+      ),
     ),
     // Tuned against the owner's Portra 400 scans: the stock that should read as
     // film. Soft contrast, green-teal shadows (red drops out first), warm
@@ -193,6 +211,22 @@ class FilmProfile {
       halation: 0.20,
       vignette: 0.18,
       defects: 1.0,
+      // Famous latitude: overexposed it goes creamy, pastel and finer;
+      // underexposed the shadows go muddy green-teal and the grain climbs.
+      process: FilmProcess(
+        meter: 0.6,
+        scanFix: 0.82,
+        crystal: 0.6,
+        shadowCoarse: 1.5,
+        layerScale: [1.1, 1.0, 1.5],
+        underGrain: 0.35,
+        overGrain: 0.18,
+        underFog: 0.03,
+        underTint: [-0.014, 0.012, 0.004],
+        overSaturation: -0.06,
+        overWarmth: 0.012,
+        halationSpread: 0.5,
+      ),
     ),
     // Tuned against the owner's HP5 scans: strictly neutral, deep blacks, strong
     // contrast, bright highlights, and heavy grain that is strongest in the
@@ -214,6 +248,20 @@ class FilmProfile {
       halationColor: [1.0, 1.0, 1.0],
       vignette: 0.20,
       defects: 1.0,
+      // Silver grain, coarse in thin shadows; home-developed, so rolls vary.
+      process: FilmProcess(
+        meter: 0.55,
+        scanFix: 0.8,
+        crystal: 0.7,
+        shadowCoarse: 1.8,
+        layerScale: [1.0, 1.0, 1.0],
+        underGrain: 0.45,
+        overGrain: 0.1,
+        underFog: 0.04,
+        underTint: [0.0, 0.0, 0.0],
+        overSaturation: 0,
+        chemistry: 1.2,
+      ),
     ),
     // Instant integral film, tuned against the owner's Polaroid 600 scans:
     // washed-out cream highlights that never reach white, navy-teal shadows,
@@ -247,6 +295,23 @@ class FilmProfile {
       exposureDrift: 0.16,
       defects: 1.0,
       negative: false,
+      // No scanner to save it: a crude meter, exposure errors print as they
+      // are (dark and murky, or washed out), and temperature swings the
+      // chemistry from pack to pack.
+      process: FilmProcess(
+        meter: 0.7,
+        scanFix: 0.0,
+        crystal: 0.2,
+        shadowCoarse: 1.1,
+        layerScale: [1.0, 1.0, 1.2],
+        underGrain: 0.1,
+        overGrain: 0.0,
+        underFog: 0.0,
+        underTint: [-0.01, 0.0, 0.012],
+        overSaturation: -0.15,
+        overWarmth: 0.02,
+        chemistry: 1.5,
+      ),
     ),
     // --- Pro stocks (1.9): first passes, to tune on the phone ------------
     // Golden 200: the warm consumer film from every drugstore shelf. Golden
@@ -276,6 +341,17 @@ class FilmProfile {
       halation: 0.12,
       vignette: 0.2,
       defects: 1.0,
+      process: FilmProcess(
+        meter: 0.5,
+        crystal: 0.5,
+        shadowCoarse: 1.7,
+        layerScale: [1.2, 1.0, 1.6],
+        underGrain: 0.4,
+        underFog: 0.035,
+        underTint: [-0.004, 0.008, -0.006],
+        overSaturation: -0.05,
+        overWarmth: 0.015,
+      ),
     ),
     // Night 800T: cinema stock balanced for tungsten light, with the
     // anti-halation layer removed: cool daylight, warm lamps, glowing red
@@ -304,6 +380,18 @@ class FilmProfile {
       halationColor: [1.0, 0.18, 0.08],
       vignette: 0.18,
       defects: 1.0,
+      // No anti-halation backing: a wide red skirt and a glow on every lamp.
+      process: FilmProcess(
+        meter: 0.5,
+        crystal: 0.6,
+        shadowCoarse: 1.6,
+        layerScale: [1.2, 1.0, 1.5],
+        underGrain: 0.4,
+        underFog: 0.03,
+        underTint: [-0.016, 0.006, 0.014],
+        halationSpread: 0.65,
+        bloom: 0.06,
+      ),
     ),
     // Chrome 50: saturated slide film, the landscape photographer's
     // favourite. Deep blacks, vivid greens and blues, warm tight
@@ -331,6 +419,21 @@ class FilmProfile {
       vignette: 0.22,
       defects: 0.6,
       negative: false,
+      // Slide film: what you shoot is what you get (no scan rescue), dense
+      // black when under, washed out when over; E-6 labs are tightly run.
+      process: FilmProcess(
+        meter: 0.5,
+        scanFix: 0.15,
+        crystal: 0.3,
+        shadowCoarse: 1.2,
+        layerScale: [1.05, 1.0, 1.3],
+        underGrain: 0.1,
+        overGrain: 0.0,
+        underFog: 0.0,
+        underTint: [0.0, -0.004, 0.01],
+        overSaturation: -0.12,
+        chemistry: 0.6,
+      ),
     ),
     // Single-Use 27: the cardboard camera from every wedding table and
     // holiday. A 400 consumer film with a green cast, punchy but cheap
@@ -359,6 +462,21 @@ class FilmProfile {
       flashStrength: 1.0,
       exposureDrift: 0.18,
       defects: 1.0,
+      // Fixed shutter and aperture: it exposes by the scene, not the phone.
+      // The minilab rescues most of it, with green mud in the shadows.
+      process: FilmProcess(
+        meter: 0.9,
+        scanFix: 0.85,
+        crystal: 0.55,
+        shadowCoarse: 1.8,
+        layerScale: [1.2, 1.0, 1.6],
+        underGrain: 0.5,
+        underFog: 0.05,
+        underTint: [-0.012, 0.016, -0.002],
+        overSaturation: -0.05,
+        chemistry: 1.3,
+        bloom: 0.08,
+      ),
     ),
     // Epic 70: big-screen 65/70 mm motion picture film. Clean, wide, rich
     // and filmic: soft roll-off, gentle teal-orange split, very fine grain,
@@ -452,9 +570,9 @@ enum GrainStrength {
 ///   5. hue-selective tweaks + saturation in OKLCh, gamut-mapped back
 ///   6. sRGB encode, split toning, scanner black lift / highlight cap
 class FilmModel {
-  FilmModel(this.p) {
+  FilmModel(this.p, {this.dev = const Development()}) {
     for (var c = 0; c < 3; c++) {
-      final g = p.contrast[c];
+      final g = p.contrast[c] * dev.contrast;
       // y(x0) = 0.18 with x0 = inverseDisplay(0.18)
       final x0 = _inverseDisplay(0.18);
       _mg[c] = math.pow(x0, g) * (p.white / 0.18 - 1);
@@ -463,6 +581,9 @@ class FilmModel {
   }
 
   final FilmProfile p;
+
+  /// The roll's development (stills only; the viewfinder uses none).
+  final Development dev;
   final List<double> _mg = List<double>.filled(3, 0);
   late final double _ev;
   final List<double> _lab = List<double>.filled(3, 0);
@@ -477,9 +598,10 @@ class FilmModel {
       r = g = b = y;
     }
     final m = p.matrix;
-    var cr = (m[0] * r + m[1] * g + m[2] * b) * p.balance[0] * _ev;
-    var cg = (m[3] * r + m[4] * g + m[5] * b) * p.balance[1] * _ev;
-    var cb = (m[6] * r + m[7] * g + m[8] * b) * p.balance[2] * _ev;
+    final t = dev.tint;
+    var cr = (m[0] * r + m[1] * g + m[2] * b) * p.balance[0] * t[0] * _ev;
+    var cg = (m[3] * r + m[4] * g + m[5] * b) * p.balance[1] * t[1] * _ev;
+    var cb = (m[6] * r + m[7] * g + m[8] * b) * p.balance[2] * t[2] * _ev;
     cr = _curve(_inverseDisplay(math.max(0, cr)), 0);
     cg = _curve(_inverseDisplay(math.max(0, cg)), 1);
     cb = _curve(_inverseDisplay(math.max(0, cb)), 2);
@@ -534,7 +656,7 @@ class FilmModel {
   }
 
   double _curve(double x, int c) {
-    final g = p.contrast[c];
+    final g = p.contrast[c] * dev.contrast;
     final xg = math.pow(x, g);
     return p.white * xg / (xg + _mg[c]);
   }

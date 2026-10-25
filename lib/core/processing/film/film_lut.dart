@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'color_math.dart';
+import 'film_process.dart';
 import 'film_profile.dart';
 
 /// Log-ish encoding of display-linear light in [0, 4] (two stops of
@@ -44,8 +45,9 @@ class FilmLut {
     int size = defaultSize,
     LutInput input = LutInput.shaped,
     double exposureEv = 0,
+    Development dev = const Development(),
   }) {
-    final model = FilmModel(profile);
+    final model = FilmModel(profile, dev: dev);
     final data = Float32List(size * size * size * 3);
     final axis = Float64List(size);
     final gain = math.pow(2, exposureEv).toDouble();

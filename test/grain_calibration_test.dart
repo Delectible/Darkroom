@@ -67,7 +67,7 @@ void main() {
     expect(strong, greaterThan(normal * 2));
   });
 
-  test('Portra 400 grain matches the reference scans at Normal (Lisbon sky)', () {
+  test('Portra 400 grain at Normal (Lisbon sky; ~0.6x the scans)', () {
     final normal = _skyGrain(
       GrainStrength.normal,
       stock: 'portra400',
@@ -77,7 +77,8 @@ void main() {
       // short side.
       w: 3000,
     );
-    expect(normal, inInclusiveRange(0.027, 0.041)); // scans: ~0.034
+    // The scans measured ~0.034; scaled back at the owner's call (1.9.5).
+    expect(normal, inInclusiveRange(0.016, 0.024));
   });
 
   test('HP5 grain matches the scans: heaviest in the highlights', () {

@@ -231,7 +231,9 @@ class FilmProfile {
         overSaturation: -0.06,
         overWarmth: 0.012,
         halationSpread: 0.5,
-        formation: GrainFormation(),
+        // 1.9.5: scaled back (was 6 crystals: too grainy even in good
+        // light); same grain size and colour, ~0.63x the strength.
+        formation: GrainFormation(crystals: 15),
       ),
     ),
     // Tuned against the owner's HP5 scans: strictly neutral, deep blacks, strong

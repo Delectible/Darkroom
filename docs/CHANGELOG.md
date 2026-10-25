@@ -1187,3 +1187,5 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   random offset per frame, `lut2` mix by tone, picture softened to the
   grain) and a tighter scan: only the edge of the sprocket hole shows, thin
   frame lines (viewfinder, mask and export share `CineStrip`).
+- [ ] **57.12** Portrait 400 grain scaled back (~0.63x: 15 crystals, was
+  6); same grain size, softness and colour; Weak/Strong scale from it.

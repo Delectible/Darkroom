@@ -219,8 +219,8 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   deep blacks, heavy grain strongest in the highlights via
   `FilmProfile.grainHighlights`, uniform `uGrainHi`) are tuned against
   the owner's reference scans; `grain_calibration_test` pins their Normal grain
-  to the scans (Ektar ~0.0076, Portra ~0.034, HP5 ~0.025 mid / ~0.055
-  bright).
+  to the scans (Ektar ~0.0076, Portra ~0.034 in the scans but ~0.02 since
+  1.9.5 at the owner's call, HP5 ~0.025 mid / ~0.055 bright).
 - Developing process (stills only, `FilmProcess` in `film_process.dart`,
   one per stock on `FilmProfile.process`): the camera meters the frame
   itself (centre-weighted log average vs `meterKey`, weight `meter`), plus

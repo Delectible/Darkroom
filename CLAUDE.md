@@ -238,7 +238,9 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   (`frameHeight` = short side, Weak/Strong scale it and the crystal count)
   and scaled up; detail stops at the grain. It replaces the texture grain
   for that stock (calibration test still pins it); the app throttles it
-  (`throttle: 0.5`). Other stocks: next.
+  (`throttle: 0.5`). Instant 600 too (1800 px, smooth); while an instant
+  print is still processing the darkroom shows it developing on the raw
+  photo (`_instantPicture`). Other stocks: next.
   `FilmRenderer(nominal: true)` = none of it (tests); `EV=` in
   film_preview forces an exposure.
 - Defects (`film_defects.dart`): developed stills only (never the

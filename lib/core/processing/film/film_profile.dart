@@ -318,6 +318,9 @@ class FilmProfile {
         overSaturation: -0.15,
         overWarmth: 0.02,
         chemistry: 1.5,
+        // Instant dyes are soft and smooth: formed at a low resolution
+        // (fast enough for the 20 s develop), many small clouds.
+        formation: GrainFormation(frameHeight: 1800, clouds: [1.5, 1.4, 1.8], crystals: 60, shared: 0.95),
       ),
     ),
     // --- Pro stocks (1.9): first passes, to tune on the phone ------------

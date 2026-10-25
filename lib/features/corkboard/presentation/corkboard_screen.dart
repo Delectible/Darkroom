@@ -1580,20 +1580,10 @@ class _Tray extends ConsumerWidget {
               Expanded(
                 child: Center(
                   child: TweenAnimationBuilder<double>(
-                    tween: Tween(end: processing ? 0 : progress),
+                    tween: Tween(end: _instantDevelop(item, progress)),
                     duration: const Duration(seconds: 1),
-                    builder: (context, p, _) => InstantPrint(
-                      develop: p,
-                      shadow: false,
-                      picture: thumb == null || processing
-                          ? const SizedBox.shrink()
-                          : Image.file(
-                              File(thumb),
-                              fit: BoxFit.cover,
-                              cacheWidth: 160,
-                              gaplessPlayback: true,
-                            ),
-                    ),
+                    builder: (context, p, _) =>
+                        InstantPrint(develop: p, shadow: false, picture: _instantPicture(item, 160)),
                   ),
                 ),
               ),
@@ -1761,14 +1751,9 @@ class _DarkroomCloseUp extends ConsumerWidget {
         body = SizedBox(
           width: width * 0.8,
           child: TweenAnimationBuilder<double>(
-            tween: Tween(end: progress),
+            tween: Tween(end: _instantDevelop(item, (1 - left.inMilliseconds / total).clamp(0.0, 1.0))),
             duration: const Duration(seconds: 1),
-            builder: (context, p, _) => InstantPrint(
-              develop: p,
-              picture: thumb == null
-                  ? const SizedBox.shrink()
-                  : Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 720, gaplessPlayback: true),
-            ),
+            builder: (context, p, _) => InstantPrint(develop: p, picture: _instantPicture(item, 720)),
           ),
         );
       } else {
@@ -2482,4 +2467,23 @@ class _ShakeNote extends StatelessWidget {
       ),
     );
   }
+}
+
+/// How far an instant print has come up. While its grain is still being
+/// formed it keeps developing on the original photo, short of the end.
+double _instantDevelop(MediaItem item, double progress) =>
+    item.status == MediaStatus.processing ? math.min(progress, 0.85) : progress;
+
+/// The picture in an instant print: the finished print, or the original
+/// photo while the print is still being made (it swaps in when ready).
+Widget _instantPicture(MediaItem item, int cacheWidth) {
+  final path = item.status == MediaStatus.processing ? item.rawPath : item.thumbPath;
+  if (path == null || item.status == MediaStatus.failed) return const SizedBox.shrink();
+  return Image.file(
+    File(path),
+    fit: BoxFit.cover,
+    cacheWidth: cacheWidth,
+    gaplessPlayback: true,
+    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+  );
 }

@@ -169,7 +169,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     body:
                         'The free version comes with one roll of film and one battery charge for the digital '
                         'cameras each day. Both are back every morning.\n\n'
-                        'If you ever want more, Darkroom Pro lifts the limits for a one-time ${ProStore.fallbackPrice}. '
+                        'If you ever want more, Darkroom Pro lifts the limits and adds more films and cameras '
+                        '(the darker ones in the picker), for a one-time ${ProStore.fallbackPrice}. '
                         'No subscription, no ads.',
                   ),
                   const _Page(icon: Icons.swipe_outlined, title: 'Getting around', child: _Gestures()),

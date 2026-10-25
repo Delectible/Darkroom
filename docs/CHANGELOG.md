@@ -1201,3 +1201,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **57.15** "Note from the Lab" snackbar after a film shot that was
   1.5+ stops too dark for the stock (no flash): `LabNote` reads the
   capture's EXIF before the hand-off.
+- [ ] **57.16** Every film made of grain (see CLAUDE.md for each stock's
+  grain); Strong grain also takes fewer crystals by its resolution.
+- [ ] **57.17** Picker: Pro films / cameras darkened until Pro, the Pro group
+  set a little apart; Pro sheet, settings and intro mention the 9 extras.
+- [~] **57.18** New artwork for the Pro films and cameras (`tool/render/items`:
+  canister gold / night / chrome, disposable, filmcan, webcam, dslr,
+  toycam, minidv); low-res samples sent for approval.

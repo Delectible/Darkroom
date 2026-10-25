@@ -14,7 +14,8 @@ double _skyGrain(
   String stock = 'ektar100',
   List<int> rgb = const [150, 205, 240],
   int target = 1612,
-  int w = 300,
+  // A whole frame: the films are formed from grains at the frame's short side.
+  int w = 3000,
 }) {
   const h = 3000;
   final data = Uint8List(w * h * 3);
@@ -73,9 +74,6 @@ void main() {
       stock: 'portra400',
       rgb: const [57, 120, 164],
       target: 1353,
-      // A whole frame: Portra's image is formed from grains at the frame's
-      // short side.
-      w: 3000,
     );
     // The scans measured ~0.034; scaled back at the owner's call (1.9.5).
     expect(normal, inInclusiveRange(0.016, 0.024));

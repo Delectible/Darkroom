@@ -154,8 +154,8 @@ class _ProRow extends StatelessWidget {
       ),
       subtitle: Text(
         pro
-            ? 'Unlocked: unlimited film and battery. Thank you!'
-            : 'One roll and one battery charge a day. Pro lifts the limits.',
+            ? 'Unlocked: unlimited film and battery, every film and camera. Thank you!'
+            : 'One roll and one battery charge a day. Pro lifts the limits and adds 9 films and cameras.',
         style: TextStyle(color: p.textMuted, fontSize: 12),
       ),
       trailing: Icon(Icons.chevron_right, color: p.textMuted),

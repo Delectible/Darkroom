@@ -24,6 +24,24 @@ const VARIANTS = {
     base: '#151515', band: '#e9e9e6', stripe: '#9a9a9a', ink: '#f2f2f0', ink2: '#bdbdbd', numBg: '#f2f2f0', numInk: '#121212',
     cap: 0x1b1b1b, capMetal: 0.35, capRough: 0.42, film: 0x1d1b22, filmSheen: 0x55525f, seed: 37,
   },
+  // Pro stocks (1.9), after the classics they nod to (no real marks):
+  // the yellow drugstore box, the black-and-red tungsten cine stock, the
+  // green slide film.
+  gold: {
+    iso: '200', word: 'GOLDEN', kind: 'COLOR NEGATIVE FILM', process: 'PROCESS C-41', din: '24°',
+    base: '#f4b315', band: '#c8161d', stripe: '#1a1a1a', ink: '#3a1d06', ink2: '#5a3410', numBg: '#c8161d', numInk: '#fff4d6',
+    cap: 0x1a1a1a, capMetal: 0.35, capRough: 0.38, film: 0x1e110b, filmSheen: 0x5a3826, seed: 41,
+  },
+  night: {
+    iso: '800T', word: 'NIGHT', kind: 'TUNGSTEN CINE FILM', process: 'PROCESS C-41', din: '30°',
+    base: '#121212', band: '#d0202a', stripe: '#f2f2f2', ink: '#f4f4f4', ink2: '#c9c9c9', numBg: '#d0202a', numInk: '#ffffff',
+    cap: 0xb8b8b8, capMetal: 1.0, capRough: 0.3, film: 0x281410, filmSheen: 0x6a3020, seed: 53,
+  },
+  chrome: {
+    iso: '50', word: 'CHROME', kind: 'COLOR REVERSAL FILM', process: 'PROCESS E-6', din: '18°',
+    base: '#0f6b3c', band: '#f1f1ec', stripe: '#7a2a8c', ink: '#ffffff', ink2: '#d6eedd', numBg: '#f1f1ec', numInk: '#0f6b3c',
+    cap: 0x1a1a1a, capMetal: 0.35, capRough: 0.38, film: 0x1a1612, filmSheen: 0x4a4038, seed: 67,
+  },
 };
 
 const ROT = 0.55;                       // yaw applied to the group
@@ -60,8 +78,8 @@ function labelCanvas(v) {
   fitFont(g, v.iso, 900, 'Inter Display', U(0.16), Vy(0.27));
   g.fillText(v.iso, F(-0.045), Vy(0.835));
   g.textAlign = 'left';
-  fitFont(g, 'ISO ' + v.iso + '/' + v.din, 700, 'DejaVu Sans Condensed', U(0.11), Vy(0.06));
-  g.fillText('ISO ' + v.iso + '/' + v.din, F(0.045), Vy(0.68));
+  fitFont(g, 'ISO ' + v.iso.replace(/T$/, '') + '/' + v.din, 700, 'DejaVu Sans Condensed', U(0.11), Vy(0.06));
+  g.fillText('ISO ' + v.iso.replace(/T$/, '') + '/' + v.din, F(0.045), Vy(0.68));
   fitFont(g, '135-36 EXP', 700, 'DejaVu Sans Condensed', U(0.11), Vy(0.06));
   g.fillText('135-36 EXP', F(0.045), Vy(0.76));
   fitFont(g, v.process, 600, 'DejaVu Sans Condensed', U(0.11), Vy(0.05));
@@ -73,9 +91,12 @@ function labelCanvas(v) {
   drawRabbit(g, F(-0.094), Vy(0.095), Vy(0.075), v.ink2);
   // left side: exposure guide
   g.textAlign = 'left'; g.fillStyle = v.ink2;
-  const rows = v.iso === '100'
-    ? ['SUN  1/125 f/16', 'HAZE  1/125 f/11', 'CLOUD  1/125 f/8', 'SHADE  1/60 f/8']
-    : ['SUN  1/500 f/16', 'HAZE  1/500 f/11', 'CLOUD  1/250 f/8', 'SHADE  1/125 f/5.6'];
+  const rows = {
+    '50': ['SUN  1/60 f/16', 'HAZE  1/60 f/11', 'CLOUD  1/60 f/8', 'SHADE  1/30 f/8'],
+    '100': ['SUN  1/125 f/16', 'HAZE  1/125 f/11', 'CLOUD  1/125 f/8', 'SHADE  1/60 f/8'],
+    '200': ['SUN  1/250 f/16', 'HAZE  1/250 f/11', 'CLOUD  1/250 f/8', 'SHADE  1/125 f/8'],
+    '800T': ['TUNGSTEN 3200K', 'STREET  1/60 f/2', 'INTERIOR  1/30 f/2', 'DAYLIGHT: 85 FILTER'],
+  }[v.iso] ?? ['SUN  1/500 f/16', 'HAZE  1/500 f/11', 'CLOUD  1/250 f/8', 'SHADE  1/125 f/5.6'];
   g.font = `600 ${Vy(0.05)}px "DejaVu Sans Condensed"`;
   rows.forEach((t, i) => g.fillText(t, F(-0.46), Vy(0.15 + i * 0.075)));
   // right side (towards the lips): storage note

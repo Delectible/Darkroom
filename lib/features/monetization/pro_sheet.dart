@@ -232,7 +232,8 @@ class _LimitSheet extends ConsumerWidget {
             FutureBuilder(
               future: ref.read(proStoreProvider).price(),
               builder: (_, price) => Text(
-                'Darkroom Pro removes the daily limits, for a one-time ${price.data ?? ProStore.fallbackPrice}.',
+                'Darkroom Pro removes the daily limits and adds 9 more films and cameras, '
+                'for a one-time ${price.data ?? ProStore.fallbackPrice}.',
                 style: TextStyle(color: p.textMuted, fontSize: 13, height: 1.35),
               ),
             ),
@@ -353,10 +354,14 @@ class _ProSheetState extends ConsumerState<_ProSheet> {
             const SizedBox(height: 6),
             Text(
               'The free version gives you one roll of film and one battery charge for the digital cameras '
-              'each day. Pro takes the limits away:',
+              'each day. Pro takes the limits away and opens the whole cabinet:',
               style: TextStyle(color: p.textMuted, fontSize: 13, height: 1.35),
             ),
             const SizedBox(height: 12),
+            line(
+              '5 more films: Golden 200, Night 800T, Chrome 50, a single-use camera and Epic 70 movie film',
+            ),
+            line('4 more digital cameras: a 2005 webcam, a starter DSLR, a toy pixel cam and MiniDV'),
             line('Unlimited film: a new roll whenever you want one'),
             line('Unlimited battery for the digital cameras'),
             line('Change film in the middle of a roll'),

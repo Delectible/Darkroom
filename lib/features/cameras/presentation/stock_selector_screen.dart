@@ -411,6 +411,8 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                                   controller: _pages,
                                   index: i,
                                   pageWidth: pageW,
+                                  firstPro: _specs.indexWhere((s) => s.pro),
+                                  locked: _specs[i].pro && !ref.watch(proProvider),
                                   onTap: () {
                                     if (i == _index) {
                                       Navigator.of(context).pop();
@@ -551,11 +553,20 @@ class _Item extends StatelessWidget {
     required this.pageWidth,
     required this.onTap,
     required this.child,
+    this.firstPro = -1,
+    this.locked = false,
   });
 
   final PageController controller;
   final int index;
   final double pageWidth;
+
+  /// Index of the first Pro item (-1: none): the Pro group sits a little
+  /// apart from the free one.
+  final int firstPro;
+
+  /// A Pro item the user doesn't have yet: drawn darkened.
+  final bool locked;
   final VoidCallback onTap;
   final Widget child;
 
@@ -573,12 +584,37 @@ class _Item extends StatelessWidget {
           page = controller.page ?? page;
         }
         final d = (page - index).abs().clamp(0.0, 1.0);
-        return OverflowBox(
-          minWidth: pageWidth,
-          maxWidth: pageWidth,
-          child: Opacity(
-            opacity: 1 - 0.55 * d,
-            child: Transform.scale(scale: 1 - 0.32 * d, child: child),
+        // Gap between the free and Pro groups: each side of the boundary
+        // moves apart relative to where the page is, so the item in front
+        // stays centred.
+        var shift = 0.0;
+        if (firstPro > 0) {
+          final side = index >= firstPro ? 1.0 : -1.0;
+          final pageSide = ((page - (firstPro - 0.5)) * 2).clamp(-1.0, 1.0);
+          shift = (side - pageSide) * pageWidth * 0.09;
+        }
+        Widget art = child!;
+        if (locked) {
+          // Darkened and a little desaturated until it's unlocked.
+          art = ColorFiltered(
+            colorFilter: const ColorFilter.matrix([
+              0.36, 0.06, 0.02, 0, 0, //
+              0.03, 0.38, 0.03, 0, 0, //
+              0.02, 0.06, 0.36, 0, 0, //
+              0, 0, 0, 1, 0,
+            ]),
+            child: art,
+          );
+        }
+        return Transform.translate(
+          offset: Offset(shift, 0),
+          child: OverflowBox(
+            minWidth: pageWidth,
+            maxWidth: pageWidth,
+            child: Opacity(
+              opacity: 1 - 0.55 * d,
+              child: Transform.scale(scale: 1 - 0.32 * d, child: art),
+            ),
           ),
         );
       },

@@ -195,7 +195,9 @@ class FilmRenderer {
         wh: wh,
         seed: seed,
         sizeScale: size,
-        crystals: form.crystals / (grain.factor * grain.factor * size * size),
+        // Strong grain is coarser too, which reads a little softer at the
+        // same noise: fewer crystals again by the resolution makes up for it.
+        crystals: form.crystals * grain.resolution / (grain.factor * grain.factor * size * size),
         throttle: throttle,
         exposureRow: (wy, er, eg, eb) {
           final y = wy < 0 ? 0 : (wy >= wh ? wh - 1 : wy);

@@ -173,6 +173,7 @@ class FilmProfile {
       defects: 0.6,
       // Little latitude below box speed: shadows block up and go cold.
       process: FilmProcess(
+        formation: GrainFormation(frameHeight: 4200, crystals: 165),
         iso: 100,
         meter: 0.5,
         scanFix: 0.7,
@@ -260,6 +261,13 @@ class FilmProfile {
       defects: 1.0,
       // Silver grain, coarse in thin shadows; home-developed, so rolls vary.
       process: FilmProcess(
+        formation: GrainFormation(
+          frameHeight: 2600,
+          clouds: [1.8, 1.8, 1.8],
+          crystals: 11,
+          shared: 1.0,
+          speed: 3.0,
+        ),
         iso: 400,
         meter: 0.55,
         scanFix: 0.8,
@@ -360,6 +368,7 @@ class FilmProfile {
       vignette: 0.2,
       defects: 1.0,
       process: FilmProcess(
+        formation: GrainFormation(frameHeight: 2800, crystals: 12),
         iso: 200,
         meter: 0.5,
         crystal: 0.5,
@@ -401,6 +410,7 @@ class FilmProfile {
       defects: 1.0,
       // No anti-halation backing: a wide red skirt and a glow on every lamp.
       process: FilmProcess(
+        formation: GrainFormation(frameHeight: 2400, crystals: 8, shared: 0.88),
         iso: 800,
         meter: 0.5,
         crystal: 0.6,
@@ -442,6 +452,7 @@ class FilmProfile {
       // Slide film: what you shoot is what you get (no scan rescue), dense
       // black when under, washed out when over; E-6 labs are tightly run.
       process: FilmProcess(
+        formation: GrainFormation(frameHeight: 4600, crystals: 330),
         iso: 50,
         meter: 0.5,
         scanFix: 0.15,
@@ -486,6 +497,7 @@ class FilmProfile {
       // Fixed shutter and aperture: it exposes by the scene, not the phone.
       // The minilab rescues most of it, with green mud in the shadows.
       process: FilmProcess(
+        formation: GrainFormation(frameHeight: 2200, crystals: 10, shared: 0.88),
         iso: 400,
         // Fixed f/10 at 1/125 s: needs daylight (or the flash).
         darkLimit: 13.6,
@@ -526,6 +538,8 @@ class FilmProfile {
       halation: 0.12,
       vignette: 0.12,
       exposureDrift: 0,
+      // 65 mm frames: very fine grain plates.
+      process: FilmProcess(formation: GrainFormation(frameHeight: 3200, crystals: 24)),
     ),
     // Tuned against the owner's Super 8 scans: faded home-movie colour, lifted
     // blacks, soft highlights that rarely reach white, very muted colour

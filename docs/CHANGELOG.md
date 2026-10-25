@@ -1175,11 +1175,11 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the expected density. Formed at the film's resolution (3000 px short
   side at Normal), in strips, read back bilinearly; detail stops at the
   grain. Throttled (rests half its work time). Viewfinder unchanged.
-- [ ] **57.9** Fix: faint horizontal lines every 64 rows in Portrait 400
+- [x] **57.9** → 1.9.3 · Fix: faint horizontal lines every 64 rows in Portrait 400
   (1.9.2): the renderer overwrote source rows a new grain strip still
   reads; it now keeps the originals in a ring. Low-res phones (1080p):
   formed at the photo's own size (no extra work), grain at pixel scale.
-- [ ] **57.10** Instant 600 made of grain too (soft, smooth dyes: formed at
+- [x] **57.10** → 1.9.3 · Instant 600 made of grain too (soft, smooth dyes: formed at
   1800 px, many small clouds; ~+2 s). Keeps the 20 s develop: while the
   print is still being made, the darkroom shows it developing on the
   original photo (stops short of done) and swaps the finished print in.

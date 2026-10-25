@@ -54,6 +54,10 @@ class VideoProfile {
   static const _clean = "aeval=exprs='if(isnan(val(0)),0,clip(val(0),-1,1))'";
 
   static VideoProfile forSpec(CameraSpec spec) {
+    if (spec.film case final f? when f.gate == 0) {
+      // Big-screen cine film (Epic 70): 24 fps, clean stereo sound.
+      return const VideoProfile(longEdge: 1280, fps: '24', bitrateKbps: 8000);
+    }
     if (spec.film != null) {
       // Super 8: 18 fps, sound-camera style mono audio.
       return const VideoProfile(

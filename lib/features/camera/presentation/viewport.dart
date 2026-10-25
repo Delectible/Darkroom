@@ -499,11 +499,12 @@ class _FilmCounter extends ConsumerWidget {
       // daily cartridge is shorter).
       final length = pro ? spec.videoMaxSeconds : today.left(spec);
       final feet = ((length - elapsed) / 4).ceil().clamp(0, 50);
-      text = elsewhere ? 'NOT LOADED' : '$feet FT';
+      text = blocked == Blocked.proOnly ? 'PRO' : (elsewhere ? 'NOT LOADED' : '$feet FT');
     } else if (!pro) {
       final left = today.left(spec);
       text = switch (blocked) {
         Blocked.outOfFilm => 'NO FILM',
+        Blocked.proOnly => 'PRO',
         _ when elsewhere => 'NOT LOADED',
         _ => spec.roll.countsDown ? '$left LEFT' : 'FRAME ${Allowance.sizeOf(spec) - left + 1}',
       };

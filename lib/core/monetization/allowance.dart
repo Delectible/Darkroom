@@ -17,6 +17,9 @@ enum Blocked {
   /// The digital cameras' shared battery is flat for today.
   flatBattery,
 
+  /// A Pro-only film or camera (CameraSpec.pro).
+  proOnly,
+
   /// Today's roll is still in its box: the first shot loads it, so ask
   /// first (the stock can't change until it's finished).
   unloaded,
@@ -108,6 +111,7 @@ class Allowance {
 
   /// Null when [spec] may shoot.
   Blocked? check(CameraSpec spec) {
+    if (spec.pro) return Blocked.proOnly;
     if (spec.mode == AppMode.digital) return left(spec) > 0 ? null : Blocked.flatBattery;
     if (carried && !asked) return Blocked.carriedOver;
     if (stock != null && filmUsed >= rollSize) return Blocked.outOfFilm;

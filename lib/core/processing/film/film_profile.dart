@@ -248,6 +248,143 @@ class FilmProfile {
       defects: 1.0,
       negative: false,
     ),
+    // --- Pro stocks (1.9): first passes, to tune on the phone ------------
+    // Golden 200: the warm consumer film from every drugstore shelf. Golden
+    // cast, yellows and skin pushed, saturated reds, slightly cool lifted
+    // shadows, medium grain.
+    'gold200': FilmProfile(
+      id: 'gold200',
+      exposureEv: 0.1,
+      balance: [1.03, 1.0, 0.95],
+      contrast: [1.18, 1.14, 1.08],
+      white: 1.02,
+      saturation: 1.12,
+      hues: [
+        HueTweak(27, 24, shift: 3, chroma: 1.1),
+        HueTweak(60, 30, shift: 4, chroma: 1.12, light: 0.02),
+        HueTweak(100, 30, shift: -6, chroma: 1.15, light: 0.02),
+        HueTweak(142, 40, shift: -6, chroma: 0.95),
+        HueTweak(235, 40, shift: -4, chroma: 0.9),
+      ],
+      shadowLift: 0.02,
+      highlightCap: 0.98,
+      shadowTint: [-0.01, 0.0, 0.012],
+      highlightTint: [0.016, 0.006, -0.022],
+      grainAmount: 0.034,
+      grainChroma: 0.4,
+      grainResolution: 1700,
+      halation: 0.12,
+      vignette: 0.2,
+      defects: 1.0,
+    ),
+    // Night 800T: cinema stock balanced for tungsten light, with the
+    // anti-halation layer removed: cool daylight, warm lamps, glowing red
+    // halos round every light, teal shadows, visible grain.
+    'cinestill800t': FilmProfile(
+      id: 'cinestill800t',
+      exposureEv: 0.2,
+      balance: [0.9, 0.98, 1.1],
+      contrast: [1.1, 1.08, 1.04],
+      white: 1.0,
+      saturation: 1.0,
+      hues: [
+        HueTweak(27, 24, shift: 4, chroma: 1.15),
+        HueTweak(55, 28, shift: -4, chroma: 1.05),
+        HueTweak(195, 40, shift: 6, chroma: 1.1),
+        HueTweak(235, 40, shift: -8, chroma: 1.05),
+      ],
+      shadowLift: 0.03,
+      highlightCap: 0.97,
+      shadowTint: [-0.03, 0.01, 0.025],
+      highlightTint: [0.015, 0.0, -0.01],
+      grainAmount: 0.045,
+      grainChroma: 0.45,
+      grainResolution: 1400,
+      halation: 0.7,
+      halationColor: [1.0, 0.18, 0.08],
+      vignette: 0.18,
+      defects: 1.0,
+    ),
+    // Chrome 50: saturated slide film, the landscape photographer's
+    // favourite. Deep blacks, vivid greens and blues, warm tight
+    // highlights, almost no grain. Slides are positives (no lift, dark dust).
+    'velvia50': FilmProfile(
+      id: 'velvia50',
+      exposureEv: -0.15,
+      balance: [1.0, 1.0, 1.02],
+      contrast: [1.45, 1.45, 1.42],
+      white: 1.02,
+      saturation: 1.35,
+      hues: [
+        HueTweak(27, 24, shift: 2, chroma: 1.15),
+        HueTweak(55, 26, shift: 2, chroma: 1.05),
+        HueTweak(142, 40, shift: 4, chroma: 1.25, light: -0.03),
+        HueTweak(235, 34, shift: 2, chroma: 1.2, light: -0.03),
+        HueTweak(300, 40, shift: 0, chroma: 1.2),
+      ],
+      shadowTint: [0.0, -0.004, 0.01],
+      highlightTint: [0.006, 0.0, -0.012],
+      grainAmount: 0.012,
+      grainChroma: 0.15,
+      grainResolution: 2800,
+      halation: 0.05,
+      vignette: 0.22,
+      defects: 0.6,
+      negative: false,
+    ),
+    // Single-Use 27: the cardboard camera from every wedding table and
+    // holiday. A 400 consumer film with a green cast, punchy but cheap
+    // colour, a soft plastic lens with heavy vignetting, harsh flash.
+    'superia400': FilmProfile(
+      id: 'superia400',
+      exposureEv: 0.1,
+      balance: [0.98, 1.03, 0.97],
+      contrast: [1.2, 1.24, 1.16],
+      white: 1.02,
+      saturation: 1.08,
+      hues: [
+        HueTweak(27, 24, shift: -2, chroma: 1.05),
+        HueTweak(142, 44, shift: 6, chroma: 1.12),
+        HueTweak(195, 40, shift: -6, chroma: 1.05),
+      ],
+      shadowLift: 0.025,
+      highlightCap: 0.97,
+      shadowTint: [-0.015, 0.018, 0.0],
+      highlightTint: [0.008, 0.006, -0.012],
+      grainAmount: 0.04,
+      grainChroma: 0.45,
+      grainResolution: 1300,
+      halation: 0.15,
+      vignette: 0.45,
+      flashStrength: 1.0,
+      exposureDrift: 0.18,
+      defects: 1.0,
+    ),
+    // Epic 70: big-screen 65/70 mm motion picture film. Clean, wide, rich
+    // and filmic: soft roll-off, gentle teal-orange split, very fine grain,
+    // no gate or weave (a modern projector print).
+    'vision70': FilmProfile(
+      id: 'vision70',
+      balance: [1.02, 1.0, 0.98],
+      contrast: [1.16, 1.12, 1.1],
+      white: 1.0,
+      saturation: 1.05,
+      hues: [
+        HueTweak(55, 30, shift: 2, chroma: 1.06, light: 0.01),
+        HueTweak(142, 40, shift: -8, chroma: 0.9),
+        HueTweak(210, 44, shift: -6, chroma: 1.05),
+      ],
+      shadowLift: 0.01,
+      highlightCap: 0.98,
+      shadowTint: [-0.02, 0.008, 0.02],
+      highlightTint: [0.016, 0.006, -0.016],
+      grainAmount: 0.012,
+      grainChroma: 0.3,
+      grainResolution: 2400,
+      halation: 0.12,
+      vignette: 0.12,
+      exposureDrift: 0,
+    ),
     // Tuned against the owner's Super 8 scans: faded home-movie colour, lifted
     // blacks, soft highlights that rarely reach white, very muted colour
     // with olive mids and slightly green highlights, heavy grain, a warm

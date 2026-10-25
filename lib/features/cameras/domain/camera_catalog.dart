@@ -108,6 +108,95 @@ class CameraCatalog {
     boxInk: 0xFF1A1A1A,
   );
 
+  // --- Pro films (1.9). Artwork: placeholders until their renders are made.
+
+  static const gold200 = CameraSpec(
+    id: 'gold200',
+    mode: AppMode.film,
+    name: 'Golden 200',
+    subtitle: 'The yellow-box drugstore classic, warm & golden',
+    badge: 'ISO 200',
+    quality: CaptureQuality.high,
+    output: OutputProfile(maxLongEdge: 8192, jpegQuality: 92),
+    aspects: _filmAspects,
+    defaultAspect: AspectRatioOption.r3x2,
+    artwork: 'assets/artwork/ektar100.webp',
+    boxColor: 0xFFF2B705,
+    boxInk: 0xFF8E1B12,
+    pro: true,
+  );
+
+  static const night800 = CameraSpec(
+    id: 'cinestill800t',
+    mode: AppMode.film,
+    name: 'Night 800T',
+    subtitle: 'Tungsten movie film: red halos round lights',
+    badge: 'ISO 800',
+    quality: CaptureQuality.high,
+    output: OutputProfile(maxLongEdge: 8192, jpegQuality: 92),
+    aspects: _filmAspects,
+    defaultAspect: AspectRatioOption.r3x2,
+    artwork: 'assets/artwork/portra400.webp',
+    boxColor: 0xFF1E2A44,
+    boxInk: 0xFFE8503A,
+    pro: true,
+  );
+
+  static const chrome50 = CameraSpec(
+    id: 'velvia50',
+    mode: AppMode.film,
+    name: 'Chrome 50',
+    subtitle: 'Vivid slide film for landscapes, deep blacks',
+    badge: 'ISO 50',
+    quality: CaptureQuality.high,
+    output: OutputProfile(maxLongEdge: 8192, jpegQuality: 92),
+    aspects: _filmAspects,
+    defaultAspect: AspectRatioOption.r3x2,
+    artwork: 'assets/artwork/ektar100.webp',
+    boxColor: 0xFF2E7D4F,
+    boxInk: 0xFFF5F0E0,
+    pro: true,
+  );
+
+  static const singleUse = CameraSpec(
+    id: 'superia400',
+    mode: AppMode.film,
+    name: 'Single-Use 27',
+    subtitle: 'The cardboard camera from every wedding table',
+    badge: '27 EXP',
+    quality: CaptureQuality.high,
+    output: OutputProfile(maxLongEdge: 4096, jpegQuality: 90),
+    aspects: [AspectRatioOption.r3x2],
+    defaultAspect: AspectRatioOption.r3x2,
+    artwork: 'assets/artwork/polaroid600.webp',
+    roll: FilmRoll(frames: 27, countsDown: true),
+    pickerTag: 'DISPOSABLE',
+    boxColor: 0xFF2F8F3E,
+    boxInk: 0xFFF6F2E6,
+    pro: true,
+  );
+
+  static const epic70 = CameraSpec(
+    id: 'vision70',
+    mode: AppMode.film,
+    name: 'Epic 70',
+    subtitle: 'Big-screen 70mm movie film, wide and rich',
+    badge: '24 FPS',
+    quality: CaptureQuality.standard,
+    output: OutputProfile(maxLongEdge: 1920, jpegQuality: 92),
+    aspects: [AspectRatioOption.r16x9],
+    defaultAspect: AspectRatioOption.r16x9,
+    artwork: 'assets/artwork/super8.webp',
+    recordsVideo: true,
+    videoPrefix: 'EPIC',
+    videoMaxSeconds: 300,
+    landscapeOnly: true,
+    pickerTag: 'MOVIE · 70MM',
+    boxColor: 0xFF101010,
+    boxInk: 0xFFD8B25A,
+    pro: true,
+  );
+
   // --------------------------------------------------------------------------
   // DIGITAL
   // --------------------------------------------------------------------------
@@ -303,8 +392,201 @@ class CameraCatalog {
     storage: DigitalStorage.floppy,
   );
 
-  static const List<CameraSpec> film = [ektar100, portra400, hp5, polaroid600, super8];
-  static const List<CameraSpec> digital = [floppy, ccd2003, flipPhone, camcorder];
+  // --- Pro cameras (1.9). Artwork: placeholders until their renders are made.
+
+  static const webcam = CameraSpec(
+    id: 'webcam05',
+    mode: AppMode.digital,
+    name: '2005 Webcam',
+    subtitle: 'Grainy 320x240 snaps off the top of a CRT',
+    badge: '0.3MP',
+    look: LookSpec(
+      kind: ShaderKind.ccd,
+      matrix: [
+        0.96, 0.02, 0.06, //
+        0.0, 1.0, 0.02, //
+        0.04, 0.0, 1.08,
+      ],
+      offset: [0.02, 0.01, 0.05],
+      saturation: 0.82,
+      exposure: 1.08,
+      gamma: 0.95,
+      contrast: 1.02,
+      pivot: 0.5,
+      black: 0.06,
+      white: 0.92,
+      vignette: 0.22,
+      grainAmount: 0.05,
+      grainSize: 1.6,
+      flashStrength: 0.0,
+      sharpen: -0.2,
+      chromaNoise: 0.14,
+      bloom: 0.2,
+      smear: 0.15,
+      lowRes: 320,
+    ),
+    quality: CaptureQuality.low,
+    output: OutputProfile(
+      maxLongEdge: 960,
+      jpegQuality: 88,
+      lowResLongEdge: 320,
+      lowResJpegQuality: 55,
+      upscale: 3,
+    ),
+    aspects: [AspectRatioOption.r4x3],
+    defaultAspect: AspectRatioOption.r4x3,
+    artwork: 'assets/artwork/floppy99.webp',
+    photoPrefix: 'SNAP',
+    zoom: ZoomSpec(max: 2),
+    pro: true,
+  );
+
+  static const dslr = CameraSpec(
+    id: 'dslr08',
+    mode: AppMode.digital,
+    name: '2008 Starter DSLR',
+    subtitle: 'Crisp 10MP with that kit-lens punch',
+    badge: '10MP',
+    look: LookSpec(
+      kind: ShaderKind.ccd,
+      matrix: [
+        1.04, -0.02, -0.02, //
+        -0.01, 1.03, -0.02, //
+        -0.01, -0.03, 1.04,
+      ],
+      offset: [0.0, 0.0, 0.0],
+      saturation: 1.12,
+      exposure: 1.0,
+      gamma: 1.0,
+      contrast: 1.14,
+      pivot: 0.5,
+      black: 0.0,
+      white: 1.0,
+      vignette: 0.1,
+      grainAmount: 0.006,
+      grainSize: 1.0,
+      flashStrength: 0.85,
+      sharpen: 0.45,
+      chromaNoise: 0.02,
+      bloom: 0.06,
+      smear: 0.0,
+    ),
+    quality: CaptureQuality.high,
+    output: OutputProfile(maxLongEdge: 3888, jpegQuality: 92),
+    aspects: [AspectRatioOption.r3x2, AspectRatioOption.r4x3, AspectRatioOption.r1x1],
+    defaultAspect: AspectRatioOption.r3x2,
+    artwork: 'assets/artwork/ccd2003.webp',
+    photoPrefix: 'IMG_',
+    zoom: ZoomSpec(max: 3),
+    pro: true,
+  );
+
+  static const toyCam = CameraSpec(
+    id: 'toycam',
+    mode: AppMode.digital,
+    name: 'Toy Pixel Cam',
+    subtitle: 'A keychain toy cam: chunky pixels, 4 colours',
+    badge: '128px',
+    look: LookSpec(
+      kind: ShaderKind.jpegPixel,
+      matrix: [
+        1.0, 0.0, 0.0, //
+        0.0, 1.0, 0.0, //
+        0.0, 0.0, 1.0,
+      ],
+      offset: [0.0, 0.0, 0.0],
+      saturation: 1.3,
+      exposure: 1.1,
+      gamma: 0.95,
+      contrast: 1.15,
+      pivot: 0.5,
+      black: 0.04,
+      white: 0.96,
+      vignette: 0.1,
+      grainAmount: 0.0,
+      grainSize: 1.0,
+      sharpen: 0.0,
+      flashStrength: 0.7,
+      lowRes: 128,
+      posterize: 4,
+      artifact: 0.2,
+    ),
+    quality: CaptureQuality.low,
+    output: OutputProfile(
+      maxLongEdge: 1024,
+      jpegQuality: 92,
+      lowResLongEdge: 128,
+      lowResJpegQuality: 90,
+      upscale: 8,
+    ),
+    aspects: [AspectRatioOption.r1x1],
+    defaultAspect: AspectRatioOption.r1x1,
+    artwork: 'assets/artwork/flipphone.webp',
+    photoPrefix: 'TOY_',
+    zoom: ZoomSpec(max: 2),
+    pro: true,
+  );
+
+  static const miniDv = CameraSpec(
+    id: 'minidv04',
+    mode: AppMode.digital,
+    name: '2004 MiniDV',
+    subtitle: 'Digital tape: sharp, saturated, interlaced',
+    badge: 'DV',
+    look: LookSpec(
+      kind: ShaderKind.vhs,
+      matrix: [
+        1.02, 0.0, -0.02, //
+        0.0, 1.02, 0.0, //
+        -0.01, 0.0, 1.02,
+      ],
+      offset: [0.0, 0.0, 0.01],
+      saturation: 1.1,
+      exposure: 1.04,
+      gamma: 0.95,
+      contrast: 1.06,
+      pivot: 0.5,
+      black: 0.03,
+      white: 0.98,
+      vignette: 0.04,
+      grainAmount: 0.012,
+      grainSize: 1.0,
+      flashStrength: 0.5,
+      scanline: 0.08,
+      bleed: 0.2,
+      jitter: 0.05,
+      tracking: 0.05,
+      lines: 480,
+    ),
+    quality: CaptureQuality.standard,
+    output: OutputProfile(
+      maxLongEdge: 1440,
+      jpegQuality: 90,
+      lowResLongEdge: 720,
+      lowResJpegQuality: 85,
+      upscale: 2,
+    ),
+    aspects: [AspectRatioOption.r4x3, AspectRatioOption.r16x9],
+    defaultAspect: AspectRatioOption.r16x9,
+    artwork: 'assets/artwork/camcorder90.webp',
+    timestampStyle: TimestampStyle.camcorderOsd,
+    recordsVideo: true,
+    photoPrefix: 'DSCF',
+    videoPrefix: 'MDV_',
+    videoMaxSeconds: 900,
+    zoom: ZoomSpec(max: 10, endToEnd: Duration(milliseconds: 3000)),
+    pickerTag: 'VIDEO',
+    pro: true,
+  );
+
+  static const List<CameraSpec> film = [
+    ektar100, portra400, hp5, polaroid600, super8, //
+    gold200, night800, chrome50, singleUse, epic70,
+  ];
+  static const List<CameraSpec> digital = [
+    floppy, ccd2003, flipPhone, camcorder, //
+    webcam, dslr, toyCam, miniDv,
+  ];
   static const List<CameraSpec> all = [...film, ...digital];
 
   static List<CameraSpec> forMode(AppMode mode) => mode == AppMode.film ? film : digital;

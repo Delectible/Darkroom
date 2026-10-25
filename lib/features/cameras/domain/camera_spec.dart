@@ -120,6 +120,7 @@ class CameraSpec {
     this.storage = DigitalStorage.sdCard,
     this.boxColor = 0xFFE3D8C3,
     this.boxInk = 0xFF2A2420,
+    this.pro = false,
   });
 
   /// Darkroom time for film shots unless a stock says otherwise.
@@ -181,6 +182,10 @@ class CameraSpec {
   final int boxInk;
 
   /// Film stocks: the emulsion model shared by shader, stills and video.
+  /// Only with Darkroom Pro: free users can pick it and see its look in the
+  /// viewfinder, but the shutter asks for Pro (Blocked.proOnly).
+  final bool pro;
+
   FilmProfile? get film => FilmProfile.forStock(id);
 
   bool get isFilm => mode == AppMode.film;

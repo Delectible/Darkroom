@@ -492,6 +492,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                                 spacing: 6,
                                 children: [
                                   if (loaded) _Tag(loadedTag, const Color(0xFF81C784)),
+                                  if (spec?.pro ?? false) const _Tag('PRO', Color(0xFFE0B04A)),
                                   if (spec?.pickerTag case final tag?) _Tag(tag, const Color(0xFFE57373)),
                                   if (grain != GrainStrength.normal)
                                     _Tag(

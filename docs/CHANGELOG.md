@@ -1142,3 +1142,20 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **56.19** Darkroom 98 windows (Run, User Profile) centre above the
   keyboard (`showWin98Window`: padding by the keyboard, scaled down if
   short).
+
+## 57. Stocks (2026-10-25)
+
+- [x] **57.1** Pro films (`CameraSpec.pro`; free users can pick them and see
+  the look, the shutter asks for Pro: `Blocked.proOnly`): Golden 200
+  (`gold200`), Night 800T (`cinestill800t`), Chrome 50 (`velvia50`),
+  Single-Use 27 disposable (`superia400`, 27 frames, flash), Epic 70
+  (`vision70`, 70mm movie film, 24 fps, no gate).
+- [x] **57.2** Pro digital: 2005 Webcam (`webcam05`), 2008 Starter DSLR
+  (`dslr08`), Toy Pixel Cam (`toycam`), 2004 MiniDV (`minidv04`, video).
+- [ ] **57.3** Owner tunes the new looks on the phone.
+- [ ] **57.4** Owner fine-tunes the current film stocks (Vivid, Portrait,
+  Classic, Instant, Super 8).
+- [ ] **57.5** Real artwork for the new stocks and cameras (placeholders now
+  reuse existing renders): 3 canisters, a disposable, a 70mm can, webcam,
+  DSLR, toy cam, MiniDV camcorder.
+- [ ] **57.6** Epic 70: a wider frame (2.2:1 / 2.76:1) than 16:9.

@@ -207,6 +207,11 @@ class _LimitSheet extends ConsumerWidget {
         'Battery flat',
         'The digital cameras have used today\'s charge. It will be full again tomorrow morning.',
       ),
+      Blocked.proOnly => (
+        '${spec.name} is part of Pro',
+        'Darkroom Pro adds ${spec.isFilm ? 'this film' : 'this camera'} and the other Pro '
+            '${spec.isFilm ? 'films' : 'cameras'}. Everything you have now stays free.',
+      ),
       // Asked by showLoadRollSheet / showCarriedRollSheet instead.
       Blocked.unloaded || Blocked.carriedOver => ('', ''),
     };

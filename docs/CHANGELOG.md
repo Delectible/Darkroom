@@ -1175,3 +1175,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the expected density. Formed at the film's resolution (3000 px short
   side at Normal), in strips, read back bilinearly; detail stops at the
   grain. Throttled (rests half its work time). Viewfinder unchanged.
+- [ ] **57.9** Fix: faint horizontal lines every 64 rows in Portrait 400
+  (1.9.2): the renderer overwrote source rows a new grain strip still
+  reads; it now keeps the originals in a ring. Low-res phones (1080p):
+  formed at the photo's own size (no extra work), grain at pixel scale.

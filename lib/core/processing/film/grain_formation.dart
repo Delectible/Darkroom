@@ -198,6 +198,9 @@ class GrainFormer {
     return n;
   }
 
+  /// Work rows a strip reads beyond its own (each side).
+  int get pad => _pad;
+
   /// Formed light of layer [c] at work pixel (wx, wy); call [ensure] first.
   double at(int c, int wx, int wy) => _out![((wy - _base) * ww + wx) * 3 + c];
 

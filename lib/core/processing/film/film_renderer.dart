@@ -162,7 +162,8 @@ class FilmRenderer {
     // film's resolution, read back bilinearly. Replaces the grain texture.
     final form = pr.formation;
     GrainFormer? former;
-    var wh = 0, ww = 0;
+    var wh = 0, ww = 0, keep = 1, done = 0;
+    Uint8List? ring;
     Int32List? wxi;
     Float64List? wtx;
     if (form != null && amount > 0) {
@@ -195,11 +196,13 @@ class FilmRenderer {
             final xa = math.min(w - 1, sx[x]), xb = math.max(xa + 1, sx[x + 1]);
             var r = 0.0, g = 0.0, b = 0.0;
             for (var yy = ya; yy < yb; yy++) {
-              var q = (yy * w + xa) * 3;
+              final old = yy < done;
+              final src = old ? ring! : data;
+              var q = ((old ? yy % keep : yy) * w + xa) * 3;
               for (var xx = xa; xx < xb; xx++, q += 3) {
-                r += toLin[data[q]];
-                g += toLin[data[q + 1]];
-                b += toLin[data[q + 2]];
+                r += toLin[src[q]];
+                g += toLin[src[q + 1]];
+                b += toLin[src[q + 2]];
               }
             }
             final dx = (((xa + xb) * 0.5) / w - 0.5) * 2.0;
@@ -212,6 +215,11 @@ class FilmRenderer {
           }
         },
       );
+      // The main loop writes the finished photo over [data] row by row,
+      // but a new strip still reads a few source rows above it: keep the
+      // originals of recent rows in a ring.
+      keep = ((former.pad + 2) * h / wh).ceil() + 2;
+      ring = Uint8List(keep * w * 3);
       wxi = Int32List(w);
       wtx = Float64List(w);
       for (var x = 0; x < w; x++) {
@@ -231,6 +239,8 @@ class FilmRenderer {
       var wy0 = 0, wy1 = 0;
       var wty = 0.0;
       if (formed) {
+        ring!.setRange((y % keep) * w * 3, (y % keep + 1) * w * 3, data, y * w * 3);
+        done = y + 1;
         final f = ((y + 0.5) * wh / h - 0.5).clamp(0.0, wh - 1.0);
         wy0 = f.floor();
         wy1 = math.min(wh - 1, wy0 + 1);

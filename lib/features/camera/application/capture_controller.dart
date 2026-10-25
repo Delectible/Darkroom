@@ -15,6 +15,7 @@ import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
 import 'camera_session_controller.dart';
 import 'camera_ui_state.dart';
+import 'lab_note.dart';
 import 'zoom_controller.dart';
 import '../../../core/device/battery.dart';
 import '../../../core/device/haptics.dart';
@@ -148,11 +149,13 @@ class CaptureController extends Notifier<CaptureState> {
     );
     try {
       final file = await c.takePicture();
+      // Read before the hand-off moves the file.
+      final note = await LabNote.forFile(ctx.spec, file.path, flash: ctx.flash == FlashSetting.on);
       // Hand-off: moves the file into our cache + writes the queue row.
       // Processing then continues in the background isolate.
       await ref.read(captureProcessorProvider).enqueuePhoto(file.path, ctx);
       ref.read(allowanceProvider.notifier).usePhoto(ctx.spec);
-      state = state.copyWith(busy: false);
+      state = state.copyWith(busy: false, message: note);
       unawaited(_maybeAskNotificationPermission(ctx));
     } on CameraException catch (e) {
       state = state.copyWith(busy: false, message: 'Capture failed: ${e.description ?? e.code}');

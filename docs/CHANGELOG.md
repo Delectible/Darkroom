@@ -1198,3 +1198,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   back.
 - [ ] **57.14** Settings: each stock / camera folds up to its name (plus
   what's set); a dropdown arrow opens its ratio / grain / timestamp.
+- [ ] **57.15** "Note from the Lab" snackbar after a film shot that was
+  1.5+ stops too dark for the stock (no flash): `LabNote` reads the
+  capture's EXIF before the hand-off.

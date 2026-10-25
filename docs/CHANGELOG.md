@@ -1187,30 +1187,30 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   random offset per frame, `lut2` mix by tone, picture softened to the
   grain) and a tighter scan: only the edge of the sprocket hole shows, thin
   frame lines (viewfinder, mask and export share `CineStrip`).
-- [ ] **57.12** Portrait 400 grain scaled back (~0.63x: 15 crystals, was
+- [x] **57.12** → 1.9.5 · Portrait 400 grain scaled back (~0.63x: 15 crystals, was
   6); same grain size, softness and colour; Weak/Strong scale from it.
-- [ ] **57.13** Film speed: the scene's real brightness comes from the
+- [x] **57.13** → 1.9.5 · Film speed: the scene's real brightness comes from the
   phone's EXIF (shutter, aperture, ISO: `sceneEvOf`); each stock has an ISO
   and the camera a dark limit (35 mm f/2.8 at 1/30 s; instant f/14.6 1/4 s;
   single-use f/10 1/125 s), so slow film comes out under in the dark
   (`FilmProcess.underFor`, up to 4 stops; never with flash). Formed grain
   sees the full error (fewer developed grains), the scan pulls brightness
   back.
-- [ ] **57.14** Settings: each stock / camera folds up to its name (plus
+- [x] **57.14** → 1.9.5 · Settings: each stock / camera folds up to its name (plus
   what's set); a dropdown arrow opens its ratio / grain / timestamp.
-- [ ] **57.15** "Note from the Lab" snackbar after a film shot that was
+- [x] **57.15** → 1.9.5 · "Note from the Lab" snackbar after a film shot that was
   1.5+ stops too dark for the stock (no flash): `LabNote` reads the
   capture's EXIF before the hand-off.
-- [ ] **57.16** Every film made of grain (see CLAUDE.md for each stock's
+- [x] **57.16** → 1.9.5 · Every film made of grain (see CLAUDE.md for each stock's
   grain); Strong grain also takes fewer crystals by its resolution.
-- [ ] **57.17** Picker: Pro films / cameras darkened until Pro, the Pro group
+- [x] **57.17** → 1.9.5 · Picker: Pro films / cameras darkened until Pro, the Pro group
   set a little apart; Pro sheet, settings and intro mention the 9 extras.
-- [x] **57.18** New artwork for the Pro films and cameras (`tool/render/items`:
+- [x] **57.18** → 1.9.5 · New artwork for the Pro films and cameras (`tool/render/items`:
   canister gold / night / chrome, disposable, filmcan, webcam, dslr,
   toycam, minidv); low-res samples sent for approval.
-- [ ] **57.19** Film descriptions lead with the ISO and what it's good /
+- [x] **57.19** → 1.9.5 · Film descriptions lead with the ISO and what it's good /
   bad at, after the stock each film is modelled on.
-- [ ] **57.20** Free version: swiping the memo card only steps through the
+- [x] **57.20** → 1.9.5 · Free version: swiping the memo card only steps through the
   free films (`step` skips Pro).
-- [ ] **57.21** 3D bodies: the live picture is clipped in by the rim's swing
+- [x] **57.21** → 1.9.5 · 3D bodies: the live picture is clipped in by the rim's swing
   as the body turns (`_RimClip`), so it stays inside the rendered frame.

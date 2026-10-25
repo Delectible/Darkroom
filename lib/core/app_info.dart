@@ -3,17 +3,25 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.9.3';
+  static const version = '1.9.4';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Instant 600 prints are now made of grain too, soft like the real thing. Fixed faint lines in Portrait 400 photos.';
+      'Super 8 reels are now made of real film grain, framed like a home-movie transfer with just the edge of the sprocket hole.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
-    ('1.9', ['New Pro films and cameras', 'Real developing process', 'Photos made of grain']),
+    (
+      '1.9',
+      [
+        'New Pro films and cameras',
+        'Real developing process',
+        'Photos made of grain',
+        'Super 8 grain and framing',
+      ],
+    ),
     (
       '1.8',
       [

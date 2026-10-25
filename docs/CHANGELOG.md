@@ -1208,3 +1208,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [~] **57.18** New artwork for the Pro films and cameras (`tool/render/items`:
   canister gold / night / chrome, disposable, filmcan, webcam, dslr,
   toycam, minidv); low-res samples sent for approval.
+- [ ] **57.19** Film descriptions lead with the ISO and what it's good /
+  bad at, after the stock each film is modelled on.
+- [ ] **57.20** Free version: swiping the memo card only steps through the
+  free films (`step` skips Pro).
+- [ ] **57.21** 3D bodies: the live picture is clipped in by the rim's swing
+  as the body turns (`_RimClip`), so it stays inside the rendered frame.

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
 import '../../settings/application/settings_controllers.dart';
+import 'body_swap.dart' show BodyYaw;
 import 'photo_body.dart';
 import 'viewport.dart';
 import '../../../core/skins/camera_skins.dart';
@@ -108,9 +110,12 @@ class WholeFace extends ConsumerWidget {
                       // The live picture in the rendered frame's screen.
                       Positioned.fromRect(
                         rect: screen,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(film ? 6 : 3),
-                          child: const CameraViewport(),
+                        child: _RimClip(
+                          rim: film ? _filmRim : _digitalRim,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(film ? 6 : 3),
+                            child: const CameraViewport(),
+                          ),
                         ),
                       ),
                       at(
@@ -226,4 +231,43 @@ class ProcessingSpinner extends ConsumerWidget {
             ),
     );
   }
+}
+
+/// How far the viewfinder's rim stands out of the face (design dp): the
+/// rendered frame's inner ring (film: the polished ring, 3.2 x HEIGHTS;
+/// digital: the gloss bezel, 2.4 x HEIGHTS; tool/render/blender/whole_body.py).
+const _filmRim = 3.2 * 2.6;
+const _digitalRim = 2.4 * 2.6;
+
+/// The live picture is drawn flat on the face, but the rim round it stands
+/// out: as the body turns, the rim's inner edge swings across the picture's
+/// edge. Clip the picture in from both sides by that swing so it always
+/// stays inside the rendered frame (the far side then shows a sliver of the
+/// recess, as a real window would).
+class _RimClip extends StatelessWidget {
+  const _RimClip({required this.rim, required this.child});
+
+  final double rim;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final yaw = BodyYaw.of(context);
+    if (yaw.abs() < 1e-3) return child;
+    // A point [rim] out of the face lands this far across it.
+    final inset = rim * math.tan(yaw.abs());
+    return ClipRect(clipper: _SideClip(inset), child: child);
+  }
+}
+
+class _SideClip extends CustomClipper<Rect> {
+  const _SideClip(this.inset);
+
+  final double inset;
+
+  @override
+  Rect getClip(Size size) => Rect.fromLTRB(inset, 0, size.width - inset, size.height);
+
+  @override
+  bool shouldReclip(_SideClip old) => old.inset != inset;
 }

@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/monetization/pro.dart';
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
 import '../../../core/settings/settings_repository.dart';
@@ -171,10 +172,16 @@ class SelectedCameraNotifier extends Notifier<Map<AppMode, String>> {
         .setString(mode == AppMode.film ? PrefKeys.cameraFilm : PrefKeys.cameraDigital, id);
   }
 
-  /// Next / previous stock or body in catalog order (wraps around).
+  /// Next / previous stock or body in catalog order (wraps around). Without
+  /// Pro it only shuffles through the free ones (the picker shows the rest).
   Future<void> step(AppMode mode, int delta) {
-    final list = CameraCatalog.forMode(mode);
+    final pro = ref.read(proProvider);
+    final list = [
+      for (final c in CameraCatalog.forMode(mode))
+        if (pro || !c.pro) c,
+    ];
     final i = list.indexWhere((c) => c.id == state[mode]);
+    if (i < 0) return select(mode, (delta > 0 ? list.first : list.last).id);
     return select(mode, list[(i + delta) % list.length].id);
   }
 }

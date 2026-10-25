@@ -12,6 +12,7 @@ import 'cine_strip.dart';
 import 'crop_math.dart';
 import 'film/film_lut.dart';
 import 'film/film_profile.dart';
+import 'film/grain_plates.dart';
 import 'look_spec.dart';
 import 'video_filters.dart';
 
@@ -189,6 +190,27 @@ class VideoPlanner {
           p.join(job.workDir, 'dust_%03d.png'),
         ])
         ..addAll(['-loop', '1', '-framerate', profile.fps, '-i', p.join(job.workDir, 'gate.png')]);
+      // Stocks made of grain: plates of formed grain (input 3).
+      final form = film.process.formation;
+      if (form != null) {
+        GrainPlates.render(
+          job.workDir,
+          outW,
+          outH,
+          form,
+          resolution: job.grain.resolution,
+          factor: job.grain.factor,
+          seed: job.id.hashCode,
+        );
+        inputs.addAll([
+          '-stream_loop',
+          '-1',
+          '-framerate',
+          profile.fps,
+          '-i',
+          p.join(job.workDir, 'plate_%02d.png'),
+        ]);
+      }
       graph = VideoFilters.filmGraph(
         film: film,
         grain: job.grain,

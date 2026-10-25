@@ -4,6 +4,7 @@ import '../../features/cameras/domain/camera_spec.dart';
 import 'cine_strip.dart';
 import 'crop_math.dart';
 import 'film/film_profile.dart';
+import 'film/grain_plates.dart';
 import 'look_spec.dart';
 
 /// Per-camera video encode settings.
@@ -274,14 +275,25 @@ class VideoFilters {
     // The grain stream below has a std of ~24 levels; grainmerge adds it.
     // Matched to the owner's Super 8 scans (fine, ~0.015 high-pass in the frame).
     final grainOpacity = _f((film.grainAmount * grain.factor * 255 / 24 * 0.3).clamp(0.0, 1.0));
+    // Grey levels of grain at mid-grey; deep shadows and highlights carry
+    // about half.
+    final amp = film.grainAmount * grain.factor * 255 / GrainPlates.scale;
+    final plateMix = 'clip(x+(y-128)*${_f(amp)}*(0.55+1.8*(x/255)*(1-x/255)),0,255)';
     final halOpacity = _f((film.halation * 1.6).clamp(0.0, 1.0));
     final hr = (255 * film.halationColor[0]).round(), hg = (255 * film.halationColor[1]).round();
     final hb = (255 * film.halationColor[2]).round();
 
+    // Stocks made of grain (plates on input 3): the picture softens to the
+    // grain's own size, so detail stops at the grain.
+    final form = film.process.formation;
+    final plateScale = form == null ? 0.0 : GrainPlates.filmScale(form, outH, grain.resolution);
+    final softness = form == null
+        ? math.max(0.6, outH / 720 * 1.1)
+        : math.max(0.6, form.clouds[1] * plateScale);
     final base = [
       ..._geometry(crop, rotateTurns, outW, outH, profile),
       // Super 8 is soft: a small lens on a 5.8 mm frame.
-      'gblur=sigma=${_f(math.max(0.6, outH / 720 * 1.1))}',
+      'gblur=sigma=${_f(softness)}',
       'format=gbrp',
       "lut3d=file='$cubePath':interp=tetrahedral",
       // Exposure flicker: a jump every frame plus a slow pulse (uneven
@@ -314,12 +326,21 @@ class VideoFilters {
       "[hi]lutrgb=r='clip((val-205)*${hr / 255 * 4.2},0,255)':g='clip((val-205)*${hg / 255 * 4.2},0,255)'"
           ":b='clip((val-205)*${hb / 255 * 4.2},0,255)',gblur=sigma=$halSigma[glow]",
       '[img][glow]blend=all_mode=screen:all_opacity=$halOpacity[hal]',
-      // Coarse grain: mid-grey noise at grain resolution, scaled up, merged.
-      // Mostly-luma noise with a little chroma, like dye clouds.
-      'color=c=0x808080:s=${grainW}x$grainH:r=${profile.fps},format=yuv444p,'
-          'noise=c0s=100:c0f=t+u:c1s=${(60 * film.grainChroma).round()}:c1f=t+u'
-          ':c2s=${(60 * film.grainChroma).round()}:c2f=t+u,scale=$outW:$outH:flags=bicubic,format=gbrp[grain]',
-      '[hal][grain]blend=all_mode=grainmerge:all_opacity=$grainOpacity:shortest=1[grained]',
+      if (form == null) ...[
+        // Coarse grain: mid-grey noise at grain resolution, scaled up, merged.
+        // Mostly-luma noise with a little chroma, like dye clouds.
+        'color=c=0x808080:s=${grainW}x$grainH:r=${profile.fps},format=yuv444p,'
+            'noise=c0s=100:c0f=t+u:c1s=${(60 * film.grainChroma).round()}:c1f=t+u'
+            ':c2s=${(60 * film.grainChroma).round()}:c2f=t+u,scale=$outW:$outH:flags=bicubic,format=gbrp[grain]',
+        '[hal][grain]blend=all_mode=grainmerge:all_opacity=$grainOpacity:shortest=1[grained]',
+      ] else ...[
+        // Formed grain: a plate per frame at a random offset, added in
+        // proportion to the tone (strongest in the mid-tones, as formed
+        // grain shows) through a precomputed 8-bit table.
+        '[3:v]format=gbrp,crop=$outW:$outH:'
+            "'random(5)*${2 * GrainPlates.margin(outH)}':'random(6)*${2 * GrainPlates.margin(outH)}'[grain]",
+        "[hal][grain]lut2=c0='$plateMix':c1='$plateMix':c2='$plateMix'[grained]",
+      ],
       '[grained]format=yuv444p,vignette=a=${_f(film.vignette * 2.2)}[vig]',
       '[vig][1:v]overlay=0:0:shortest=1:format=auto[dusty]',
       ...strip,

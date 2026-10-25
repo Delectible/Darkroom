@@ -1183,3 +1183,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   1800 px, many small clouds; ~+2 s). Keeps the 20 s develop: while the
   print is still being made, the darkroom shows it developing on the
   original photo (stops short of done) and swaps the finished print in.
+- [ ] **57.11** Super 8 made of grain: formed grain plates (16 per reel,
+  random offset per frame, `lut2` mix by tone, picture softened to the
+  grain) and a tighter scan: only the edge of the sprocket hole shows, thin
+  frame lines (viewfinder, mask and export share `CineStrip`).

@@ -102,7 +102,8 @@ void main() {
         expect(f.width, plan.outW);
         // Sprocket hole is black, the film edge left of it near-black, and
         // the picture area is not.
-        final hx = ((CineStrip.holeX + CineStrip.holeW / 2) * f.width).round();
+        // Only the hole's right edge is on the canvas (scanned a touch wide).
+        final hx = ((CineStrip.holeX + CineStrip.holeW) * f.width * 0.4).round();
         final hole = f.getPixel(hx, f.height ~/ 2);
         expect(hole.r + hole.g + hole.b, lessThan(60));
         final pic = f.getPixel(((CineStrip.picX + CineStrip.picW / 2) * f.width).round(), f.height ~/ 2);

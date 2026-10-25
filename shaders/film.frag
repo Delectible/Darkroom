@@ -104,9 +104,9 @@ float highlight(vec2 frag, float gain) {
 }
 
 // ---- Super 8 film strip (mirrors lib/core/processing/cine_strip.dart) ----
-const float kLeft = 0.16;
-const float kRight = 0.035;
-const float kSliver = 0.05;
+const float kLeft = 0.025;
+const float kRight = 0.022;
+const float kSliver = 0.003;
 const float kGap = 0.014;
 const float kPicX = kLeft;
 const float kPicW = 1.0 - kLeft - kRight;
@@ -154,7 +154,7 @@ vec4 stripColor(vec2 u, float aspect, float px) {
   float hole = boxSdf(p, vec2((kHoleX + kHoleW / 2.0) * aspect, kHoleY + kHoleH / 2.0),
       vec2(kHoleW / 2.0 * aspect, kHoleH / 2.0), kHoleR);
   vec3 col = vec3(18.0, 12.0, 10.0) / 255.0;
-  float e = (p.x - 0.012 * aspect) / 0.0016;
+  float e = (p.x - (kHoleX - 0.15) * aspect) / 0.0016;
   col = mix(col, vec3(62.0, 74.0, 104.0) / 255.0, 0.55 * exp(-e * e));
   if (hole > 0.0) {
     float t = hole / 0.0035;

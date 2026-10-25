@@ -2,10 +2,10 @@ import 'dart:math' as math;
 
 import 'crop_math.dart';
 
-/// Layout of a full-gate Super 8 scan, the way reels are digitised today:
-/// the picture, a black edge down the left with the sprocket hole, a thin
-/// edge on the right, and slivers of the previous / next frames above and
-/// below, across thin frame lines.
+/// Layout of a Super 8 transfer scanned a touch wide (1.9.4; was the full
+/// gate): the picture with its rounded gate corners, just the edge of the
+/// sprocket hole (glowing rim) down the left, a thin edge on the right and
+/// thin frame lines above and below.
 ///
 /// All values are fractions of the canvas (width for x, height for y) in the
 /// viewer's upright frame. One source for the live viewfinder (film.frag),
@@ -13,14 +13,14 @@ import 'crop_math.dart';
 class CineStrip {
   const CineStrip._();
 
-  /// Black film edge on the left (holds the sprocket hole).
-  static const left = 0.16;
+  /// Black film edge on the left (the sprocket hole's edge shows in it).
+  static const left = 0.025;
 
   /// Thin black edge on the right.
-  static const right = 0.035;
+  static const right = 0.022;
 
   /// How much of the neighbouring frames shows above and below.
-  static const sliver = 0.05;
+  static const sliver = 0.003;
 
   /// Frame line between frames.
   static const gap = 0.014;
@@ -30,7 +30,8 @@ class CineStrip {
   static const picY = sliver + gap;
   static const picH = 1 - 2 * (sliver + gap);
 
-  /// Sprocket hole: just left of the picture, centred on it.
+  /// Sprocket hole: just left of the picture, centred on it (mostly off
+  /// the canvas: only its right edge shows).
   static const holeW = 0.115;
   static const holeH = 0.25;
   static const holeX = left - holeW - 0.008;
@@ -124,8 +125,8 @@ class CineStripPixel {
       CineStrip.holeRadius,
     );
     var r = base.$1.toDouble(), g = base.$2.toDouble(), b = base.$3.toDouble();
-    // Faint line down the film's outer edge.
-    final e = (x - 0.012 * aspect) / 0.0016;
+    // Faint line down the film's outer edge (off the canvas when cropped).
+    final e = (x - (CineStrip.holeX - 0.15) * aspect) / 0.0016;
     final line = 0.55 * math.exp(-e * e);
     r += (edgeLine.$1 - r) * line;
     g += (edgeLine.$2 - g) * line;

@@ -546,6 +546,9 @@ class FilmProfile {
       flicker: 1,
       dust: 1,
       gate: 1,
+      // Made of grain (1.9.4): video uses formed grain plates. A 5.8 mm
+      // frame: coarse grain.
+      process: FilmProcess(formation: GrainFormation(frameHeight: 700)),
     ),
   };
 }

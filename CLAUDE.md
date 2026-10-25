@@ -331,10 +331,13 @@ Film Mode
   PLAY (`_ended`; Android's player sticks), plus a one-shot stall watchdog.
   No swiping or tapping on the screen; only the keys. No REC badge in the Super 8 viewfinder. Always landscape
   (`CameraSpec.landscapeOnly`: held upright it records a landscape slice,
-  `CropMath` `acrossShortSide`). Reels are full-gate scans (`CineStrip`,
-  `core/processing/cine_strip.dart`): black film edge with the sprocket hole
-  (glowing rim) on the viewer's left, slivers of the neighbouring frames
-  across frame lines. The viewfinder shader draws the same strip (uniforms
+  `CropMath` `acrossShortSide`). Reels are scanned a touch wide (`CineStrip`,
+  `core/processing/cine_strip.dart`; 1.9.4, was the full gate): rounded
+  frame corners, just the edge of the sprocket hole (glowing rim) on the
+  viewer's left, thin frame lines. Grain is formed (1.9.4,
+  `film/grain_plates.dart`): 16 plates of grain from the stills' model
+  (`GrainFormation(frameHeight: 700)`), one per frame at a random offset,
+  mixed by tone with `lut2`; the picture softens to the grain's size. The viewfinder shader draws the same strip (uniforms
   `uCanvas`, `uTurns`: it rotates with the phone so the hole stays on the
   viewer's left; `_StripTurn` swings it round when the phone turns, in the shader via
   `uSpin` so the hole turns with the strip); FFmpeg composites it from `gate.png`. Faded look tuned to

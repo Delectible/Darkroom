@@ -208,7 +208,7 @@ class PhotoPipeline {
         rollSeed: Development.rollSeedFor(job.cameraId, job.capturedAtMs),
         grain: job.grain,
         sceneEv: sceneEv,
-        throttle: 0.5,
+        throttle: 0.25,
       ).render(data, w, h, flash: flash);
     } else {
       final look = spec.look!;

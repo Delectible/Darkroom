@@ -1224,3 +1224,12 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **57.24** Single-Use 27 tuned to the owner's disposable samples:
   grain halved (40 crystals), deep blacks (lift 0.008), near-white
   highlights (cap 0.99), a touch more contrast.
+- [ ] **57.25** Instant 600 develops in 40 s (a burst of shots took far
+  longer than 20 s).
+- [ ] **57.26** Faster developing: grain formation ~2x faster (cached
+  response tables, box blurs for coarse clouds, table-driven counts); two
+  shots develop side by side on 8-core phones; the throttle rests 0.25 of
+  the work time (was 0.5).
+- [ ] **57.27** Single-Use 27 plastic lens (`PlasticLens`): barrel
+  distortion, colour fringes, soft corners, highlights rolled off; stronger
+  vignette (0.58).

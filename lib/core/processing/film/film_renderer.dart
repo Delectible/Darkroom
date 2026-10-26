@@ -88,6 +88,7 @@ class FilmRenderer {
   double lastEv = 0;
 
   void render(Uint8List data, int w, int h, {required double flash}) {
+    if (!nominal) profile.lens?.apply(data, w, h);
     final pr = profile.process;
     final rnd = math.Random(seed);
     final drift = (rnd.nextDouble() * 2 - 1) * profile.exposureDrift;

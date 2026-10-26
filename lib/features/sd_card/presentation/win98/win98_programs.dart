@@ -243,7 +243,7 @@ const pingLines = [
   'Reply from darkroom: bytes=32 time=5min TTL=98',
   'Reply from darkroom: bytes=32 time=5min TTL=98',
   'Reply from darkroom: bytes=32 time=5min TTL=98',
-  'Reply from darkroom: bytes=32 time=20s TTL=600 (instant)',
+  'Reply from darkroom: bytes=32 time=40s TTL=600 (instant)',
   '',
   'Ping statistics: 4 sent, 4 developed, 0 lost.',
 ];

@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.9.5';
+  static const version = '1.9.6';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Every film is now made of real grain, and film speed matters: slow film struggles in the dark, with a note from the lab. New artwork for the Pro films and cameras.';
+      'Prints develop about twice as fast. Notes from the lab arrive with the developed print. Instant film now takes 40 seconds. The Single-Use camera gets its plastic lens: bowed lines, soft corners and a darker vignette.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

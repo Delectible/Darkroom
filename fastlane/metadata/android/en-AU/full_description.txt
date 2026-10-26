@@ -2,7 +2,7 @@ Most camera apps give you the picture instantly and a hundred filters to pick fr
 
 FILM MODE
 • Five films: a clean, punchy colour film, a soft and warm portrait film, a gritty black & white film, square instant prints in 8-shot packs, and a Super 8 movie camera.
-• Every shot goes to the darkroom and takes about five minutes to develop (instant prints fade in over 20 seconds). A quiet notification tells you when it's ready, even if the app is closed.
+• Every shot goes to the darkroom and takes about five minutes to develop (instant prints fade in over 40 seconds). A quiet notification tells you when it's ready, even if the app is closed.
 • Developed prints get pinned to a corkboard. Each frame has real film grain and the odd speck of dust, hair or light leak, tuned against scans of real film.
 • Write a note on the border of an instant print.
 • Super 8 reels play on a projector with chunky tape-deck keys, fast forward and rewind that actually spool, and a label you can rename.

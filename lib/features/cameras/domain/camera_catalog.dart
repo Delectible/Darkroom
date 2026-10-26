@@ -100,7 +100,7 @@ class CameraCatalog {
     aspects: [AspectRatioOption.r1x1],
     defaultAspect: AspectRatioOption.r1x1,
     artwork: 'assets/artwork/polaroid600.webp',
-    developTime: Duration(seconds: 20),
+    developTime: Duration(seconds: 40),
     printStyle: PrintStyle.instant,
     roll: FilmRoll(prefix: 'PACK', frames: 8, counter: 'instant', countsDown: true),
     pickerTag: 'INSTANT · 20 S',

@@ -77,7 +77,11 @@ class CaptureProcessor {
 
   final _queue = <Future<void> Function()>[];
   final _inFlightRaw = <String>{};
-  bool _draining = false;
+  int _workers = 0;
+
+  /// Shots developed side by side: two on phones with cores to spare (a
+  /// burst no longer waits in line), else one.
+  static final int _maxWorkers = Platform.numberOfProcessors >= 8 ? 2 : 1;
 
   /// Number of captures waiting for / in processing (drives a UI spinner).
   final ValueNotifier<int> pending = ValueNotifier<int>(0);
@@ -231,16 +235,16 @@ class CaptureProcessor {
 
   void _enqueue(Future<void> Function() task) {
     _queue.add(task);
-    pending.value = _queue.length + (_draining ? 1 : 0);
-    if (!_draining) unawaited(_drain());
+    if (_workers < _maxWorkers) unawaited(_drain());
+    pending.value = _queue.length + _workers;
   }
 
   Future<void> _drain() async {
-    _draining = true;
+    _workers++;
     try {
       while (_queue.isNotEmpty) {
         final task = _queue.removeAt(0);
-        pending.value = _queue.length + 1;
+        pending.value = _queue.length + _workers;
         try {
           await task();
         } catch (e, st) {
@@ -248,8 +252,8 @@ class CaptureProcessor {
         }
       }
     } finally {
-      _draining = false;
-      pending.value = 0;
+      _workers--;
+      pending.value = _queue.length + _workers;
     }
   }
 

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'color_math.dart';
 import 'film_process.dart';
 import 'grain_formation.dart';
+import 'plastic_lens.dart';
 
 /// A hue-selective adjustment applied in OKLCh after the film curve.
 class HueTweak {
@@ -58,6 +59,7 @@ class FilmProfile {
     this.gate = 0,
     this.defects = 0,
     this.negative = true,
+    this.lens,
     this.grainHighlights = 0,
     this.process = const FilmProcess(),
   });
@@ -136,6 +138,10 @@ class FilmProfile {
 
   /// Negative film (dust scans white); false for positive / instant.
   final bool negative;
+
+  /// A cheap plastic lens in front of the film (developed stills only);
+  /// null = a decent glass lens.
+  final PlasticLens? lens;
 
   /// Camera, developer and scanner behaviour of the developed still.
   final FilmProcess process;
@@ -335,7 +341,7 @@ class FilmProfile {
         overWarmth: 0.02,
         chemistry: 1.5,
         // Instant dyes are soft and smooth: formed at a low resolution
-        // (fast enough for the 20 s develop), many small clouds.
+        // (fast enough for the 40 s develop), many small clouds.
         formation: GrainFormation(frameHeight: 1800, clouds: [1.5, 1.4, 1.8], crystals: 60, shared: 0.95),
       ),
     ),
@@ -491,10 +497,13 @@ class FilmProfile {
       grainChroma: 0.45,
       grainResolution: 1300,
       halation: 0.15,
-      vignette: 0.45,
+      vignette: 0.58,
       flashStrength: 1.0,
       exposureDrift: 0.18,
       defects: 1.0,
+      // One moulded plastic element: bowed lines, colour fringes and soft
+      // corners, highlights that give up early.
+      lens: PlasticLens(),
       // Fixed shutter and aperture: it exposes by the scene, not the phone.
       // The minilab rescues most of it, with green mud in the shadows.
       process: FilmProcess(

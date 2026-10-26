@@ -239,7 +239,8 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   (`frameHeight` = short side, Weak/Strong scale it and the crystal count)
   and scaled up; detail stops at the grain. It replaces the texture grain
   for that stock (calibration test still pins it); the app throttles it
-  (`throttle: 0.5`). Instant 600 too (1800 px, smooth); while an instant
+  (`throttle: 0.25`; two shots develop at once on 8-core phones,
+  `CaptureProcessor._maxWorkers`). Instant 600 too (1800 px, smooth); while an instant
   print is still processing the darkroom shows it developing on the raw
   photo (`_instantPicture`). Since 1.9.5 every film is: Ektar 4200 px /
   165 crystals (fine, ~0.0078), Velvia 4600 / 330 (finest), Gold 2800 / 12,
@@ -249,6 +250,10 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   EXIF; `FilmProcess.iso` + `darkLimit` (the camera's widest aperture at
   its slowest shutter) give `underFor` stops under (no flash); formed grain
   is exposed by the full error and the scan pulls it back (`negGain`).
+  Single-Use 27 has a plastic lens (`FilmProfile.lens`, `PlasticLens`:
+  barrel, colour fringes, soft corners, highlight roll-off; stills only).
+  Formation blurs coarse clouds with 3 boxes, fine ones (sigma < 1.6)
+  with the Gaussian (boxes print single grains as squares).
   `FilmRenderer(nominal: true)` = none of it (tests); `EV=` in
   film_preview forces an exposure.
 - Defects (`film_defects.dart`): developed stills only (never the
@@ -393,7 +398,7 @@ Film Mode
 - Video audio: Super 8 = sound-stripe chain, camcorder = tape chain
   (`VideoProfile.super8Audio` / `camcorderAudio`).
 - **Polaroid 600** (`printStyle: instant`): square only, 8-shot packs,
-  develops in 20 s (watch it fade in on the corkboard's darkroom strip).
+  develops in 40 s (watch it fade in on the corkboard's darkroom strip).
   Notes are typed in the print viewer (Write / tap the border), drawn in the
   bundled Caveat font, and baked into saved/shared files with the border
   (`core/processing/instant_frame.dart`). Note is stored in `note` (DB v3).

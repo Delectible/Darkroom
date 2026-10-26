@@ -24,6 +24,12 @@ class LookRenderer {
 
   /// 4-neighbour unsharp mask with rolling row buffers (CCD); a negative
   /// [LookSpec.sharpen] blurs instead.
+  /// 4x4 Bayer threshold in [0, 1), the same as the jpeg_pixel shader's.
+  static double _bayer4(int x, int y) {
+    double b2(int x, int y) => ((x * 0.5 + y * y * 0.75) % 1.0);
+    return b2(x >> 1 & 1, y >> 1 & 1) * 0.25 + b2(x & 1, y & 1);
+  }
+
   void sharpen(Uint8List data, int w, int h, {int radius = 1}) {
     final amount = look.sharpen * 2.0;
     // Negative amounts soften (cheap plastic lenses).
@@ -188,6 +194,7 @@ class LookRenderer {
     final chroma = look.grainChroma;
     final chromaNoise = look.chromaNoise * 255.0;
     final levels = look.kind == ShaderKind.jpegPixel ? math.max(2.0, look.posterize) : 0.0;
+    final dither = look.kind == ShaderKind.jpegPixel ? look.dither : 0.0;
     final scan = look.kind == ShaderKind.vhs ? look.scanline : 0.0;
 
     for (var y = 0; y < h; y++) {
@@ -251,9 +258,11 @@ class LookRenderer {
         }
 
         if (levels > 0) {
-          outR = (outR / 255 * levels).roundToDouble() / levels * 255;
-          outG = (outG / 255 * levels).roundToDouble() / levels * 255;
-          outB = (outB / 255 * levels).roundToDouble() / levels * 255;
+          // Ordered dither (4x4 Bayer, as the shader) before quantising.
+          final d = dither == 0 ? 0.0 : dither * (_bayer4(x, y) - 0.5 + 1 / 32);
+          outR = (outR / 255 * levels + 0.5 + d).floorToDouble() / levels * 255;
+          outG = (outG / 255 * levels + 0.5 + d).floorToDouble() / levels * 255;
+          outB = (outB / 255 * levels + 0.5 + d).floorToDouble() / levels * 255;
         }
         outR *= rowScan;
         outG *= rowScan;

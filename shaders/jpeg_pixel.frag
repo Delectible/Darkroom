@@ -27,6 +27,8 @@ uniform vec4 uCrop;          // 25-28
 uniform float uLowRes;       // 29  fat pixels across the visible frame width
 uniform float uPosterize;    // 30  levels per channel
 uniform float uArtifact;     // 31  0..1 block/ringing strength
+uniform float uDither;       // 32  0..1 ordered (Bayer 4x4) dither before posterize
+uniform float uEdge;         // 33  edge enhancement per fat pixel (unsharp)
 
 uniform sampler2D uTexture;
 
@@ -64,6 +66,10 @@ vec3 grade(vec3 rgb, vec2 cropUv) {
   return tone(clamp(c, 0.0, 1.0));
 }
 
+// Ordered dither threshold in [0, 1) for a fat pixel (4x4 Bayer).
+float bayer2(vec2 a) { return fract(a.x * 0.5 + a.y * a.y * 0.75); }
+float bayer4(vec2 a) { return bayer2(floor(a * 0.5)) * 0.25 + bayer2(a); }
+
 vec3 rgb2ycc(vec3 c) {
   float y = dot(c, vec3(0.299, 0.587, 0.114));
   return vec3(y, (c.b - y) * 0.564, (c.r - y) * 0.713);
@@ -83,6 +89,14 @@ void main() {
   vec2 cellCentre = origin + (cell + 0.5) * px;
 
   vec3 lumaSrc = texture(uTexture, toUv(cellCentre)).rgb;
+  if (uEdge > 0.0) {
+    // Edge enhancement across neighbouring fat pixels (Game Boy Camera).
+    vec3 avg = (texture(uTexture, toUv(cellCentre + vec2(px, 0.0))).rgb +
+                texture(uTexture, toUv(cellCentre - vec2(px, 0.0))).rgb +
+                texture(uTexture, toUv(cellCentre + vec2(0.0, px))).rgb +
+                texture(uTexture, toUv(cellCentre - vec2(0.0, px))).rgb) * 0.25;
+    lumaSrc = clamp(lumaSrc + (lumaSrc - avg) * uEdge * 2.0, 0.0, 1.0);
+  }
 
   // 4:2:0 chroma: one chroma sample per 2x2 fat pixels.
   vec2 chromaCell = floor(cell / 2.0);
@@ -116,7 +130,8 @@ void main() {
 
   // Reduced colour depth (the banding of a 4096-colour screen).
   float levels = max(uPosterize, 2.0);
-  c = floor(c * levels + 0.5) / levels;
+  float d = uDither * (bayer4(mod(cell, 4.0)) - 0.5 + 1.0 / 32.0);
+  c = floor(c * levels + 0.5 + d) / levels;
 
   fragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
 }

@@ -55,6 +55,7 @@ class LookSpec {
     this.lowRes = 240,
     this.posterize = 64,
     this.artifact = 0,
+    this.dither = 0,
     this.scanline = 0,
     this.bleed = 0,
     this.jitter = 0,
@@ -104,6 +105,10 @@ class LookSpec {
   final double lowRes;
   final double posterize;
   final double artifact;
+
+  /// Ordered (4x4 Bayer) dithering before [posterize], 0..1: the Game Boy
+  /// Camera's way of getting gradients out of a few levels.
+  final double dither;
 
   // VHS
   final double scanline;
@@ -210,7 +215,9 @@ class LookSpec {
   List<double> extraUniforms() => switch (kind) {
     ShaderKind.film => const [],
     ShaderKind.ccd => [sharpen, chromaNoise, bloom, smear],
-    ShaderKind.jpegPixel => [lowRes, posterize, artifact],
+    // Positive sharpen only: the flip phone's negative one is its soft lens
+    // (stills only).
+    ShaderKind.jpegPixel => [lowRes, posterize, artifact, dither, math.max(0, sharpen)],
     ShaderKind.vhs => [scanline, bleed, jitter, tracking, lines],
   };
 }

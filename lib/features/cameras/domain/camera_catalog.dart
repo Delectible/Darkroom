@@ -190,7 +190,7 @@ class CameraCatalog {
     recordsVideo: true,
     videoPrefix: 'EPIC',
     videoMaxSeconds: 300,
-    landscapeOnly: true,
+    // Shoots the way it's held, like a video camera (portrait too).
     pickerTag: 'MOVIE · 70MM',
     boxColor: 0xFF101010,
     boxInk: 0xFFD8B25A,

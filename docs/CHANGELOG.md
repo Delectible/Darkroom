@@ -1239,3 +1239,5 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   print / delay, longest queue, cores in use; All Time and Since Reset
   tabs. Over 20% late (10+ shots): a one-time "Note from the Lab" that the
   phone is the bottleneck.
+- [ ] **57.29** Epic 70 shoots the way it's held (portrait too), like a video
+  camera; only Super 8 stays landscape-only.

@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Prints develop about twice as fast. Notes from the lab arrive with the developed print. Instant film now takes 40 seconds. The Single-Use camera gets its plastic lens: bowed lines, soft corners and a darker vignette.';
+      'Prints develop about twice as fast. Notes from the lab arrive with the developed print. Instant film now takes 40 seconds. The Single-Use camera gets its plastic lens: bowed lines, soft corners and a darker vignette. Epic 70 now films upright too.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

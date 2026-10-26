@@ -279,7 +279,8 @@ Pro-only stocks / cameras (1.9) set `pro: true` on their `CameraSpec`: the
 picker tags them PRO, free users can pick them and see the look, and the
 shutter shows the Pro sheet (`Allowance.check` -> `Blocked.proOnly`). Film
 video without a gate (`FilmProfile.gate == 0`, Epic 70) gets a 24 fps cinema
-`VideoProfile` instead of Super 8's.
+`VideoProfile` instead of Super 8's, and shoots the way it's held
+(portrait too; only Super 8 is `landscapeOnly`).
 
 Everything a body needs lives on its `CameraSpec` in `camera_catalog.dart`:
 look (`FilmProfile` in `film_profile.dart` for film, `LookSpec` for digital),

@@ -155,7 +155,7 @@ class CameraSpec {
   final int videoMaxSeconds;
 
   /// Always frames landscape, even with the phone held upright (a landscape
-  /// slice of the view). Super 8.
+  /// slice of the view). Super 8 (Epic 70 shoots the way it's held).
   final bool landscapeOnly;
 
   /// Film: how long a shot spends in the darkroom.

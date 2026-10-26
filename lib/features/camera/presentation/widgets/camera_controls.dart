@@ -200,33 +200,49 @@ class AspectButton extends ConsumerWidget {
       // onto a key in 3D either flattens the lift or crops the letters.
       Widget inked(double alpha) {
         final ink = (film ? const Color(0xFF151515) : const Color(0xFFE4E6E9)).withValues(alpha: alpha);
+        final locked = spec.aspectLocked && !sideways;
+        final text = Text(
+          aspect.label,
+          style: film
+              // Engraved into the chrome dial: a condensed camera face,
+              // its paint fill sunk below a catch of light.
+              ? TextStyle(
+                  fontFamily: 'Dial',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                  letterSpacing: 0.3,
+                  height: 1,
+                  color: ink,
+                  shadows: [
+                    Shadow(
+                      color: const Color(0xFFFFFFFF).withValues(alpha: 0.55 * alpha),
+                      offset: const Offset(0, 0.6),
+                    ),
+                  ],
+                )
+              : photoLabel(onMetal: false).copyWith(fontSize: 11, color: ink),
+        );
+        if (film) {
+          // On the dial's round face: a small lock over the format, both
+          // kept inside the tick ring (scaled down, never spilling).
+          return Upright(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [if (locked) Icon(Icons.lock, size: 7, color: ink), text],
+                ),
+              ),
+            ),
+          );
+        }
         return Upright(
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              if (spec.aspectLocked && !sideways) Icon(Icons.lock, size: 10, color: ink),
-              Text(
-                aspect.label,
-                style: film
-                    // Engraved into the chrome dial: a condensed camera face,
-                    // its paint fill sunk below a catch of light.
-                    ? TextStyle(
-                        fontFamily: 'Dial',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        letterSpacing: 0.3,
-                        height: 1,
-                        color: ink,
-                        shadows: [
-                          Shadow(
-                            color: const Color(0xFFFFFFFF).withValues(alpha: 0.55 * alpha),
-                            offset: const Offset(0, 0.6),
-                          ),
-                        ],
-                      )
-                    : photoLabel(onMetal: false).copyWith(fontSize: 11, color: ink),
-              ),
-            ],
+            children: [if (locked) Icon(Icons.lock, size: 10, color: ink), text],
           ),
         );
       }

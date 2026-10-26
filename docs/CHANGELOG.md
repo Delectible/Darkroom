@@ -1214,3 +1214,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   free films (`step` skips Pro).
 - [x] **57.21** → 1.9.5 · 3D bodies: the live picture is clipped in by the rim's swing
   as the body turns (`_RimClip`), so it stays inside the rendered frame.
+- [ ] **57.22** Note from the Lab comes with the developed print (banner as
+  it comes out, or next time the app opens), not at capture: kept per shot
+  in `PrefKeys.labNotes` (`LabNote.keep` / `take`).

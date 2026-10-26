@@ -66,6 +66,10 @@ class PrefKeys {
   static const developed = 'review.developed';
   static const reviewAsked = 'review.asked';
 
+  /// Notes from the lab waiting for their prints to develop (shot id ->
+  /// note, JSON); shown with the print as it comes out.
+  static const labNotes = 'lab.notes';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -92,6 +96,7 @@ class PrefKeys {
     launches,
     developed,
     reviewAsked,
+    labNotes,
   };
 }
 

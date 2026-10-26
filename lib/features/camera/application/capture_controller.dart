@@ -153,9 +153,11 @@ class CaptureController extends Notifier<CaptureState> {
       final note = await LabNote.forFile(ctx.spec, file.path, flash: ctx.flash == FlashSetting.on);
       // Hand-off: moves the file into our cache + writes the queue row.
       // Processing then continues in the background isolate.
-      await ref.read(captureProcessorProvider).enqueuePhoto(file.path, ctx);
+      final id = await ref.read(captureProcessorProvider).enqueuePhoto(file.path, ctx);
+      // The lab says so once the print is developed (DarkroomController).
+      if (note != null) await LabNote.keep(ref.read(sharedPrefsProvider), id, note);
       ref.read(allowanceProvider.notifier).usePhoto(ctx.spec);
-      state = state.copyWith(busy: false, message: note);
+      state = state.copyWith(busy: false);
       unawaited(_maybeAskNotificationPermission(ctx));
     } on CameraException catch (e) {
       state = state.copyWith(busy: false, message: 'Capture failed: ${e.description ?? e.code}');

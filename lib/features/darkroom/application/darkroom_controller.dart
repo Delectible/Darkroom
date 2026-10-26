@@ -8,14 +8,19 @@ import '../../../core/db/media_repository.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/providers.dart';
 import '../../../core/review/review_prompt.dart';
+import '../../camera/application/lab_note.dart';
 
 @immutable
 class DarkroomBanner {
-  const DarkroomBanner(this.items);
+  const DarkroomBanner(this.items, {this.labNote});
 
   final List<MediaItem> items;
 
+  /// "Note from the Lab: ..." for a print that came back underexposed.
+  final String? labNote;
+
   String get text {
+    if (items.isEmpty) return 'Your prints are back from the lab';
     final videos = items.where((i) => i.isVideo).length;
     final photos = items.length - videos;
     if (items.length == 1) {
@@ -93,6 +98,26 @@ class DarkroomController extends Notifier<DarkroomBanner?> {
         final foreground = ref.read(appLifecycleProvider) == AppLifecycleState.resumed;
         final fresh = await engine.announceDeveloped(foreground: foreground);
         if (!ref.mounted) return;
+        // Notes from the lab ride with their prints, once developed (also
+        // ones that came out while the app was closed).
+        var notes = const <String>[];
+        if (foreground) {
+          final now = DateTime.now();
+          final developed = (ref.read(filmItemsProvider).value ?? const <MediaItem>[])
+              .where((m) => m.isDevelopedAt(now))
+              .map((m) => m.id);
+          notes = await LabNote.take(ref.read(sharedPrefsProvider), {
+            ...developed,
+            ...fresh.map((m) => m.id),
+          });
+          if (!ref.mounted) return;
+        }
+        final note = notes.isEmpty ? null : notes.last;
+        if (fresh.isEmpty && note != null) {
+          state = DarkroomBanner(const [], labNote: note);
+          _bannerTimer?.cancel();
+          _bannerTimer = Timer(const Duration(seconds: 8), dismissBanner);
+        }
         if (fresh.isNotEmpty && foreground) {
           // A small moment: a soft tick and a light tap as the banner drops
           // (the gallery button's print swaps in on its own).
@@ -103,9 +128,9 @@ class DarkroomController extends Notifier<DarkroomBanner?> {
               .where((m) => m.isDevelopedAt(now))
               .length;
           ref.read(reviewPromptProvider).developed(fresh.length, total: total);
-          state = DarkroomBanner(fresh);
+          state = DarkroomBanner(fresh, labNote: note);
           _bannerTimer?.cancel();
-          _bannerTimer = Timer(const Duration(seconds: 4), dismissBanner);
+          _bannerTimer = Timer(Duration(seconds: note == null ? 4 : 8), dismissBanner);
         }
         await engine.reschedule();
       } while (_again && ref.mounted);

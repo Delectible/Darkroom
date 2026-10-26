@@ -1101,12 +1101,16 @@ class _DarkroomBannerOverlay extends ConsumerStatefulWidget {
 
 class _DarkroomBannerOverlayState extends ConsumerState<_DarkroomBannerOverlay> {
   String _text = '';
+  String? _note;
 
   @override
   Widget build(BuildContext context) {
     final banner = ref.watch(darkroomControllerProvider);
     final visible = banner != null;
-    if (visible) _text = banner.text;
+    if (visible) {
+      _text = banner.text;
+      _note = banner.labNote;
+    }
     return SafeArea(
       child: Align(
         alignment: Alignment.topCenter,
@@ -1135,9 +1139,24 @@ class _DarkroomBannerOverlayState extends ConsumerState<_DarkroomBannerOverlay> 
                   children: [
                     const Icon(Icons.light, color: Color(0xFFFF5252), size: 18),
                     const SizedBox(width: 10),
-                    Text(
-                      _text,
-                      style: const TextStyle(color: Color(0xFFFFCDD2), fontWeight: FontWeight.w600),
+                    Flexible(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _text,
+                            style: const TextStyle(color: Color(0xFFFFCDD2), fontWeight: FontWeight.w600),
+                          ),
+                          if (_note != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              _note!,
+                              style: const TextStyle(color: Color(0xFFFFE0B2), fontSize: 12.5, height: 1.3),
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

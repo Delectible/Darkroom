@@ -1,12 +1,17 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/processing/photo_pipeline.dart' show sceneEvOf;
 import '../../cameras/domain/camera_spec.dart';
+import 'camera_ui_state.dart' show PrefKeys;
 
-/// "Note from the Lab": after a film shot in light too dim for the stock
-/// (no flash), a word on why the print will come back thin and grainy.
+/// "Note from the Lab": a film shot in light too dim for the stock (no
+/// flash) comes back with a word on why it's thin and grainy. Worked out at
+/// capture (the phone's exposure), kept until the print is developed, and
+/// shown as it comes out: the lab can't know before.
 class LabNote {
   const LabNote._();
 
@@ -32,5 +37,32 @@ class LabNote {
     } on Object {
       return null;
     }
+  }
+
+  static Map<String, String> _read(SharedPreferencesWithCache prefs) {
+    try {
+      final raw = prefs.getString(PrefKeys.labNotes);
+      return raw == null ? {} : (jsonDecode(raw) as Map).cast<String, String>();
+    } on Object {
+      return {};
+    }
+  }
+
+  /// Keeps [note] for the shot [id] until its print is developed.
+  static Future<void> keep(SharedPreferencesWithCache prefs, String id, String note) async {
+    final all = _read(prefs)..[id] = note;
+    await prefs.setString(PrefKeys.labNotes, jsonEncode(all));
+  }
+
+  /// The notes for the developed shots in [ids] (each once), oldest first.
+  static Future<List<String>> take(SharedPreferencesWithCache prefs, Iterable<String> ids) async {
+    final all = _read(prefs);
+    final out = <String>[];
+    for (final id in ids) {
+      final n = all.remove(id);
+      if (n != null) out.add(n);
+    }
+    if (out.isNotEmpty) await prefs.setString(PrefKeys.labNotes, jsonEncode(all));
+    return out;
   }
 }

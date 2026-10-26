@@ -1300,3 +1300,5 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   plus 2.76 (anamorphic 70 mm: halation stretched sideways) and 1.43;
   a print's lifted black, highlights rolling off well before white
   (cap 0.92), warm rich skin, cool blue-lavender shadows.
+- [ ] **57.47** Epic 70: 2.76 dropped (2.20 and 1.43 only), one look for
+  every frame (no sideways halos on one ratio).

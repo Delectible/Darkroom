@@ -265,15 +265,13 @@ class VideoFilters {
     int? canvasH,
     int? cueInput,
     List<(double, double)> cueTimes = const [],
-    bool anamorphic = false,
   }) {
     final cw = canvasW ?? outW, chh = canvasH ?? outH;
     // A cinema print sits still in the gate (no weave at all).
     final weaveX = film.weave == 0 ? 0.0 : math.max(1.0, outH * 0.0035 * film.weave);
     final weaveY = film.weave == 0 ? 0.0 : math.max(1.0, outH * 0.0055 * film.weave);
     final pad = (math.max(weaveX, weaveY) * 2).ceil() + 2;
-    // An anamorphic lens stretches the glow sideways.
-    final halSigma = _f(math.max(2.0, outH * (anamorphic ? 0.03 : 0.014)));
+    final halSigma = _f(math.max(2.0, outH * 0.014));
     final res = film.grainResolution * grain.resolution;
     final grainW = (outW * res / outH / 1.3).round().clamp(64, outW) & ~1;
     final grainH = (res / 1.3).round().clamp(48, outH) & ~1;
@@ -335,7 +333,7 @@ class VideoFilters {
       '[0:v]$base',
       // Halation: highlights -> red-orange glow -> screen.
       "[hi]lutrgb=r='clip((val-205)*${hr / 255 * 4.2},0,255)':g='clip((val-205)*${hg / 255 * 4.2},0,255)'"
-          ":b='clip((val-205)*${hb / 255 * 4.2},0,255)',gblur=sigma=$halSigma${anamorphic ? ':sigmaV=${_f(math.max(1.0, outH * 0.004))}' : ''}[glow]",
+          ":b='clip((val-205)*${hb / 255 * 4.2},0,255)',gblur=sigma=$halSigma[glow]",
       '[img][glow]blend=all_mode=screen:all_opacity=$halOpacity[hal]',
       if (form == null) ...[
         // Coarse grain: mid-grey noise at grain resolution, scaled up, merged.

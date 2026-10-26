@@ -184,9 +184,8 @@ class CameraCatalog {
     badge: '24 FPS',
     quality: CaptureQuality.standard,
     output: OutputProfile(maxLongEdge: 1920, jpegQuality: 92),
-    // The real frames: 2.20:1 (5-perf 70 mm), 2.76:1 (anamorphic 70 mm,
-    // halos stretch sideways) and 1.43:1 (15-perf giant screen).
-    aspects: [AspectRatioOption.r220, AspectRatioOption.r276, AspectRatioOption.r143],
+    // The real frames: 2.20:1 (5-perf 70 mm) and 1.43:1 (15-perf giant screen).
+    aspects: [AspectRatioOption.r220, AspectRatioOption.r143],
     defaultAspect: AspectRatioOption.r220,
     artwork: 'assets/artwork/vision70.webp',
     recordsVideo: true,

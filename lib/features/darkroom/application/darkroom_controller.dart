@@ -30,6 +30,11 @@ class DarkroomBanner {
   }
 }
 
+/// Shown once when over 20% of prints come out after their timer.
+const slowPhoneNote =
+    "Note from the Lab: your phone is the bottleneck in our darkroom. It's not a problem, "
+    'but expect some prints to come out a little late.';
+
 /// In-process darkroom clock.
 ///
 /// While the app process is alive (foreground, or backgrounded but not yet
@@ -112,7 +117,13 @@ class DarkroomController extends Notifier<DarkroomBanner?> {
           });
           if (!ref.mounted) return;
         }
-        final note = notes.isEmpty ? null : notes.last;
+        var note = notes.isEmpty ? null : notes.last;
+        // Once, if this phone keeps missing the darkroom's timers.
+        final stats = ref.read(developStatsProvider);
+        if (foreground && fresh.isNotEmpty && note == null && stats.shouldWarn) {
+          note = slowPhoneNote;
+          unawaited(stats.markTold());
+        }
         if (fresh.isEmpty && note != null) {
           state = DarkroomBanner(const [], labNote: note);
           _bannerTimer?.cancel();

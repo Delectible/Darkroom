@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/diagnostics/develop_stats.dart';
 import '../../../core/monetization/pro.dart';
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
@@ -70,6 +71,9 @@ class PrefKeys {
   /// note, JSON); shown with the print as it comes out.
   static const labNotes = 'lab.notes';
 
+  /// Development stats (Debug window) and whether the slow-phone note was shown.
+  static const developStats = DevelopStats.key;
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -97,6 +101,7 @@ class PrefKeys {
     developed,
     reviewAsked,
     labNotes,
+    developStats,
   };
 }
 

@@ -12,9 +12,11 @@ import '../../../../core/app_info.dart';
 import '../../../../core/device/battery.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/debug_flags.dart';
+import '../../../../core/diagnostics/develop_stats.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
+import '../../../../core/processing/capture_processor.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/skins/camera_skins.dart';
 import '../../../../core/review/review_prompt.dart';
@@ -81,6 +83,19 @@ final _tools = <_Tool>[
     'Slow frames per activity, and whether the app (UI) or the graphics chip (GPU) was the hold-up. '
         'Copy it and send it to Claude.',
     (context, _) => _perfReport(context),
+  ),
+  _Tool(
+    PixelIcon.hourglass,
+    'Development Stats',
+    'How long film shots take to process on this phone, and how many missed their darkroom timer. '
+        'All time, or since you last reset. Plus the cores at work right now.',
+    (context, _) => showWin98Window<void>(
+      context,
+      title: 'Development Stats',
+      width: 320,
+      icon: const PixelIconView(PixelIcon.hourglass),
+      builder: (context) => const _DevelopStatsView(),
+    ),
   ),
   _Tool(
     PixelIcon.camera,
@@ -224,6 +239,104 @@ Future<void> _perfReport(BuildContext context) => showWin98Window<void>(
     },
   ),
 );
+
+class _DevelopStatsView extends ConsumerStatefulWidget {
+  const _DevelopStatsView();
+
+  @override
+  ConsumerState<_DevelopStatsView> createState() => _DevelopStatsViewState();
+}
+
+class _DevelopStatsViewState extends ConsumerState<_DevelopStatsView> {
+  int _tab = 0;
+  late final Timer _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    // The queue lines are live.
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tick.cancel();
+    super.dispose();
+  }
+
+  static String _secs(int ms) => '${(ms / 1000).toStringAsFixed(1)} s';
+
+  String _text(DevelopTally t) {
+    final p = ref.read(captureProcessorProvider);
+    final n = t.shots, ok = n - t.late;
+    String pct(int v) => n == 0 ? '-' : '${(100 * v / n).toStringAsFixed(0)}%';
+    final d = t.since;
+    return [
+      if (_tab == 1) 'Since ${d.day}/${d.month} ${d.hour}:${d.minute.toString().padLeft(2, '0')}',
+      'Film shots developed: $n',
+      'On time: $ok (${pct(ok)})',
+      'Missed the timer: ${t.late} (${pct(t.late)})',
+      if (t.late > 0) 'Average delay when late: ${_secs(t.lateMs ~/ t.late)}',
+      'Average processing: ${n == 0 ? '-' : _secs(t.workMs ~/ n)}',
+      'Average shot to print: ${n == 0 ? '-' : _secs(t.totalMs ~/ n)}',
+      'Longest queue: ${t.maxQueue} waiting',
+      '',
+      'Cores: ${Platform.numberOfProcessors}, developing on up to ${CaptureProcessor.maxWorkers}',
+      'Now: ${p.busy} developing, ${p.waiting} waiting',
+      if (t.shots >= DevelopStats.minShots && t.lateShare > DevelopStats.warnShare)
+        'Over ${(DevelopStats.warnShare * 100).round()}% late: this phone is the bottleneck.',
+    ].join('\n');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = ref.read(developStatsProvider);
+    final text = _text(_tab == 0 ? stats.allTime : stats.recent);
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Win98TabStrip(
+            tabs: const [Win98Tab('All Time'), Win98Tab('Since Reset')],
+            selected: _tab,
+            onSelect: (i) => setState(() => _tab = i),
+          ),
+          Win98Bevel(
+            style: BevelStyle.window,
+            padding: const EdgeInsets.all(8),
+            child: Text(text, style: W98.text.copyWith(fontSize: 10)),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              if (_tab == 1) ...[
+                Win98Button(
+                  minWidth: 64,
+                  onPressed: () async {
+                    await stats.clearRecent();
+                    if (mounted) setState(() {});
+                  },
+                  child: const Text('Reset'),
+                ),
+                const SizedBox(width: 6),
+              ],
+              Win98Button(
+                minWidth: 64,
+                onPressed: () => unawaited(Clipboard.setData(ClipboardData(text: text))),
+                child: const Text('Copy'),
+              ),
+              const SizedBox(width: 6),
+              Win98Button(minWidth: 64, onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 Future<void> _done(BuildContext context, String text) =>
     showWin98MessageBox(context, title: 'Debug', message: text);

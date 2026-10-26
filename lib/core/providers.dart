@@ -9,6 +9,7 @@ import 'background/background_time.dart';
 import 'background/background_worker.dart';
 import 'db/app_database.dart';
 import 'db/media_repository.dart';
+import 'diagnostics/develop_stats.dart';
 import 'notifications/notification_service.dart';
 import 'paths/app_paths.dart';
 import 'processing/capture_processor.dart';
@@ -67,6 +68,9 @@ final darkroomEngineProvider = Provider<DarkroomEngine>((ref) {
   );
 });
 
+/// How film shots fare in this phone's darkroom queue (Debug > Development Stats).
+final developStatsProvider = Provider<DevelopStats>((ref) => DevelopStats(ref.watch(sharedPrefsProvider)));
+
 final captureProcessorProvider = Provider<CaptureProcessor>((ref) {
   final processor = CaptureProcessor(
     paths: ref.watch(appPathsProvider),
@@ -74,6 +78,7 @@ final captureProcessorProvider = Provider<CaptureProcessor>((ref) {
     film: ref.watch(filmRepositoryProvider),
     sdCard: ref.watch(sdCardRepositoryProvider),
     onFilmQueueChanged: () => ref.read(darkroomEngineProvider).reschedule(),
+    onDeveloped: (s) => unawaited(ref.read(developStatsProvider).add(s)),
   );
   final backgroundTime = BackgroundTime(processor.pending);
   ref.onDispose(() {

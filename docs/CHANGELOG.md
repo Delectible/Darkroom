@@ -1234,3 +1234,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **57.27** Single-Use 27 plastic lens (`PlasticLens`): barrel
   distortion, colour fringes, soft corners, highlights rolled off; stronger
   vignette (0.58).
+- [ ] **57.28** Debug > Development Stats (`DevelopStats`): film shots
+  developed, on time vs missed the timer (%), average processing / shot to
+  print / delay, longest queue, cores in use; All Time and Since Reset
+  tabs. Over 20% late (10+ shots): a one-time "Note from the Lab" that the
+  phone is the bottleneck.

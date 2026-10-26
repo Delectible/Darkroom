@@ -10,6 +10,7 @@ import 'package:path/path.dart' as p;
 import '../../features/cameras/domain/camera_catalog.dart';
 import '../../features/cameras/domain/camera_spec.dart';
 import '../db/app_database.dart';
+import '../diagnostics/develop_stats.dart';
 import '../db/media_repository.dart';
 import '../paths/app_paths.dart';
 import '../settings/settings_repository.dart';
@@ -51,8 +52,8 @@ class CaptureContext {
 ///  1. The plugin's capture file is *moved* (not copied) into our private
 ///     capture cache and a `processing` row is written. From this point the
 ///     shot survives an app kill.
-///  2. Jobs run strictly one at a time (bounded memory) in a background
-///     isolate (stills) or FFmpeg's native threads (video).
+///  2. Jobs run a few at a time (half the cores, soonest due first) in
+///     background isolates (stills) or FFmpeg's native threads (video).
 ///  3. On success the row flips to `ready` (which also nulls raw_path in the
 ///     same UPDATE), and only then is the un-filtered file deleted.
 ///  4. On launch, `recover()` resumes interrupted jobs and `sweepOrphans()`
@@ -65,6 +66,7 @@ class CaptureProcessor {
     required this.film,
     required this.sdCard,
     required this.onFilmQueueChanged,
+    this.onDeveloped,
   });
 
   final AppPaths paths;
@@ -75,6 +77,9 @@ class CaptureProcessor {
   /// Lets the darkroom re-arm notifications when prints are added/finished.
   final Future<void> Function() onFilmQueueChanged;
 
+  /// Each film shot this run developed, for the Debug stats.
+  final void Function(DevelopSample sample)? onDeveloped;
+
   /// Waiting jobs with when their shot is due out of the darkroom.
   final _queue = <(DateTime, Future<void> Function())>[];
   final _inFlightRaw = <String>{};
@@ -82,7 +87,11 @@ class CaptureProcessor {
 
   /// Shots developed side by side: half the phone's cores (at most 4, for
   /// memory: each full-size print holds a few hundred MB while it forms).
-  static final int _maxWorkers = (Platform.numberOfProcessors ~/ 2).clamp(1, 4);
+  static final int maxWorkers = (Platform.numberOfProcessors ~/ 2).clamp(1, 4);
+
+  /// Shots developing right now, and waiting.
+  int get busy => _workers;
+  int get waiting => _queue.length;
 
   /// Number of captures waiting for / in processing (drives a UI spinner).
   final ValueNotifier<int> pending = ValueNotifier<int>(0);
@@ -236,7 +245,7 @@ class CaptureProcessor {
 
   void _enqueue(DateTime due, Future<void> Function() task) {
     _queue.add((due, task));
-    if (_workers < _maxWorkers) unawaited(_drain());
+    if (_workers < maxWorkers) unawaited(_drain());
     pending.value = _queue.length + _workers;
   }
 
@@ -264,7 +273,8 @@ class CaptureProcessor {
     }
   }
 
-  Future<void> _runPhoto(MediaRepository repo, PhotoJob job) async {
+  Future<void> _runPhoto(MediaRepository repo, PhotoJob job, {bool resumed = false}) async {
+    final started = DateTime.now();
     try {
       await repo.bumpAttempts(job.id);
       // Heavy lifting (decode, crop, grade, grain, encode) never touches the
@@ -278,6 +288,7 @@ class CaptureProcessor {
         height: r.height,
         bytes: r.bytes,
       );
+      if (!resumed) unawaited(_record(repo, job.id, started));
       await _deleteQuietly(job.rawPath);
       if (r.originalCopyPath != null) {
         await _saveOriginalToGallery(r.originalCopyPath!);
@@ -290,7 +301,8 @@ class CaptureProcessor {
     }
   }
 
-  Future<void> _runVideo(MediaRepository repo, VideoJob job) async {
+  Future<void> _runVideo(MediaRepository repo, VideoJob job, {bool resumed = false}) async {
+    final started = DateTime.now();
     try {
       await repo.bumpAttempts(job.id);
       final r = await VideoPipeline.run(job);
@@ -303,6 +315,7 @@ class CaptureProcessor {
         bytes: r.bytes,
         durationMs: job.durationMs,
       );
+      if (!resumed) unawaited(_record(repo, job.id, started));
       await _deleteQuietly(job.rawPath);
     } catch (e) {
       await _handleFailure(repo, job.id, job.rawPath, e, retry: () => _runVideo(repo, job));
@@ -314,6 +327,28 @@ class CaptureProcessor {
 
   /// A job gets three attempts in total (counted in the DB, so they also
   /// span app restarts) before it is marked failed and its raw file purged,
+  /// Film shots with a darkroom timer feed the Debug stats.
+  Future<void> _record(MediaRepository repo, String id, DateTime started) async {
+    final cb = onDeveloped;
+    if (cb == null || !identical(repo, film)) return;
+    final finished = DateTime.now();
+    try {
+      final item = await repo.byId(id);
+      if (item == null || !item.readyAt.isAfter(item.capturedAt)) return;
+      cb(
+        DevelopSample(
+          capturedAt: item.capturedAt,
+          readyAt: item.readyAt,
+          started: started,
+          finished: finished,
+          queued: _queue.length,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Develop stats: $e');
+    }
+  }
+
   /// so a corrupt capture can never leak storage or loop forever.
   Future<void> _handleFailure(
     MediaRepository repo,
@@ -370,10 +405,10 @@ class CaptureProcessor {
         final map = jsonDecode(jobJson) as Map<String, Object?>;
         if (map['type'] == 'video') {
           final job = VideoJob.fromJson(map);
-          _enqueue(item.readyAt, () => _runVideo(repo, job));
+          _enqueue(item.readyAt, () => _runVideo(repo, job, resumed: true));
         } else {
           final job = PhotoJob.fromJson(map);
-          _enqueue(item.readyAt, () => _runPhoto(repo, job));
+          _enqueue(item.readyAt, () => _runPhoto(repo, job, resumed: true));
         }
       }
     }

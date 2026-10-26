@@ -1241,3 +1241,5 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   phone is the bottleneck.
 - [ ] **57.29** Epic 70 shoots the way it's held (portrait too), like a video
   camera; only Super 8 stays landscape-only.
+- [ ] **57.30** Debug window sorted into Win98 tree folders (Darkroom, Pro &
+  Film, Performance, Cosmetics, Diagnostics, First Run & Store).

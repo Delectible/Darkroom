@@ -64,9 +64,8 @@ final _tools = <_Tool>[
     'Darkroom Development',
     'On: film takes ${CameraSpec.defaultDevelopTime.inMinutes} minutes to develop (instant prints under a minute). '
         'Off: film develops instantly, and anything in the darkroom is finished now.',
-    (_, ref) => ref
-        .read(globalSettingsProvider.notifier)
-        .setDarkroomEnabled(!ref.read(globalSettingsProvider).darkroomEnabled),
+    (_, ref) =>
+        ref.read(globalSettingsProvider.notifier).setDarkroomEnabled(!ref.read(globalSettingsProvider).darkroomEnabled),
     on: (ref) => ref.watch(globalSettingsProvider).darkroomEnabled,
   ),
   _Tool(
@@ -113,11 +112,9 @@ final _tools = <_Tool>[
     PixelIcon.rabbit,
     'Welcome Tour',
     'Plays the first-run tour now, exactly as a new user sees it.',
-    (context, _) => Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => OnboardingScreen(onDone: () => Navigator.of(context).pop()),
-      ),
-    ),
+    (context, _) => Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (context) => OnboardingScreen(onDone: () => Navigator.of(context).pop()))),
   ),
   _Tool(
     PixelIcon.question,
@@ -158,16 +155,13 @@ final _tools = <_Tool>[
         'developed print). Google only shows it to installs from Play; Apple never shows it in TestFlight.',
     (_, _) => ReviewPrompt.show(),
   ),
-  _Tool(
-    PixelIcon.camera,
-    'Unlock All Skins',
-    'Every camera skin owned (or none again, game progress kept).',
-    (_, ref) async {
-      final n = ref.read(unlockedSkinsProvider.notifier);
-      ref.read(unlockedSkinsProvider).isEmpty ? await n.unlockAll() : await n.lockAll();
-    },
-    on: (ref) => ref.watch(unlockedSkinsProvider).isNotEmpty,
-  ),
+  _Tool(PixelIcon.camera, 'Unlock All Skins', 'Every camera skin owned (or none again, game progress kept).', (
+    _,
+    ref,
+  ) async {
+    final n = ref.read(unlockedSkinsProvider.notifier);
+    ref.read(unlockedSkinsProvider).isEmpty ? await n.unlockAll() : await n.lockAll();
+  }, on: (ref) => ref.watch(unlockedSkinsProvider).isNotEmpty),
   _Tool(
     PixelIcon.computer,
     'System Info',
@@ -226,11 +220,7 @@ Future<void> _perfReport(BuildContext context) => showWin98Window<void>(
                   child: const Text('Copy'),
                 ),
                 const SizedBox(width: 6),
-                Win98Button(
-                  minWidth: 64,
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
+                Win98Button(minWidth: 64, onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
               ],
             ),
           ],
@@ -338,8 +328,7 @@ class _DevelopStatsViewState extends ConsumerState<_DevelopStatsView> {
   }
 }
 
-Future<void> _done(BuildContext context, String text) =>
-    showWin98MessageBox(context, title: 'Debug', message: text);
+Future<void> _done(BuildContext context, String text) => showWin98MessageBox(context, title: 'Debug', message: text);
 
 Future<void> _systemInfo(BuildContext context, WidgetRef ref) async {
   final battery = await Battery.level();
@@ -384,12 +373,7 @@ Future<void> showDebugMenu(BuildContext context) async {
     final typed = await _askPassword(context);
     if (typed == null || !context.mounted) return;
     if (!DebugGate.accepts(typed)) {
-      await showWin98MessageBox(
-        context,
-        title: 'Debug',
-        message: 'Incorrect password.',
-        icon: Win98MessageIcon.error,
-      );
+      await showWin98MessageBox(context, title: 'Debug', message: 'Incorrect password.', icon: Win98MessageIcon.error);
       return;
     }
     DebugGate.unlocked = true;
@@ -446,17 +430,9 @@ Future<String?> _askPassword(BuildContext context) {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Win98Button(
-                minWidth: 76,
-                onPressed: () => Navigator.of(context).pop(ctrl.text),
-                child: const Text('OK'),
-              ),
+              Win98Button(minWidth: 76, onPressed: () => Navigator.of(context).pop(ctrl.text), child: const Text('OK')),
               const SizedBox(width: 6),
-              Win98Button(
-                minWidth: 76,
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
-              ),
+              Win98Button(minWidth: 76, onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
             ],
           ),
         ],
@@ -472,9 +448,44 @@ class _DebugMenu extends ConsumerStatefulWidget {
   ConsumerState<_DebugMenu> createState() => _DebugMenuState();
 }
 
+/// The Debug window's folders, in order, and the tools in each (by name).
+/// A tool left out lands in Other.
+const _groups = <(String, List<String>)>[
+  ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
+  ('Pro & Film', ['Darkroom Pro', 'Refill Film & Battery']),
+  ('Performance', ['Performance Recorder', 'Performance Report', 'Frame Timing Graphs', 'Slow Motion']),
+  ('Cosmetics', ['Unlock All Skins']),
+  ('Diagnostics', ['Camera Log', 'Crash Reports', 'System Info', 'Test Crash']),
+  ('First Run & Store', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt']),
+];
+
+/// Folder name -> indexes into [_tools].
+final Map<String, List<int>> _folders = () {
+  final out = <String, List<int>>{};
+  final placed = <int>{};
+  for (final (name, tools) in _groups) {
+    final ids = [
+      for (final t in tools)
+        if (_tools.indexWhere((x) => x.name == t) case final i when i >= 0) i,
+    ];
+    out[name] = ids;
+    placed.addAll(ids);
+  }
+  final rest = [
+    for (var i = 0; i < _tools.length; i++)
+      if (!placed.contains(i)) i,
+  ];
+  if (rest.isNotEmpty) out['Other'] = rest;
+  return out;
+}();
+
 class _DebugMenuState extends ConsumerState<_DebugMenu> {
   final _scroll = ScrollController();
-  int _picked = 0;
+
+  /// The picked tool (index into [_tools]), or a folder ([_folder]).
+  int? _picked;
+  String? _folder;
+  final _open = <String>{};
 
   @override
   void dispose() {
@@ -483,14 +494,103 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
   }
 
   Future<void> _run() async {
-    await _tools[_picked].run(context, ref);
+    final i = _picked;
+    if (i == null) return;
+    await _tools[i].run(context, ref);
     if (mounted) setState(() {}); // switches show their new state
+  }
+
+  void _toggle(String folder) => setState(() {
+    _folder = folder;
+    _picked = null;
+    if (!_open.remove(folder)) _open.add(folder);
+  });
+
+  Widget _row({
+    required bool picked,
+    required double indent,
+    required List<Widget> children,
+    VoidCallback? onTap,
+    VoidCallback? onDoubleTap,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      onDoubleTap: onDoubleTap,
+      child: SizedBox(
+        height: 26,
+        child: Row(
+          children: [
+            SizedBox(width: indent),
+            Expanded(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                color: picked ? W98.navy : null,
+                child: Row(children: children),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final tool = _tools[_picked];
-    final on = tool.on?.call(ref);
+    final picked = _picked;
+    final tool = picked == null ? null : _tools[picked];
+    final on = tool?.on?.call(ref);
+    final rows = <Widget>[];
+    for (final MapEntry(key: name, value: ids) in _folders.entries) {
+      final open = _open.contains(name);
+      final sel = _folder == name && picked == null;
+      rows.add(
+        _row(
+          picked: sel,
+          indent: 0,
+          onTap: () => _toggle(name),
+          children: [
+            _PlusBox(open: open),
+            const SizedBox(width: 4),
+            PixelIconView(open ? PixelIcon.folderOpen : PixelIcon.folder),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(name, style: W98.text.copyWith(color: sel ? W98.selectInk : W98.windowInk)),
+            ),
+          ],
+        ),
+      );
+      if (!open) continue;
+      for (final i in ids) {
+        final t = _tools[i];
+        final sel = i == picked;
+        final state = t.on?.call(ref);
+        rows.add(
+          _row(
+            picked: sel,
+            indent: 24,
+            onTap: () => setState(() {
+              _picked = i;
+              _folder = name;
+            }),
+            onDoubleTap: () {
+              setState(() => _picked = i);
+              unawaited(_run());
+            },
+            children: [
+              PixelIconView(t.icon),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(t.name, style: W98.text.copyWith(color: sel ? W98.selectInk : W98.windowInk)),
+              ),
+              if (state != null)
+                Text(state ? 'On' : 'Off', style: W98.text.copyWith(color: sel ? W98.white : W98.shadow)),
+            ],
+          ),
+        );
+      }
+    }
+    final folderTools = _folder == null ? const <int>[] : _folders[_folder]!;
     return Padding(
       padding: const EdgeInsets.all(8),
       child: Column(
@@ -503,56 +603,26 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
             style: BevelStyle.sunken,
             color: W98.white,
             child: SizedBox(
-              height: 168,
+              height: 220,
               child: Win98Scrollbar(
                 controller: _scroll,
-                child: ListView.builder(
-                  controller: _scroll,
-                  padding: const EdgeInsets.all(2),
-                  itemCount: _tools.length,
-                  itemBuilder: (context, i) {
-                    final t = _tools[i];
-                    final picked = i == _picked;
-                    final state = t.on?.call(ref);
-                    return GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => setState(() => _picked = i),
-                      onDoubleTap: () {
-                        setState(() => _picked = i);
-                        unawaited(_run());
-                      },
-                      child: Container(
-                        height: 26,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        color: picked ? W98.navy : null,
-                        child: Row(
-                          children: [
-                            PixelIconView(t.icon),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                t.name,
-                                style: W98.text.copyWith(color: picked ? W98.selectInk : W98.windowInk),
-                              ),
-                            ),
-                            if (state != null)
-                              Text(
-                                state ? 'On' : 'Off',
-                                style: W98.text.copyWith(color: picked ? W98.white : W98.shadow),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                child: ListView(controller: _scroll, padding: const EdgeInsets.all(2), children: rows),
               ),
             ),
           ),
           const SizedBox(height: 8),
           Win98GroupBox(
-            label: tool.name,
-            child: SizedBox(height: 52, child: Text(tool.about, style: W98.text.copyWith(fontSize: 11))),
+            label: tool?.name ?? _folder ?? 'Debug',
+            child: SizedBox(
+              height: 52,
+              child: Text(
+                tool?.about ??
+                    (_folder == null
+                        ? 'Open a folder to see its tools.'
+                        : [for (final i in folderTools) _tools[i].name].join(', ')),
+                style: W98.text.copyWith(fontSize: 11),
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           Row(
@@ -560,19 +630,54 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
             children: [
               Win98Button(
                 minWidth: 76,
-                onPressed: () => unawaited(_run()),
-                child: Text(on == null ? 'Run' : (on ? 'Turn Off' : 'Turn On')),
+                onPressed: tool == null ? (_folder == null ? null : () => _toggle(_folder!)) : () => unawaited(_run()),
+                child: Text(
+                  tool == null
+                      ? (_folder != null && _open.contains(_folder) ? 'Collapse' : 'Expand')
+                      : on == null
+                      ? 'Run'
+                      : (on ? 'Turn Off' : 'Turn On'),
+                ),
               ),
               const SizedBox(width: 6),
-              Win98Button(
-                minWidth: 76,
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
-              ),
+              Win98Button(minWidth: 76, onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
             ],
           ),
         ],
       ),
     );
   }
+}
+
+/// The tree's [+] / [-] box.
+class _PlusBox extends StatelessWidget {
+  const _PlusBox({required this.open});
+
+  final bool open;
+
+  @override
+  Widget build(BuildContext context) =>
+      CustomPaint(size: const Size(9, 9), painter: _PlusPainter(open, W98.shadow, W98.windowInk));
+}
+
+class _PlusPainter extends CustomPainter {
+  _PlusPainter(this.open, this.frame, this.ink);
+
+  final bool open;
+  final Color frame, ink;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final f = Paint()
+      ..color = frame
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawRect(const Rect.fromLTWH(0.5, 0.5, 8, 8), f);
+    final p = Paint()..color = ink;
+    canvas.drawRect(const Rect.fromLTWH(2, 4, 5, 1), p);
+    if (!open) canvas.drawRect(const Rect.fromLTWH(4, 2, 1, 5), p);
+  }
+
+  @override
+  bool shouldRepaint(_PlusPainter old) => old.open != open || old.frame != frame || old.ink != ink;
 }

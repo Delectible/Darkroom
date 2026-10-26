@@ -515,7 +515,9 @@ UI
 - Crash reports stay on the phone (`core/diagnostics/crash_log.dart`):
   Dart errors + Android ApplicationExitInfo; Win98 Help > Debug... >
   Crash Reports. The Debug window (`win98/debug_menu.dart`, list `_tools`;
-  add new tools there) also has Camera Log, the tour, develop-now, frame
+  add new tools there and name them in a `_groups` folder: Darkroom, Pro &
+  Film, Performance, Cosmetics, Diagnostics, First Run & Store; a Win98
+  tree with [+]/[-] folders) also has Camera Log, the tour, develop-now, frame
   graphs (`perfOverlayProvider`), slow motion, system info, a test crash,
   and the Performance Recorder (`core/diagnostics/perf_recorder.dart`:
   `PerfRecorder.mark('label')` tags the next frames; the report splits UI

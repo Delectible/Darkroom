@@ -128,11 +128,19 @@ void main() {
     await tester.enterText(find.byType(TextField), 'test-password');
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
-    expect(find.text('Darkroom Pro'), findsWidgets);
-    expect(find.text('Refill Film & Battery'), findsOneWidget);
-    expect(find.text('Darkroom Development'), findsOneWidget);
+    // Folders, closed: tools show once one is opened.
+    expect(find.text('Performance'), findsOneWidget);
+    expect(find.text('Cosmetics'), findsOneWidget);
+    expect(find.text('Performance Recorder'), findsNothing);
+    await tester.tap(find.text('Performance'));
+    await tester.pump();
     expect(find.text('Performance Recorder'), findsOneWidget);
-    // The first tool (Darkroom Pro) is picked: a switch.
+    await tester.tap(find.text('Pro & Film'));
+    await tester.pump();
+    expect(find.text('Refill Film & Battery'), findsOneWidget);
+    // Darkroom Pro is a switch.
+    await tester.tap(find.text('Darkroom Pro'));
+    await tester.pump(const Duration(milliseconds: 400)); // past the double-tap wait
     expect(find.text('Turn On'), findsOneWidget);
     await tester.tap(find.text('Turn On'));
     await tester.pump();

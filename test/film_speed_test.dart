@@ -14,10 +14,10 @@ void main() {
   });
 
   test('a dim street: the slow films fall behind, the fast one copes', () {
-    expect(under('ektar100', 4), closeTo(3.9, 0.05));
+    expect(under('ektar100', 4), 3); // 3.9, capped
     expect(under('portra400', 4), closeTo(1.9, 0.05));
     expect(under('cinestill800t', 4), closeTo(0.9, 0.05));
-    expect(under('velvia50', 1), 4); // capped: past that it's just black
+    expect(under('velvia50', 1), 3); // capped: past that the lab can't print it
   });
 
   test('the lab leaves a note when it was too dark for the film', () {

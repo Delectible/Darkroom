@@ -184,8 +184,9 @@ class CameraCatalog {
     badge: '24 FPS',
     quality: CaptureQuality.standard,
     output: OutputProfile(maxLongEdge: 1920, jpegQuality: 92),
-    aspects: [AspectRatioOption.r16x9],
-    defaultAspect: AspectRatioOption.r16x9,
+    // The real frames: 1.43:1 (15-perf giant screen) and 2.20:1 (5-perf).
+    aspects: [AspectRatioOption.r143, AspectRatioOption.r220],
+    defaultAspect: AspectRatioOption.r143,
     artwork: 'assets/artwork/vision70.webp',
     recordsVideo: true,
     videoPrefix: 'EPIC',

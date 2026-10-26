@@ -263,10 +263,13 @@ class VideoFilters {
     int rotateTurns = 0,
     int? canvasW,
     int? canvasH,
+    int? cueInput,
+    List<(double, double)> cueTimes = const [],
   }) {
     final cw = canvasW ?? outW, chh = canvasH ?? outH;
-    final weaveX = math.max(1.0, outH * 0.0035 * film.weave);
-    final weaveY = math.max(1.0, outH * 0.0055 * film.weave);
+    // A cinema print sits still in the gate (no weave at all).
+    final weaveX = film.weave == 0 ? 0.0 : math.max(1.0, outH * 0.0035 * film.weave);
+    final weaveY = film.weave == 0 ? 0.0 : math.max(1.0, outH * 0.0055 * film.weave);
     final pad = (math.max(weaveX, weaveY) * 2).ceil() + 2;
     final halSigma = _f(math.max(2.0, outH * 0.014));
     final res = film.grainResolution * grain.resolution;
@@ -317,6 +320,12 @@ class VideoFilters {
             '[c0][ftop]overlay=$x0:0[c1]',
             '[c1][fbot]overlay=$x0:$botY[c2]',
             '[c2][2:v]overlay=0:0:format=auto[gated]',
+          ]
+        : cueInput != null && cueTimes.isNotEmpty
+        // Reel-change cue marks: a dot top right for four frames.
+        ? [
+            "[dusty][$cueInput:v]overlay=0:0:format=auto:enable='"
+                "${cueTimes.map((c) => 'between(t,${_f(c.$1)},${_f(c.$2)})').join('+')}'[gated]",
           ]
         : ['[dusty]null[gated]'];
 

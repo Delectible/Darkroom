@@ -1290,3 +1290,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   holds meter + light together), olive-brown mud instead of green, less
   extra grain. Base fog of thin negatives now lifts only the darks (all
   stocks): lamps and windows stay clean.
+- [ ] **57.45** Epic 70 as a clean cinema print, not Super 8: the real
+  frames (1.43 giant screen, default, and 2.20 wide; `AspectRatioOption.r143`
+  / `r220`), its own dirt (rare single-frame specks, mostly white; no hairs,
+  scratches or flares: `_renderPrintDirt`), no gate jitter (weave 0 is now
+  still), reel-change cue marks top right 8 s and 1 s before the end of
+  takes of 12 s or more, neutral highlights. `cinema_ffmpeg_test` runs it.

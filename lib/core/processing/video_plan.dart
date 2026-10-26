@@ -175,7 +175,11 @@ class VideoPlanner {
       File(
         cube,
       ).writeAsStringSync(FilmLut.build(film, input: LutInput.srgb, size: 33).toCube(title: spec.name));
-      _renderDustFrames(job.workDir, outW, outH, seed: job.id.hashCode);
+      if (film.gate > 0) {
+        _renderDustFrames(job.workDir, outW, outH, seed: job.id.hashCode);
+      } else {
+        _renderPrintDirt(job.workDir, outW, outH, seed: job.id.hashCode);
+      }
       if (film.gate > 0) (planW, planH) = CineStrip.canvasSize(outW, outH);
       File(
         p.join(job.workDir, 'gate.png'),
@@ -211,6 +215,20 @@ class VideoPlanner {
           p.join(job.workDir, 'plate_%02d.png'),
         ]);
       }
+      // A cinema reel: cue marks before its end (motor 8 s, changeover 1 s;
+      // four frames each), on takes long enough to be a reel.
+      int? cueInput;
+      final cueTimes = <(double, double)>[];
+      final secs = job.durationMs / 1000;
+      if (film.gate == 0 && secs >= 12) {
+        const four = 4 / 24;
+        cueTimes
+          ..add((secs - 8, secs - 8 + four))
+          ..add((secs - 1, secs - 1 + four));
+        File(p.join(job.workDir, 'cue.png')).writeAsBytesSync(_cuePng(outW, outH));
+        cueInput = form == null ? 3 : 4;
+        inputs.addAll(['-loop', '1', '-framerate', profile.fps, '-i', p.join(job.workDir, 'cue.png')]);
+      }
       graph = VideoFilters.filmGraph(
         film: film,
         grain: job.grain,
@@ -222,6 +240,8 @@ class VideoPlanner {
         rotateTurns: turns,
         canvasW: planW,
         canvasH: planH,
+        cueInput: cueInput,
+        cueTimes: cueTimes,
       );
     } else {
       final look = spec.look!;
@@ -310,6 +330,58 @@ class VideoPlanner {
       upscale: profile.upscale,
       pass1Path: pass1,
     );
+  }
+
+  /// 54 frames of a clean cinema print's dirt: most frames spotless, now
+  /// and then one tiny speck, a frame long. Dirt on the camera negative
+  /// prints as a white sparkle (most of it), dirt on the print as black.
+  static void _renderPrintDirt(String dir, int w, int h, {required int seed}) {
+    final rnd = math.Random(seed);
+    final unit = math.min(w, h) / 1080.0;
+    for (var f = 0; f < 54; f++) {
+      final im = img.Image(width: w, height: h, numChannels: 4);
+      if (rnd.nextDouble() < 0.14) {
+        final cx = rnd.nextInt(w), cy = rnd.nextInt(h);
+        final r = ((0.6 + rnd.nextDouble() * 1.1) * unit).round().clamp(1, 4);
+        final white = rnd.nextDouble() < 0.75;
+        img.fillCircle(
+          im,
+          x: cx,
+          y: cy,
+          radius: r,
+          color: white ? img.ColorRgba8(250, 248, 240, 150) : img.ColorRgba8(6, 5, 4, 170),
+          antialias: true,
+        );
+      }
+      File(
+        p.join(dir, 'dust_${f.toString().padLeft(3, '0')}.png'),
+      ).writeAsBytesSync(img.encodePng(im, level: 1));
+    }
+  }
+
+  /// A reel-change cue mark: a round dot punched in the print, top right,
+  /// with a slightly ragged dark rim.
+  static Uint8List _cuePng(int w, int h) {
+    final im = img.Image(width: w, height: h, numChannels: 4);
+    final r = math.min(w, h) * 0.028;
+    final cx = w - math.min(w, h) * 0.11, cy = math.min(w, h) * 0.11;
+    final rnd = math.Random(7);
+    final edge = [for (var i = 0; i < 64; i++) 1 + (rnd.nextDouble() - 0.5) * 0.05];
+    for (var y = (cy - r * 1.3).floor(); y <= (cy + r * 1.3).ceil(); y++) {
+      for (var x = (cx - r * 1.3).floor(); x <= (cx + r * 1.3).ceil(); x++) {
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        final dx = x + 0.5 - cx, dy = y + 0.5 - cy;
+        final a = (math.atan2(dy, dx) / (2 * math.pi) + 0.5) * 64;
+        final rr = r * edge[a.floor() % 64];
+        final d = math.sqrt(dx * dx + dy * dy);
+        if (d <= rr + 1) {
+          im.setPixelRgba(x, y, 242, 238, 226, (232 * (rr + 1 - d).clamp(0.0, 1.0)).round());
+        } else if (d <= rr + 1 + r * 0.08) {
+          im.setPixelRgba(x, y, 20, 14, 10, 90);
+        }
+      }
+    }
+    return img.encodePng(im, level: 1);
   }
 
   /// 54 frames of dirt looped over the clip: specks (dark dirt and bright

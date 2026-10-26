@@ -44,6 +44,7 @@ class FilmProfile {
     this.shadowLift = 0,
     this.highlightCap = 1.0,
     this.shadowTint = const [0, 0, 0],
+    this.shadowMud = 0,
     this.highlightTint = const [0, 0, 0],
     required this.grainAmount,
     this.grainChroma = 0.35,
@@ -98,6 +99,10 @@ class FilmProfile {
   /// Split toning added in sRGB, weighted toward shadows / highlights.
   final List<double> shadowTint;
   final List<double> highlightTint;
+
+  /// How much colour the darks lose (0..1): a negative's thin shadows scan
+  /// muddy and take the [shadowTint], while the light tones stay clean.
+  final double shadowMud;
 
   // --- texture --------------------------------------------------------------
   /// Grain standard deviation in sRGB units at "Normal" strength.
@@ -214,6 +219,7 @@ class FilmProfile {
       shadowLift: 0.015,
       highlightCap: 0.965,
       shadowTint: [-0.032, 0.015, -0.004],
+      shadowMud: 0.25,
       highlightTint: [0.012, 0.0, -0.022],
       grainAmount: 0.05,
       grainChroma: 0.4,
@@ -352,10 +358,10 @@ class FilmProfile {
     'gold200': FilmProfile(
       id: 'gold200',
       exposureEv: 0.1,
-      balance: [1.03, 1.0, 0.95],
+      balance: [1.04, 1.0, 0.935],
       contrast: [1.18, 1.14, 1.08],
       white: 1.02,
-      saturation: 1.12,
+      saturation: 1.16,
       hues: [
         HueTweak(27, 24, shift: 3, chroma: 1.1),
         HueTweak(60, 30, shift: 4, chroma: 1.12, light: 0.02),
@@ -365,8 +371,9 @@ class FilmProfile {
       ],
       shadowLift: 0.01,
       highlightCap: 0.98,
-      shadowTint: [-0.01, 0.0, 0.012],
-      highlightTint: [0.016, 0.006, -0.022],
+      shadowTint: [-0.016, 0.013, -0.004],
+      shadowMud: 0.5,
+      highlightTint: [0.012, 0.01, -0.012],
       grainAmount: 0.034,
       grainChroma: 0.4,
       grainResolution: 1700,
@@ -405,7 +412,8 @@ class FilmProfile {
       ],
       shadowLift: 0.005,
       highlightCap: 0.97,
-      shadowTint: [-0.02, 0.012, 0.01],
+      shadowTint: [-0.024, 0.014, 0.01],
+      shadowMud: 0.45,
       highlightTint: [0.02, 0.008, -0.02],
       grainAmount: 0.045,
       grainChroma: 0.45,
@@ -426,6 +434,8 @@ class FilmProfile {
         underFog: 0.03,
         underTint: [-0.014, 0.01, 0.004],
         halationSpread: 0.9,
+        // Balanced for lamps: daylight scans cool and cyan.
+        daylight: [0.88, 0.97, 1.16],
         bloom: 0.06,
       ),
     ),
@@ -480,7 +490,7 @@ class FilmProfile {
     'superia400': FilmProfile(
       id: 'superia400',
       exposureEv: 0.1,
-      balance: [0.98, 1.03, 0.97],
+      balance: [0.99, 1.01, 0.98],
       contrast: [1.26, 1.3, 1.22],
       white: 1.02,
       saturation: 1.08,
@@ -491,7 +501,8 @@ class FilmProfile {
       ],
       shadowLift: 0.008,
       highlightCap: 0.99,
-      shadowTint: [-0.015, 0.018, 0.0],
+      shadowTint: [-0.02, 0.024, 0.0],
+      shadowMud: 0.6,
       highlightTint: [0.008, 0.006, -0.012],
       grainAmount: 0.026,
       grainChroma: 0.45,
@@ -657,7 +668,7 @@ class FilmModel {
     cg = _curve(_inverseDisplay(math.max(0, cg)), 1);
     cb = _curve(_inverseDisplay(math.max(0, cb)), 2);
 
-    if (!p.mono && (p.hues.isNotEmpty || p.saturation != 1)) {
+    if (!p.mono && (p.hues.isNotEmpty || p.saturation != 1 || p.shadowMud > 0)) {
       ColorMath.linearToOklab(cr, cg, cb, _lab);
       final l0 = _lab[0];
       var c = math.sqrt(_lab[1] * _lab[1] + _lab[2] * _lab[2]);
@@ -673,6 +684,9 @@ class FilmModel {
         lightness += t.light * w * ColorMath.smoothstep(0.05, 0.35, l0);
       }
       c *= p.saturation;
+      // Muddy darks: the thin dye in the shadows can't hold colour, so it
+      // drains toward the shadow tint (added below); light tones stay clean.
+      c *= 1 - 0.65 * p.shadowMud * (1 - ColorMath.smoothstep(0.18, 0.62, l0));
       final hr = h * math.pi / 180;
       final ca = math.cos(hr), sa = math.sin(hr);
       // Gamut map: shrink chroma until every channel is >= 0.

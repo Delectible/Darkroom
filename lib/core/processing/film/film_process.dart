@@ -44,6 +44,7 @@ class FilmProcess {
     this.formation,
     this.iso = 400,
     this.darkLimit = 7.9,
+    this.daylight,
   });
 
   /// Film speed (ISO). With the scene's real brightness (from the phone's
@@ -113,6 +114,21 @@ class FilmProcess {
   /// The image is built out of grains (stills): detail stops at the grain.
   /// Null = the grain texture over a sharp image.
   final GrainFormation? formation;
+
+  /// Tungsten-balanced film: colour gains (R, G, B) in daylight. The phone
+  /// white-balances every photo, so the scene's brightness says what lit
+  /// it: bright (EV >= 12) is the sun, dim (EV <= 8) is lamps, where the
+  /// film is balanced and the gains fade out. Null = daylight film.
+  final List<double>? daylight;
+
+  /// [daylight]'s gains for a scene at [sceneEv] (EV at ISO 100).
+  List<double> lightGain(double? sceneEv) {
+    final d = daylight;
+    if (d == null || sceneEv == null) return const [1, 1, 1];
+    final t = ((sceneEv - 8) / 4).clamp(0.0, 1.0);
+    final k = t * t * (3 - 2 * t);
+    return [for (final g in d) 1 + (g - 1) * k];
+  }
 
   /// Most stops the meter may move the frame either way.
   static const double maxMeterEv = 1.5;

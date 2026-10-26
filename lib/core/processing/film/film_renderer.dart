@@ -92,10 +92,11 @@ class FilmRenderer {
     final pr = profile.process;
     final rnd = math.Random(seed);
     final drift = (rnd.nextDouble() * 2 - 1) * profile.exposureDrift;
+    final light = nominal ? const [1.0, 1.0, 1.0] : pr.lightGain(sceneEv);
     final tint = [
-      (1 + (rnd.nextDouble() - 0.5) * 0.02) * (1 - 0.03 * flash),
-      1.0,
-      (1 + (rnd.nextDouble() - 0.5) * 0.02) * (1 + 0.06 * flash),
+      (1 + (rnd.nextDouble() - 0.5) * 0.02) * (1 - 0.03 * flash) * light[0],
+      light[1],
+      (1 + (rnd.nextDouble() - 0.5) * 0.02) * (1 + 0.06 * flash) * light[2],
     ];
     final flashAmt = flash * profile.flashStrength;
 

@@ -1277,3 +1277,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **57.42** Gold 200 tuned to the owner's scans: grain much finer
   (crystals 12 -> 36, ~0.019 bright; was heavier than 800T), deeper blacks.
   Both pinned in `grain_calibration_test`.
+- [ ] **57.43** Film behaves like film in different light: muddy darks
+  (`FilmProfile.shadowMud`: shadows lose colour toward the green/teal
+  shadow tint, light tones stay clean; Portrait 0.25, 800T 0.45, Gold 0.5,
+  Single-Use 0.6, Vivid none) and tungsten balance (`FilmProcess.daylight`:
+  Night 800T scans cool/cyan in bright daylight, true under lamps, from
+  the scene EV). Gold warmer and more golden, Single-Use green only in the
+  darks, so every stock stays distinct.

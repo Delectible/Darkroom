@@ -252,6 +252,10 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   EXIF; `FilmProcess.iso` + `darkLimit` (the camera's widest aperture at
   its slowest shutter) give `underFor` stops under (no flash); formed grain
   is exposed by the full error and the scan pulls it back (`negGain`).
+  Muddy darks (`FilmProfile.shadowMud`): shadows lose colour toward the
+  stock's green/teal `shadowTint`, light tones stay clean. Tungsten film
+  (`FilmProcess.daylight`, Night 800T): cool/cyan gains in bright scenes
+  (EV >= 12), none under lamps (EV <= 8).
   Single-Use 27 has a plastic lens (`FilmProfile.lens`, `PlasticLens`:
   barrel, colour fringes, soft corners, highlight roll-off; stills only).
   Formation blurs coarse clouds with 3 boxes, fine ones (sigma < 1.6)

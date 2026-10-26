@@ -1271,3 +1271,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   (Allow camera: asks, or opens the app's settings page), mic / photos as a
   small note at the foot of the frame, one tap to fix (`Permissions`,
   channel `darkroom/permissions`); a mic allowed later reopens with sound.
+- [ ] **57.41** Night 800T tuned to the owner's scans: deep near-black teal
+  shadows (was lifted blue), warmer lamps, more contrast, wider red
+  halation, finer grain (crystals 8 -> 12, ~0.025 bright like the scans).
+- [ ] **57.42** Gold 200 tuned to the owner's scans: grain much finer
+  (crystals 12 -> 36, ~0.019 bright; was heavier than 800T), deeper blacks.
+  Both pinned in `grain_calibration_test`.

@@ -245,8 +245,8 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   over 20% late after 10 shots = a one-time lab note, `slowPhoneNote`). Instant 600 too (1800 px, smooth); while an instant
   print is still processing the darkroom shows it developing on the raw
   photo (`_instantPicture`). Since 1.9.5 every film is: Ektar 4200 px /
-  165 crystals (fine, ~0.0078), Velvia 4600 / 330 (finest), Gold 2800 / 12,
-  Night 800T 2400 / 8, Single-Use 2200 / 10, HP5 mono 2600 / 11 with
+  165 crystals (fine, ~0.0078), Velvia 4600 / 330 (finest), Gold 2800 / 36 (scans ~0.020 bright),
+  Night 800T 2400 / 12 (scans ~0.025 bright), Single-Use 2200 / 10, HP5 mono 2600 / 11 with
   `speed: 3` (grain heaviest in the highlights), Epic 70 video plates 3200 / 24.
   Film speed (1.9.5): `sceneEvOf` reads the scene's EV from the phone's
   EXIF; `FilmProcess.iso` + `darkLimit` (the camera's widest aperture at

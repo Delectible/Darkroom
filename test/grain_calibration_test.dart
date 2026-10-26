@@ -87,4 +87,13 @@ void main() {
     expect(bright, inInclusiveRange(0.042, 0.066)); // scans: ~0.047-0.061 in a bright sky
     expect(bright, greaterThan(mid * 1.7));
   });
+
+  test('Gold 200 and Night 800T match their scans at Normal (bright wall, 1612 px)', () {
+    final gold = _skyGrain(GrainStrength.normal, stock: 'gold200', rgb: const [215, 215, 215]);
+    final night = _skyGrain(GrainStrength.normal, stock: 'cinestill800t', rgb: const [215, 215, 215]);
+    // The scans: Gold ~0.020, 800T ~0.025 on bright flat areas.
+    expect(gold, inInclusiveRange(0.014, 0.024));
+    expect(night, inInclusiveRange(0.021, 0.032));
+    expect(night, greaterThan(gold));
+  });
 }

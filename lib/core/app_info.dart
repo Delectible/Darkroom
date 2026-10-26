@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.9.7';
+  static const version = '1.9.8';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Cleaner shine on the 3D cameras (no more blocky patches). The Toy Pixel Cam is sharper and dithered like a Game Boy Camera. New 2005 Webcam picture.';
+      'Super 8 reels now play in a cosy wood-panelled room with a lamp and a plant. Night 800T, Gold 200 and Single-Use look closer to the real films. Epic 70 shoots the real 70mm frames as a clean cinema print. Permission reminders, and the viewfinder stays live when you change film.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -22,6 +22,9 @@ class AppInfo {
         'Super 8 grain and framing',
         'Faster developing',
         'Rename files in Darkroom 98',
+        'Films behave like film in any light',
+        'Epic 70 in real 70mm frames',
+        'A cosy projector room',
       ],
     ),
     (

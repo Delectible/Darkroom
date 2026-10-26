@@ -1158,7 +1158,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **57.5** Real artwork for the new stocks and cameras (placeholders now
   reuse existing renders): 3 canisters, a disposable, a 70mm can, webcam,
   DSLR, toy cam, MiniDV camcorder.
-- [ ] **57.6** Epic 70: a wider frame (2.2:1 / 2.76:1) than 16:9.
+- [x] **57.6** → 1.9.8 · Epic 70: a wider frame (2.2:1 / 2.76:1) than 16:9.
 - [x] **57.7** → 1.9.1 · 2026-10-25 · The developing process (stills, `FilmProcess` in
   `film_process.dart`): the camera meters the frame itself (centre-weighted),
   so frames land over or under; the lab scan rescues most of it, leaving the
@@ -1261,48 +1261,48 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **57.36** → 1.9.7 · Toy Pixel Cam after the Game Boy Camera: 160 px, edge
   enhancement, 4x4 Bayer dither before the 4 levels (`LookSpec.dither`,
   shader uniforms 32-33), no JPEG pass.
-- [ ] **57.37** Film format dial lettering in an engraved condensed camera
+- [x] **57.37** → 1.9.8 · Film format dial lettering in an engraved condensed camera
   face (Barlow Condensed, family `Dial`).
-- [ ] **57.38** Digital flash and ratio keys given room (ratio key 128 -> 146).
-- [ ] **57.39** Switching stocks / cameras keeps the viewfinder live: one camera
+- [x] **57.38** → 1.9.8 · Digital flash and ratio keys given room (ratio key 128 -> 146).
+- [x] **57.39** → 1.9.8 · Switching stocks / cameras keeps the viewfinder live: one camera
   preset for every stills body (max), one for every video body (veryHigh);
   only stills <-> video reopens the camera.
-- [ ] **57.40** Permissions still off after the tour: camera on the viewfinder
+- [x] **57.40** → 1.9.8 · Permissions still off after the tour: camera on the viewfinder
   (Allow camera: asks, or opens the app's settings page), mic / photos as a
   small note at the foot of the frame, one tap to fix (`Permissions`,
   channel `darkroom/permissions`); a mic allowed later reopens with sound.
-- [ ] **57.41** Night 800T tuned to the owner's scans: deep near-black teal
+- [x] **57.41** → 1.9.8 · Night 800T tuned to the owner's scans: deep near-black teal
   shadows (was lifted blue), warmer lamps, more contrast, wider red
   halation, finer grain (crystals 8 -> 12, ~0.025 bright like the scans).
-- [ ] **57.42** Gold 200 tuned to the owner's scans: grain much finer
+- [x] **57.42** → 1.9.8 · Gold 200 tuned to the owner's scans: grain much finer
   (crystals 12 -> 36, ~0.019 bright; was heavier than 800T), deeper blacks.
   Both pinned in `grain_calibration_test`.
-- [ ] **57.43** Film behaves like film in different light: muddy darks
+- [x] **57.43** → 1.9.8 · Film behaves like film in different light: muddy darks
   (`FilmProfile.shadowMud`: shadows lose colour toward the green/teal
   shadow tint, light tones stay clean; Portrait 0.25, 800T 0.45, Gold 0.5,
   Single-Use 0.6, Vivid none) and tungsten balance (`FilmProcess.daylight`:
   Night 800T scans cool/cyan in bright daylight, true under lamps, from
   the scene EV). Gold warmer and more golden, Single-Use green only in the
   darks, so every stock stays distinct.
-- [ ] **57.44** Single-Use indoors without flash no longer goes green and
+- [x] **57.44** → 1.9.8 · Single-Use indoors without flash no longer goes green and
   milky: fixed f/8 at 1/100 (`darkLimit` 12.6), underexposure capped at
   1.5 stops (`FilmProcess.maxUnder`, a hard-printing minilab; the cap now
   holds meter + light together), olive-brown mud instead of green, less
   extra grain. Base fog of thin negatives now lifts only the darks (all
   stocks): lamps and windows stay clean.
-- [ ] **57.45** Epic 70 as a clean cinema print, not Super 8: the real
+- [x] **57.45** → 1.9.8 · Epic 70 as a clean cinema print, not Super 8: the real
   frames (1.43 giant screen, default, and 2.20 wide; `AspectRatioOption.r143`
   / `r220`), its own dirt (rare single-frame specks, mostly white; no hairs,
   scratches or flares: `_renderPrintDirt`), no gate jitter (weave 0 is now
   still), reel-change cue marks top right 8 s and 1 s before the end of
   takes of 12 s or more, neutral highlights. `cinema_ffmpeg_test` runs it.
-- [ ] **57.46** Epic 70 tuned to the owner's 70 mm frames: 2.20 by default,
+- [x] **57.46** → 1.9.8 · Epic 70 tuned to the owner's 70 mm frames: 2.20 by default,
   plus 2.76 (anamorphic 70 mm: halation stretched sideways) and 1.43;
   a print's lifted black, highlights rolling off well before white
   (cap 0.92), warm rich skin, cool blue-lavender shadows.
-- [ ] **57.47** Epic 70: 2.76 dropped (2.20 and 1.43 only), one look for
+- [x] **57.47** → 1.9.8 · Epic 70: 2.76 dropped (2.20 and 1.43 only), one look for
   every frame (no sideways halos on one ratio).
-- [ ] **57.48** Projector viewer: the scrolling sprocket strips are gone.
+- [x] **57.48** → 1.9.8 · Projector viewer: the scrolling sprocket strips are gone.
   The film shows on a matte screen in a dark wood-panelled room, lit by
   the projector behind you (faint beam, warm spill on the wall, lamp
   flicker), above a walnut hi-fi console with a glowing table lamp and a

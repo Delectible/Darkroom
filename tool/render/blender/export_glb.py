@@ -499,6 +499,10 @@ def export(mode, out, size, draft):
         export_lights=False, export_cameras=False, export_image_format='JPEG', export_jpeg_quality=90,
         export_apply=True,
     )
+    # JPEG blocks the roughness / metal / normal maps (square patches in the
+    # shine): those go in as the lossless PNGs baked above.
+    from glb_maps import lossless_maps
+    lossless_maps(path, tmp)
     press = PRESS_DIGITAL if mode == 'digital' else {}
     meta = {
         'design': [WB.W, WB.H], 'cutY': WB.CUT_Y, 'dist': WB.DIST, 'heights': WB.HEIGHTS,

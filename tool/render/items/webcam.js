@@ -17,7 +17,7 @@ export async function build(THREE) {
   L.position.set(0, 58, R - 3.2); g.add(L);
   const led = new THREE.Mesh(new THREE.SphereGeometry(1.4, 16, 12), new THREE.MeshStandardMaterial({ color: 0x2244ff, emissive: 0x3366ff, emissiveIntensity: 2.5 }));
   led.position.set(13, 70, R - 4.2); g.add(led);
-  const logo = decal(22, 6, (c, w, h) => { c.fillStyle = '#c9ccd0'; c.font = `800 ${h * 0.6}px "Inter Display"`; c.textBaseline = 'middle'; c.fillText('DARKROOM', w * 0.18, h / 2); drawRabbit(c, w * 0.08, h * 0.5, h * 0.7, '#c9ccd0'); }, { px: 30 });
+  const logo = decal(22, 6, (c, w, h) => { c.fillStyle = '#c9ccd0'; c.font = `800 ${h * 0.5}px "Inter Display"`; c.textBaseline = 'middle'; c.fillText('DARKROOM', w * 0.18, h / 2); drawRabbit(c, w * 0.08, h * 0.5, h * 0.7, '#c9ccd0'); }, { px: 30 });
   logo.position.set(0, 46.5, R - 1.2); logo.rotation.x = 0.42; g.add(logo);
   // neck and the folding clip base
   const neck = cyl(6, 22, grey, 32); neck.position.y = 24; g.add(neck);
@@ -25,8 +25,9 @@ export async function build(THREE) {
   const base = rbox(70, 8, 46, 4, white, 6); base.position.y = 4; g.add(base);
   const foot = rbox(70, 6, 10, 3, grey, 4); foot.position.set(0, 3, -24); g.add(foot);
   const pad = rbox(60, 1.5, 38, 1, plastic(0x2a2a2a, { rough: 0.9, texture: 0.5 })); pad.position.y = -0.2; g.add(pad);
-  // USB cable trailing off behind
-  const curve = new THREE.CatmullRomCurve3([[0, 10, -26], [6, 6, -40], [24, 1.2, -52], [60, 1.2, -50], [96, 1.2, -66]].map((p) => new THREE.Vector3(...p)));
+  // a short stub of USB cable out of the back (a long one pulls the
+  // auto-framing off the camera)
+  const curve = new THREE.CatmullRomCurve3([[0, 10, -26], [3, 5, -34], [10, 1.2, -40], [20, 1.2, -42]].map((p) => new THREE.Vector3(...p)));
   g.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 1.6, 12), plastic(0x1a1a1a, { rough: 0.6, texture: 0 })));
 
   g.rotation.y = -0.35;

@@ -520,16 +520,17 @@ class FilmProfile {
       process: FilmProcess(
         formation: GrainFormation(frameHeight: 2200, crystals: 40, shared: 0.95),
         iso: 400,
-        // Fixed f/10 at 1/125 s: needs daylight (or the flash).
-        darkLimit: 13.6,
+        // Fixed f/8 at 1/100 s: needs daylight (or the flash).
+        darkLimit: 12.6,
+        maxUnder: 1.5,
         meter: 0.9,
         scanFix: 0.85,
         crystal: 0.55,
         shadowCoarse: 1.8,
         layerScale: [1.2, 1.0, 1.6],
-        underGrain: 0.5,
-        underFog: 0.05,
-        underTint: [-0.012, 0.016, -0.002],
+        underGrain: 0.3,
+        underFog: 0.035,
+        underTint: [0.004, 0.01, -0.014],
         overSaturation: -0.05,
         chemistry: 1.3,
         bloom: 0.08,

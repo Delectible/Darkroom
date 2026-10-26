@@ -162,7 +162,7 @@ class CameraCatalog {
     id: 'superia400',
     mode: AppMode.film,
     name: 'Single-Use 27',
-    subtitle: 'Disposable: fixed f/10, use the flash indoors',
+    subtitle: 'Disposable: fixed f/8, use the flash indoors',
     badge: '27 EXP',
     quality: CaptureQuality.high,
     output: OutputProfile(maxLongEdge: 4096, jpegQuality: 90),

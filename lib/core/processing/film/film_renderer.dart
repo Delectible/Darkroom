@@ -113,6 +113,7 @@ class FilmRenderer {
     } else if (!nominal) {
       ev = drift + dev.density + pr.meter * (1 - flash) * _meterEv(data, w, h, toLin, pr.meterKey);
       if (sceneEv != null && flash == 0) ev -= pr.underFor(sceneEv!);
+      ev = math.max(ev, -pr.maxUnder);
     }
     lastEv = ev;
     // The lab scan pulls most of an exposure error back; the film's curve
@@ -348,10 +349,12 @@ class FilmRenderer {
             b = l + (b - l) * sat;
           }
           if (under > 0) {
-            final sh = (1 - l) * (1 - l);
-            r = fog + (1 - fog) * r + ut[0] * sh;
-            g = fog + (1 - fog) * g + ut[1] * sh;
-            b = fog + (1 - fog) * b + ut[2] * sh;
+            // Base fog shows through the thin parts: the darks go milky,
+            // the light tones (lamps, windows) stay clean.
+            final sh = (1 - l) * (1 - l), f = fog * (1 - l);
+            r = f + (1 - f) * r + ut[0] * sh;
+            g = f + (1 - f) * g + ut[1] * sh;
+            b = f + (1 - f) * b + ut[2] * sh;
           }
           if (warm != 0) {
             final hl = l * l;

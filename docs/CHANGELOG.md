@@ -1284,3 +1284,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   Night 800T scans cool/cyan in bright daylight, true under lamps, from
   the scene EV). Gold warmer and more golden, Single-Use green only in the
   darks, so every stock stays distinct.
+- [ ] **57.44** Single-Use indoors without flash no longer goes green and
+  milky: fixed f/8 at 1/100 (`darkLimit` 12.6), underexposure capped at
+  1.5 stops (`FilmProcess.maxUnder`, a hard-printing minilab; the cap now
+  holds meter + light together), olive-brown mud instead of green, less
+  extra grain. Base fog of thin negatives now lifts only the darks (all
+  stocks): lamps and windows stay clean.

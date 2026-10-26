@@ -463,8 +463,8 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   title while a menu is open switches to it (`showWin98Menu` siblings);
   caption buttons and toolbar buttons have padded hit areas.
 - Tabs carry a dot (`Win98Tab.dot`): red on SD Card / A: while files wait to
-  transfer, blue on C: for files moved there and not opened yet
-  (`cSeenProvider`, `PrefKeys.cSeen`; older files count as seen). C: is
+  transfer, blue on C: for files moved there since C: was last
+  opened (`cSeenProvider.seeAll`, `PrefKeys.cSeen`; older files count as seen). C: is
   `C:\My Pictures\Darkroom` (Start > My Pictures).
 - Rename (File > Rename, viewer Rename; `renameMedia` in media_actions):
   the row, the file on disk and, on Android 10+, the photo-library copy

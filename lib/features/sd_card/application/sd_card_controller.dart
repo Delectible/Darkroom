@@ -151,6 +151,14 @@ class CSeenNotifier extends Notifier<({Set<String> ids, DateTime since})> {
     unawaited(ref.read(sharedPrefsProvider).setStringList(PrefKeys.cSeen, ids.toList()));
   }
 
+  /// The C: drive was looked at: everything on it is no longer new.
+  void seeAll() {
+    final onC = ref.read(cDriveFilesProvider).map((m) => m.id).toSet();
+    if (onC.every(state.ids.contains)) return;
+    state = (ids: onC, since: state.since);
+    unawaited(ref.read(sharedPrefsProvider).setStringList(PrefKeys.cSeen, onC.toList()));
+  }
+
   bool isNew(MediaItem m) => !m.onSdCard && m.savedAt != null && m.savedAt!.isAfter(state.since) && !state.ids.contains(m.id);
 }
 

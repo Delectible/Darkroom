@@ -17,6 +17,9 @@ import 'package:flutter_test/flutter_test.dart';
 class _Seen extends CSeenNotifier {
   @override
   ({Set<String> ids, DateTime since}) build() => (ids: const {}, since: DateTime(2026));
+
+  @override
+  void seeAll() {}
 }
 
 class _Prefs extends ExplorerPrefsNotifier {

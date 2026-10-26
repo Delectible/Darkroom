@@ -167,6 +167,9 @@ void main() {
 class _Seen extends CSeenNotifier {
   @override
   ({Set<String> ids, DateTime since}) build() => (ids: const {}, since: DateTime(2026));
+
+  @override
+  void seeAll() {}
 }
 
 class _Theme extends Win98ThemeNotifier {

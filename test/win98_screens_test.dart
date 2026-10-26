@@ -192,5 +192,8 @@ class _Seen extends CSeenNotifier {
   ({Set<String> ids, DateTime since}) build() => (ids: const {}, since: DateTime(2026));
 
   @override
+  void seeAll() {}
+
+  @override
   void see(String id) {}
 }

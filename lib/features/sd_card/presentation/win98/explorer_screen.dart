@@ -552,6 +552,12 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     final floppyFiles = ref.watch(floppyFilesProvider);
     final cFiles = ref.watch(cDriveFilesProvider);
     final place = _current;
+    // Opening C: (or new files landing while it's open) clears its blue dot.
+    if (place == ExplorerPlace.c && ref.watch(cHasNewProvider)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(cSeenProvider.notifier).seeAll();
+      });
+    }
     final drive = switch (place) {
       ExplorerPlace.sd => Drive.sd,
       ExplorerPlace.floppy => Drive.floppy,

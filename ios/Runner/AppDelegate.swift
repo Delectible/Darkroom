@@ -1,3 +1,4 @@
+import AVFoundation
 import Flutter
 import Photos
 import UIKit
@@ -34,6 +35,37 @@ import UserNotifications
       UIDevice.current.isBatteryMonitoringEnabled = true
       let level = UIDevice.current.batteryLevel
       result(level < 0 ? nil : Int((level * 100).rounded()))
+    }
+    // Camera / microphone: granted?, ask (only while iOS still will), and
+    // the app's page in Settings for when it won't.
+    let permissions = FlutterMethodChannel(name: "darkroom/permissions", binaryMessenger: registrar.messenger())
+    permissions.setMethodCallHandler { call, result in
+      let kind = (call.arguments as? [String: Any])?["kind"] as? String
+      let media: AVMediaType? = kind == "camera" ? .video : (kind == "microphone" ? .audio : nil)
+      switch call.method {
+      case "granted":
+        result(media.map { AVCaptureDevice.authorizationStatus(for: $0) == .authorized } ?? false)
+      case "request":
+        guard let media = media else {
+          result(false)
+          return
+        }
+        switch AVCaptureDevice.authorizationStatus(for: media) {
+        case .authorized: result(true)
+        case .notDetermined:
+          AVCaptureDevice.requestAccess(for: media) { ok in DispatchQueue.main.async { result(ok) } }
+        default: result(false)
+        }
+      case "openSettings":
+        if let url = URL(string: UIApplication.openSettingsURLString) {
+          UIApplication.shared.open(url)
+          result(true)
+        } else {
+          result(false)
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
     }
     // What's still in one of our photo albums (deleted copies are offered
     // again). Needs full (or limited) library access, asked for from Dart

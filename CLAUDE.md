@@ -675,6 +675,17 @@ UI
 
 ## First run
 
+- Permissions still off after the tour (`missingPermissionsProvider`,
+  `core/device/permissions.dart`, channel `darkroom/permissions`: granted /
+  request / openSettings): camera = the viewfinder's "Allow camera" (asks,
+  or the app's settings page once the phone won't); mic / photos = a small
+  note at the foot of the frame (`_PermissionNote`), one tap. Notifications
+  are optional, never nagged. Rechecked on resume; a mic allowed later
+  reopens the camera with sound.
+- Camera presets: every stills body opens with `max`, every video body
+  with `veryHigh` (`presetFor`), so changing stock / camera only reopens the
+  camera between stills and video.
+
 - `OnboardingScreen` (features, gestures, name, permissions with reasons,
   one Allow all) shows once (`PrefKeys.onboarded`); Win98 Help > Welcome
   Tour replays it. Camera + mic are asked by opening a CameraController

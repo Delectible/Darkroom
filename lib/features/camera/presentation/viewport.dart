@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/monetization/allowance.dart';
 import '../../../core/monetization/pro.dart';
 
+import '../../../core/device/permissions.dart';
 import '../../../core/device/physical_orientation.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/processing/cine_strip.dart';
@@ -183,6 +184,14 @@ class CameraViewport extends ConsumerWidget {
                       ],
                     ),
                   ),
+                ),
+                // Mic / photos still off after the tour: a small note at the
+                // foot of the frame (outside the snapshot), one tap to fix.
+                Positioned(
+                  left: maskRect.left,
+                  width: maskRect.width,
+                  bottom: h - maskRect.bottom + 34,
+                  child: const Center(child: _PermissionNote()),
                 ),
                 // While the body is tossed, a still of the viewfinder stands in
                 // for it (see [freeze]).
@@ -384,7 +393,10 @@ class _Standby extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final palette = RetroPalette.of(context);
     final (label, action) = switch (session.status) {
-      SessionStatus.permissionDenied => (session.message ?? 'Camera access needed', 'Grant access'),
+      SessionStatus.permissionDenied => (
+        'Darkroom needs the camera to take pictures. Nothing leaves your phone.',
+        'Allow camera',
+      ),
       SessionStatus.error => (session.message ?? 'Camera error', 'Retry'),
       SessionStatus.noCamera => ('No camera on this device', null),
       _ => ('', null),
@@ -412,12 +424,74 @@ class _Standby extends ConsumerWidget {
             if (action != null) ...[
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: () => ref.read(cameraSessionProvider.notifier).retry(),
+                onPressed: () async {
+                  // Denied: ask again, or (once the phone won't ask) open
+                  // the app's settings page; coming back reopens it.
+                  if (session.status == SessionStatus.permissionDenied) {
+                    await ref.read(missingPermissionsProvider.notifier).fix(Perm.camera);
+                  }
+                  ref.read(cameraSessionProvider.notifier).retry();
+                },
                 style: OutlinedButton.styleFrom(foregroundColor: palette.screenInk),
                 child: Text(action),
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "Mic is off · Allow": the permissions the camera can live without but
+/// shouldn't, still missing after the first-run tour. Tap: ask again, or
+/// the app's settings page once the phone won't ask.
+class _PermissionNote extends ConsumerWidget {
+  const _PermissionNote();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final missing = ref.watch(missingPermissionsProvider);
+    final mic = missing.contains(Perm.microphone), photos = missing.contains(Perm.photos);
+    if (!mic && !photos) return const SizedBox.shrink();
+    final ready = ref.watch(cameraSessionProvider.select((s) => s.isReady));
+    final onboarded = ref.read(sharedPrefsProvider).getBool(PrefKeys.onboarded) ?? false;
+    if (!onboarded || !ready) return const SizedBox.shrink();
+    final what = mic && photos
+        ? 'Mic and photos are off'
+        : mic
+        ? 'Mic is off: videos are silent'
+        : "Photos are off: can't save";
+    return Semantics(
+      button: true,
+      label: '$what. Allow',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          final n = ref.read(missingPermissionsProvider.notifier);
+          if (mic && !await n.fix(Perm.microphone)) return;
+          if (photos) await n.fix(Perm.photos);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: const Color(0xCC1B1B1B),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0x55FFFFFF), width: 0.6),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(mic ? Icons.mic_off_rounded : Icons.photo_library_outlined, size: 13, color: const Color(0xFFFFC857)),
+              const SizedBox(width: 6),
+              Text(what, style: const TextStyle(color: Color(0xFFEDEDED), fontSize: 11.5)),
+              const SizedBox(width: 8),
+              const Text(
+                'Allow',
+                style: TextStyle(color: Color(0xFFFFC857), fontSize: 11.5, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
         ),
       ),
     );

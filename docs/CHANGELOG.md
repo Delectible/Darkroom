@@ -1261,3 +1261,13 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **57.36** → 1.9.7 · Toy Pixel Cam after the Game Boy Camera: 160 px, edge
   enhancement, 4x4 Bayer dither before the 4 levels (`LookSpec.dither`,
   shader uniforms 32-33), no JPEG pass.
+- [ ] **57.37** Film format dial lettering in an engraved condensed camera
+  face (Barlow Condensed, family `Dial`).
+- [ ] **57.38** Digital flash and ratio keys given room (ratio key 128 -> 146).
+- [ ] **57.39** Switching stocks / cameras keeps the viewfinder live: one camera
+  preset for every stills body (max), one for every video body (veryHigh);
+  only stills <-> video reopens the camera.
+- [ ] **57.40** Permissions still off after the tour: camera on the viewfinder
+  (Allow camera: asks, or opens the app's settings page), mic / photos as a
+  small note at the foot of the frame, one tap to fix (`Permissions`,
+  channel `darkroom/permissions`); a mic allowed later reopens with sound.

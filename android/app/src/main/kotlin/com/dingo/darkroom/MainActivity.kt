@@ -1,6 +1,10 @@
 package com.dingo.darkroom
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.database.ContentObserver
+import android.net.Uri
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
@@ -30,7 +34,11 @@ import kotlin.math.abs
 //    changes): the landscape screens only turn when it is.
 //  * darkroom/gallery: the names (and ids, for renames) of the files the app saved to a photo
 //    album that are still there (deleted ones are offered again).
+//  * darkroom/permissions: camera / microphone granted?, ask for one, and
+//    open the app's settings page when Android won't ask any more.
 class MainActivity : FlutterActivity() {
+    private var permissionResult: MethodChannel.Result? = null
+
     private var volumeChannel: MethodChannel? = null
     private var captureVolume = false
     private var rotationChannel: MethodChannel? = null
@@ -201,6 +209,43 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/permissions")
+            .setMethodCallHandler { call, result ->
+                val perm = when (call.argument<String>("kind")) {
+                    "camera" -> Manifest.permission.CAMERA
+                    "microphone" -> Manifest.permission.RECORD_AUDIO
+                    else -> null
+                }
+                when (call.method) {
+                    "granted" -> result.success(perm != null && granted(perm))
+                    "request" -> {
+                        if (perm == null) {
+                            result.success(false)
+                        } else if (granted(perm)) {
+                            result.success(true)
+                        } else if (permissionResult != null) {
+                            result.success(false)
+                        } else {
+                            // Answered in onRequestPermissionsResult (straight
+                            // away, false, once Android has stopped asking).
+                            permissionResult = result
+                            requestPermissions(arrayOf(perm), PERMISSION_REQUEST)
+                        }
+                    }
+                    "openSettings" -> {
+                        try {
+                            startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         // darkroom/crash: the crashes / freezes Android recorded for this app
         // (Android 11+), for Help > Crash Reports. Kept on the phone.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/crash")
@@ -210,6 +255,16 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun granted(perm: String) = checkSelfPermission(perm) == PackageManager.PERMISSION_GRANTED
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != PERMISSION_REQUEST) return
+        val r = permissionResult ?: return
+        permissionResult = null
+        r.success(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
     }
 
     /// File names in Pictures/<album> (where the gallery plugin saves images,
@@ -311,5 +366,9 @@ class MainActivity : FlutterActivity() {
         } catch (_: Exception) {
             emptyList()
         }
+    }
+
+    companion object {
+        private const val PERMISSION_REQUEST = 7301
     }
 }

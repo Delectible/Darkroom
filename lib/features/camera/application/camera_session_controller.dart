@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/processing/photo_pipeline.dart';
+import '../../../core/device/permissions.dart';
 import '../../../core/providers.dart';
 import 'camera_log.dart';
 import 'camera_ui_state.dart';
@@ -107,6 +108,16 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     ref.listen(activeSpecProvider, (_, _) => _kick());
     ref.listen(lensProvider, (_, _) => _kick());
     ref.listen(activeFlashProvider, (_, next) => _applyFlash(_controller, next));
+    // The microphone allowed again (the viewfinder's note, or Settings):
+    // reopen with sound, so videos aren't silent until the next launch.
+    ref.listen<Set<Perm>>(missingPermissionsProvider, (prev, next) {
+      if (_audioDenied && !next.contains(Perm.microphone) && (prev ?? const {}).contains(Perm.microphone)) {
+        _audioDenied = false;
+        if (_controller?.value.isRecordingVideo ?? false) return;
+        _controllerConfig = null;
+        _kick();
+      }
+    });
     ref.onDispose(() {
       _screenVisible = false;
       final c = _controller;

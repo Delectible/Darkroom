@@ -20,6 +20,8 @@ class AppInfo {
         'Real developing process',
         'Photos made of grain',
         'Super 8 grain and framing',
+        'Faster developing',
+        'Rename files in Darkroom 98',
       ],
     ),
     (

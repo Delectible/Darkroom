@@ -1214,40 +1214,40 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   free films (`step` skips Pro).
 - [x] **57.21** → 1.9.5 · 3D bodies: the live picture is clipped in by the rim's swing
   as the body turns (`_RimClip`), so it stays inside the rendered frame.
-- [ ] **57.22** Note from the Lab comes with the developed print (banner as
+- [x] **57.22** → 1.9.6 · Note from the Lab comes with the developed print (banner as
   it comes out, or next time the app opens), not at capture: kept per shot
   in `PrefKeys.labNotes` (`LabNote.keep` / `take`).
-- [ ] **57.23** Single-Use 27 too colourful and grainy indoors: auto flash
+- [x] **57.23** → 1.9.6 · Single-Use 27 too colourful and grainy indoors: auto flash
   now also fires when the scene (EXIF) is too dim for the film; consumer
   films share more grain between layers (Gold / Single-Use 0.95, Night
   800T 0.94); underexposure capped at 3 stops.
-- [ ] **57.24** Single-Use 27 tuned to the owner's disposable samples:
+- [x] **57.24** → 1.9.6 · Single-Use 27 tuned to the owner's disposable samples:
   grain halved (40 crystals), deep blacks (lift 0.008), near-white
   highlights (cap 0.99), a touch more contrast.
-- [ ] **57.25** Instant 600 develops in 40 s (a burst of shots took far
+- [x] **57.25** → 1.9.6 · Instant 600 develops in 40 s (a burst of shots took far
   longer than 20 s).
-- [ ] **57.26** Faster developing: grain formation ~2x faster (cached
+- [x] **57.26** → 1.9.6 · Faster developing: grain formation ~2x faster (cached
   response tables, box blurs for coarse clouds, table-driven counts); half the
   phone's cores develop side by side (at most 4), the shot due out
   soonest first (instant prints before 5-minute frames); the throttle rests 0.25 of
   the work time (was 0.5).
-- [ ] **57.27** Single-Use 27 plastic lens (`PlasticLens`): barrel
+- [x] **57.27** → 1.9.6 · Single-Use 27 plastic lens (`PlasticLens`): barrel
   distortion, colour fringes, soft corners, highlights rolled off; stronger
   vignette (0.58).
-- [ ] **57.28** Debug > Development Stats (`DevelopStats`): film shots
+- [x] **57.28** → 1.9.6 · Debug > Development Stats (`DevelopStats`): film shots
   developed, on time vs missed the timer (%), average processing / shot to
   print / delay, longest queue, cores in use; All Time and Since Reset
   tabs. Over 20% late (10+ shots): a one-time "Note from the Lab" that the
   phone is the bottleneck.
-- [ ] **57.29** Epic 70 shoots the way it's held (portrait too), like a video
+- [x] **57.29** → 1.9.6 · Epic 70 shoots the way it's held (portrait too), like a video
   camera; only Super 8 stays landscape-only.
-- [ ] **57.30** Debug window sorted into Win98 tree folders (Darkroom, Pro &
+- [x] **57.30** → 1.9.6 · Debug window sorted into Win98 tree folders (Darkroom, Pro &
   Film, Performance, Cosmetics, Diagnostics, First Run & Store).
-- [ ] **57.31** Darkroom 98 tab dots: red on SD Card / A: while files wait
+- [x] **57.31** → 1.9.6 · Darkroom 98 tab dots: red on SD Card / A: while files wait
   to be transferred, blue on C: for new files not yet opened (`cSeenProvider`).
-- [ ] **57.32** "My Documents" is now "My Pictures" (tree, address bar,
+- [x] **57.32** → 1.9.6 · "My Documents" is now "My Pictures" (tree, address bar,
   transfer text, Start menu).
-- [ ] **57.33** Rename files in Darkroom 98 (File > Rename, the viewer's
+- [x] **57.33** → 1.9.6 · Rename files in Darkroom 98 (File > Rename, the viewer's
   Rename): the app, the file on disk and, on Android, the copy in the
   phone's photos. Copies are tracked by the library's own id
   (`GalleryLinks`), so one renamed in the phone's files app stays on C:

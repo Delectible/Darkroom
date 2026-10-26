@@ -23,11 +23,12 @@ void main() {
   }();
 
   test(
-    'Epic 70 renders a clean 1.43 print with cue marks before the end',
+    'Epic 70 renders a clean 70 mm print with cue marks before the end',
     () async {
       final dir = await Directory.systemTemp.createTemp('cinema');
       final raw = '${dir.path}/raw.mp4';
       final src = Platform.environment['SRC'];
+      final aspect = AspectRatioOption.fromName(Platform.environment['ASPECT'], AspectRatioOption.r220);
       final gen = await Process.run(ffmpeg, [
         '-y',
         if (src == null) ...['-f', 'lavfi', '-i', 'testsrc=size=1280x720:rate=30'] else ...['-loop', '1', '-i', src],
@@ -44,7 +45,7 @@ void main() {
         outputPath: '${dir.path}/out.mp4',
         thumbPath: '${dir.path}/thumb.jpg',
         workDir: '${dir.path}/work',
-        aspect: AspectRatioOption.r143,
+        aspect: aspect,
         previewAspect: 1280 / 720,
         timestamp: false,
         capturedAtMs: 0,
@@ -55,7 +56,7 @@ void main() {
       for (final banned in notInMinBuild) {
         expect(graph, isNot(contains('$banned=')), reason: '$banned is not in the LGPL build');
       }
-      expect(plan.outW / plan.outH, closeTo(1.43, 0.02));
+      expect(plan.outW / plan.outH, closeTo(aspect.ratio, 0.02));
 
       final out = '${dir.path}/out.mp4';
       final run = await Process.run(ffmpeg, [

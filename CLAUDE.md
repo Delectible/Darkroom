@@ -285,7 +285,7 @@ shutter shows the Pro sheet (`Allowance.check` -> `Blocked.proOnly`). Film
 video without a gate (`FilmProfile.gate == 0`, Epic 70) gets a 24 fps cinema
 `VideoProfile` instead of Super 8's, and shoots the way it's held
 (portrait too; only Super 8 is `landscapeOnly`).
-Epic 70 is a clean cinema print: 1.43 / 2.20 frames, rare single-frame
+Epic 70 is a clean cinema print: 2.20 (default) / 2.76 (anamorphic: halos stretched sideways) / 1.43 frames, rare single-frame
 specks (`_renderPrintDirt`, not Super 8's dirt), no weave, and reel-change
 cue marks (`_cuePng`) 8 s and 1 s before the end of takes >= 12 s
 (`cinema_ffmpeg_test`, `SRC=photo SHOTS=dir` to look).

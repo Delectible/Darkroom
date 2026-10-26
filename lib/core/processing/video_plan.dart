@@ -242,6 +242,7 @@ class VideoPlanner {
         canvasH: planH,
         cueInput: cueInput,
         cueTimes: cueTimes,
+        anamorphic: job.aspect == AspectRatioOption.r276,
       );
     } else {
       final look = spec.look!;

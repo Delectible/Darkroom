@@ -1296,3 +1296,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   scratches or flares: `_renderPrintDirt`), no gate jitter (weave 0 is now
   still), reel-change cue marks top right 8 s and 1 s before the end of
   takes of 12 s or more, neutral highlights. `cinema_ffmpeg_test` runs it.
+- [ ] **57.46** Epic 70 tuned to the owner's 70 mm frames: 2.20 by default,
+  plus 2.76 (anamorphic 70 mm: halation stretched sideways) and 1.43;
+  a print's lifted black, highlights rolling off well before white
+  (cap 0.92), warm rich skin, cool blue-lavender shadows.

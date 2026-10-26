@@ -9,10 +9,11 @@ enum AspectRatioOption {
   r1x1('1:1', 1, 1),
   r3x2('3:2', 3, 2),
 
-  /// Large-format cinema: the tall 15-perf 70 mm frame, and the wide 5-perf
-  /// 70 mm projection print.
+  /// Large-format cinema: the tall 15-perf 70 mm frame, the 5-perf 70 mm
+  /// print, and the anamorphic 70 mm ultra-wide.
   r143('1.43', 143, 100),
-  r220('2.20', 220, 100);
+  r220('2.20', 220, 100),
+  r276('2.76', 276, 100);
 
   const AspectRatioOption(this.label, this.long, this.short);
 

@@ -536,28 +536,30 @@ class FilmProfile {
         bloom: 0.08,
       ),
     ),
-    // Epic 70: big-screen 65/70 mm motion picture film. Clean, wide, rich
-    // and filmic: soft roll-off, gentle teal-orange split, very fine grain,
-    // no gate or weave (a modern projector print).
+    // Epic 70: 65/70 mm motion picture film, after the owner's frames from
+    // 70 mm epics: a print's black (a touch lifted, never crushed), highlights
+    // that roll off well before white, warm rich skin, cool blue-lavender
+    // shadows, very fine grain, no gate or weave.
     'vision70': FilmProfile(
       id: 'vision70',
       balance: [1.02, 1.0, 0.98],
       contrast: [1.16, 1.12, 1.1],
       white: 1.0,
-      saturation: 1.05,
+      saturation: 1.1,
       hues: [
-        HueTweak(55, 30, shift: 2, chroma: 1.06, light: 0.01),
+        HueTweak(27, 26, shift: 2, chroma: 1.1),
+        HueTweak(55, 30, shift: 2, chroma: 1.08, light: 0.01),
         HueTweak(142, 40, shift: -8, chroma: 0.9),
         HueTweak(210, 44, shift: -6, chroma: 1.05),
       ],
-      shadowLift: 0.01,
-      highlightCap: 0.98,
-      shadowTint: [-0.012, 0.004, 0.01],
-      highlightTint: [0.012, 0.008, -0.012],
+      shadowLift: 0.035,
+      highlightCap: 0.92,
+      shadowTint: [-0.006, -0.004, 0.03],
+      highlightTint: [0.016, 0.008, -0.014],
       grainAmount: 0.012,
       grainChroma: 0.3,
       grainResolution: 2400,
-      halation: 0.12,
+      halation: 0.16,
       vignette: 0.12,
       exposureDrift: 0,
       // 65 mm frames: very fine grain plates.

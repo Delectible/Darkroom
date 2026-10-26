@@ -1221,3 +1221,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   now also fires when the scene (EXIF) is too dim for the film; consumer
   films share more grain between layers (Gold / Single-Use 0.95, Night
   800T 0.94); underexposure capped at 3 stops.
+- [ ] **57.24** Single-Use 27 tuned to the owner's disposable samples:
+  grain halved (40 crystals), deep blacks (lift 0.008), near-white
+  highlights (cap 0.99), a touch more contrast.

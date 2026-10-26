@@ -467,14 +467,15 @@ class FilmProfile {
         chemistry: 0.6,
       ),
     ),
-    // Single-Use 27: the cardboard camera from every wedding table and
-    // holiday. A 400 consumer film with a green cast, punchy but cheap
+    // Single-Use 27 (tuned 1.9.6 against the owner's disposable samples:
+    // deep blacks, near-white highlights, green shadows, cyan skies, modest
+    // grain): the cardboard camera from every wedding table and holiday. A 400 consumer film with a green cast, punchy but cheap
     // colour, a soft plastic lens with heavy vignetting, harsh flash.
     'superia400': FilmProfile(
       id: 'superia400',
       exposureEv: 0.1,
       balance: [0.98, 1.03, 0.97],
-      contrast: [1.2, 1.24, 1.16],
+      contrast: [1.26, 1.3, 1.22],
       white: 1.02,
       saturation: 1.08,
       hues: [
@@ -482,11 +483,11 @@ class FilmProfile {
         HueTweak(142, 44, shift: 6, chroma: 1.12),
         HueTweak(195, 40, shift: -6, chroma: 1.05),
       ],
-      shadowLift: 0.025,
-      highlightCap: 0.97,
+      shadowLift: 0.008,
+      highlightCap: 0.99,
       shadowTint: [-0.015, 0.018, 0.0],
       highlightTint: [0.008, 0.006, -0.012],
-      grainAmount: 0.04,
+      grainAmount: 0.026,
       grainChroma: 0.45,
       grainResolution: 1300,
       halation: 0.15,
@@ -497,7 +498,7 @@ class FilmProfile {
       // Fixed shutter and aperture: it exposes by the scene, not the phone.
       // The minilab rescues most of it, with green mud in the shadows.
       process: FilmProcess(
-        formation: GrainFormation(frameHeight: 2200, crystals: 10, shared: 0.95),
+        formation: GrainFormation(frameHeight: 2200, crystals: 40, shared: 0.95),
         iso: 400,
         // Fixed f/10 at 1/125 s: needs daylight (or the flash).
         darkLimit: 13.6,

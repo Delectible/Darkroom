@@ -14,6 +14,11 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+class _Seen extends CSeenNotifier {
+  @override
+  ({Set<String> ids, DateTime since}) build() => (ids: const {}, since: DateTime(2026));
+}
+
 class _Prefs extends ExplorerPrefsNotifier {
   @override
   ExplorerPrefs build() => const ExplorerPrefs();
@@ -67,6 +72,7 @@ void main() {
           explorerPrefsProvider.overrideWith(_Prefs.new),
           userNameProvider.overrideWith(_Name.new),
           win98ThemeProvider.overrideWith(_Theme.new),
+          cSeenProvider.overrideWith(_Seen.new),
           initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
           initialCameraSettingsProvider.overrideWithValue(const {}),
         ],

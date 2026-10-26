@@ -192,7 +192,11 @@ class PhotoPipeline {
     final flashFired = switch (job.flash) {
       FlashSetting.on => true,
       FlashSetting.off => false,
-      FlashSetting.auto => LookRenderer.meanLuma(data, w, h) < 0.22,
+      // Auto: a dark-looking frame, or (film) a scene too dim for the
+      // stock, whatever the phone made of it.
+      FlashSetting.auto =>
+        LookRenderer.meanLuma(data, w, h) < 0.22 ||
+            (spec.film != null && sceneEv != null && spec.film!.process.underFor(sceneEv) >= 1),
     };
     final flash = flashFired ? 1.0 : 0.0;
 

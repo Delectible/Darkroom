@@ -150,7 +150,7 @@ class CaptureController extends Notifier<CaptureState> {
     try {
       final file = await c.takePicture();
       // Read before the hand-off moves the file.
-      final note = await LabNote.forFile(ctx.spec, file.path, flash: ctx.flash == FlashSetting.on);
+      final note = await LabNote.forFile(ctx.spec, file.path, flash: ctx.flash != FlashSetting.off);
       // Hand-off: moves the file into our cache + writes the queue row.
       // Processing then continues in the background isolate.
       final id = await ref.read(captureProcessorProvider).enqueuePhoto(file.path, ctx);

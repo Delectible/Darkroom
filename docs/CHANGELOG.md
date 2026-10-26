@@ -1217,3 +1217,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **57.22** Note from the Lab comes with the developed print (banner as
   it comes out, or next time the app opens), not at capture: kept per shot
   in `PrefKeys.labNotes` (`LabNote.keep` / `take`).
+- [ ] **57.23** Single-Use 27 too colourful and grainy indoors: auto flash
+  now also fires when the scene (EXIF) is too dim for the film; consumer
+  films share more grain between layers (Gold / Single-Use 0.95, Night
+  800T 0.94); underexposure capped at 3 stops.

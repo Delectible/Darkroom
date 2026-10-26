@@ -368,7 +368,7 @@ class FilmProfile {
       vignette: 0.2,
       defects: 1.0,
       process: FilmProcess(
-        formation: GrainFormation(frameHeight: 2800, crystals: 12),
+        formation: GrainFormation(frameHeight: 2800, crystals: 12, shared: 0.95),
         iso: 200,
         meter: 0.5,
         crystal: 0.5,
@@ -410,7 +410,7 @@ class FilmProfile {
       defects: 1.0,
       // No anti-halation backing: a wide red skirt and a glow on every lamp.
       process: FilmProcess(
-        formation: GrainFormation(frameHeight: 2400, crystals: 8, shared: 0.88),
+        formation: GrainFormation(frameHeight: 2400, crystals: 8, shared: 0.94),
         iso: 800,
         meter: 0.5,
         crystal: 0.6,
@@ -497,7 +497,7 @@ class FilmProfile {
       // Fixed shutter and aperture: it exposes by the scene, not the phone.
       // The minilab rescues most of it, with green mud in the shadows.
       process: FilmProcess(
-        formation: GrainFormation(frameHeight: 2200, crystals: 10, shared: 0.88),
+        formation: GrainFormation(frameHeight: 2200, crystals: 10, shared: 0.95),
         iso: 400,
         // Fixed f/10 at 1/125 s: needs daylight (or the flash).
         darkLimit: 13.6,

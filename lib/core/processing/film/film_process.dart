@@ -57,8 +57,8 @@ class FilmProcess {
   final double darkLimit;
 
   /// Stops under for a scene at [sceneEv] (EV at ISO 100); 0 if it's fine,
-  /// at most 4 (past that the frame is just black).
-  double underFor(double sceneEv) => (darkLimit - math.log(iso / 100) / math.ln2 - sceneEv).clamp(0.0, 4.0);
+  /// at most 3 (past that the lab couldn't print it anyway).
+  double underFor(double sceneEv) => (darkLimit - math.log(iso / 100) / math.ln2 - sceneEv).clamp(0.0, 3.0);
 
   /// How much the camera's own meter reading moves exposure (0 = trust
   /// the phone's exposure completely).

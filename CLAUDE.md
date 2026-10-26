@@ -239,8 +239,8 @@ for video. Plus a tileable grain texture, halation and exposure drift.
   (`frameHeight` = short side, Weak/Strong scale it and the crystal count)
   and scaled up; detail stops at the grain. It replaces the texture grain
   for that stock (calibration test still pins it); the app throttles it
-  (`throttle: 0.25`; two shots develop at once on 8-core phones,
-  `CaptureProcessor._maxWorkers`). Instant 600 too (1800 px, smooth); while an instant
+  (`throttle: 0.25`; half the cores develop at once, at most 4,
+  `CaptureProcessor._maxWorkers`; the shot due out soonest goes first). Instant 600 too (1800 px, smooth); while an instant
   print is still processing the darkroom shows it developing on the raw
   photo (`_instantPicture`). Since 1.9.5 every film is: Ektar 4200 px /
   165 crystals (fine, ~0.0078), Velvia 4600 / 330 (finest), Gold 2800 / 12,

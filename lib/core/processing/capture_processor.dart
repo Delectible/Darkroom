@@ -75,13 +75,14 @@ class CaptureProcessor {
   /// Lets the darkroom re-arm notifications when prints are added/finished.
   final Future<void> Function() onFilmQueueChanged;
 
-  final _queue = <Future<void> Function()>[];
+  /// Waiting jobs with when their shot is due out of the darkroom.
+  final _queue = <(DateTime, Future<void> Function())>[];
   final _inFlightRaw = <String>{};
   int _workers = 0;
 
-  /// Shots developed side by side: two on phones with cores to spare (a
-  /// burst no longer waits in line), else one.
-  static final int _maxWorkers = Platform.numberOfProcessors >= 8 ? 2 : 1;
+  /// Shots developed side by side: half the phone's cores (at most 4, for
+  /// memory: each full-size print holds a few hundred MB while it forms).
+  static final int _maxWorkers = (Platform.numberOfProcessors ~/ 2).clamp(1, 4);
 
   /// Number of captures waiting for / in processing (drives a UI spinner).
   final ValueNotifier<int> pending = ValueNotifier<int>(0);
@@ -179,7 +180,7 @@ class CaptureProcessor {
       jobJson: jsonEncode({'type': 'photo', ...job.toJson()}),
     );
     if (spec.mode == AppMode.film) unawaited(onFilmQueueChanged());
-    _enqueue(() => _runPhoto(repo, job));
+    _enqueue(_readyAt(ctx, now), () => _runPhoto(repo, job));
     return id;
   }
 
@@ -229,12 +230,12 @@ class CaptureProcessor {
       jobJson: jsonEncode({'type': 'video', ...job.toJson()}),
     );
     if (spec.mode == AppMode.film) unawaited(onFilmQueueChanged());
-    _enqueue(() => _runVideo(repo, job));
+    _enqueue(_readyAt(ctx, now), () => _runVideo(repo, job));
     return id;
   }
 
-  void _enqueue(Future<void> Function() task) {
-    _queue.add(task);
+  void _enqueue(DateTime due, Future<void> Function() task) {
+    _queue.add((due, task));
     if (_workers < _maxWorkers) unawaited(_drain());
     pending.value = _queue.length + _workers;
   }
@@ -243,7 +244,13 @@ class CaptureProcessor {
     _workers++;
     try {
       while (_queue.isNotEmpty) {
-        final task = _queue.removeAt(0);
+        // Soonest out of the darkroom first (an instant print before a
+        // roll's 5-minute frame), first come first served on a tie.
+        var next = 0;
+        for (var i = 1; i < _queue.length; i++) {
+          if (_queue[i].$1.isBefore(_queue[next].$1)) next = i;
+        }
+        final task = _queue.removeAt(next).$2;
         pending.value = _queue.length + _workers;
         try {
           await task();
@@ -325,7 +332,7 @@ class CaptureProcessor {
     // Transient (e.g. low memory while the camera is busy): back off, retry.
     Timer(Duration(seconds: 2 * item.attempts), () {
       _inFlightRaw.add(raw);
-      _enqueue(retry);
+      _enqueue(item.readyAt, retry);
     });
   }
 
@@ -363,10 +370,10 @@ class CaptureProcessor {
         final map = jsonDecode(jobJson) as Map<String, Object?>;
         if (map['type'] == 'video') {
           final job = VideoJob.fromJson(map);
-          _enqueue(() => _runVideo(repo, job));
+          _enqueue(item.readyAt, () => _runVideo(repo, job));
         } else {
           final job = PhotoJob.fromJson(map);
-          _enqueue(() => _runPhoto(repo, job));
+          _enqueue(item.readyAt, () => _runPhoto(repo, job));
         }
       }
     }

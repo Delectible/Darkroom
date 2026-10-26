@@ -1243,3 +1243,12 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   camera; only Super 8 stays landscape-only.
 - [ ] **57.30** Debug window sorted into Win98 tree folders (Darkroom, Pro &
   Film, Performance, Cosmetics, Diagnostics, First Run & Store).
+- [ ] **57.31** Darkroom 98 tab dots: red on SD Card / A: while files wait
+  to be transferred, blue on C: for new files not yet opened (`cSeenProvider`).
+- [ ] **57.32** "My Documents" is now "My Pictures" (tree, address bar,
+  transfer text, Start menu).
+- [ ] **57.33** Rename files in Darkroom 98 (File > Rename, the viewer's
+  Rename): the app, the file on disk and, on Android, the copy in the
+  phone's photos. Copies are tracked by the library's own id
+  (`GalleryLinks`), so one renamed in the phone's files app stays on C:
+  under its new name.

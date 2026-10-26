@@ -44,6 +44,7 @@ void main() {
     width: 640,
     height: 480,
     location: onC ? MediaLocation.c : MediaLocation.sd,
+    savedAt: onC ? DateTime(2026, 10, 7) : null,
   );
 
   final items = [
@@ -96,6 +97,7 @@ void main() {
             explorerPrefsProvider.overrideWith(_Prefs.new),
             userNameProvider.overrideWith(_Name.new),
             win98ThemeProvider.overrideWith(_Theme.new),
+            cSeenProvider.overrideWith(_Seen.new),
             initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
             initialCameraSettingsProvider.overrideWithValue(const {}),
           ],
@@ -139,6 +141,7 @@ void main() {
         ('about', () => showAboutDarkroom(ctx)),
         ('tip', () => showTipOfTheDay(ctx)),
         ('run', () => showRunDialog(ctx)),
+        ('rename', () => showRenameDialog(ctx, 'DSC00005.JPG')),
         (
           'box',
           () => win98Box(
@@ -158,6 +161,12 @@ void main() {
       }
     });
   }
+}
+
+/// Nothing opened yet, all of it new: C: shows its blue dot.
+class _Seen extends CSeenNotifier {
+  @override
+  ({Set<String> ids, DateTime since}) build() => (ids: const {}, since: DateTime(2026));
 }
 
 class _Theme extends Win98ThemeNotifier {

@@ -9,6 +9,7 @@ import 'package:gal/gal.dart';
 import '../../viewer/presentation/media_actions.dart';
 
 import '../../../core/db/media_repository.dart';
+import '../../../core/device/gallery_check.dart';
 import '../../../core/providers.dart';
 import '../../camera/application/camera_ui_state.dart';
 import '../../cameras/domain/camera_catalog.dart';
@@ -123,6 +124,47 @@ final floppyFilesProvider = Provider<List<MediaItem>>(
 
 /// Files moved to "Local Disk (C:)" (also in the phone's photo library).
 final cDriveFilesProvider = Provider<List<MediaItem>>((ref) => _all(ref).where((m) => !m.onSdCard).toList());
+
+/// C: files the user has opened. Files moved to C: before this was tracked
+/// count as seen.
+class CSeenNotifier extends Notifier<({Set<String> ids, DateTime since})> {
+  @override
+  ({Set<String> ids, DateTime since}) build() {
+    final p = ref.read(sharedPrefsProvider);
+    var since = p.getInt(PrefKeys.cSeenSince);
+    if (since == null) {
+      since = DateTime.now().millisecondsSinceEpoch;
+      unawaited(p.setInt(PrefKeys.cSeenSince, since));
+    }
+    return (
+      ids: (p.getStringList(PrefKeys.cSeen) ?? const <String>[]).toSet(),
+      since: DateTime.fromMillisecondsSinceEpoch(since),
+    );
+  }
+
+  void see(String id) {
+    if (state.ids.contains(id)) return;
+    // Only the files still on C: are worth remembering.
+    final onC = ref.read(cDriveFilesProvider).map((m) => m.id).toSet();
+    final ids = {...state.ids.where(onC.contains), id};
+    state = (ids: ids, since: state.since);
+    unawaited(ref.read(sharedPrefsProvider).setStringList(PrefKeys.cSeen, ids.toList()));
+  }
+
+  bool isNew(MediaItem m) => !m.onSdCard && m.savedAt != null && m.savedAt!.isAfter(state.since) && !state.ids.contains(m.id);
+}
+
+final cSeenProvider = NotifierProvider<CSeenNotifier, ({Set<String> ids, DateTime since})>(CSeenNotifier.new);
+
+/// A file on C: not opened yet (the blue dot on the C: tab).
+final cHasNewProvider = Provider<bool>((ref) {
+  ref.watch(cSeenProvider);
+  final seen = ref.read(cSeenProvider.notifier);
+  return ref.watch(cDriveFilesProvider).any(seen.isNew);
+});
+
+/// Which photo-library entry holds each saved file.
+final galleryLinksProvider = Provider<GalleryLinks>((ref) => GalleryLinks(ref.watch(sharedPrefsProvider)));
 
 /// What a content pane shows: filtered + sorted.
 final explorerItemsProvider = Provider.family<List<MediaItem>, Drive>((ref, drive) {

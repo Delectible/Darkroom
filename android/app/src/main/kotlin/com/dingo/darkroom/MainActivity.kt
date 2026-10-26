@@ -28,7 +28,7 @@ import kotlin.math.abs
 //  * darkroom/battery: the phone's battery level.
 //  * darkroom/rotation: whether the phone's auto-rotate is on (and when it
 //    changes): the landscape screens only turn when it is.
-//  * darkroom/gallery: the names of the files the app saved to a photo
+//  * darkroom/gallery: the names (and ids, for renames) of the files the app saved to a photo
 //    album that are still there (deleted ones are offered again).
 class MainActivity : FlutterActivity() {
     private var volumeChannel: MethodChannel? = null
@@ -173,6 +173,29 @@ class MainActivity : FlutterActivity() {
                             Handler(Looper.getMainLooper()).post { result.success(names) }
                         }.start()
                     }
+                    "entries" -> {
+                        val album = call.argument<String>("album") ?: ""
+                        Thread {
+                            val list = try {
+                                albumEntries(album)
+                            } catch (e: Exception) {
+                                null
+                            }
+                            Handler(Looper.getMainLooper()).post { result.success(list) }
+                        }.start()
+                    }
+                    "rename" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val to = call.argument<String>("to") ?: ""
+                        Thread {
+                            val ok = try {
+                                renameEntry(id, to)
+                            } catch (e: Exception) {
+                                false
+                            }
+                            Handler(Looper.getMainLooper()).post { result.success(ok) }
+                        }.start()
+                    }
                     "access" -> result.success("full")
                     "request" -> result.success(true)
                     else -> result.notImplemented()
@@ -207,6 +230,53 @@ class MainActivity : FlutterActivity() {
             c.use { while (it.moveToNext()) it.getString(0)?.let(names::add) }
         }
         return names
+    }
+
+    /// The entries in Pictures/<album> with their MediaStore ids ("i:12" for
+    /// images, "v:34" for videos), which survive a rename in a file manager.
+    private fun albumEntries(album: String): List<Map<String, String>>? {
+        val dir = Environment.DIRECTORY_PICTURES + "/" + album
+        val out = mutableListOf<Map<String, String>>()
+        for ((tag, uri) in listOf(
+            "i" to MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            "v" to MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+        )) {
+            val (sel, args) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?" to arrayOf("$dir%")
+            } else {
+                "${MediaStore.MediaColumns.DATA} LIKE ?" to arrayOf("%/$dir/%")
+            }
+            val c = contentResolver.query(
+                uri,
+                arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME),
+                sel,
+                args,
+                null,
+            ) ?: return null
+            c.use {
+                while (it.moveToNext()) {
+                    val name = it.getString(1) ?: continue
+                    out.add(mapOf("id" to "$tag:${it.getLong(0)}", "name" to name))
+                }
+            }
+        }
+        return out
+    }
+
+    /// Renames one of the app's own photo-library entries (Android 10+; the
+    /// file on disk moves with it). False if Android won't (not ours, old).
+    private fun renameEntry(id: String, to: String): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || to.isBlank()) return false
+        val parts = id.split(":")
+        if (parts.size != 2) return false
+        val base = if (parts[0] == "v") MediaStore.Video.Media.EXTERNAL_CONTENT_URI else MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        val uri = android.content.ContentUris.withAppendedId(base, parts[1].toLongOrNull() ?: return false)
+        val values = android.content.ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, to) }
+        return try {
+            contentResolver.update(uri, values, null, null) > 0
+        } catch (e: SecurityException) {
+            false
+        }
     }
 
     private fun recentExits(): List<Map<String, Any?>> {

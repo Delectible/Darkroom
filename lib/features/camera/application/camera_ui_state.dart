@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/gallery_check.dart';
 import '../../../core/diagnostics/develop_stats.dart';
 import '../../../core/monetization/pro.dart';
 import '../../../core/processing/photo_pipeline.dart';
@@ -74,6 +75,14 @@ class PrefKeys {
   /// Development stats (Debug window) and whether the slow-phone note was shown.
   static const developStats = DevelopStats.key;
 
+  /// Which photo-library entry holds each saved file (survives renames).
+  static const galleryLinks = GalleryLinks.key;
+
+  /// C: files opened in the viewer, and when tracking began (older files
+  /// count as seen): the blue dot on the C: tab.
+  static const cSeen = 'explorer.c.seen';
+  static const cSeenSince = 'explorer.c.seenSince';
+
   static const all = <String>{
     mode,
     cameraFilm,
@@ -102,6 +111,9 @@ class PrefKeys {
     reviewAsked,
     labNotes,
     developStats,
+    galleryLinks,
+    cSeen,
+    cSeenSince,
   };
 }
 

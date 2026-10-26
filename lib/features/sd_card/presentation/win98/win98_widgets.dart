@@ -846,11 +846,14 @@ class _MenuTitle extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class Win98Tab {
-  const Win98Tab(this.label, {this.enabled = true, this.icon});
+  const Win98Tab(this.label, {this.enabled = true, this.icon, this.dot});
 
   final String label;
   final bool enabled;
   final Widget? icon;
+
+  /// A small dot in the tab's corner (something waiting there).
+  final Color? dot;
 }
 
 class Win98TabStrip extends StatelessWidget {
@@ -881,6 +884,7 @@ class Win98TabStrip extends StatelessWidget {
                   child: Container(
                     height: i == selected ? 26 : 22,
                     margin: EdgeInsets.only(left: i == 0 ? 2 : 0),
+                    foregroundDecoration: tabs[i].dot == null ? null : _TabDot(tabs[i].dot!),
                     child: CustomPaint(
                       painter: _TabPainter(selected: i == selected),
                       child: Padding(
@@ -907,6 +911,30 @@ class Win98TabStrip extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// [Win98Tab.dot]: a 6 px dot with a dark rim in the tab's top-right corner.
+class _TabDot extends Decoration {
+  const _TabDot(this.color);
+
+  final Color color;
+
+  @override
+  BoxPainter createBoxPainter([VoidCallback? onChanged]) => _TabDotPainter(color);
+}
+
+class _TabDotPainter extends BoxPainter {
+  _TabDotPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Offset offset, ImageConfiguration configuration) {
+    final size = configuration.size ?? Size.zero;
+    final c = offset + Offset(size.width - 6, 6);
+    canvas.drawCircle(c, 3.5, Paint()..color = const Color(0xFF000000));
+    canvas.drawCircle(c, 2.5, Paint()..color = color);
   }
 }
 

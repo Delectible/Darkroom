@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/settings/settings_repository.dart';
+import 'package:darkroom/features/sd_card/application/sd_card_controller.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/debug_menu.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/win98_viewer.dart';
@@ -42,7 +43,10 @@ void main() {
   }
 
   Widget app(Widget home) => ProviderScope(
-    overrides: [initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings())],
+    overrides: [
+      initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+      cSeenProvider.overrideWith(_Seen.new),
+    ],
     child: RepaintBoundary(
       key: boundary,
       child: MaterialApp(
@@ -181,4 +185,12 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
   });
+}
+
+class _Seen extends CSeenNotifier {
+  @override
+  ({Set<String> ids, DateTime since}) build() => (ids: const {}, since: DateTime(2026));
+
+  @override
+  void see(String id) {}
 }

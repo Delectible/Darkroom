@@ -58,6 +58,20 @@ import UserNotifications
           let names = Self.albumNames(album)
           DispatchQueue.main.async { result(names) }
         }
+      case "entries":
+        let album = (call.arguments as? [String: Any])?["album"] as? String ?? ""
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else {
+          result(nil)
+          return
+        }
+        DispatchQueue.global(qos: .userInitiated).async {
+          let entries = Self.albumEntries(album)
+          DispatchQueue.main.async { result(entries) }
+        }
+      case "rename":
+        // Photos keeps an asset's original file name: nothing to rename.
+        result(false)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -99,6 +113,21 @@ import UserNotifications
       }
     }
     return names
+  }
+
+  /// The assets in the album(s) titled [album]: local identifier (stable)
+  /// and original file name.
+  private static func albumEntries(_ album: String) -> [[String: String]] {
+    var out: [[String: String]] = []
+    let collections = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: nil)
+    collections.enumerateObjects { collection, _, _ in
+      guard collection.localizedTitle == album else { return }
+      PHAsset.fetchAssets(in: collection, options: nil).enumerateObjects { asset, _, _ in
+        let name = PHAssetResource.assetResources(for: asset).first?.originalFilename ?? ""
+        out.append(["id": asset.localIdentifier, "name": name])
+      }
+    }
+    return out
   }
 
   private func beginBackgroundTime() {

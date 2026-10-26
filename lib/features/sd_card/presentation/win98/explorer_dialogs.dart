@@ -8,7 +8,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/audio/sfx.dart';
 
 import '../../../../core/app_info.dart';
+import '../../../../core/db/media_repository.dart';
 import '../../../../core/diagnostics/crash_log.dart';
+import '../../../../core/providers.dart';
 import '../../../camera/application/camera_log.dart';
 import '../../../camera/application/camera_ui_state.dart' show userNameProvider, win98ThemeProvider;
 import '../../../cameras/domain/camera_catalog.dart';
@@ -126,7 +128,7 @@ class _CopyingDialogState extends ConsumerState<CopyingDialog> with SingleTicker
                       const SizedBox(height: 8),
                       Text(t?.current ?? 'Preparing…', style: W98.text),
                       Text(
-                        "From '${widget.fromFloppy ? '3½ Floppy (A:)' : 'SD Card (E:)'}' to 'C:\\My Documents\\Darkroom'",
+                        "From '${widget.fromFloppy ? '3½ Floppy (A:)' : 'SD Card (E:)'}' to 'C:\\My Pictures\\Darkroom'",
                         style: W98.text,
                       ),
                       const SizedBox(height: 8),
@@ -881,7 +883,7 @@ class _DefragState extends State<_Defrag> {
 // Start menu, Run, Shut Down, and the blue screen
 // -----------------------------------------------------------------------------
 
-enum StartAction { camera, documents, options, help, run, profile, shutDown }
+enum StartAction { camera, pictures, options, help, run, profile, shutDown }
 
 Future<StartAction?> showStartMenu(BuildContext context) {
   final bottom = MediaQuery.paddingOf(context).bottom + 32;
@@ -954,7 +956,7 @@ Future<StartAction?> showStartMenu(BuildContext context) {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             _startItem(context, PixelIcon.camera, 'Camera', StartAction.camera),
-                            _startItem(context, PixelIcon.folder, 'Documents', StartAction.documents),
+                            _startItem(context, PixelIcon.folder, 'My Pictures', StartAction.pictures),
                             _startItem(context, PixelIcon.views, 'Settings', StartAction.options),
                             _startItem(context, PixelIcon.question, 'Help', StartAction.help),
                             _startItem(context, PixelIcon.upFolder, 'Run...', StartAction.run),
@@ -1069,6 +1071,100 @@ Future<void> showUserProfile(BuildContext context) async {
   );
   ctrl.dispose();
   if (name != null) await container.read(userNameProvider.notifier).set(name);
+}
+
+/// File > Rename: the new name for [fileName] (the extension stays), or
+/// null when cancelled.
+Future<String?> showRenameDialog(BuildContext context, String fileName) async {
+  final dot = fileName.lastIndexOf('.');
+  final stem = dot > 0 ? fileName.substring(0, dot) : fileName;
+  final ext = dot > 0 ? fileName.substring(dot) : '';
+  final ctrl = TextEditingController(text: stem)
+    ..selection = TextSelection(baseOffset: 0, extentOffset: stem.length);
+  final name = await showWin98Window<String>(
+    context,
+    title: 'Rename',
+    width: 330,
+    builder: (context) => Padding(
+      padding: const EdgeInsets.all(10),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text("Rename '$fileName' to:"),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Win98Bevel(
+                  style: BevelStyle.sunken,
+                  color: W98.window,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    maxLength: 64,
+                    style: W98.text,
+                    cursorColor: W98.windowInk,
+                    decoration: const InputDecoration(isDense: true, border: InputBorder.none, counterText: ''),
+                    onSubmitted: (v) => Navigator.of(context).pop(v),
+                  ),
+                ),
+              ),
+              if (ext.isNotEmpty) Text(' $ext'),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(ctrl.text),
+                child: const Text('OK'),
+              ),
+              const SizedBox(width: 6),
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ),
+  );
+  // After the window's closing animation (it still draws the field).
+  unawaited(Future<void>.delayed(const Duration(milliseconds: 400), ctrl.dispose));
+  return name;
+}
+
+/// Renames [item] after asking (File > Rename, the viewer's Rename): in
+/// the app, on disk and, once on C:, its copy in the phone's photos where
+/// the phone allows it. Returns the renamed row, or null.
+Future<MediaItem?> renameWithDialog(BuildContext context, WidgetRef ref, MediaItem item) async {
+  final typed = await showRenameDialog(context, item.fileName);
+  if (typed == null || !context.mounted) return null;
+  final repo = ref.read(sdCardRepositoryProvider);
+  final used = await renameMedia(
+    repo,
+    item,
+    typed,
+    album: item.onSdCard ? null : digitalAlbum,
+    links: ref.read(galleryLinksProvider),
+  );
+  if (!context.mounted) return null;
+  if (used == null) {
+    await showWin98MessageBox(
+      context,
+      title: 'Error Renaming File',
+      message: 'A file name cannot be blank or contain any of the following characters:\n\\ / : * ? " < > |',
+      icon: Win98MessageIcon.error,
+    );
+    return null;
+  }
+  return repo.byId(item.id);
 }
 
 /// Start > Run. A few commands do something.

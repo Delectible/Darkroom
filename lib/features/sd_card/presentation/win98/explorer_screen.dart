@@ -142,7 +142,14 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
               0,
     );
     if (!allowed || !mounted) return;
-    final missing = await missingFromGallery(onC, digitalAlbum);
+    // A copy renamed in the phone's own files app keeps its place: C: takes
+    // the new name too.
+    final missing = await missingFromGallery(
+      onC,
+      digitalAlbum,
+      links: ref.read(galleryLinksProvider),
+      onRenamed: (m, name) => renameMedia(repo, m, name),
+    );
     if (missing == null || missing.isEmpty || !mounted) return;
     // Files the user already said No to stay quiet (File > Copy to Photos
     // still works on them).
@@ -196,6 +203,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     _aScroll.dispose();
     super.dispose();
   }
+
+  static const _waitingDot = Color(0xFFE02020);
+  static const _newDot = Color(0xFF2070F0);
 
   ExplorerPlace get _current {
     if (_place != null) return _place!;
@@ -351,7 +361,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         if (!quiet) {
           await _box(
             'Transfer Complete',
-            "${t?.total ?? 0} file(s) moved to C:\\My Documents\\Darkroom and copied to your photo library "
+            "${t?.total ?? 0} file(s) moved to C:\\My Pictures\\Darkroom and copied to your photo library "
                 "(album 'Darkroom').",
           );
         }
@@ -467,7 +477,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     switch (a) {
       case StartAction.camera:
         Navigator.of(context).pop();
-      case StartAction.documents:
+      case StartAction.pictures:
         _go(ExplorerPlace.c);
       case StartAction.options:
         await showExplorerOptions(context);
@@ -576,7 +586,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     final (title, pathIcon, path) = switch (place) {
       ExplorerPlace.sd => ('Exploring - SD Card (E:)', PixelIcon.removableDrive, r'E:\DCIM\100DRKRM'),
       ExplorerPlace.floppy => ('Exploring - 3½ Floppy (A:)', PixelIcon.floppy, r'A:\TAPE01'),
-      ExplorerPlace.c => ('Exploring - Local Disk (C:)', PixelIcon.hardDrive, r'C:\My Documents\Darkroom'),
+      ExplorerPlace.c => ('Exploring - Local Disk (C:)', PixelIcon.hardDrive, r'C:\My Pictures\Darkroom'),
       ExplorerPlace.myComputer => ('My Computer', PixelIcon.computer, 'My Computer'),
     };
 
@@ -632,6 +642,18 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                 Win98MenuItem(
                                   'Delete',
                                   onSelected: _selected.isEmpty ? null : _deleteSelected,
+                                ),
+                                Win98MenuItem(
+                                  'Rename',
+                                  onSelected: _selected.length == 1
+                                      ? () => unawaited(
+                                          renameWithDialog(
+                                            context,
+                                            ref,
+                                            visible.firstWhere((m) => m.id == _selected.first),
+                                          ),
+                                        )
+                                      : null,
                                 ),
                                 const Win98MenuItem.separator(),
                                 Win98MenuItem(
@@ -750,7 +772,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                         'Files on the card are locked: open one, or press Transfer, to move it to '
                                         "Local Disk (C:). Moving also copies it to your phone's photo library.\n\n"
                                         'On C:, tap a file twice to open it, hold it to send it, and use the arrows in '
-                                        'the viewer to flip through your pictures.',
+                                        'the viewer to flip through your pictures. File > Rename renames a file (and '
+                                        "its copy in your phone's photos).\n\n"
+                                        'A red dot on a drive: files still to transfer. A blue dot on C:: new pictures '
+                                        "you haven't opened yet.",
                                   ),
                                 ),
                                 Win98MenuItem('Debug...', onSelected: () => showDebugMenu(context)),
@@ -774,9 +799,22 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                           const SizedBox(height: 4),
                           Win98TabStrip(
                             tabs: [
-                              const Win98Tab('SD Card (E:)', icon: PixelIconView(PixelIcon.removableDrive)),
-                              const Win98Tab('A:', icon: PixelIconView(PixelIcon.floppy)),
-                              const Win98Tab('C:', icon: PixelIconView(PixelIcon.hardDrive)),
+                              // Red: files still to transfer. Blue: new on C:, not opened yet.
+                              Win98Tab(
+                                'SD Card (E:)',
+                                icon: const PixelIconView(PixelIcon.removableDrive),
+                                dot: ref.watch(sdCardFilesProvider).isEmpty ? null : _waitingDot,
+                              ),
+                              Win98Tab(
+                                'A:',
+                                icon: const PixelIconView(PixelIcon.floppy),
+                                dot: ref.watch(floppyFilesProvider).isEmpty ? null : _waitingDot,
+                              ),
+                              Win98Tab(
+                                'C:',
+                                icon: const PixelIconView(PixelIcon.hardDrive),
+                                dot: ref.watch(cHasNewProvider) ? _newDot : null,
+                              ),
                               const Win98Tab('My Computer', icon: PixelIconView(PixelIcon.computer)),
                             ],
                             selected: place.index,

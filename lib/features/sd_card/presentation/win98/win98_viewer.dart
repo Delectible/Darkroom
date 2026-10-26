@@ -10,6 +10,7 @@ import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../viewer/presentation/media_actions.dart';
+import '../../application/sd_card_controller.dart';
 import 'explorer_dialogs.dart';
 import 'pixel_icons.dart';
 import 'win98_media_player.dart';
@@ -90,6 +91,20 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
   double get _sliderValue => math.log(_scale) / math.log(_maxZoom);
   double _scaleFor(double v) => math.pow(_maxZoom, v).toDouble();
 
+  Future<void> _rename() async {
+    final renamed = await renameWithDialog(context, ref, _item);
+    if (renamed == null || !mounted) return;
+    setState(() => _items[_index] = renamed);
+  }
+
+  /// Opening a C: file takes its blue dot off the C: tab.
+  void _see() {
+    final item = _item;
+    if (!item.onSdCard) {
+      Future.microtask(() => ref.read(cSeenProvider.notifier).see(item.id));
+    }
+  }
+
   Future<void> _delete() async {
     final r = await win98Box(
       context,
@@ -114,6 +129,7 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
     if (_items.isEmpty) return const SizedBox.shrink();
     final item = _item;
     final path = item.outputPath;
+    _see();
     return Win98Scale(
       child: Scaffold(
         backgroundColor: W98.desktop,
@@ -154,6 +170,12 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                               onPressed: () => unawaited(shareMedia(anchor, item)),
                               child: const Text('Send To'),
                             ),
+                          ),
+                          const SizedBox(width: 3),
+                          Win98Button(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                            onPressed: _rename,
+                            child: const Text('Rename'),
                           ),
                           const SizedBox(width: 3),
                           Win98Button(

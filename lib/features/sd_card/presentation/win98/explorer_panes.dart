@@ -389,7 +389,7 @@ class ExplorerFolderTree extends StatelessWidget {
             onTap: () => onSelect(ExplorerPlace.floppy),
           ),
           node(1, PixelIcon.hardDrive, 'Local Disk (C:)', onTap: () => onSelect(ExplorerPlace.c)),
-          node(2, PixelIcon.folder, 'My Documents', onTap: () => onSelect(ExplorerPlace.c)),
+          node(2, PixelIcon.folder, 'My Pictures', onTap: () => onSelect(ExplorerPlace.c)),
           node(
             3,
             PixelIcon.folderOpen,

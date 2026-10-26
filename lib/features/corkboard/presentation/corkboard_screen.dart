@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/gallery_check.dart';
 import '../../../core/device/system_gestures.dart';
 import '../../../core/theme/darkroom_mark.dart';
 import '../../../core/db/media_repository.dart';
@@ -180,7 +181,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
               true,
     );
     if (!allowed || !mounted) return;
-    final missing = await missingFromGallery(items, filmAlbum);
+    final missing = await missingFromGallery(items, filmAlbum, links: GalleryLinks(prefs));
     if (missing == null || missing.isEmpty || !mounted) return;
     await repo.markUnsaved([for (final m in missing) m.id]);
     // Ones the user already waved off stay quiet (Save still works on them).

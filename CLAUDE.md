@@ -564,6 +564,9 @@ UI
   height). `--env` writes the studio (`studio.hdr`, the renders' soft boxes,
   plus a separate diffuse SH like the renders' dark world).
   `bundle_live.py OUT assets/body3d` copies them in with `manifest.json`.
+  Roughness/metal and normal maps go into the .glb as lossless PNG
+  (`glb_maps.py`, after the glTF export): JPEG blocks showed as square
+  patches in the shine.
   `hook/build.dart` turns the .glb files into Flutter Scene packages at
   build time (`flutter_scene_generated/`, not committed; textures GPU-
   compressed; ~25 MB in the app for both bodies, adds ~4 min to a

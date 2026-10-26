@@ -1252,3 +1252,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   phone's photos. Copies are tracked by the library's own id
   (`GalleryLinks`), so one renamed in the phone's files app stays on C:
   under its new name.
+- [ ] **57.34** 3D bodies: blocky patches in the shine (film + digital, every
+  skin). The baked roughness/metal and normal maps went into the .glb as
+  JPEG (metal in the blue channel, kept at half resolution in blocks);
+  they are lossless PNG now (`tool/render/blender/glb_maps.py`, run by
+  export_glb.py). Film re-baked, digital re-packed from its bakes.
+- [ ] **57.35** 2005 Webcam artwork: centred, short cable, full label.

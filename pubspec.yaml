@@ -99,6 +99,12 @@ flutter:
     - family: W98
       fonts:
         - asset: assets/fonts/DotGothic16-Regular.ttf
+    # Lettering engraved on the film body's format dial (Barlow Condensed,
+    # SIL OFL 1.1).
+    - family: Dial
+      fonts:
+        - asset: assets/fonts/BarlowCondensed-SemiBold.ttf
+          weight: 600
   shaders:
     - shaders/film.frag
     - shaders/ccd_color.frag

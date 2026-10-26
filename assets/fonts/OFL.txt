@@ -1,5 +1,6 @@
 Copyright 2014 The Caveat Project Authors (https://github.com/googlefonts/caveat)
 Copyright 2020 The DotGothic16 Project Authors (https://github.com/fontworks-fonts/DotGothic16/)
+Copyright 2017 The Barlow Project Authors (https://github.com/jpt/barlow)
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:

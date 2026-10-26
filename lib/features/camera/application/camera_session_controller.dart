@@ -164,7 +164,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
 
   _Config get _wantConfig {
     final spec = ref.read(activeSpecProvider);
-    return _Config(ref.read(lensProvider), presetFor(spec.quality));
+    return _Config(ref.read(lensProvider), presetFor(spec));
   }
 
   // ---- reconcile loop --------------------------------------------------------

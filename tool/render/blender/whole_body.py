@@ -71,7 +71,7 @@ LAYOUT = {
         'frame': FRAME, 'screenInset': 12.0,
         'lcd': (20.0, LABEL_Y - 25, 238.0, LABEL_Y + 25),
         'parts': {
-            'pill': (50.0, TOP_Y), 'pillwide': (128.0, TOP_Y), 'lens': (328.0, TOP_Y),
+            'pill': (50.0, TOP_Y), 'pillwide': (146.0, TOP_Y), 'lens': (328.0, TOP_Y),
             'lensdot': (328.0, TOP_Y), 'pillsmall': (378.0, TOP_Y), 'rocker': (330.0, LABEL_Y),
             'review': (56.0, ROW_Y), 'shutter': (206.0, ROW_Y), 'tray': (356.0, ROW_Y),
         },

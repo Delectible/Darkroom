@@ -207,7 +207,24 @@ class AspectButton extends ConsumerWidget {
               if (spec.aspectLocked && !sideways) Icon(Icons.lock, size: 10, color: ink),
               Text(
                 aspect.label,
-                style: photoLabel(onMetal: film).copyWith(fontSize: film ? 9.5 : 11, color: ink),
+                style: film
+                    // Engraved into the chrome dial: a condensed camera face,
+                    // its paint fill sunk below a catch of light.
+                    ? TextStyle(
+                        fontFamily: 'Dial',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                        letterSpacing: 0.3,
+                        height: 1,
+                        color: ink,
+                        shadows: [
+                          Shadow(
+                            color: const Color(0xFFFFFFFF).withValues(alpha: 0.55 * alpha),
+                            offset: const Offset(0, 0.6),
+                          ),
+                        ],
+                      )
+                    : photoLabel(onMetal: false).copyWith(fontSize: 11, color: ink),
               ),
             ],
           ),

@@ -257,17 +257,16 @@ class LensNotifier extends Notifier<CameraLensDirection> {
 
 final lensProvider = NotifierProvider<LensNotifier, CameraLensDirection>(LensNotifier.new);
 
-/// Maps the pure-Dart capture class onto the plugin preset.
+/// The plugin preset a body opens the camera with.
 ///
-/// The camera plugin uses one preset for the live preview and the capture.
-/// Film stills take `max`: on Android, CameraX gives the still the full
-/// sensor and keeps the preview at preview size (it can't stream full-res
-/// alongside a full-res still); iOS streams its highest format. Digital
-/// bodies stay small (their look is a small sensor).
-ResolutionPreset presetFor(CaptureQuality q) => switch (q) {
-  CaptureQuality.high => ResolutionPreset.max,
-  CaptureQuality.standard => ResolutionPreset.veryHigh,
-  CaptureQuality.low => ResolutionPreset.medium,
-};
+/// The camera plugin uses one preset for the live preview and the capture,
+/// and changing it means closing and reopening the camera (the viewfinder
+/// drops out). So bodies share as few presets as possible: every stills
+/// body takes `max` (on Android, CameraX gives the still the full sensor
+/// and keeps the preview preview-sized; digital looks shrink the still
+/// anyway), every video body `veryHigh` (1080p recordings; `max` would
+/// record 4K for the filters to chew through). Only a switch between a
+/// stills body and a video body reopens the camera.
+ResolutionPreset presetFor(CameraSpec spec) => spec.recordsVideo ? ResolutionPreset.veryHigh : ResolutionPreset.max;
 
 final activeGlobalSettingsProvider = Provider<GlobalSettings>((ref) => ref.watch(globalSettingsProvider));

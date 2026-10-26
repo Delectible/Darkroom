@@ -1302,3 +1302,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   (cap 0.92), warm rich skin, cool blue-lavender shadows.
 - [ ] **57.47** Epic 70: 2.76 dropped (2.20 and 1.43 only), one look for
   every frame (no sideways halos on one ratio).
+- [ ] **57.48** Projector viewer: the scrolling sprocket strips are gone.
+  The film shows on a matte screen in a dark wood-panelled room, lit by
+  the projector behind you (faint beam, warm spill on the wall, lamp
+  flicker), above a walnut hi-fi console with a glowing table lamp and a
+  plant. Fits 4:3, 2.20 and tall reels, upright and turned.

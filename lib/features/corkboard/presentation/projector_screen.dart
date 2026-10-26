@@ -13,6 +13,7 @@ import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
+import 'projector_room.dart';
 import 'reel_painter.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/device/upright.dart';
@@ -59,7 +60,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   String? _error;
   bool _saving = false;
 
-  /// Drives the sprocket strips, lamp flicker and shuttle artefacts.
+  /// Drives the lamp flicker (picture and room) and shuttle artefacts.
   late final AnimationController _run = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 1),
@@ -522,42 +523,26 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     );
     // The screen. Everything is on the deck's keys: no taps or swipes.
     final screen = IgnorePointer(
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(radius: 0.75, colors: [Color(0x40FFD9A0), Color(0x00000000)]),
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              _SprocketStrip(run: _run, speed: _shuttle == ReelShuttle.none ? 1 : _speed),
-              Expanded(
-                child: Center(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: c == null
-                        ? Text(
-                            _error ?? 'Threading the film…',
-                            key: ValueKey(_error),
-                            style: const TextStyle(color: Colors.white38),
-                          )
-                        : _Picture(
-                            key: ValueKey(_ids[_index]),
-                            controller: c,
-                            run: _run,
-                            shuttle: _shuttle == ReelShuttle.none ? 0 : _speed,
-                          ),
-                  ),
+      child: ProjectorRoom(
+        aspect: c?.value.aspectRatio,
+        run: _run,
+        placeholder: Text(
+          _error ?? 'Threading the film…',
+          key: ValueKey(_error),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.white38),
+        ),
+        picture: c == null
+            ? const SizedBox.shrink()
+            : AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _Picture(
+                  key: ValueKey(_ids[_index]),
+                  controller: c,
+                  run: _run,
+                  shuttle: _shuttle == ReelShuttle.none ? 0 : _speed,
                 ),
               ),
-              _SprocketStrip(run: _run, speed: _shuttle == ReelShuttle.none ? 1 : _speed),
-            ],
-          ),
-        ],
       ),
     );
     final deck = c == null
@@ -673,37 +658,38 @@ class _Picture extends StatelessWidget {
         child: ColorFiltered(colorFilter: _desaturate(math.min(0.6, s * 0.05)), child: video),
       );
     }
-    return AspectRatio(
-      aspectRatio: controller.value.aspectRatio,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          boxShadow: [BoxShadow(color: Color(0x55FFCC88), blurRadius: 40, spreadRadius: 2)],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(6),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              video,
-              IgnorePointer(
-                child: AnimatedBuilder(
-                  animation: run,
-                  builder: (context, _) => CustomPaint(
-                    painter: _GatePainter(phase: run.value, running: run.isAnimating, shuttle: s),
-                  ),
-                ),
+    return ClipRect(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          video,
+          // A matte screen: the projector's light falls off to the edges.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                radius: 0.85,
+                colors: [Color(0x00000000), Color(0x00000000), Color(0x30000000)],
+                stops: [0, 0.55, 1],
               ),
-              ValueListenableBuilder<VideoPlayerValue>(
-                valueListenable: controller,
-                builder: (context, v, _) => AnimatedOpacity(
-                  opacity: v.isPlaying || s > 0 ? 0 : 1,
-                  duration: const Duration(milliseconds: 200),
-                  child: const ColoredBox(color: Color(0x55000000)),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          IgnorePointer(
+            child: AnimatedBuilder(
+              animation: run,
+              builder: (context, _) => CustomPaint(
+                painter: _GatePainter(phase: run.value, running: run.isAnimating, shuttle: s),
+              ),
+            ),
+          ),
+          ValueListenableBuilder<VideoPlayerValue>(
+            valueListenable: controller,
+            builder: (context, v, _) => AnimatedOpacity(
+              opacity: v.isPlaying || s > 0 ? 0 : 1,
+              duration: const Duration(milliseconds: 200),
+              child: const ColoredBox(color: Color(0x55000000)),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -769,59 +755,6 @@ class _GatePainter extends CustomPainter {
   @override
   bool shouldRepaint(_GatePainter old) =>
       old.phase != phase || old.running != running || old.shuttle != shuttle;
-}
-
-/// A strip of film running past the gate, sprocket holes lit by the lamp.
-class _SprocketStrip extends StatelessWidget {
-  const _SprocketStrip({required this.run, required this.speed});
-
-  final Animation<double> run;
-  final double speed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 22,
-      child: AnimatedBuilder(
-        animation: run,
-        builder: (context, _) => CustomPaint(
-          painter: _SprocketPainter(phase: run.value, speed: speed),
-          size: Size.infinite,
-        ),
-      ),
-    );
-  }
-}
-
-class _SprocketPainter extends CustomPainter {
-  _SprocketPainter({required this.phase, required this.speed});
-
-  final double phase;
-  final double speed;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.drawRect(Offset.zero & size, Paint()..color = const Color(0xFF1C120B));
-    const pitch = 18.0;
-    // 18 frames a second, one hole per frame (faster while shuttling).
-    final offset = (phase * 18 * pitch * speed) % pitch;
-    final hole = Paint()..color = const Color(0x55FFE2B0);
-    for (var y = -pitch + offset; y < size.height + pitch; y += pitch) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(size.width / 2 - 4, y, 8, speed > 3 ? 10 + speed : 10),
-          const Radius.circular(2),
-        ),
-        hole,
-      );
-    }
-    final edge = Paint()..color = const Color(0x22FFFFFF);
-    canvas.drawRect(Rect.fromLTWH(0, 0, 1, size.height), edge);
-    canvas.drawRect(Rect.fromLTWH(size.width - 1, 0, 1, size.height), edge);
-  }
-
-  @override
-  bool shouldRepaint(_SprocketPainter old) => old.phase != phase || old.speed != speed;
 }
 
 // ---------------------------------------------------------------------------

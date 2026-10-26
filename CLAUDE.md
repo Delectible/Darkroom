@@ -344,7 +344,11 @@ Film Mode
   Photos; No is remembered the same way). Matching is by the saved name (`galleryNameFor`, numbered
   duplicates allowed).
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;
-  playback is a projector (`projector_screen.dart`): beam + screen, and a
+  playback is a projector (`projector_screen.dart`) in a dark wood-panelled
+  room (`ProjectorRoom`, art by `tool/room/make_room.py`: tiled wall,
+  walnut hi-fi console with a lit lamp and a plant; the screen fits each
+  reel's shape above it, its light and a faint beam warm the wall and
+  flicker with the lamp; `projector_room_test`), and a
   `ProjectorDeck` with the reel and a masking-tape label (tap: rename reel
   and file, `renameReel`), an amber dial + needle to seek, a drum counter
   for time left (no feet counter), and piano keys (start, prev, rew,

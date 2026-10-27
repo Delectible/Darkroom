@@ -1307,3 +1307,5 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the projector behind you (faint beam, warm spill on the wall, lamp
   flicker), above a walnut hi-fi console with a glowing table lamp and a
   plant. Fits 4:3, 2.20 and tall reels, upright and turned.
+- [ ] **57.49** Carousel: Golden 200, Night 800T and Chrome 50 centred on the
+  canister like the first three (art shifted 85 px; knob at x 470 of 1024).

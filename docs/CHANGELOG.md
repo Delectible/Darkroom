@@ -1307,5 +1307,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the projector behind you (faint beam, warm spill on the wall, lamp
   flicker), above a walnut hi-fi console with a glowing table lamp and a
   plant. Fits 4:3, 2.20 and tall reels, upright and turned.
-- [ ] **57.49** Carousel: Golden 200, Night 800T and Chrome 50 centred on the
+- [x] **57.49** → 1.9.9 · Carousel: Golden 200, Night 800T and Chrome 50 centred on the
   canister like the first three (art shifted 85 px; knob at x 470 of 1024).
+- [x] **57.50** → 1.9.9 · App Store release (`appstore-release.yml`) never
+  cancels a submission already in review unless `replace_pending` is ticked
+  (the 1.9.8 release had pulled 1.8.3 out of Apple's queue).

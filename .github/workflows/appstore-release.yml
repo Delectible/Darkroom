@@ -19,6 +19,11 @@ on:
         description: "App Store Connect's primary language for What's new"
         required: false
         default: 'en-US'
+      replace_pending:
+        description: 'Cancel a submission already waiting for review and send this build instead (goes to the back of the queue)'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
   actions: read
@@ -71,6 +76,9 @@ jobs:
           echo "Build ${{ steps.build.outputs.num }}, version $version:"; cat "$RUNNER_TEMP/meta/$LANG_CODE/release_notes.txt"
       - run: sudo gem install fastlane --no-document --quiet
       - name: Submit for review (released automatically once approved)
+        # Never cancels a submission that's already waiting for review (that
+        # restarts Apple's queue) unless replace_pending is ticked: deliver
+        # then stops with an error instead.
         run: |
           python3 -I - <<'PY' > "$RUNNER_TEMP/asc.json"
           import json, os
@@ -89,7 +97,7 @@ jobs:
             skip_app_version_update:false \
             submit_for_review:true \
             automatic_release:true \
-            reject_if_possible:true \
+            reject_if_possible:${{ inputs.replace_pending }} \
             run_precheck_before_submit:false \
             force:true \
             submission_information:'{"export_compliance_uses_encryption":false,"add_id_info_uses_idfa":false}'

@@ -100,7 +100,11 @@ Read this first. It's the hand-off from the earlier development sessions
   owner says "release to iPhone"; input `build`, empty = newest) submits
   it to App Review as a new version with "What's new" from AppInfo.latest
   and auto-releases on approval (fastlane deliver, the App Store Connect
-  key secrets). **Remind the owner every ~3 main builds** that the iPhone
+  key secrets). It never cancels a submission already in review (input
+  `replace_pending`, off by default): on 2026-10-27 it did, pulling 1.8.3
+  out of the queue for 1.9.8. Check App Store Connect before running it.
+  Pushes to `main` only reach TestFlight (its own beta review), never the
+  App Store queue. **Remind the owner every ~3 main builds** that the iPhone
   App Store is behind if it hasn't been released since.
   **Closed testing** (for other testers) is the slow path: the
   `promote-closed.yml` workflow (Actions tab, run by hand) promotes a build

@@ -9,6 +9,7 @@ import '../../../../core/audio/sfx.dart';
 import '../../../../core/theme/darkroom_mark.dart';
 import '../../../../core/device/haptics.dart';
 import '../../../../core/device/upright.dart';
+import 'explorer_screen.dart' show ExplorerMonitor;
 
 /// Start > Shut Down: the "shutting down" screen (sky, clouds and a pixel
 /// rabbit, with a shutdown tune), then the monitor switching off: the
@@ -19,7 +20,8 @@ Future<void> showShutDownSequence(BuildContext context) => Navigator.of(context)
     settings: UprightApp.landscape,
     opaque: true,
     transitionDuration: const Duration(milliseconds: 250),
-    pageBuilder: (context, _, _) => const UprightPage(child: _ShutDown()),
+    // On the same monitor: the picture shuts down inside its bezel.
+    pageBuilder: (context, _, _) => const UprightPage(child: ExplorerMonitor(child: _ShutDown())),
     transitionsBuilder: (context, a, _, child) => FadeTransition(opacity: a, child: child),
   ),
 );

@@ -1455,10 +1455,14 @@ class _CentredFit extends StatelessWidget {
 /// The 9x "animate windows" effect: a dotted outline grows from the centre,
 /// then the window appears.
 class Win98ZoomTransition extends StatelessWidget {
-  const Win98ZoomTransition({super.key, required this.animation, required this.child});
+  const Win98ZoomTransition({super.key, required this.animation, required this.child, this.origin});
 
   final Animation<double> animation;
   final Widget child;
+
+  /// Where the window opens from (local), e.g. the file that was opened;
+  /// null = the middle.
+  final Offset? origin;
 
   @override
   Widget build(BuildContext context) {
@@ -1468,6 +1472,29 @@ class Win98ZoomTransition extends StatelessWidget {
       builder: (context, child) {
         final t = animation.value;
         if (t >= 0.999) return child!;
+        final o = origin;
+        if (o != null) {
+          // The outline grows from the opened file out to the window.
+          return LayoutBuilder(
+            builder: (context, box) {
+              final from = Rect.fromCenter(center: o, width: 36, height: 28);
+              final to = (Offset.zero & box.biggest).deflate(6);
+              final r = Rect.lerp(from, to, Curves.easeOut.transform(t))!;
+              return Stack(
+                children: [
+                  Positioned.fromRect(
+                    rect: r,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: W98.dark.withValues(alpha: 0.7), width: 2),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        }
         return Stack(
           children: [
             Center(
@@ -1667,4 +1694,100 @@ class _GlyphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GlyphPainter old) => old.glyph != glyph || old.dot != dot || old.color != color;
+}
+
+/// A monitor's moulded plastic (View > Options > Monitor).
+class MonitorFinish {
+  const MonitorFinish({
+    required this.name,
+    required this.light,
+    required this.mid,
+    required this.dark,
+    required this.edgeLit,
+    required this.edgeShade,
+    required this.lipShade,
+    required this.lipLit,
+    required this.badge,
+    this.darkIcons = true,
+  });
+
+  final String name;
+
+  /// The plastic from top to bottom (lit from above).
+  final Color light, mid, dark;
+
+  /// The rounded outer edge, catching the light / in shade.
+  final Color edgeLit, edgeShade;
+
+  /// The lip round the recessed screen.
+  final Color lipShade, lipLit;
+
+  /// The maker's badge on the chin.
+  final Color badge;
+
+  /// Dark status-bar icons on this plastic (light ones on dark plastic).
+  final bool darkIcons;
+
+  static const beige = MonitorFinish(
+    name: 'Beige',
+    light: Color(0xFFEEE9DC),
+    mid: Color(0xFFDCD5C4),
+    dark: Color(0xFFC9C1AE),
+    edgeLit: Color(0xFFFBF8EF),
+    edgeShade: Color(0xFFA79F8B),
+    lipShade: Color(0xFF8E8674),
+    lipLit: Color(0xFFF4F0E4),
+    badge: Color(0xFF9C9480),
+  );
+
+  static const all = [
+    beige,
+    MonitorFinish(
+      name: 'Platinum',
+      light: Color(0xFFF1F2F3),
+      mid: Color(0xFFDADCDF),
+      dark: Color(0xFFC2C5CA),
+      edgeLit: Color(0xFFFFFFFF),
+      edgeShade: Color(0xFF999EA6),
+      lipShade: Color(0xFF7D828A),
+      lipLit: Color(0xFFF7F8F9),
+      badge: Color(0xFF8B9099),
+    ),
+    MonitorFinish(
+      name: 'Graphite',
+      light: Color(0xFF4C4E52),
+      mid: Color(0xFF393A3D),
+      dark: Color(0xFF2A2B2E),
+      edgeLit: Color(0xFF6E7075),
+      edgeShade: Color(0xFF19191B),
+      lipShade: Color(0xFF121314),
+      lipLit: Color(0xFF5C5E62),
+      badge: Color(0xFF85888E),
+      darkIcons: false,
+    ),
+    MonitorFinish(
+      name: 'Ocean',
+      light: Color(0xFF86CBD3),
+      mid: Color(0xFF55ADB8),
+      dark: Color(0xFF358C98),
+      edgeLit: Color(0xFFC4EEF2),
+      edgeShade: Color(0xFF226A74),
+      lipShade: Color(0xFF1D5C64),
+      lipLit: Color(0xFFAEE3E9),
+      badge: Color(0xFF1F6069),
+    ),
+    MonitorFinish(
+      name: 'Tangerine',
+      light: Color(0xFFF5B06C),
+      mid: Color(0xFFE88F41),
+      dark: Color(0xFFCB7128),
+      edgeLit: Color(0xFFFDD7AE),
+      edgeShade: Color(0xFF9B5016),
+      lipShade: Color(0xFF8A4613),
+      lipLit: Color(0xFFFBD3A6),
+      badge: Color(0xFF8A4613),
+    ),
+  ];
+
+  static MonitorFinish byName(String? name) => all.firstWhere((f) => f.name == name, orElse: () => beige);
 }

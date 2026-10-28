@@ -1324,3 +1324,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **57.53** Darkroom 98 image viewer opens inside the beige monitor
   (the window zooms open on its screen, the bezel stays put) instead of on
   bare desktop colour. `Win98Safe` removed (unused).
+- [ ] **57.54** Darkroom 98: View > Options > Monitor (Beige, Platinum,
+  Graphite, Ocean, Tangerine), the bezel on every Darkroom 98 screen
+  (explorer, viewer, shut down, blue screen). Opening a file zooms its
+  window out from the file instead of the middle.

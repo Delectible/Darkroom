@@ -454,6 +454,13 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   whole tree at once. Use `W98.window` / `W98.windowInk` for list and field
   backgrounds/text, `W98.navy` / `W98.selectInk` for selection, never
   `Colors.white` / `Colors.black`. `win98_themes_test` renders every scheme.
+  View > Options > Monitor picks the monitor's plastic (`MonitorFinish` in
+  win98_widgets.dart: Beige, Platinum, Graphite, Ocean, Tangerine;
+  `win98MonitorProvider`, `PrefKeys.win98Monitor`); `ExplorerMonitor` wraps
+  every Darkroom 98 screen (explorer, viewer, shut down, blue screen), so
+  the bezel never changes between them (`win98_monitor_test`). Opening a
+  file zooms its window out from where it was touched (`_lastTap`,
+  `Win98ZoomTransition.origin`).
   The window sits on a strip of desktop (6 dp portrait, 4-5 landscape).
 - Win98 screens and dialogs render through `Win98Scale` (1.3x, uniform), in
   the pixel font family `W98` (DotGothic16; it lacks □ ▲ ▶ ✓, so use

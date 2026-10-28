@@ -44,6 +44,7 @@ class PrefKeys {
 
   /// The Win98 colour scheme's name (View > Options > Themes).
   static const win98Theme = 'ui.win98.theme';
+  static const win98Monitor = 'ui.win98.monitor';
 
   /// iOS: the reason for full photo-library access was shown (once).
   static const galleryAsked = 'gallery.asked';
@@ -101,6 +102,7 @@ class PrefKeys {
     skinsUnlocked,
     skinProgress,
     win98Theme,
+    win98Monitor,
     galleryAsked,
     galleryDismissed,
     pro,
@@ -151,6 +153,25 @@ class Win98ThemeNotifier extends Notifier<String?> {
 }
 
 final win98ThemeProvider = NotifierProvider<Win98ThemeNotifier, String?>(Win98ThemeNotifier.new);
+
+/// The Darkroom 98 monitor's plastic (View > Options > Monitor; null: Beige).
+class Win98MonitorNotifier extends Notifier<String?> {
+  @override
+  String? build() {
+    try {
+      return ref.read(sharedPrefsProvider).getString(PrefKeys.win98Monitor);
+    } catch (_) {
+      return null; // tests without prefs
+    }
+  }
+
+  Future<void> set(String name) async {
+    state = name;
+    await ref.read(sharedPrefsProvider).setString(PrefKeys.win98Monitor, name);
+  }
+}
+
+final win98MonitorProvider = NotifierProvider<Win98MonitorNotifier, String?>(Win98MonitorNotifier.new);
 
 class AppModeNotifier extends Notifier<AppMode> {
   @override
@@ -267,6 +288,7 @@ final lensProvider = NotifierProvider<LensNotifier, CameraLensDirection>(LensNot
 /// anyway), every video body `veryHigh` (1080p recordings; `max` would
 /// record 4K for the filters to chew through). Only a switch between a
 /// stills body and a video body reopens the camera.
-ResolutionPreset presetFor(CameraSpec spec) => spec.recordsVideo ? ResolutionPreset.veryHigh : ResolutionPreset.max;
+ResolutionPreset presetFor(CameraSpec spec) =>
+    spec.recordsVideo ? ResolutionPreset.veryHigh : ResolutionPreset.max;
 
 final activeGlobalSettingsProvider = Provider<GlobalSettings>((ref) => ref.watch(globalSettingsProvider));

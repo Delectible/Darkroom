@@ -12,11 +12,13 @@ import '../../../../core/db/media_repository.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/providers.dart';
 import '../../../camera/application/camera_log.dart';
-import '../../../camera/application/camera_ui_state.dart' show userNameProvider, win98ThemeProvider;
+import '../../../camera/application/camera_ui_state.dart'
+    show userNameProvider, win98MonitorProvider, win98ThemeProvider;
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
+import 'explorer_screen.dart' show ExplorerMonitor;
 import 'pixel_icons.dart';
 import 'win98_widgets.dart';
 import '../../../../core/device/haptics.dart';
@@ -301,14 +303,16 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Win98TabStrip(
-            tabs: const [Win98Tab('Cameras'), Win98Tab('General'), Win98Tab('Themes')],
+            tabs: const [Win98Tab('Cameras'), Win98Tab('General'), Win98Tab('Themes'), Win98Tab('Monitor')],
             selected: _tab,
             onSelect: (i) => setState(() => _tab = i),
           ),
           Win98Bevel(
             style: BevelStyle.window,
             padding: const EdgeInsets.all(8),
-            child: _tab == 2
+            child: _tab == 3
+                ? _monitor()
+                : _tab == 2
                 ? _themes()
                 : _tab == 0
                 ? Column(
@@ -412,6 +416,32 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
     );
   }
 
+  /// The monitor's plastic: the bezel round every Darkroom 98 screen.
+  Widget _monitor() {
+    final current = MonitorFinish.byName(ref.watch(win98MonitorProvider)).name;
+    return Win98GroupBox(
+      label: 'Monitor',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final finish in MonitorFinish.all)
+            Row(
+              children: [
+                Expanded(
+                  child: Win98Radio(
+                    selected: finish.name == current,
+                    label: finish.name,
+                    onTap: () => unawaited(ref.read(win98MonitorProvider.notifier).set(finish.name)),
+                  ),
+                ),
+                _MonitorSwatch(finish),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
   /// The colour schemes, each with a little swatch of its desktop, window
   /// and title bar; picking one recolours everything straight away.
   Widget _themes() {
@@ -438,6 +468,39 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
               ],
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// A monitor in miniature: its plastic round a dark screen.
+class _MonitorSwatch extends StatelessWidget {
+  const _MonitorSwatch(this.finish);
+
+  final MonitorFinish finish;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 20,
+      margin: const EdgeInsets.only(right: 4),
+      padding: const EdgeInsets.fromLTRB(5, 3, 5, 5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [finish.light, finish.dark],
+        ),
+        border: Border.all(color: finish.edgeShade),
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: W98.desktop,
+          border: Border.all(color: finish.lipShade),
+          borderRadius: BorderRadius.circular(1.5),
+        ),
       ),
     );
   }
@@ -1106,7 +1169,11 @@ Future<String?> showRenameDialog(BuildContext context, String fileName) async {
                     maxLength: 64,
                     style: W98.text,
                     cursorColor: W98.windowInk,
-                    decoration: const InputDecoration(isDense: true, border: InputBorder.none, counterText: ''),
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      counterText: '',
+                    ),
                     onSubmitted: (v) => Navigator.of(context).pop(v),
                   ),
                 ),
@@ -1241,43 +1308,46 @@ Future<void> showBlueScreen(BuildContext context) {
   return Navigator.of(context).push(
     PageRouteBuilder<void>(
       transitionDuration: Duration.zero,
-      pageBuilder: (context, _, _) => GestureDetector(
-        onTap: () => Navigator.of(context).pop(),
-        child: ColoredBox(
-          color: const Color(0xFF0000AA),
-          child: SafeArea(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: DefaultTextStyle(
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'monospace',
-                    fontSize: 13,
-                    height: 1.35,
-                    decoration: TextDecoration.none,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        color: const Color(0xFFAAAAAA),
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: const Text(
-                          'Darkroom',
-                          style: TextStyle(color: Color(0xFF0000AA), fontWeight: FontWeight.w700),
+      // On the monitor, like everything in Darkroom 98.
+      pageBuilder: (context, _, _) => ExplorerMonitor(
+        child: GestureDetector(
+          onTap: () => Navigator.of(context).pop(),
+          child: ColoredBox(
+            color: const Color(0xFF0000AA),
+            child: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: DefaultTextStyle(
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: 'monospace',
+                      fontSize: 13,
+                      height: 1.35,
+                      decoration: TextDecoration.none,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          color: const Color(0xFFAAAAAA),
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: const Text(
+                            'Darkroom',
+                            style: TextStyle(color: Color(0xFF0000AA), fontWeight: FontWeight.w700),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'A fatal exception 0E has occurred at 0028:C0FFEE98 in VXD SHUTTER(01) + 00001998. '
-                        'The current roll will be terminated.\n\n'
-                        '*  Tap anywhere to terminate the current application.\n'
-                        '*  Don\'t worry, your photos are safe. This was a joke.',
-                      ),
-                      const SizedBox(height: 16),
-                      const Text('Tap anywhere to continue _'),
-                    ],
+                        const SizedBox(height: 16),
+                        const Text(
+                          'A fatal exception 0E has occurred at 0028:C0FFEE98 in VXD SHUTTER(01) + 00001998. '
+                          'The current roll will be terminated.\n\n'
+                          '*  Tap anywhere to terminate the current application.\n'
+                          '*  Don\'t worry, your photos are safe. This was a joke.',
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Tap anywhere to continue _'),
+                      ],
+                    ),
                   ),
                 ),
               ),

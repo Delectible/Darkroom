@@ -181,8 +181,8 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   (immersiveSticky; on Android always, `UprightApp.systemUi`). Win98: the window
   sits on a strip of desktop; the monitor bezel (`ExplorerMonitor.bezelOf`) takes the system
   insets (status bar, gesture strip; landscape 24 dp sides for the cutout
-  and the rounded corners, 4 dp top/bottom; `Win98Safe` the same for
-  screens without the monitor), `Win98Scale.factorFor` keeps 420 dp of height (short phones
+  and the rounded corners, 4 dp top/bottom; the image viewer opens inside the same monitor,
+  zooming in on its screen), `Win98Scale.factorFor` keeps 420 dp of height (short phones
   scale down); the big Transfer bar is dropped. `explorer_screens_test`
   runs portrait + four landscape phones.
 - The app is **portrait** everywhere else. Landscape is detected with the

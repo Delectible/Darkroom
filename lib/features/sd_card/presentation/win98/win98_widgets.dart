@@ -266,36 +266,6 @@ enum BevelStyle { raised, pressed, window, sunken, shallow }
 /// keeps its exact proportions but is comfortable to touch: the subtree lays
 /// out on a smaller virtual screen and is scaled up to fill the real one
 /// (text and pixel art stay sharp; hit testing follows the scale).
-/// SafeArea for the Win98 screens. Upright it's the usual one; turned to
-/// landscape the status bar is hidden and both sides keep [side] clear: past
-/// a punch-hole camera, and so a window's close button isn't lost in the
-/// phone's rounded corner (the reported cutout can be a whole
-/// status-bar-wide strip, a tenth of the screen). Less [covered] (a bezel
-/// already round it).
-class Win98Safe extends StatelessWidget {
-  const Win98Safe({super.key, required this.child, this.covered = 0});
-
-  final Widget child;
-  final double covered;
-
-  static const side = 24.0;
-
-  @override
-  Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    if (mq.size.width <= mq.size.height) return SafeArea(child: child);
-    final x = math.max(0.0, side - covered);
-    return SafeArea(
-      left: false,
-      right: false,
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: x),
-        child: child,
-      ),
-    );
-  }
-}
-
 class Win98Scale extends StatelessWidget {
   const Win98Scale({super.key, required this.child});
 

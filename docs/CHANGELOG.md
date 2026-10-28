@@ -1321,3 +1321,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   (No thanks / Yea!); only Yea! opens the store's rating prompt. Same
   timing (once, 5th launch + 10th print). Debug > Rating Prompt shows it.
   If the store can't open its box after Yea!, a quiet toast says thanks.
+- [ ] **57.53** Darkroom 98 image viewer opens inside the beige monitor
+  (the window zooms open on its screen, the bezel stays put) instead of on
+  bare desktop colour. `Win98Safe` removed (unused).

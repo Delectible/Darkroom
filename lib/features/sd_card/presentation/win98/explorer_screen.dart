@@ -293,10 +293,17 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     PageRouteBuilder<void>(
       settings: UprightApp.landscape,
       transitionDuration: const Duration(milliseconds: 160),
-      pageBuilder: (_, _, _) => UprightPage(
-        child: Win98ViewerScreen(items: items, initialIndex: index),
+      // Inside the same monitor: the window zooms open on its screen, the
+      // beige bezel stays where it is.
+      pageBuilder: (_, a, _) => UprightPage(
+        child: ExplorerMonitor(
+          child: Win98ZoomTransition(
+            animation: a,
+            child: Win98ViewerScreen(items: items, initialIndex: index),
+          ),
+        ),
       ),
-      transitionsBuilder: (context, a, _, child) => Win98ZoomTransition(animation: a, child: child),
+      transitionsBuilder: (_, _, _, child) => child,
     ),
   );
 

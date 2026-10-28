@@ -7,6 +7,7 @@ import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/sd_card/application/sd_card_controller.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/debug_menu.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
+import 'package:darkroom/features/sd_card/presentation/win98/explorer_screen.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/win98_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -93,7 +94,8 @@ void main() {
       bytes: 48213,
       location: MediaLocation.c,
     );
-    await tester.pumpWidget(app(Win98ViewerScreen(items: [item, item], initialIndex: 0)));
+    // Opened from the explorer: inside the same beige monitor.
+    await tester.pumpWidget(app(ExplorerMonitor(child: Win98ViewerScreen(items: [item, item], initialIndex: 0))));
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pumpAndSettle();
     expect(find.text('Reset Zoom'), findsOneWidget);

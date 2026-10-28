@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/diagnostics/debug_flags.dart';
 import 'core/device/upright.dart';
+import 'core/navigation.dart';
 import 'core/providers.dart';
 import 'core/theme/retro_theme.dart';
 import 'features/camera/application/camera_ui_state.dart';
@@ -37,6 +38,7 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Darkroom',
+      navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       showPerformanceOverlay: ref.watch(perfOverlayProvider),
       theme: RetroPalette.film.toTheme(),

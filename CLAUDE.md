@@ -665,6 +665,8 @@ UI
   what's open, sets the mode and pushes the screen (also read once after
   the first frame, for a cold launch).
 - Store rating prompt (`core/review/review_prompt.dart`, in_app_review):
+  our own sheet first ("Give us a shoutout!", `features/review/rating_sheet.dart`,
+  No thanks / Yea!; Yea! opens the store's prompt; shown via `appNavigatorKey`),
   asked once, after the 5th launch and the 10th developed print, 3 s after
   a print comes out (`PrefKeys.launches` / `developed` / `reviewAsked`);
   Debug > Rating Prompt. A print coming out in the app also plays a soft

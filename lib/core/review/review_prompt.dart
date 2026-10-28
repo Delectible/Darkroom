@@ -1,15 +1,18 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_review/in_app_review.dart';
 
 import '../../features/camera/application/camera_ui_state.dart' show PrefKeys;
+import '../../features/review/rating_sheet.dart';
 import '../monetization/pro.dart' show prefsOf;
+import '../navigation.dart';
 
-/// The store's own rating prompt (Google Play / App Store, no leaving the
-/// app), asked once: after the 5th launch and the 10th developed print, a
-/// moment after a print comes out of the developer.
+/// Asks for a rating once: after the 5th launch and the 10th developed
+/// print, a moment after a print comes out of the developer. Our own sheet
+/// first ("Give us a shoutout!"); "Yea!" opens the store's own prompt
+/// (Google Play / App Store, no leaving the app).
 class ReviewPrompt {
   ReviewPrompt(this._ref);
 
@@ -38,10 +41,18 @@ class ReviewPrompt {
     if ((prefs.getInt(PrefKeys.launches) ?? 0) < launchesNeeded || now < printsNeeded) return;
     unawaited(prefs.setBool(PrefKeys.reviewAsked, true));
     // Let the print-ready moment land first.
-    Timer(const Duration(seconds: 3), () => unawaited(show()));
+    Timer(const Duration(seconds: 3), () => unawaited(ask()));
   }
 
-  /// Asks the store to show its prompt (Debug calls this directly). The
+  /// Our sheet, then the store's prompt if they say yes. [context] defaults
+  /// to the app's navigator.
+  static Future<void> ask([BuildContext? context]) async {
+    final ctx = context ?? appNavigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    if (await showRatingSheet(ctx)) await show();
+  }
+
+  /// Asks the store to show its prompt. The
   /// store decides: Play only shows it to installs from Play, at most a few
   /// times a year; Apple never shows it in TestFlight builds.
   static Future<void> show() async {

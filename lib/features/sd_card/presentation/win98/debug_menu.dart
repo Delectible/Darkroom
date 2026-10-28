@@ -151,9 +151,10 @@ final _tools = <_Tool>[
   _Tool(
     PixelIcon.rabbit,
     'Rating Prompt',
-    'Asks the store to show its rating prompt now (normally once, after the 5th launch and the 10th '
-        'developed print). Google only shows it to installs from Play; Apple never shows it in TestFlight.',
-    (_, _) => ReviewPrompt.show(),
+    'Shows the "Give us a shoutout!" sheet now (normally once, after the 5th launch and the 10th developed '
+        "print); Yea! asks the store for its prompt. Google only shows that to installs from Play; Apple never "
+        'shows it in TestFlight.',
+    (context, _) => ReviewPrompt.ask(context),
   ),
   _Tool(PixelIcon.camera, 'Unlock All Skins', 'Every camera skin owned (or none again, game progress kept).', (
     _,

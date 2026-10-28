@@ -1317,3 +1317,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   `assets/artwork/rabbit_mark.png` from make_icons.py `intro_mark`), on the
   last page "Maybe later" top right so the button and dots don't move, and
   Notifications marked optional.
+- [ ] **57.52** Rating prompt: our own "Give us a shoutout!" sheet first
+  (No thanks / Yea!); only Yea! opens the store's rating prompt. Same
+  timing (once, 5th launch + 10th print). Debug > Rating Prompt shows it.

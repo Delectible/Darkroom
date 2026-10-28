@@ -99,6 +99,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('changing the picture keeps what is on screen (an open tab stays open)', (tester) async {
+    addTearDown(() => Win98Display.current.value = const Win98Display());
+    await tester.pumpWidget(const MaterialApp(home: Win98Glass(child: _Counter())));
+    await tester.tap(find.text('0'));
+    await tester.pump();
+    expect(find.text('1'), findsOneWidget);
+    for (final d in const [
+      Win98Display(brightness: 0.7),
+      Win98Display(brightness: 0.7, crt: true),
+      Win98Display(),
+    ]) {
+      Win98Display.current.value = d;
+      await tester.pump();
+      expect(find.text('1'), findsOneWidget, reason: '$d');
+    }
+  });
+
   test('settings: saved and read back; no colour layer until something changes', () {
     const d = Win98Display(
       crt: true,
@@ -130,4 +147,18 @@ void main() {
       greaterThan(const Win98Display(res: Win98Res.xga).scaleFor(phone)),
     );
   });
+}
+
+class _Counter extends StatefulWidget {
+  const _Counter();
+
+  @override
+  State<_Counter> createState() => _CounterState();
+}
+
+class _CounterState extends State<_Counter> {
+  int n = 0;
+
+  @override
+  Widget build(BuildContext context) => TextButton(onPressed: () => setState(() => n++), child: Text('$n'));
 }

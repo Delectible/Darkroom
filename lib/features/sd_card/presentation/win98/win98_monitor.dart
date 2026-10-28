@@ -97,12 +97,13 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
     final finish = MonitorFinish.byName(ref.watch(win98MonitorProvider));
     final d = ref.watch(win98DisplayProvider);
     final land = MediaQuery.sizeOf(context).aspectRatio > 1;
-    final radius = d.crt ? 16.0 : 6.0;
+    final radius = d.crt ? 22.0 : 6.0;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // status-bar icons that read on the plastic
       value: finish.darkIcons ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
-      child: ColoredBox(
-        color: finish.mid,
+      // No fill of its own: the bezel paints the plastic, and while a
+      // window zooms open on the screen the one below shows through.
+      child: SizedBox.expand(
         child: LayoutBuilder(
           builder: (context, box) {
             final size = box.biggest;
@@ -130,13 +131,15 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
                                 removeRight: true,
                                 child: widget.child,
                               ),
-                              builder: (context, child) => _degauss.isAnimating
-                                  ? Transform(
-                                      alignment: Alignment.center,
-                                      transform: _wobble(_degauss.value),
-                                      child: child,
-                                    )
-                                  : child!,
+                              // Always a Transform (identity at rest): swapping it
+                              // in and out would rebuild the screen's state.
+                              builder: (context, child) => Transform(
+                                alignment: Alignment.center,
+                                transform: _degauss.isAnimating
+                                    ? _wobble(_degauss.value)
+                                    : Matrix4.identity(),
+                                child: child,
+                              ),
                             ),
                             IgnorePointer(
                               child: AnimatedBuilder(

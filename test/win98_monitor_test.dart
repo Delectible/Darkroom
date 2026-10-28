@@ -9,7 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Every monitor finish (View > Options > Monitor) draws round the screen,
+/// Every monitor finish (Tools > Options > Monitor) draws round the screen,
 /// upright and turned. `SHOTS=dir` saves them.
 void main() {
   final shots = Platform.environment['SHOTS'];

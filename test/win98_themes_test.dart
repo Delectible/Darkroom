@@ -42,7 +42,7 @@ class _Theme extends Win98ThemeNotifier {
   Future<void> set(String name) async => state = _saved = name;
 }
 
-/// Win98 colour schemes (View > Options > Themes): the explorer opens in
+/// Win98 colour schemes (Tools > Options > Themes): the explorer opens in
 /// the saved one, and picking another recolours the open screens at once.
 /// `SHOTS=dir` saves the explorer in every scheme.
 void main() {
@@ -119,10 +119,10 @@ void main() {
     });
   }
 
-  testWidgets('picking a theme in View > Options recolours it at once', (tester) async {
+  testWidgets('picking a theme in Tools > Options recolours it at once', (tester) async {
     await pump(tester);
     expect(W98.scheme, Win98Scheme.standard);
-    await tester.tap(find.text('View').first);
+    await tester.tap(find.text('Tools').first);
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Options').last);
     await tester.pumpAndSettle();

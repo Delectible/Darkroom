@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 
-/// The Darkroom 98 monitor's settings (View > Options > Monitor / Screen
+/// The Darkroom 98 monitor's settings (Tools > Options > Monitor / Screen
 /// Saver): the kind of tube, the resolution the desktop runs at, the
 /// knobs, the colour, large fonts and the screen saver.
 ///
@@ -264,22 +265,31 @@ class Win98Idle {
 
 /// The monitor's glass over [child]: the knobs and the colour (one colour
 /// matrix), and on a CRT its scan lines. [screen]: the whole screen (the
-/// tube's glow, the dark curved edges and a glint on the glass too);
-/// dialogs and menus get just the colour and the lines.
-class Win98Glass extends StatelessWidget {
+/// glass's bulge, its glow and a glint too); dialogs and menus get just the
+/// colour and the lines.
+class Win98Glass extends StatefulWidget {
   const Win98Glass({super.key, required this.child, this.screen = false});
 
   final Widget child;
   final bool screen;
 
   @override
+  State<Win98Glass> createState() => _Win98GlassState();
+}
+
+class _Win98GlassState extends State<Win98Glass> {
+  // The layers round the child come and go with the settings; the key keeps
+  // what's under them (a dialog's open tab, the explorer) as it was.
+  final _content = GlobalKey();
+
+  @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Win98Display>(
       valueListenable: Win98Display.current,
-      child: child,
-      builder: (context, d, child) {
+      builder: (context, d, _) {
         final m = d.matrix;
-        Widget out = m == null ? child! : ColorFiltered(colorFilter: ColorFilter.matrix(m), child: child);
+        final child = KeyedSubtree(key: _content, child: widget.child);
+        Widget out = m == null ? child : ColorFiltered(colorFilter: ColorFilter.matrix(m), child: child);
         if (d.crt) {
           out = Stack(
             fit: StackFit.passthrough,
@@ -289,7 +299,11 @@ class Win98Glass extends StatelessWidget {
                 child: IgnorePointer(
                   child: RepaintBoundary(
                     child: CustomPaint(
-                      painter: CrtGlassPainter(pitch: d.res.scanline, screen: screen),
+                      painter: CrtGlassPainter(
+                        pitch: d.res.scanline,
+                        screen: widget.screen,
+                        ratio: MediaQuery.devicePixelRatioOf(context),
+                      ),
                     ),
                   ),
                 ),
@@ -303,60 +317,109 @@ class Win98Glass extends StatelessWidget {
   }
 }
 
-/// A CRT's face: scan lines, and on the whole [screen] the bulge of the
-/// glass (edges falling off into the dark, corners darkest), the tube's
-/// faint blue-white glow round the edge, a soft glint top left.
+/// A CRT's face: scan lines, and on the whole [screen] the glass bulging
+/// out at you: a soft dark falloff round its rounded edge, a broad sheen
+/// across the middle, a glint top left, the tube's faint glow at the rim.
+/// The glass (all soft shapes) is drawn once per size into a half-res
+/// picture; only the lines are drawn live.
 class CrtGlassPainter extends CustomPainter {
-  const CrtGlassPainter({required this.pitch, this.screen = true});
+  const CrtGlassPainter({required this.pitch, this.screen = true, this.ratio = 1});
 
   final double pitch;
   final bool screen;
+  final double ratio;
+
+  static const radius = 22.0;
+  static ui.Image? _glass;
+  static Size? _glassSize;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final all = Offset.zero & size;
+    if (screen && !size.isEmpty) {
+      final glass = _glassFor(size);
+      canvas.drawImageRect(
+        glass,
+        Offset.zero & Size(glass.width.toDouble(), glass.height.toDouble()),
+        Offset.zero & size,
+        Paint()..filterQuality = FilterQuality.medium,
+      );
+    }
     // Scan lines: the gap between the beam's lines.
-    final gap = Paint()..color = const Color(0x2A000000);
-    final h = pitch * 0.42;
+    final h = pitch * 0.38;
     final path = Path();
     for (var y = pitch - h; y < size.height; y += pitch) {
       path.addRect(Rect.fromLTWH(0, y, size.width, h));
     }
-    canvas.drawPath(path, gap);
-    if (!screen) return;
-    // The bulge: darker toward the edges, darkest in the corners.
-    canvas.drawRect(
+    canvas.drawPath(path, Paint()..color = const Color(0x1C000000));
+  }
+
+  ui.Image _glassFor(Size size) {
+    final cached = _glass;
+    if (cached != null && _glassSize == size) return cached;
+    final k = math.max(1.0, ratio * 0.5);
+    final recorder = ui.PictureRecorder();
+    final c = Canvas(recorder)..scale(k);
+    final all = Offset.zero & size;
+    final short = size.shortestSide;
+    final face = RRect.fromRectAndRadius(all, const Radius.circular(radius));
+    c.clipRRect(face);
+    // The bulge: the glass curving away into the dark round its edge.
+    c.drawRRect(
+      face,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = short * 0.09
+        ..color = const Color(0x8C000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, short * 0.04),
+    );
+    // A whisper of vignette toward the corners.
+    c.drawRect(
       all,
       Paint()
         ..shader =
             const RadialGradient(
-              radius: 0.78,
-              colors: [Color(0x00000000), Color(0x00000000), Color(0x26000000), Color(0x70000000)],
-              stops: [0, 0.6, 0.86, 1.08],
+              radius: 0.75,
+              colors: [Color(0x00000000), Color(0x00000000), Color(0x1A000000)],
+              stops: [0, 0.7, 1],
             ).createShader(
-              Rect.fromCenter(center: all.center, width: size.width * 1.12, height: size.height * 1.12),
+              Rect.fromCenter(center: all.center, width: size.width * 1.1, height: size.height * 1.1),
             ),
     );
-    // The tube's glow round its edge.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(all.deflate(1.5), const Radius.circular(14)),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..color = const Color(0x1AB8DCFF),
+    // A broad sheen on the dome, a little above and left of centre.
+    final dome = Rect.fromCenter(
+      center: all.center + Offset(-size.width * 0.06, -size.height * 0.08),
+      width: size.width * 0.95,
+      height: size.height * 0.8,
     );
-    // A glint where the room's light catches the curved glass.
-    final glint = Rect.fromLTWH(-size.width * 0.25, -size.height * 0.2, size.width * 0.9, size.height * 0.55);
-    canvas.drawOval(
+    c.drawOval(
+      dome,
+      Paint()
+        ..color = const Color(0x0DFFFFFF)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, short * 0.12),
+    );
+    // The glint where the room's light catches the curve.
+    final glint = Rect.fromLTWH(size.width * 0.06, size.height * 0.04, size.width * 0.45, size.height * 0.12);
+    c.drawOval(
       glint,
       Paint()
-        ..shader = const RadialGradient(
-          colors: [Color(0x14FFFFFF), Color(0x06FFFFFF), Color(0x00FFFFFF)],
-          stops: [0, 0.6, 1],
-        ).createShader(glint),
+        ..color = const Color(0x14FFFFFF)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, short * 0.05),
     );
+    // The tube's glow at the rim.
+    c.drawRRect(
+      face.deflate(1.5),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..color = const Color(0x16B8DCFF),
+    );
+    final image = recorder.endRecording().toImageSync((size.width * k).ceil(), (size.height * k).ceil());
+    _glass?.dispose();
+    _glass = image;
+    _glassSize = size;
+    return image;
   }
 
   @override
-  bool shouldRepaint(CrtGlassPainter old) => old.pitch != pitch || old.screen != screen;
+  bool shouldRepaint(CrtGlassPainter old) => old.pitch != pitch || old.screen != screen || old.ratio != ratio;
 }

@@ -42,7 +42,7 @@ class PrefKeys {
   /// The games' counts toward the skins (`stat=value` strings).
   static const skinProgress = 'skins.progress';
 
-  /// The Win98 colour scheme's name (View > Options > Themes).
+  /// The Win98 colour scheme's name (Tools > Options > Themes).
   static const win98Theme = 'ui.win98.theme';
   static const win98Monitor = 'ui.win98.monitor';
 
@@ -162,7 +162,7 @@ class Win98ThemeNotifier extends Notifier<String?> {
 
 final win98ThemeProvider = NotifierProvider<Win98ThemeNotifier, String?>(Win98ThemeNotifier.new);
 
-/// The Darkroom 98 monitor's plastic (View > Options > Monitor; null: Beige).
+/// The Darkroom 98 monitor's plastic (Tools > Options > Monitor; null: Beige).
 class Win98MonitorNotifier extends Notifier<String?> {
   @override
   String? build() {

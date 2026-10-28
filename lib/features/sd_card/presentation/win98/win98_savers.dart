@@ -8,7 +8,7 @@ import '../../../../core/device/upright.dart';
 import 'win98_monitor.dart';
 import 'win98_display.dart';
 
-/// Darkroom 98's screen savers (View > Options > Screen Saver): 3D Pipes,
+/// Darkroom 98's screen savers (Tools > Options > Screen Saver): 3D Pipes,
 /// Starfield and 3D Text, all drawn live (no assets). They start after
 /// [Win98Display.saverWait] minutes without a touch ([Win98SaverWatch]) and
 /// any touch puts them away.
@@ -167,18 +167,11 @@ class _ScreenSaverViewState extends State<ScreenSaverView> with SingleTickerProv
 }
 
 // ---------------------------------------------------------------------------
-// 3D Pipes: shiny pipes growing through a box of space, turning at random,
-// ball joints at the bends; a new colour when one gets stuck, a fresh
-// screen once it's full.
+// 3D Pipes: three pipes at a time racing through a box of space, each its
+// own colour, turning at random with a ball joint at every bend, crossing
+// in front of and behind each other; when one gets boxed in another starts
+// somewhere free; once the screen is busy it fades and starts again.
 // ---------------------------------------------------------------------------
-
-class _Seg {
-  _Seg(this.a, this.b, this.colour);
-
-  final _V3 a;
-  _V3 b;
-  final Color colour;
-}
 
 class _V3 {
   const _V3(this.x, this.y, this.z);
@@ -194,13 +187,32 @@ class _V3 {
   int get hashCode => Object.hash(x, y, z);
 }
 
+class _Seg {
+  _Seg(this.a, this.b, this.colour);
+
+  final _V3 a, b;
+  final Color colour;
+}
+
+class _Pipe {
+  _Pipe(this.at, this.colour);
+
+  _V3 at;
+  _V3? dir;
+  final Color colour;
+  _Seg? tip;
+  bool alive = true;
+}
+
 class _Pipes {
   _Pipes(this.rng) {
-    _start();
+    _reset();
   }
 
   final math.Random rng;
-  static const nx = 12, ny = 9, nz = 10;
+  /// The box of space, cells across, up and deep: shaped like the screen.
+  int nx = 16, ny = 12, nz = 12;
+  static const lanes = 3, perScreen = 21, steps = 18.0;
   static const _dirs = [
     _V3(1, 0, 0),
     _V3(-1, 0, 0),
@@ -210,97 +222,114 @@ class _Pipes {
     _V3(0, 0, -1),
   ];
   static const _colours = [
-    Color(0xFFD03A2E),
-    Color(0xFF2E8BD0),
-    Color(0xFF3CB043),
-    Color(0xFFE8B41C),
-    Color(0xFFB04CC8),
-    Color(0xFF22B8B0),
-    Color(0xFFE07A26),
-    Color(0xFFC8C8C8),
+    Color(0xFFD8261C),
+    Color(0xFF1E64E0),
+    Color(0xFF22B22E),
+    Color(0xFFF0C21A),
+    Color(0xFFC02CD0),
+    Color(0xFF1CC8C8),
+    Color(0xFFF07818),
+    Color(0xFFD8D8D8),
   ];
 
   final segs = <_Seg>[];
   final joints = <(_V3, Color)>[];
+  final pipes = <_Pipe>[];
   final _used = <_V3>{};
-  late _V3 _at;
-  _V3? _dir;
-  late Color _colour;
-  int _pipes = 0;
+  int _started = 0;
+  int _colour = 0;
 
-  /// 0..1 along the segment growing now.
+  /// 0..1 along the step every live pipe is taking now.
   double grow = 0;
 
-  /// Fading the screen out before starting over (1 -> 0).
+  /// Fading out before starting over (1 -> 0).
   double fade = 1;
   bool _clearing = false;
 
-  bool _free(_V3 p) =>
-      p.x >= 0 && p.x < nx && p.y >= 0 && p.y < ny && p.z >= 0 && p.z < nz && !_used.contains(p);
-
-  void _start() {
-    if (_pipes >= 7 || _used.length > nx * ny * nz * 0.45) {
-      _clearing = true;
-      return;
-    }
-    for (var tries = 0; tries < 50; tries++) {
-      final p = _V3(rng.nextInt(nx), rng.nextInt(ny), rng.nextInt(nz));
-      if (_free(p)) {
-        _at = p;
-        _used.add(p);
-        _dir = null;
-        _colour = _colours[(_pipes + rng.nextInt(2)) % _colours.length];
-        _pipes++;
-        joints.add((p, _colour));
-        _step();
-        return;
-      }
-    }
-    _clearing = true;
+  /// Shapes the box like a [size] screen (starts over if that changes it).
+  void fit(Size size) {
+    final tall = size.height > size.width * 1.2, wide = size.width > size.height * 1.2;
+    final (x, y) = tall ? (11, 19) : (wide ? (19, 11) : (15, 15));
+    if (x == nx && y == ny) return;
+    nx = x;
+    ny = y;
+    _reset();
   }
 
-  void _step() {
-    final options = [
-      for (final d in _dirs)
-        if (_free(_at + d)) d,
-    ];
-    if (options.isEmpty) {
-      joints.add((_at, _colour));
-      _start();
+    bool _free(_V3 p) =>
+      p.x >= 0 && p.x < nx && p.y >= 0 && p.y < ny && p.z >= 0 && p.z < nz && !_used.contains(p);
+
+  void _reset() {
+    segs.clear();
+    joints.clear();
+    pipes.clear();
+    _used.clear();
+    _started = 0;
+    _colour = rng.nextInt(_colours.length);
+    fade = 1;
+    _clearing = false;
+    for (var i = 0; i < lanes; i++) {
+      _spawn();
+    }
+  }
+
+  void _spawn() {
+    if (_started >= perScreen) return;
+    for (var tries = 0; tries < 60; tries++) {
+      final p = _V3(rng.nextInt(nx), rng.nextInt(ny), rng.nextInt(nz));
+      if (!_free(p)) continue;
+      _used.add(p);
+      _colour = (_colour + 1 + rng.nextInt(2)) % _colours.length;
+      pipes.add(_Pipe(p, _colours[_colour]));
+      _started++;
       return;
     }
-    // Mostly straight on; now and then a bend.
-    final d = _dir != null && options.contains(_dir) && rng.nextDouble() < 0.72
-        ? _dir!
+  }
+
+  void _step(_Pipe pipe) {
+    final options = [
+      for (final d in _dirs)
+        if (_free(pipe.at + d)) d,
+    ];
+    if (options.isEmpty) {
+      pipe.alive = false;
+      return;
+    }
+    // Mostly straight on; a bend now and then, with a ball joint.
+    final d = pipe.dir != null && options.contains(pipe.dir) && rng.nextDouble() < 0.7
+        ? pipe.dir!
         : options[rng.nextInt(options.length)];
-    if (_dir != null && d != _dir) joints.add((_at, _colour));
-    _dir = d;
-    final next = _at + d;
+    if (pipe.dir != null && d != pipe.dir) joints.add((pipe.at, pipe.colour));
+    pipe.dir = d;
+    final next = pipe.at + d;
     _used.add(next);
-    segs.add(_Seg(_at, next, _colour));
-    _at = next;
-    grow = 0;
+    final seg = _Seg(pipe.at, next, pipe.colour);
+    segs.add(seg);
+    pipe.tip = seg;
+    pipe.at = next;
   }
 
   void advance(double dt) {
     if (_clearing) {
-      fade -= dt * 1.2;
-      if (fade <= 0) {
-        segs.clear();
-        joints.clear();
-        _used.clear();
-        _pipes = 0;
-        fade = 1;
-        _clearing = false;
-        _start();
-      }
+      fade -= dt * 1.6;
+      if (fade <= 0) _reset();
       return;
     }
-    grow += dt * 11;
-    while (grow >= 1 && !_clearing) {
-      _step();
+    grow += dt * steps;
+    while (grow >= 1) {
+      grow -= 1;
+      for (final pipe in [...pipes]) {
+        if (pipe.alive) _step(pipe);
+      }
+      final live = pipes.where((p) => p.alive).length;
+      for (var i = live; i < lanes; i++) {
+        _spawn();
+      }
+      if (pipes.every((p) => !p.alive) || _used.length > nx * ny * nz * 0.5) {
+        _clearing = true;
+        break;
+      }
     }
-    grow = grow.clamp(0, 1);
   }
 }
 
@@ -311,79 +340,95 @@ class _PipesPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    p.fit(size);
+    final nx = p.nx, ny = p.ny, nz = p.nz;
     // A fixed camera a little above and to the side of the box.
-    final scale = math.min(size.width / (_Pipes.nx + 2), size.height / (_Pipes.ny + 2)) * 0.95;
-    const yaw = 0.42, pitch = 0.3;
+    final scale = math.min(size.width / (nx + 1), size.height / (ny + 1)) * 1.02;
+    const yaw = 0.36, pitch = 0.24;
     final cy = math.cos(yaw), sy = math.sin(yaw), cp = math.cos(pitch), sp = math.sin(pitch);
     final centre = size.center(Offset.zero);
-    (Offset, double) project(double x, double y, double z) {
-      x -= (_Pipes.nx - 1) / 2;
-      y -= (_Pipes.ny - 1) / 2;
-      z -= (_Pipes.nz - 1) / 2;
+    (Offset, double, double) project(double x, double y, double z) {
+      x -= (nx - 1) / 2;
+      y -= (ny - 1) / 2;
+      z -= (nz - 1) / 2;
       final x1 = x * cy - z * sy, z1 = x * sy + z * cy;
       final y1 = y * cp - z1 * sp, z2 = y * sp + z1 * cp;
-      final k = 1 / (1 + z2 * 0.045);
-      return (centre + Offset(x1, -y1) * scale * k, k);
+      final k = 1 / (1 + z2 * 0.04);
+      return (centre + Offset(x1, -y1) * scale * k, k, z2);
     }
 
-    final r = scale * 0.17;
+    final r = scale * 0.24;
     final alpha = p.fade.clamp(0.0, 1.0);
-    for (var i = 0; i < p.segs.length; i++) {
-      final s = p.segs[i];
-      final last = i == p.segs.length - 1;
-      final t = last ? p.grow : 1.0;
-      final (a, ka) = project(s.a.x.toDouble(), s.a.y.toDouble(), s.a.z.toDouble());
-      final (b0, kb) = project(
+    // Everything far to near, so pipes pass in front of and behind each other.
+    final items = <(double, void Function())>[];
+    final growing = {
+      for (final pipe in p.pipes)
+        if (pipe.alive && pipe.tip != null) pipe.tip!,
+    };
+    for (final s in p.segs) {
+      final t = growing.contains(s) ? p.grow : 1.0;
+      final (a, ka, za) = project(s.a.x.toDouble(), s.a.y.toDouble(), s.a.z.toDouble());
+      final (b, kb, zb) = project(
         s.a.x + (s.b.x - s.a.x) * t,
         s.a.y + (s.b.y - s.a.y) * t,
         s.a.z + (s.b.z - s.a.z) * t,
       );
-      _tube(canvas, a, b0, r * (ka + kb) / 2, s.colour, alpha);
+      items.add(((za + zb) / 2, () => _tube(canvas, a, b, r * (ka + kb) / 2, s.colour, alpha)));
     }
     for (final (j, c) in p.joints) {
-      final (o, k) = project(j.x.toDouble(), j.y.toDouble(), j.z.toDouble());
-      _ball(canvas, o, r * k * 1.3, c, alpha);
+      final (o, k, z) = project(j.x.toDouble(), j.y.toDouble(), j.z.toDouble());
+      // a hair nearer than the pipes meeting there, so it sits over both
+      items.add((z - 0.01, () => _ball(canvas, o, r * k * 1.32, c, alpha)));
+    }
+    items.sort((x, y) => y.$1.compareTo(x.$1));
+    for (final (_, draw) in items) {
+      draw();
     }
   }
 
-  /// A shaded tube: dark rim, body, a highlight along the lit side.
+  /// A shiny tube: dark rims, the body, a broad light and a specular streak
+  /// along the side facing the light (up-left).
   static void _tube(Canvas canvas, Offset a, Offset b, double r, Color c, double alpha) {
     final d = b - a;
     final len = d.distance;
     if (len < 0.5) return;
     var n = Offset(-d.dy, d.dx) / len;
-    if (n.dy > 0 || (n.dy == 0 && n.dx > 0)) n = -n; // the side facing up-left
-    Paint stroke(Color col, double w) => Paint()
-      ..color = col.withValues(alpha: alpha)
-      ..strokeWidth = w
-      ..strokeCap = StrokeCap.butt;
-    canvas.drawLine(a, b, stroke(Color.lerp(c, Colors.black, 0.55)!, r * 2));
-    canvas.drawLine(a + n * r * 0.12, b + n * r * 0.12, stroke(c, r * 1.45));
-    canvas.drawLine(a + n * r * 0.42, b + n * r * 0.42, stroke(Color.lerp(c, Colors.white, 0.35)!, r * 0.5));
-    canvas.drawLine(
-      a + n * r * 0.52,
-      b + n * r * 0.52,
-      stroke(Colors.white.withValues(alpha: 0.75), r * 0.14),
-    );
+    if (n.dy > 0 || (n.dy == 0 && n.dx > 0)) n = -n;
+    // Overlap the next segment a touch, so no seam shows where they meet.
+    final u = d / len * 1.2;
+    a -= u;
+    b += u;
+    final paint = Paint()..strokeCap = StrokeCap.butt;
+    void line(Color col, double w, double off) {
+      paint
+        ..color = col.withValues(alpha: alpha * col.a)
+        ..strokeWidth = w;
+      canvas.drawLine(a + n * off, b + n * off, paint);
+    }
+
+    line(Color.lerp(c, Colors.black, 0.62)!, r * 2, 0);
+    line(Color.lerp(c, Colors.black, 0.3)!, r * 1.7, r * 0.06);
+    line(c, r * 1.3, r * 0.14);
+    line(Color.lerp(c, Colors.white, 0.28)!, r * 0.7, r * 0.36);
+    line(Colors.white.withValues(alpha: 0.85), r * 0.16, r * 0.5);
   }
 
   static void _ball(Canvas canvas, Offset o, double r, Color c, double alpha) {
-    final rect = Rect.fromCircle(center: o, radius: r);
     canvas.drawCircle(
       o,
       r,
       Paint()
         ..shader = RadialGradient(
-          center: const Alignment(-0.4, -0.45),
+          center: const Alignment(-0.38, -0.42),
           radius: 0.95,
           colors: [
             Colors.white.withValues(alpha: alpha),
-            Color.lerp(c, Colors.white, 0.25)!.withValues(alpha: alpha),
+            Color.lerp(c, Colors.white, 0.3)!.withValues(alpha: alpha),
             c.withValues(alpha: alpha),
-            Color.lerp(c, Colors.black, 0.6)!.withValues(alpha: alpha),
+            Color.lerp(c, Colors.black, 0.65)!.withValues(alpha: alpha),
           ],
-          stops: const [0, 0.18, 0.55, 1],
-        ).createShader(rect),
+          stops: const [0, 0.14, 0.5, 1],
+        ).createShader(Rect.fromCircle(center: o, radius: r)),
     );
   }
 

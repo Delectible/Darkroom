@@ -9,7 +9,7 @@ import '../../../../core/diagnostics/perf_recorder.dart';
 import 'win98_display.dart';
 
 /// A 9x appearance scheme: the colours of 3D objects, windows, selection,
-/// title bars and the desktop (View > Options > Themes).
+/// title bars and the desktop (Tools > Options > Themes).
 class Win98Scheme {
   const Win98Scheme({
     required this.name,
@@ -1713,7 +1713,7 @@ class _GlyphPainter extends CustomPainter {
   bool shouldRepaint(_GlyphPainter old) => old.glyph != glyph || old.dot != dot || old.color != color;
 }
 
-/// A monitor's moulded plastic (View > Options > Monitor).
+/// A monitor's moulded plastic (Tools > Options > Monitor).
 class MonitorFinish {
   const MonitorFinish({
     required this.name,

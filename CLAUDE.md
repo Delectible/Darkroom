@@ -457,13 +457,13 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   seeded per clip); the shader and stills roll per field / per shot.
   `LookSpec.tracking` = how often.
 - Win98 colours come from the current `Win98Scheme` (`W98.scheme`; `W98.*`
-  are getters, so they can't go in `const` expressions). View > Options >
+  are getters, so they can't go in `const` expressions). Tools > Options >
   Themes picks one (`win98ThemeProvider`, `PrefKeys.win98Theme`; the
   explorer applies the saved one in initState); `W98.apply` restyles the
   whole tree at once. Use `W98.window` / `W98.windowInk` for list and field
   backgrounds/text, `W98.navy` / `W98.selectInk` for selection, never
   `Colors.white` / `Colors.black`. `win98_themes_test` renders every scheme.
-  View > Options > Monitor picks the monitor's plastic (`MonitorFinish` in
+  Tools > Options > Monitor picks the monitor's plastic (`MonitorFinish` in
   win98_widgets.dart: Beige, Platinum, Graphite, Ocean, Tangerine;
   `win98MonitorProvider`, `PrefKeys.win98Monitor`); `ExplorerMonitor` wraps
   every Darkroom 98 screen (explorer, viewer, shut down, blue screen), so

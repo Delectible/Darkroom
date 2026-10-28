@@ -1355,3 +1355,13 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   it as the app goes down (picked up next launch); every Android report
   also says whether the app was on screen, its memory, the phone; native
   crashes keep the tombstone's readable text.
+- [~] **57.60** Darkroom 98 fixes: a file zooms open over the explorer
+  again (the viewer's route is see-through, the monitor has no fill of its
+  own; no flash of bezel colour opening or closing). Moving the
+  brightness/contrast sliders no longer resets Options to its first tab
+  (`Win98Glass` keeps its child under a GlobalKey; the degauss wobble is
+  always a Transform). Options moved to the Tools menu. 3D Pipes like the
+  real one: three pipes at a time, faster, many colours crossing in depth
+  order, ball joints only at bends, box shaped like the screen. CRT: far
+  less vignette, lighter scan lines, a convex bulge (soft dark rim,
+  sheen, glint; drawn once into a half-res picture).

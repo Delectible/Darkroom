@@ -267,7 +267,7 @@ class _PiePainter extends CustomPainter {
 }
 
 // -----------------------------------------------------------------------------
-// View > Options (the same settings as the camera's settings sheet)
+// Tools > Options (the same settings as the camera's settings sheet)
 // -----------------------------------------------------------------------------
 
 Future<void> showExplorerOptions(BuildContext context) => showWin98Window<void>(

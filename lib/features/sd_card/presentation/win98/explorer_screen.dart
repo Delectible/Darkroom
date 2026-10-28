@@ -105,7 +105,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   @override
   void initState() {
     super.initState();
-    // The saved colour scheme (View > Options > Themes), before anything draws.
+    // The saved colour scheme (Tools > Options > Themes), before anything draws.
     W98.scheme = Win98Scheme.byName(ref.read(win98ThemeProvider));
     for (final s in Sfx.windows98) {
       unawaited(s.preload());
@@ -308,6 +308,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   Future<void> _push(List<MediaItem> items, int index, Offset? origin) => Navigator.of(context).push(
     PageRouteBuilder<void>(
       settings: UprightApp.landscape,
+      // See-through while it zooms: the explorer stays on the screen under
+      // the growing outline (the same bezel is drawn over the old one).
+      opaque: false,
       transitionDuration: const Duration(milliseconds: 160),
       // Inside the same monitor: the window zooms open on its screen from
       // the file, the bezel stays where it is.
@@ -769,9 +772,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                     checked: prefs.showTree,
                                     onSelected: prefsN.toggleTree,
                                   ),
-                                  Win98MenuItem('Options...', onSelected: () => showExplorerOptions(context)),
                                 ],
                                 'Tools': () => [
+                                  Win98MenuItem('Options...', onSelected: () => showExplorerOptions(context)),
+                                  const Win98MenuItem.separator(),
                                   // (only a hard disk gets defragmented)
                                   Win98MenuItem(
                                     'Defragment Local Disk (C:)...',

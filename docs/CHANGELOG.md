@@ -1344,3 +1344,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   (your own words), wait 1/3/5/10 min, Preview, a little monitor running
   it. Drawn live, no assets; any touch wakes it; a playing clip keeps it
   away (`win98_savers.dart`).
+- [x] **57.58** → 1.9.11 · Smooth start: the launch screen carries on
+  into the app (`LaunchCurtain`, `lib/core/startup/`: the rabbit plus a
+  line of chatter, a different one each launch) until the camera is live
+  with its look loaded (min 1.1 s, max 5 s), then fades into it. Android
+  12+'s system splash fades into it too (MainActivity). The cork tiles
+  warm under it.

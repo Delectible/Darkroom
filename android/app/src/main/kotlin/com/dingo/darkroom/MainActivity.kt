@@ -56,6 +56,13 @@ class MainActivity : FlutterActivity() {
             it.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS
         }
         refreshRate(fast = true)
+        // Android 12+ draws its own splash; fade it into the app's launch
+        // curtain (the same rabbit on the same black) instead of cutting.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            splashScreen.setOnExitAnimationListener { view ->
+                view.animate().alpha(0f).setDuration(240L).withEndAction { view.remove() }.start()
+            }
+        }
     }
 
     /// Fast: the screen's fastest refresh rate (90/120 Hz; left alone,

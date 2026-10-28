@@ -3,17 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.9.10';
+  static const version = '1.9.11';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98 monitor settings: a CRT tube with a degauss button, resolution, '
-      'brightness and contrast knobs, warm/cool, green and amber screens, large fonts, '
-      'monitor colours, and screen savers (3D Pipes, Starfield, 3D Text). '
-      'Also: a friendlier welcome tour, pictures open inside the monitor, '
-      'and the projector always shows the biggest picture.';
+      'Smoother start: the launch screen stays a moment longer (with a different line of '
+      'darkroom chatter each time) and fades into a fully loaded, live camera. '
+      'Plus Darkroom 98 monitor settings and screen savers.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -30,6 +28,7 @@ class AppInfo {
         'Epic 70 in real 70mm frames',
         'A cosy projector room',
         'Monitor settings and screen savers',
+        'A smooth start',
       ],
     ),
     (

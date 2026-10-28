@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,7 +8,10 @@ import 'core/diagnostics/debug_flags.dart';
 import 'core/device/upright.dart';
 import 'core/navigation.dart';
 import 'core/providers.dart';
+import 'core/shaders/shader_library.dart';
+import 'core/startup/launch_curtain.dart';
 import 'core/theme/retro_theme.dart';
+import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/camera_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -34,6 +40,44 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
     super.dispose();
   }
 
+  /// The launch curtain's line: a different one from last time.
+  late final int _line = () {
+    final prefs = ref.read(sharedPrefsProvider);
+    final n = LaunchCurtain.lines.length;
+    final last = prefs.getInt(PrefKeys.launchLine) ?? -1;
+    final line = (last + 1 + math.Random().nextInt(n - 1)) % n;
+    unawaited(prefs.setInt(PrefKeys.launchLine, line));
+    return line;
+  }();
+
+  DateTime? _liveSince;
+
+  /// Lift the curtain once the camera is open with its look loaded (or
+  /// won't open: no permission, no camera), or something else is on top
+  /// (the tour, a shortcut's screen).
+  bool _ready() {
+    if (ref.read(sharedPrefsProvider).getBool(PrefKeys.onboarded) != true) return true;
+    if (appNavigatorKey.currentState?.canPop() ?? false) return true;
+    switch (ref.read(cameraSessionProvider).status) {
+      case SessionStatus.permissionDenied || SessionStatus.noCamera || SessionStatus.error:
+        return true;
+      case SessionStatus.idle || SessionStatus.initializing:
+        return false;
+      case SessionStatus.ready:
+        break;
+    }
+    if (ref.read(shaderProgramsProvider).value == null) return false;
+    final spec = ref.read(activeSpecProvider);
+    if (spec.film != null &&
+        (ref.read(filmLutImageProvider(spec.id)).value == null ||
+            ref.read(grainImageProvider).value == null)) {
+      return false;
+    }
+    // The stream's first frames take a moment to arrive after it opens.
+    final since = _liveSince ??= DateTime.now();
+    return DateTime.now().difference(since) > const Duration(milliseconds: 450);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -48,8 +92,13 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       navigatorObservers: [UprightApp.observer],
       // Bigger system text is honoured up to 1.3x: past that the camera's
       // printed labels and the sheets' layouts break.
-      builder: (context, child) =>
-          MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
+      // The launch screen stays up (with a line of chatter) until the camera
+      // is live, then fades away.
+      builder: (context, child) => LaunchCurtain(
+        isReady: _ready,
+        line: _line,
+        child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
+      ),
     );
   }
 }

@@ -72,6 +72,9 @@ class PrefKeys {
   static const developed = 'review.developed';
   static const reviewAsked = 'review.asked';
 
+  /// The launch screen's last line (the next launch shows another).
+  static const launchLine = 'launch.line';
+
   /// Notes from the lab waiting for their prints to develop (shot id ->
   /// note, JSON); shown with the print as it comes out.
   static const labNotes = 'lab.notes';
@@ -115,6 +118,7 @@ class PrefKeys {
     launches,
     developed,
     reviewAsked,
+    launchLine,
     labNotes,
     developStats,
     galleryLinks,

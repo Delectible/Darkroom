@@ -190,9 +190,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       // A shortcut or notification that launched the app before this
       // screen was listening.
       _follow(ref.read(pendingRouteProvider));
-      // Paint the corkboard's cork while nothing is happening, so its first
-      // slide-in doesn't have to.
-      Future<void>.delayed(const Duration(seconds: 2), () async {
+      // Paint the corkboard's cork while the launch screen is still up, so
+      // neither the camera's first moments nor the board's first slide-in
+      // have to.
+      Future<void>.delayed(const Duration(milliseconds: 300), () async {
         if (!mounted) return;
         final programs = await ref.read(shaderProgramsProvider.future);
         if (mounted) CorkTiles.warm(programs.cork, MediaQuery.sizeOf(context));

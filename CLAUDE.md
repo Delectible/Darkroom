@@ -131,6 +131,13 @@ Read this first. It's the hand-off from the earlier development sessions
   just push and read the GitHub Actions result. `pubspec.lock` is committed.
   Start-up runs under a 25 s watchdog (main.dart `_StartupFailed`): a hang
   or throw shows the step and a copyable report instead of the splash.
+  The first frame is `LaunchCurtain` (app.dart builder,
+  `core/startup/launch_curtain.dart`): the launch screen's rabbit plus a
+  line of chatter (`LaunchCurtain.lines`, never the same twice running,
+  `PrefKeys.launchLine`), held until `_ready` (camera session open, look
+  shaders + LUT/grain loaded, 450 ms of stream; or the tour / a pushed
+  screen / no permission), min 1.1 s, max 5 s, then faded out. Android
+  12+'s splash fades into it (MainActivity `setOnExitAnimationListener`).
 - UI checks without a phone: `test/*_screens_test.dart` pump screens at
   Pixel 9 Pro size (fail on overflow); `SHOTS=dir FLUTTER_ROOT=<sdk>` also
   saves PNGs with real fonts. `camcorder_osd_ffmpeg_test` runs the camcorder

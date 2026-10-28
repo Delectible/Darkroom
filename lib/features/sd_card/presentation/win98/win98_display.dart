@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -422,4 +423,134 @@ class CrtGlassPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CrtGlassPainter old) => old.pitch != pitch || old.screen != screen || old.ratio != ratio;
+}
+
+/// A CRT's picture bulging out of the curved glass (`shaders/crt_bulge.frag`
+/// through ImageFilter.shader): the edges bow outward, the corners fall away
+/// into black. Touches are mapped the same way, so a tap lands on what's
+/// drawn under the finger. Only where the engine runs shader filters
+/// (Impeller), and only while [still] (a shader filter under a moving
+/// transition draws in the wrong place): it eases in once the screen has
+/// arrived and drops out as it leaves.
+class CrtWarp extends StatefulWidget {
+  const CrtWarp({super.key, required this.on, required this.child});
+
+  final bool on;
+  final Widget child;
+
+  /// How far it bulges: the corners pull in about this fraction.
+  static const amount = 0.05;
+
+  static Future<ui.FragmentProgram>? _program;
+
+  /// The pixel of content drawn at [p] on a [size] screen bulging by [k]
+  /// (the shader's mapping).
+  static Offset sourceOf(Offset p, Size size, double k) {
+    final a = size.width / size.height;
+    final dx = p.dx / size.width - 0.5, dy = p.dy / size.height - 0.5;
+    final r2 = (dx * dx * a * a + dy * dy) / (0.25 * (a * a + 1));
+    final f = 1 + k * r2;
+    return Offset((0.5 + dx * f) * size.width, (0.5 + dy * f) * size.height);
+  }
+
+  @override
+  State<CrtWarp> createState() => _CrtWarpState();
+}
+
+class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
+  final _content = GlobalKey();
+  late final _ease = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+  ui.FragmentShader? _shader;
+  Animation<double>? _route;
+
+  @override
+  void initState() {
+    super.initState();
+    if (ui.ImageFilter.isShaderFilterSupported) {
+      CrtWarp._program ??= ui.FragmentProgram.fromAsset('shaders/crt_bulge.frag');
+      CrtWarp._program!.then((p) {
+        if (mounted) setState(() => _shader = p.fragmentShader());
+      }, onError: (Object _) {});
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final a = ModalRoute.of(context)?.animation;
+    if (a != _route) {
+      _route?.removeStatusListener(_settle);
+      _route = a?..addStatusListener(_settle);
+      _settle(a?.status ?? AnimationStatus.completed);
+    }
+  }
+
+  void _settle(AnimationStatus s) {
+    if (s == AnimationStatus.completed) {
+      _ease.forward();
+    } else {
+      _ease.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _route?.removeStatusListener(_settle);
+    _ease.dispose();
+    _shader?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = KeyedSubtree(key: _content, child: widget.child);
+    final shader = _shader;
+    if (shader == null || !widget.on) return child;
+    return AnimatedBuilder(
+      animation: _ease,
+      builder: (context, _) {
+        final k = CrtWarp.amount * Curves.easeOut.transform(_ease.value);
+        if (k <= 0) return child;
+        shader.setFloat(2, k);
+        return _WarpHits(
+          k: k,
+          // A fresh filter each time: the engine snapshots the uniforms.
+          child: ImageFiltered(imageFilter: ui.ImageFilter.shader(shader), child: child),
+        );
+      },
+    );
+  }
+}
+
+/// Hit testing through the bulge: a touch at a point goes to the content
+/// drawn there (each pointer keeps the offset it went down with).
+class _WarpHits extends SingleChildRenderObjectWidget {
+  const _WarpHits({required this.k, required super.child});
+
+  final double k;
+
+  @override
+  _RenderWarpHits createRenderObject(BuildContext context) => _RenderWarpHits(k);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderWarpHits renderObject) => renderObject.k = k;
+}
+
+class _RenderWarpHits extends RenderProxyBox {
+  _RenderWarpHits(this.k);
+
+  double k;
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final c = child;
+    if (c == null) return false;
+    final source = CrtWarp.sourceOf(position, size, k);
+    final shift = source - position;
+    return result.addWithRawTransform(
+      transform: Matrix4.translationValues(shift.dx, shift.dy, 0),
+      position: position,
+      hitTest: (result, position) => c.hitTest(result, position: position),
+    );
+  }
 }

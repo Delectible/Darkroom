@@ -115,45 +115,49 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(radius),
                     child: RepaintBoundary(
-                      child: Win98Glass(
-                        screen: true,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            AnimatedBuilder(
-                              animation: _degauss,
-                              // the insets are the monitor's; inside it is all screen
-                              child: MediaQuery.removePadding(
-                                context: context,
-                                removeTop: true,
-                                removeBottom: true,
-                                removeLeft: true,
-                                removeRight: true,
-                                child: widget.child,
-                              ),
-                              // Always a Transform (identity at rest): swapping it
-                              // in and out would rebuild the screen's state.
-                              builder: (context, child) => Transform(
-                                alignment: Alignment.center,
-                                transform: _degauss.isAnimating
-                                    ? _wobble(_degauss.value)
-                                    : Matrix4.identity(),
-                                child: child,
-                              ),
-                            ),
-                            IgnorePointer(
-                              child: AnimatedBuilder(
+                      // A CRT's picture bulges (the scan lines with it).
+                      child: CrtWarp(
+                        on: d.crt,
+                        child: Win98Glass(
+                          screen: true,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              AnimatedBuilder(
                                 animation: _degauss,
-                                builder: (context, _) => _degauss.isAnimating
-                                    ? CustomPaint(painter: _RainbowPainter(_degauss.value))
-                                    : const SizedBox.shrink(),
+                                // the insets are the monitor's; inside it is all screen
+                                child: MediaQuery.removePadding(
+                                  context: context,
+                                  removeTop: true,
+                                  removeBottom: true,
+                                  removeLeft: true,
+                                  removeRight: true,
+                                  child: widget.child,
+                                ),
+                                // Always a Transform (identity at rest): swapping it
+                                // in and out would rebuild the screen's state.
+                                builder: (context, child) => Transform(
+                                  alignment: Alignment.center,
+                                  transform: _degauss.isAnimating
+                                      ? _wobble(_degauss.value)
+                                      : Matrix4.identity(),
+                                  child: child,
+                                ),
                               ),
-                            ),
-                            if (_osd case (final label, final v))
                               IgnorePointer(
-                                child: _Osd(label: label, value: v),
+                                child: AnimatedBuilder(
+                                  animation: _degauss,
+                                  builder: (context, _) => _degauss.isAnimating
+                                      ? CustomPaint(painter: _RainbowPainter(_degauss.value))
+                                      : const SizedBox.shrink(),
+                                ),
                               ),
-                          ],
+                              if (_osd case (final label, final v))
+                                IgnorePointer(
+                                  child: _Osd(label: label, value: v),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

@@ -1365,3 +1365,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   order, ball joints only at bends, box shaped like the screen. CRT: far
   less vignette, lighter scan lines, a convex bulge (soft dark rim,
   sheen, glint; drawn once into a half-res picture).
+- [~] **57.61** CRT bulge is a real warp now (`shaders/crt_bulge.frag`
+  via ImageFilter.shader, `CrtWarp` in win98_display.dart, 5% at the
+  corners): edges bow out, corners tuck into black; touches mapped through
+  the same curve (`_WarpHits`). Impeller only; off while the screen slides
+  in or out (eases in after).

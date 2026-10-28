@@ -116,6 +116,18 @@ void main() {
     }
   });
 
+  test('CRT bulge: the centre stays put, the edges pull content in from further out', () {
+    const size = Size(388, 800);
+    const k = CrtWarp.amount;
+    expect(CrtWarp.sourceOf(size.center(Offset.zero), size, k), size.center(Offset.zero));
+    final corner = CrtWarp.sourceOf(Offset.zero, size, k);
+    expect(corner.dx, lessThan(0));
+    expect(corner.dy, lessThan(0));
+    // a few dp at most where you'd tap
+    final mid = CrtWarp.sourceOf(const Offset(194, 60), size, k);
+    expect((mid - const Offset(194, 60)).distance, lessThan(25));
+  });
+
   test('settings: saved and read back; no colour layer until something changes', () {
     const d = Win98Display(
       crt: true,

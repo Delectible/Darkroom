@@ -18,15 +18,22 @@ void main() {
   final shots = Platform.environment['SHOTS'];
   final src = Platform.environment['SRC'];
 
-  test('layout keeps the screen in the room, above the console top', () {
-    for (final size in const [Size(412, 560), Size(515, 380), Size(380, 300)]) {
+  test('layout: the biggest picture, the console below it, never lifted off the floor', () {
+    for (final size in const [Size(412, 560), Size(515, 380), Size(380, 300), Size(560, 330)]) {
       for (final aspect in [4 / 3, 2.2, 9 / 16]) {
         final l = ProjectorRoom.layout(size, aspect);
         final room = Offset.zero & size;
         expect(room.contains(l.screen.topLeft) && room.contains(l.screen.bottomRight), isTrue);
         expect(l.screen.width / l.screen.height, closeTo(aspect, 0.01));
-        expect(l.screen.bottom, lessThan(l.console.bottom - l.console.height * 0.3), reason: '$size $aspect');
-        expect(l.screen.width, greaterThan(size.width * 0.15));
+        // As big as the room allows for this shape (14 side, 12 top, 8 bottom).
+        final aw = size.width - 28, ah = size.height - 20;
+        final maxW = aw / aspect <= ah ? aw : ah * aspect;
+        expect(l.screen.width, closeTo(maxW, 0.6), reason: '$size $aspect');
+        // The lamp and the plant stay clear of the picture.
+        final above = l.console.height * 362 / 640;
+        expect(l.console.top + above * 0.08, greaterThanOrEqualTo(l.screen.bottom), reason: '$size $aspect');
+        // Standing on the floor or lower, never floating up.
+        expect(l.console.bottom, greaterThanOrEqualTo(size.height - 8.5), reason: '$size $aspect');
       }
     }
   });

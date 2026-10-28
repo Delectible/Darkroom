@@ -1328,3 +1328,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   Graphite, Ocean, Tangerine), the bezel on every Darkroom 98 screen
   (explorer, viewer, shut down, blue screen). Opening a file zooms its
   window out from the file instead of the middle.
+- [ ] **57.55** Projector: the picture always gets the biggest size the
+  room and the reel's shape allow; the console (lamp, plant) slides down,
+  partly or all off the bottom, instead of shrinking it. With room to
+  spare it stays standing on the floor as before.

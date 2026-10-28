@@ -350,8 +350,10 @@ Film Mode
 - **Super 8** develops like the prints. Preview is a spool of film on a reel;
   playback is a projector (`projector_screen.dart`) in a dark wood-panelled
   room (`ProjectorRoom`, art by `tool/room/make_room.py`: tiled wall,
-  walnut hi-fi console with a lit lamp and a plant; the screen fits each
-  reel's shape above it, its light and a faint beam warm the wall and
+  walnut hi-fi console with a lit lamp and a plant; the screen is always
+  the biggest the room and the reel's shape allow, and the console slides
+  down under it, partly or all off the bottom, when it would otherwise
+  shrink the picture (never higher than the floor), its light and a faint beam warm the wall and
   flicker with the lamp; `projector_room_test`), and a
   `ProjectorDeck` with the reel and a masking-tape label (tap: rename reel
   and file, `renameReel`), an amber dial + needle to seek, a drum counter

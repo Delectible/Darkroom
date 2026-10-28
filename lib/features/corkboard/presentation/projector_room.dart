@@ -42,10 +42,11 @@ class ProjectorRoom extends StatelessWidget {
     // furniture under a wide screen when turned.
     final cw = land ? math.min(size.width * 0.62, size.height * 0.34 * _consoleAspect) : size.width * 0.92;
     final ch = cw / _consoleAspect;
-    final console = Rect.fromLTWH((size.width - cw) / 2, floor - ch, cw, ch);
-    final surface = console.top + ch * _surface;
-    final above = surface - console.top;
-    const pad = 14.0, top = 12.0;
+    // Standing on the floor, the console's top board is here; the lamp and
+    // the plant reach [above] higher.
+    final above = ch * _surface;
+    final restSurface = floor - ch + above;
+    const pad = 14.0, top = 12.0, gap = 8.0;
 
     Rect fit(double bottom) {
       final aw = size.width - 2 * pad, ah = bottom - top;
@@ -57,11 +58,24 @@ class ProjectorRoom extends StatelessWidget {
       return Rect.fromLTWH((size.width - w) / 2, top + (ah - h) / 2, w, h);
     }
 
-    // Clear of the lamp and the plant unless that leaves a small screen;
-    // then the furniture stands in front of its lower edge.
-    final clear = fit(surface - above * 0.92);
-    final tight = fit(surface - 10);
-    return (screen: clear.width >= tight.width * 0.6 ? clear : tight, console: console);
+    // The picture comes first: as big as the room and the reel's shape
+    // allow. Where the console on the floor leaves that much room, the
+    // screen sits centred above it; otherwise the screen keeps its full
+    // size at the top and the console slides down under it, partly (or
+    // all) off the bottom, its lamp and plant clear of the picture.
+    final full = fit(size.height - gap);
+    final clear = fit(restSurface - above * 0.92);
+    final Rect screen;
+    final double surface;
+    if (clear.width >= full.width - 0.5) {
+      screen = clear;
+      surface = restSurface;
+    } else {
+      screen = Rect.fromLTWH(full.left, top, full.width, full.height);
+      surface = math.max(restSurface, screen.bottom + gap + above * 0.92);
+    }
+    final console = Rect.fromLTWH((size.width - cw) / 2, surface - above, cw, ch);
+    return (screen: screen, console: console);
   }
 
   @override

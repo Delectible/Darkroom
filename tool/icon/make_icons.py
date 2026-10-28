@@ -6,6 +6,7 @@ The mark: a rabbit with X'd-out eyes, split into red / green / blue copies
 like a mis-converged CRT. Where the three overlap they add up to white.
 
 Writes:
+  App      assets/artwork/rabbit_mark.png, the welcome tour's rabbit.
   Android  adaptive icon (background colour, foreground, monochrome for
            Android 13+ themed icons), legacy round icon for API 24-25,
            status-bar notification glyph.
@@ -157,6 +158,15 @@ def monochrome(px):
     return _out(px, np.full((S, S, 3), 255.0) * a[..., None], a)
 
 
+def intro_mark(px):
+    """The icon's rabbit on its own (head + ears, split outline, one pair of
+    X eyes), transparent: the welcome tour's first page."""
+    S = px * SS
+    cx, cy, D = _glyph_frame(S, S * 0.86)
+    rgb, a = mark(S, cx, cy, D, bust=False)
+    return _out(px, rgb, a)
+
+
 def status_glyph(px):
     """Notification icon: white glyph, 24dp with ~2dp padding."""
     S = px * SS
@@ -253,6 +263,7 @@ def main():
                               entry('AppIcon-Tinted-1024.png', 'tinted')],
                    'info': {'version': 1, 'author': 'xcode'}}, f, indent=2)
 
+    save(intro_mark(384), 'assets', 'artwork', 'rabbit_mark.png')
     save(social_preview(), 'docs', 'social_preview.png')
     # Play Store listing images (published by .github/workflows/play-listing.yml).
     play = ['fastlane', 'metadata', 'android', 'en-AU', 'images']

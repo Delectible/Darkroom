@@ -1312,3 +1312,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **57.50** → 1.9.9 · App Store release (`appstore-release.yml`) never
   cancels a submission already in review unless `replace_pending` is ticked
   (the 1.9.8 release had pulled 1.8.3 out of Apple's queue).
+- [ ] **57.51** Welcome tour: new wording on pages 1-4 (owner's text), the
+  app icon's rabbit on page 1 (split outline, one pair of eyes;
+  `assets/artwork/rabbit_mark.png` from make_icons.py `intro_mark`), on the
+  last page "Maybe later" top right so the button and dots don't move, and
+  Notifications marked optional.

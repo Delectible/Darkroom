@@ -6,9 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
 import '../../core/device/haptics.dart';
-import '../../core/monetization/pro.dart';
 import '../../core/providers.dart';
-import '../../core/theme/darkroom_mark.dart';
 import '../camera/application/camera_session_controller.dart';
 import '../camera/application/camera_ui_state.dart';
 
@@ -126,13 +124,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           children: [
             Align(
               alignment: Alignment.centerRight,
-              child: AnimatedOpacity(
-                opacity: last ? 0 : 1,
+              child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
-                child: TextButton(
-                  onPressed: last ? null : () => _pages.jumpToPage(_count - 1),
-                  child: const Text('Skip', style: TextStyle(color: _muted)),
-                ),
+                child: !last
+                    ? TextButton(
+                        key: const ValueKey('skip'),
+                        onPressed: () => _pages.jumpToPage(_count - 1),
+                        child: const Text('Skip', style: TextStyle(color: _muted)),
+                      )
+                    : TextButton(
+                        key: const ValueKey('later'),
+                        // Keeps its height once asked, so nothing below moves.
+                        onPressed: asked ? null : () => unawaited(_finish()),
+                        child: AnimatedOpacity(
+                          opacity: asked ? 0 : 1,
+                          duration: const Duration(milliseconds: 200),
+                          child: const Text('Maybe later', style: TextStyle(color: _muted)),
+                        ),
+                      ),
               ),
             ),
             Expanded(
@@ -140,38 +149,43 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 controller: _pages,
                 onPageChanged: (i) => setState(() => _page = i),
                 children: [
-                  const _Page(
-                    hero: _SplitRabbit(size: 120),
-                    title: 'Hi. This is Darkroom.',
+                  _Page(
+                    hero: Image.asset(
+                      'assets/artwork/rabbit_mark.png',
+                      width: 140,
+                      height: 140,
+                      filterQuality: FilterQuality.medium,
+                    ),
+                    title: 'Hey, this is your Darkroom.',
                     body:
-                        'A camera that makes you wait for your photos. On purpose. '
-                        "It's good for you, like vegetables, but with more grain.",
+                        'Experience photography like it used to be. A little more physical, a lot more fun.',
                   ),
                   const _Page(
                     icon: Icons.camera_roll_outlined,
-                    title: 'Film: shoot now, see later.',
+                    title: 'Shoot now, view later.',
                     body:
-                        'Pick a film (colour, black & white, an instant pack, even Super 8). Every shot goes into the '
-                        'darkroom for about five minutes, then gets pinned to your corkboard.\n\n'
-                        'Nothing lands in your phone\'s gallery until you tap Save. Very old-fashioned. Very you.',
+                        'Pick from a variety of film stocks and cameras. Things take time to develop. '
+                        "Don't rush it, go make a coffee.\n\n"
+                        "Once it's done, it gets pinned to the corkboard. Nothing goes to your phone's gallery "
+                        'until you save it.',
                   ),
                   const _Page(
                     icon: Icons.save_outlined,
                     title: 'Digital: the year 2000 called.',
                     body:
-                        'A floppy-disk camera, a CCD compact, a flip phone and a camcorder. Shots go onto a '
-                        'pretend SD card, browsed on an extremely serious 1998 desktop.\n\n'
-                        'Move them to C: to set them free. There may be games. We will deny everything.',
+                        'Feed your nostalgia with several retro-inspired digital cameras. Transfer your shots to '
+                        'your desktop computer to view them, just like the good old days.\n\n'
+                        "Play some games while you're there. Maybe you'll win some cool new looks for your camera.",
                   ),
                   const _Page(
                     icon: Icons.wb_twilight_outlined,
                     title: 'A roll a day.',
                     body:
-                        'The free version comes with one roll of film and one battery charge for the digital '
-                        'cameras each day. Both are back every morning.\n\n'
-                        'If you ever want more, Darkroom Pro lifts the limits and adds more films and cameras '
-                        '(the darker ones in the picker), for a one-time ${ProStore.fallbackPrice}. '
-                        'No subscription, no ads.',
+                        "You get one roll of film of your choice every day. Once it's loaded, you're stuck with it "
+                        'till the next day. The battery in your digital camera runs out too.\n\n'
+                        'If you ever want more, Darkroom Pro gives you more flexibility: unlimited film and '
+                        'battery, change whenever you want, and a few more cameras to choose from.\n\n'
+                        'A reasonable price, once, forever. Never any ads, never any pressure.',
                   ),
                   const _Page(icon: Icons.swipe_outlined, title: 'Getting around', child: _Gestures()),
                   _Page(
@@ -230,6 +244,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         _PermissionRow(
                           icon: Icons.notifications_none,
                           name: 'Notifications',
+                          optional: true,
                           why: 'A quiet nudge when prints are ready. No buzzing, no spam.',
                           granted: _granted[_Ask.notifications],
                         ),
@@ -295,11 +310,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       ),
                     ),
                   ),
-                  if (last && !asked)
-                    TextButton(
-                      onPressed: () => unawaited(_finish()),
-                      child: const Text('Maybe later', style: TextStyle(color: _muted)),
-                    ),
                 ],
               ),
             ),
@@ -422,9 +432,16 @@ class _Gestures extends StatelessWidget {
 }
 
 class _PermissionRow extends StatelessWidget {
-  const _PermissionRow({required this.icon, required this.name, required this.why, this.granted});
+  const _PermissionRow({
+    required this.icon,
+    required this.name,
+    required this.why,
+    this.granted,
+    this.optional = false,
+  });
 
   final IconData icon;
+  final bool optional;
   final String name;
   final String why;
 
@@ -443,8 +460,21 @@ class _PermissionRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
+                Text.rich(
+                  TextSpan(
+                    text: name,
+                    children: [
+                      if (optional)
+                        const TextSpan(
+                          text: '  optional',
+                          style: TextStyle(
+                            color: _OnboardingScreenState._muted,
+                            fontWeight: FontWeight.w400,
+                            fontSize: 12,
+                          ),
+                        ),
+                    ],
+                  ),
                   style: const TextStyle(color: _OnboardingScreenState._ink, fontWeight: FontWeight.w700),
                 ),
                 Text(why, style: const TextStyle(color: _OnboardingScreenState._muted, fontSize: 13)),
@@ -460,47 +490,4 @@ class _PermissionRow extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The app icon's rabbit: red, green and blue copies slightly apart, adding
-/// up to white where they overlap.
-class _SplitRabbit extends StatelessWidget {
-  const _SplitRabbit({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final shift = size * 0.03;
-    return CustomPaint(
-      size: Size(size * DarkroomMark.aspect + shift * 2, size),
-      painter: _SplitRabbitPainter(shift),
-    );
-  }
-}
-
-class _SplitRabbitPainter extends CustomPainter {
-  const _SplitRabbitPainter(this.shift);
-
-  final double shift;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final bounds = Offset.zero & size;
-    canvas.saveLayer(bounds.inflate(4), Paint());
-    for (final (c, dx) in [
-      (const Color(0xFFFF0000), 0.0),
-      (const Color(0xFF00FF00), shift),
-      (const Color(0xFF0000FF), shift * 2),
-    ]) {
-      canvas.saveLayer(bounds.inflate(4), Paint()..blendMode = BlendMode.plus);
-      canvas.translate(dx, 0);
-      DarkroomMarkPainter(color: c).paint(canvas, Size(size.height * DarkroomMark.aspect, size.height));
-      canvas.restore();
-    }
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_SplitRabbitPainter old) => old.shift != shift;
 }

@@ -42,6 +42,14 @@ void main() {
           ),
         ),
       );
+      // The first page's rabbit is an asset: load it (and fail if it's gone).
+      await tester.runAsync(
+        () => precacheImage(
+          const AssetImage('assets/artwork/rabbit_mark.png'),
+          tester.element(find.byType(OnboardingScreen)),
+          onError: (e, _) => throw e,
+        ),
+      );
       await tester.pumpAndSettle();
       for (var page = 0; page < 7; page++) {
         if (shots != null) {

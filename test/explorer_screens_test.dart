@@ -7,6 +7,7 @@ import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/sd_card/application/sd_card_controller.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_screen.dart';
+import 'package:darkroom/features/sd_card/presentation/win98/win98_display.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart'
     show UserNameNotifier, Win98ThemeNotifier, userNameProvider, win98ThemeProvider;
 import 'package:flutter/material.dart';
@@ -73,15 +74,29 @@ void main() {
   }
 
   // Portrait, and held sideways (the app turns Win98 to landscape) on a few
-  // phones, with the insets they report (a punch hole / notch at a side).
-  for (final (tag, size, dpr, pad) in [
-    ('', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75)),
-    ('_land', const Size(2856, 1280), 3.1, const FakeViewPadding(left: 150)),
-    ('_land_s10', const Size(2280, 1080), 2.625, const FakeViewPadding(left: 105)),
-    ('_land_iphone', const Size(2556, 1179), 3.0, const FakeViewPadding(left: 177, right: 177, bottom: 63)),
-    ('_land_small', const Size(1480, 720), 2.0, const FakeViewPadding(left: 60)),
+  // phones, with the insets they report (a punch hole / notch at a side);
+  // then the chunkiest and the finest monitor settings.
+  const big = Win98Display(crt: true, res: Win98Res.vga, largeFonts: true, tint: Win98Tint.green);
+  const fine = Win98Display(res: Win98Res.xga, tint: Win98Tint.amber, brightness: 0.7, contrast: 0.3);
+  for (final (tag, size, dpr, pad, display) in [
+    ('', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75), const Win98Display()),
+    ('_land', const Size(2856, 1280), 3.1, const FakeViewPadding(left: 150), const Win98Display()),
+    ('_land_s10', const Size(2280, 1080), 2.625, const FakeViewPadding(left: 105), const Win98Display()),
+    (
+      '_land_iphone',
+      const Size(2556, 1179),
+      3.0,
+      const FakeViewPadding(left: 177, right: 177, bottom: 63),
+      const Win98Display(),
+    ),
+    ('_land_small', const Size(1480, 720), 2.0, const FakeViewPadding(left: 60), const Win98Display()),
+    ('_640', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75), big),
+    ('_640_land', const Size(2856, 1280), 3.1, const FakeViewPadding(left: 150), big),
+    ('_640_land_small', const Size(1480, 720), 2.0, const FakeViewPadding(left: 60), big),
+    ('_1024', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75), fine),
+    ('_1024_land', const Size(2856, 1280), 3.1, const FakeViewPadding(left: 150), fine),
   ]) {
-    final land = tag.isNotEmpty;
+    final land = tag.contains('land');
     testWidgets('explorer ${land ? 'landscape $tag' : 'portrait'}: tabs, menus and dialogs fit', (
       tester,
     ) async {
@@ -90,6 +105,7 @@ void main() {
       tester.view.devicePixelRatio = dpr;
       tester.view.padding = pad;
       addTearDown(tester.view.reset);
+      addTearDown(() => Win98Display.current.value = const Win98Display());
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -98,6 +114,7 @@ void main() {
             userNameProvider.overrideWith(_Name.new),
             win98ThemeProvider.overrideWith(_Theme.new),
             cSeenProvider.overrideWith(_Seen.new),
+            win98DisplayProvider.overrideWith(() => _Display(display)),
             initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
             initialCameraSettingsProvider.overrideWithValue(const {}),
           ],
@@ -155,6 +172,16 @@ void main() {
         final future = open();
         await settle(tester);
         await shoot(tester, 'dialog_$name');
+        if (name == 'options') {
+          for (final t in ['Monitor', 'Screen Saver']) {
+            await tester.tap(find.text(t).last);
+            await settle(tester);
+            await shoot(tester, 'dialog_options_${t.replaceAll(' ', '')}');
+          }
+          await tester.tap(find.text('3D Text'));
+          await settle(tester);
+          await shoot(tester, 'dialog_options_text');
+        }
         Navigator.of(tester.element(find.byType(ExplorerScreen)), rootNavigator: true).pop();
         await settle(tester);
         await future;
@@ -170,6 +197,21 @@ class _Seen extends CSeenNotifier {
 
   @override
   void seeAll() {}
+}
+
+class _Display extends Win98DisplayNotifier {
+  _Display(this.d);
+
+  final Win98Display d;
+
+  @override
+  Win98Display build() => d;
+
+  @override
+  void set(Win98Display d, {bool save = true}) {
+    state = d;
+    Win98Display.current.value = d;
+  }
 }
 
 class _Theme extends Win98ThemeNotifier {

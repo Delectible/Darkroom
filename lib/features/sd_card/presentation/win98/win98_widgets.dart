@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/audio/sfx.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
+import 'win98_display.dart';
 
 /// A 9x appearance scheme: the colours of 3D objects, windows, selection,
 /// title bars and the desktop (View > Options > Themes).
@@ -269,52 +270,60 @@ enum BevelStyle { raised, pressed, window, sunken, shallow }
 class Win98Scale extends StatelessWidget {
   const Win98Scale({super.key, required this.child});
 
-  /// Portrait: 1.3x so the pixel UI is easy to hit.
+  /// Portrait at 800 x 600: 1.3x so the pixel UI is easy to hit.
   static const factor = 1.3;
 
-  /// Landscape: 1:1, scaled down on shorter phones so the layout always
-  /// has 420 dp of height (the tallest dialogs need it).
-  static double factorFor(Size s) => s.width > s.height ? math.min(1.0, s.height / 420) : factor;
+  /// The factor on a [s] screen at the monitor's resolution: upright 1.3x
+  /// at 800 x 600 (bigger at 640, smaller at 1024); sideways 1:1, scaled
+  /// down on shorter phones so the layout always has 420 dp of height
+  /// (the tallest dialogs need it).
+  static double factorFor(Size s) => Win98Display.current.value.scaleFor(s);
 
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    return LayoutBuilder(
-      builder: (context, box) {
-        final w = box.maxWidth.isFinite ? box.maxWidth : mq.size.width;
-        final h = box.maxHeight.isFinite ? box.maxHeight : mq.size.height;
-        final factor = factorFor(mq.size);
-        return SizedBox(
-          width: w,
-          height: h,
-          child: FittedBox(
-            fit: BoxFit.fill,
-            alignment: Alignment.topLeft,
-            child: SizedBox(
-              width: w / factor,
-              height: h / factor,
-              child: MediaQuery(
-                data: mq.copyWith(
-                  size: mq.size / factor,
-                  padding: mq.padding / factor,
-                  viewPadding: mq.viewPadding / factor,
-                  viewInsets: mq.viewInsets / factor,
-                  systemGestureInsets: mq.systemGestureInsets / factor,
-                  // A fixed pixel-font desktop: its own uniform scale only.
-                  textScaler: TextScaler.noScaling,
-                ),
-                // Anything without its own style still gets the pixel font.
-                child: DefaultTextStyle.merge(
-                  style: const TextStyle(fontFamily: 'W98'),
-                  child: child,
+    return ValueListenableBuilder<Win98Display>(
+      valueListenable: Win98Display.current,
+      builder: (context, display, _) => LayoutBuilder(
+        builder: (context, box) {
+          final w = box.maxWidth.isFinite ? box.maxWidth : mq.size.width;
+          final h = box.maxHeight.isFinite ? box.maxHeight : mq.size.height;
+          final factor = display.scaleFor(mq.size);
+          return SizedBox(
+            width: w,
+            height: h,
+            child: FittedBox(
+              fit: BoxFit.fill,
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: w / factor,
+                height: h / factor,
+                child: MediaQuery(
+                  data: mq.copyWith(
+                    size: mq.size / factor,
+                    padding: mq.padding / factor,
+                    viewPadding: mq.viewPadding / factor,
+                    viewInsets: mq.viewInsets / factor,
+                    systemGestureInsets: mq.systemGestureInsets / factor,
+                    // A fixed pixel-font desktop: its own uniform scale
+                    // only (and Large fonts).
+                    textScaler: display.largeFonts
+                        ? const TextScaler.linear(Win98Display.fontScale)
+                        : TextScaler.noScaling,
+                  ),
+                  // Anything without its own style still gets the pixel font.
+                  child: DefaultTextStyle.merge(
+                    style: const TextStyle(fontFamily: 'W98'),
+                    child: child,
+                  ),
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -617,7 +626,7 @@ Future<void> showWin98Menu(
                   Positioned(
                     left: math.min(topLeft.dx / f, screen.width - 200),
                     top: topLeft.dy / f,
-                    child: _MenuPanel(items: items),
+                    child: Win98Glass(child: _MenuPanel(items: items)),
                   ),
                 ],
               );
@@ -654,7 +663,11 @@ class _MenuPanelState extends State<_MenuPanel> {
     return Material(
       type: MaterialType.transparency,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minWidth: 170, maxWidth: 240),
+        // Large fonts widen the menu with its text.
+        constraints: BoxConstraints(
+          minWidth: MediaQuery.textScalerOf(context).scale(170),
+          maxWidth: MediaQuery.textScalerOf(context).scale(240),
+        ),
         child: IntrinsicWidth(
           child: Win98Bevel(
             style: BevelStyle.window,
@@ -1207,44 +1220,46 @@ Future<int?> showWin98MessageBox(
           type: MaterialType.transparency,
           child: SizedBox(
             width: math.min(320, MediaQuery.sizeOf(context).width - 32),
-            child: Win98Bevel(
-              style: BevelStyle.window,
-              padding: const EdgeInsets.all(3),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Win98TitleBar(title: title, onClose: () => Navigator.of(context).pop()),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (iconBuilder != null) ...[
-                          SizedBox(width: 32, height: 32, child: iconBuilder(icon)),
-                          const SizedBox(width: 12),
+            child: Win98Glass(
+              child: Win98Bevel(
+                style: BevelStyle.window,
+                padding: const EdgeInsets.all(3),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Win98TitleBar(title: title, onClose: () => Navigator.of(context).pop()),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 14, 12, 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (iconBuilder != null) ...[
+                            SizedBox(width: 32, height: 32, child: iconBuilder(icon)),
+                            const SizedBox(width: 12),
+                          ],
+                          Expanded(child: Text(message, style: W98.text)),
                         ],
-                        Expanded(child: Text(message, style: W98.text)),
-                      ],
+                      ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        for (var i = 0; i < buttons.length; i++) ...[
-                          if (i > 0) const SizedBox(width: 8),
-                          Win98Button(
-                            minWidth: 76,
-                            onPressed: () => Navigator.of(context).pop(i),
-                            child: Text(buttons[i]),
-                          ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          for (var i = 0; i < buttons.length; i++) ...[
+                            if (i > 0) const SizedBox(width: 8),
+                            Win98Button(
+                              minWidth: 76,
+                              onPressed: () => Navigator.of(context).pop(i),
+                              child: Text(buttons[i]),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -1417,18 +1432,20 @@ Future<T?> showWin98Window<T>(
         child: _CentredFit(
           child: Material(
             type: MaterialType.transparency,
-            child: SizedBox(
-              width: math.min(width, MediaQuery.sizeOf(context).width - 24),
-              child: Win98Bevel(
-                style: BevelStyle.window,
-                padding: const EdgeInsets.all(3),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Win98TitleBar(title: title, icon: icon, onClose: () => Navigator.of(context).pop()),
-                    DefaultTextStyle(style: W98.text, child: builder(context)),
-                  ],
+            child: Win98Glass(
+              child: SizedBox(
+                width: math.min(width, MediaQuery.sizeOf(context).width - 24),
+                child: Win98Bevel(
+                  style: BevelStyle.window,
+                  padding: const EdgeInsets.all(3),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Win98TitleBar(title: title, icon: icon, onClose: () => Navigator.of(context).pop()),
+                      DefaultTextStyle(style: W98.text, child: builder(context)),
+                    ],
+                  ),
                 ),
               ),
             ),

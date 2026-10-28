@@ -33,8 +33,9 @@ class Sfx {
   static final w98Exit = Sfx._('assets/sfx/w98_exit.wav');
   static final w98Shutdown = Sfx._('assets/sfx/w98_shutdown.wav');
   static final crtOff = Sfx._('assets/sfx/crt_off.wav');
+  static final w98Degauss = Sfx._('assets/sfx/w98_degauss.wav');
 
-  static List<Sfx> get windows98 => [w98Click, w98Ding, w98Error, w98Exit, w98Login];
+  static List<Sfx> get windows98 => [w98Click, w98Ding, w98Error, w98Exit, w98Login, w98Degauss];
 
   // Games in Start > Run (tool/sfx/make_sfx.py game_* etc.).
   static final gameBop = Sfx._('assets/sfx/game_bop.wav');

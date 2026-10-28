@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:video_player/video_player.dart';
 
+import 'win98_display.dart';
 import 'win98_widgets.dart';
 import '../../../../core/device/haptics.dart';
 
@@ -167,6 +168,8 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
               final total = v.duration.inMilliseconds.clamp(1, 1 << 31);
               final pos = v.position.inMilliseconds.clamp(0, total);
               final playing = v.isPlaying;
+              // A clip playing keeps the screen saver away.
+              if (playing) Win98Idle.poke();
               final status = switch (_scan) {
                 1 => 'Fast Forward',
                 -1 => 'Rewind',

@@ -46,6 +46,9 @@ class PrefKeys {
   static const win98Theme = 'ui.win98.theme';
   static const win98Monitor = 'ui.win98.monitor';
 
+  /// Darkroom 98's display settings (JSON, `Win98Display`).
+  static const win98Display = 'ui.win98.display';
+
   /// iOS: the reason for full photo-library access was shown (once).
   static const galleryAsked = 'gallery.asked';
 
@@ -103,6 +106,7 @@ class PrefKeys {
     skinProgress,
     win98Theme,
     win98Monitor,
+    win98Display,
     galleryAsked,
     galleryDismissed,
     pro,

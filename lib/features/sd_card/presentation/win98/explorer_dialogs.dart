@@ -19,6 +19,8 @@ import '../../../settings/application/settings_controllers.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
 import 'explorer_screen.dart' show ExplorerMonitor;
+import 'win98_display.dart';
+import 'win98_savers.dart';
 import 'pixel_icons.dart';
 import 'win98_widgets.dart';
 import '../../../../core/device/haptics.dart';
@@ -303,14 +305,22 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Win98TabStrip(
-            tabs: const [Win98Tab('Cameras'), Win98Tab('General'), Win98Tab('Themes'), Win98Tab('Monitor')],
+            tabs: const [
+              Win98Tab('Cameras'),
+              Win98Tab('General'),
+              Win98Tab('Themes'),
+              Win98Tab('Monitor'),
+              Win98Tab('Screen Saver'),
+            ],
             selected: _tab,
             onSelect: (i) => setState(() => _tab = i),
           ),
           Win98Bevel(
             style: BevelStyle.window,
             padding: const EdgeInsets.all(8),
-            child: _tab == 3
+            child: _tab == 4
+                ? _saver()
+                : _tab == 3
                 ? _monitor()
                 : _tab == 2
                 ? _themes()
@@ -416,29 +426,224 @@ class _OptionsBodyState extends ConsumerState<_OptionsBody> {
     );
   }
 
-  /// The monitor's plastic: the bezel round every Darkroom 98 screen.
+  late final _saverText = TextEditingController(text: Win98Display.current.value.saverText);
+
+  @override
+  void dispose() {
+    _saverText.dispose();
+    super.dispose();
+  }
+
+  void _display(Win98Display Function(Win98Display d) change) =>
+      ref.read(win98DisplayProvider.notifier).set(change(ref.read(win98DisplayProvider)));
+
+  /// The monitor: its plastic (the bezel round every Darkroom 98 screen),
+  /// the tube, the resolution, the colour, the knobs and large fonts.
   Widget _monitor() {
     final current = MonitorFinish.byName(ref.watch(win98MonitorProvider)).name;
-    return Win98GroupBox(
-      label: 'Monitor',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          for (final finish in MonitorFinish.all)
-            Row(
-              children: [
-                Expanded(
-                  child: Win98Radio(
-                    selected: finish.name == current,
-                    label: finish.name,
+    final d = ref.watch(win98DisplayProvider);
+    Widget radios<T>(List<T> values, T selected, String Function(T v) label, void Function(T v) pick) => Wrap(
+      spacing: 10,
+      children: [
+        for (final v in values) Win98Radio(selected: v == selected, label: label(v), onTap: () => pick(v)),
+      ],
+    );
+    Widget slider(String label, double value, Win98Display Function(double v) change) => Row(
+      children: [
+        SizedBox(width: 74, child: Text(label, style: W98.text)),
+        Expanded(
+          child: SizedBox(
+            height: 26,
+            child: Win98Slider(
+              value: value,
+              onChanged: (v) => ref.read(win98DisplayProvider.notifier).set(change(v), save: false),
+              onChangeEnd: (v) => ref.read(win98DisplayProvider.notifier).set(change(v)),
+            ),
+          ),
+        ),
+      ],
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Win98GroupBox(
+          label: 'Plastic: $current',
+          child: Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: [
+              for (final finish in MonitorFinish.all)
+                Semantics(
+                  button: true,
+                  selected: finish.name == current,
+                  label: finish.name,
+                  child: GestureDetector(
                     onTap: () => unawaited(ref.read(win98MonitorProvider.notifier).set(finish.name)),
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: finish.name == current ? W98.navy : const Color(0x00000000),
+                        ),
+                      ),
+                      child: _MonitorSwatch(finish),
+                    ),
                   ),
                 ),
-                _MonitorSwatch(finish),
+            ],
+          ),
+        ),
+        Win98GroupBox(
+          label: 'Screen',
+          child: radios([true, false], d.crt, (crt) => crt ? 'Tube (CRT)' : 'Flat panel', (crt) {
+            _display((d) => d.copyWith(crt: crt));
+          }),
+        ),
+        Win98GroupBox(
+          label: 'Resolution',
+          child: radios(Win98Res.values, d.res, (r) => r.label, (r) => _display((d) => d.copyWith(res: r))),
+        ),
+        Win98GroupBox(
+          label: 'Colour',
+          child: radios(
+            Win98Tint.values,
+            d.tint,
+            (t) => t.label,
+            (t) => _display((d) => d.copyWith(tint: t)),
+          ),
+        ),
+        Win98GroupBox(
+          label: 'Picture',
+          child: Column(
+            children: [
+              slider(
+                'Brightness',
+                d.brightness,
+                (v) => ref.read(win98DisplayProvider).copyWith(brightness: v),
+              ),
+              slider('Contrast', d.contrast, (v) => ref.read(win98DisplayProvider).copyWith(contrast: v)),
+            ],
+          ),
+        ),
+        Win98Checkbox(
+          value: d.largeFonts,
+          label: 'Large fonts',
+          onChanged: (v) => _display((d) => d.copyWith(largeFonts: v)),
+        ),
+      ],
+    );
+  }
+
+  /// The screen saver: a little monitor running it, which one, the text
+  /// for 3D Text, how long to wait, and Preview.
+  Widget _saver() {
+    final d = ref.watch(win98DisplayProvider);
+    final finish = MonitorFinish.byName(ref.watch(win98MonitorProvider));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Center(
+          child: Container(
+            width: 150,
+            height: 112,
+            padding: const EdgeInsets.fromLTRB(9, 8, 9, 14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [finish.light, finish.dark],
+              ),
+              border: Border.all(color: finish.edgeShade),
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: BoxDecoration(border: Border.all(color: finish.lipShade)),
+              child: d.saver == Win98Saver.none
+                  ? ColoredBox(color: W98.desktop)
+                  : ScreenSaverView(key: ValueKey((d.saver, d.saverText)), saver: d.saver, text: d.saverText),
+            ),
+          ),
+        ),
+        Win98GroupBox(
+          label: 'Screen Saver',
+          child: Wrap(
+            spacing: 10,
+            children: [
+              for (final s in Win98Saver.values)
+                Win98Radio(
+                  selected: s == d.saver,
+                  label: s.label,
+                  onTap: () => _display((d) => d.copyWith(saver: s)),
+                ),
+            ],
+          ),
+        ),
+        if (d.saver == Win98Saver.text)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Row(
+              children: [
+                const Text('Text:  '),
+                Expanded(
+                  child: Win98Bevel(
+                    style: BevelStyle.sunken,
+                    color: W98.window,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: TextField(
+                      controller: _saverText,
+                      maxLength: 20,
+                      style: W98.text,
+                      cursorColor: W98.windowInk,
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        border: InputBorder.none,
+                        counterText: '',
+                      ),
+                      onChanged: (v) => _display((d) => d.copyWith(saverText: v)),
+                    ),
+                  ),
+                ),
               ],
             ),
-        ],
-      ),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              const Text('Wait: '),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final m in Win98Display.waits)
+                      Win98Radio(
+                        selected: m == d.saverWait,
+                        label: '$m min',
+                        onTap: d.saver == Win98Saver.none
+                            ? null
+                            : () => _display((d) => d.copyWith(saverWait: m)),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Win98Button(
+              minWidth: 76,
+              onPressed: d.saver == Win98Saver.none ? null : () => unawaited(showScreenSaver(context, d)),
+              child: const Text('Preview'),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -966,70 +1171,72 @@ Future<StartAction?> showStartMenu(BuildContext context) {
           Positioned(
             left: 6,
             bottom: bottom,
-            child: Material(
-              type: MaterialType.transparency,
-              child: Win98Bevel(
-                style: BevelStyle.window,
-                padding: const EdgeInsets.all(2),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        width: 24,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [W98.navy, W98.titleEnd],
+            child: Win98Glass(
+              child: Material(
+                type: MaterialType.transparency,
+                child: Win98Bevel(
+                  style: BevelStyle.window,
+                  padding: const EdgeInsets.all(2),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          width: 24,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [W98.navy, W98.titleEnd],
+                            ),
                           ),
-                        ),
-                        padding: const EdgeInsets.only(top: 6, bottom: 8),
-                        child: Column(
-                          children: [
-                            const PixelIconView(PixelIcon.rabbit),
-                            const Spacer(),
-                            RotatedBox(
-                              quarterTurns: 3,
-                              child: Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: 'Darkroom',
-                                      style: W98.text.copyWith(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 16,
+                          padding: const EdgeInsets.only(top: 6, bottom: 8),
+                          child: Column(
+                            children: [
+                              const PixelIconView(PixelIcon.rabbit),
+                              const Spacer(),
+                              RotatedBox(
+                                quarterTurns: 3,
+                                child: Text.rich(
+                                  TextSpan(
+                                    children: [
+                                      TextSpan(
+                                        text: 'Darkroom',
+                                        style: W98.text.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                        ),
                                       ),
-                                    ),
-                                    TextSpan(
-                                      text: '98',
-                                      style: W98.text.copyWith(color: Colors.white70, fontSize: 16),
-                                    ),
-                                  ],
+                                      TextSpan(
+                                        text: '98',
+                                        style: W98.text.copyWith(color: Colors.white70, fontSize: 16),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      SizedBox(
-                        width: 190,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _startItem(context, PixelIcon.camera, 'Camera', StartAction.camera),
-                            _startItem(context, PixelIcon.folder, 'My Pictures', StartAction.pictures),
-                            _startItem(context, PixelIcon.views, 'Settings', StartAction.options),
-                            _startItem(context, PixelIcon.question, 'Help', StartAction.help),
-                            _startItem(context, PixelIcon.upFolder, 'Run...', StartAction.run),
-                            Divider(height: 6, color: W98.shadow),
-                            _startItem(context, PixelIcon.rabbit, 'User Profile...', StartAction.profile),
-                            _startItem(context, PixelIcon.computer, 'Shut Down...', StartAction.shutDown),
-                          ],
+                        SizedBox(
+                          width: 190,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _startItem(context, PixelIcon.camera, 'Camera', StartAction.camera),
+                              _startItem(context, PixelIcon.folder, 'My Pictures', StartAction.pictures),
+                              _startItem(context, PixelIcon.views, 'Settings', StartAction.options),
+                              _startItem(context, PixelIcon.question, 'Help', StartAction.help),
+                              _startItem(context, PixelIcon.upFolder, 'Run...', StartAction.run),
+                              Divider(height: 6, color: W98.shadow),
+                              _startItem(context, PixelIcon.rabbit, 'User Profile...', StartAction.profile),
+                              _startItem(context, PixelIcon.computer, 'Shut Down...', StartAction.shutDown),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

@@ -1312,23 +1312,35 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **57.50** → 1.9.9 · App Store release (`appstore-release.yml`) never
   cancels a submission already in review unless `replace_pending` is ticked
   (the 1.9.8 release had pulled 1.8.3 out of Apple's queue).
-- [ ] **57.51** Welcome tour: new wording on pages 1-4 (owner's text), the
+- [x] **57.51** → 1.9.10 · Welcome tour: new wording on pages 1-4 (owner's text), the
   app icon's rabbit on page 1 (split outline, one pair of eyes;
   `assets/artwork/rabbit_mark.png` from make_icons.py `intro_mark`), on the
   last page "Maybe later" top right so the button and dots don't move, and
   Notifications marked optional.
-- [ ] **57.52** Rating prompt: our own "Give us a shoutout!" sheet first
+- [x] **57.52** → 1.9.10 · Rating prompt: our own "Give us a shoutout!" sheet first
   (No thanks / Yea!); only Yea! opens the store's rating prompt. Same
   timing (once, 5th launch + 10th print). Debug > Rating Prompt shows it.
   If the store can't open its box after Yea!, a quiet toast says thanks.
-- [ ] **57.53** Darkroom 98 image viewer opens inside the beige monitor
+- [x] **57.53** → 1.9.10 · Darkroom 98 image viewer opens inside the beige monitor
   (the window zooms open on its screen, the bezel stays put) instead of on
   bare desktop colour. `Win98Safe` removed (unused).
-- [ ] **57.54** Darkroom 98: View > Options > Monitor (Beige, Platinum,
+- [x] **57.54** → 1.9.10 · Darkroom 98: View > Options > Monitor (Beige, Platinum,
   Graphite, Ocean, Tangerine), the bezel on every Darkroom 98 screen
   (explorer, viewer, shut down, blue screen). Opening a file zooms its
   window out from the file instead of the middle.
-- [ ] **57.55** Projector: the picture always gets the biggest size the
+- [x] **57.55** → 1.9.10 · Projector: the picture always gets the biggest size the
   room and the reel's shape allow; the console (lamp, plant) slides down,
   partly or all off the bottom, instead of shrinking it. With room to
   spare it stays standing on the floor as before.
+- [x] **57.56** → 1.9.10 · Darkroom 98 monitor settings (View > Options >
+  Monitor): Tube (CRT: scan lines, curved dark edges, glow, a degauss
+  button on the bezel that wobbles the picture with colour and a thunk) or
+  Flat panel; 640 x 480 / 800 x 600 / 1024 x 768 (UI scale); Normal / Warm
+  6500K / Cool 9300K / green / amber screen; brightness and contrast knobs
+  on the bezel (with an on-screen bar) and sliders; Large fonts. Applies to
+  every Darkroom 98 screen, menu and dialog (`win98_display.dart`,
+  `win98_monitor.dart`).
+- [x] **57.57** → 1.9.10 · Screen Saver tab: 3D Pipes, Starfield, 3D Text
+  (your own words), wait 1/3/5/10 min, Preview, a little monitor running
+  it. Drawn live, no assets; any touch wakes it; a playing clip keeps it
+  away (`win98_savers.dart`).

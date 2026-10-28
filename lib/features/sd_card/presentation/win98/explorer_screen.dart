@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,8 +10,7 @@ import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
-import '../../../camera/application/camera_ui_state.dart'
-    show PrefKeys, win98MonitorProvider, win98ThemeProvider;
+import '../../../camera/application/camera_ui_state.dart' show PrefKeys, win98ThemeProvider;
 import '../../../onboarding/onboarding_screen.dart';
 import 'debug_menu.dart';
 import 'explorer_dialogs.dart';
@@ -26,6 +24,10 @@ import 'games/solitaire.dart';
 import 'win98_programs.dart';
 import 'win98_shutdown.dart';
 import 'win98_widgets.dart';
+import 'win98_monitor.dart';
+import 'win98_savers.dart';
+
+export 'win98_monitor.dart' show ExplorerMonitor;
 import '../../../../core/device/physical_orientation.dart';
 import '../../../../core/device/system_gestures.dart';
 import '../../../../core/device/upright.dart';
@@ -48,7 +50,9 @@ class ExplorerScreen extends ConsumerStatefulWidget {
     transitionDuration: slideDuration,
     reverseTransitionDuration: const Duration(milliseconds: 460),
     pageBuilder: (context, _, _) => const UprightPage(
-      child: _SwipeToClose(child: ExplorerMonitor(child: ExplorerScreen())),
+      child: _SwipeToClose(
+        child: ExplorerMonitor(child: Win98SaverWatch(child: ExplorerScreen())),
+      ),
     ),
     transitionsBuilder: (context, a, _, child) => SlideTransition(
       position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
@@ -1250,173 +1254,4 @@ class _SwipeToCloseState extends ConsumerState<_SwipeToClose> {
       child: widget.child,
     );
   }
-}
-
-/// The beige monitor round the explorer: a moulded plastic bezel with a
-/// recessed, slightly shadowed screen, a maker's badge and a green power
-/// lamp on the chin. The bezel takes up the system's insets (status bar,
-/// gesture strip, a camera cutout at the side), so the screen inside is all
-/// Windows; turned to landscape its sides are wide enough to keep the
-/// window's corners (the close button) off the phone's rounded corners.
-class ExplorerMonitor extends ConsumerWidget {
-  const ExplorerMonitor({super.key, required this.child});
-
-  static const bezel = 12.0;
-
-  static EdgeInsets bezelOf(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    if (mq.size.aspectRatio > 1) return const EdgeInsets.symmetric(horizontal: 24, vertical: 4);
-    return EdgeInsets.fromLTRB(
-      bezel,
-      math.max(bezel, mq.padding.top + 4),
-      bezel,
-      math.max(bezel + 4, mq.padding.bottom + 4),
-    );
-  }
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final bezel = bezelOf(context);
-    final finish = MonitorFinish.byName(ref.watch(win98MonitorProvider));
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      // status-bar icons that read on the plastic
-      value: finish.darkIcons ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
-      child: ColoredBox(
-        color: finish.mid,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Padding(
-              padding: bezel,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: RepaintBoundary(
-                  // the insets are the monitor's; inside it is all screen
-                  child: MediaQuery.removePadding(
-                    context: context,
-                    removeTop: true,
-                    removeBottom: true,
-                    removeLeft: true,
-                    removeRight: true,
-                    child: child,
-                  ),
-                ),
-              ),
-            ),
-            IgnorePointer(
-              child: RepaintBoundary(child: CustomPaint(painter: _BezelPainter(bezel, finish))),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BezelPainter extends CustomPainter {
-  const _BezelPainter(this.insets, this.finish);
-
-  final EdgeInsets insets;
-  final MonitorFinish finish;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final outer = Offset.zero & size;
-    final screen = RRect.fromRectAndRadius(insets.deflateRect(outer), const Radius.circular(6));
-    // The plastic: lit from above, a touch darker toward the bottom, with
-    // a faint moulding texture.
-    final frame = Path()
-      ..fillType = PathFillType.evenOdd
-      ..addRect(outer)
-      ..addRRect(screen);
-    canvas.drawPath(
-      frame,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [finish.light, finish.mid, finish.dark],
-          stops: const [0, 0.5, 1],
-        ).createShader(outer),
-    );
-    // Rounded outer edge catching the light (left/top) and in shade (right/bottom).
-    canvas.drawRect(
-      outer.deflate(1),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [finish.edgeLit, finish.edgeShade],
-        ).createShader(outer),
-    );
-    // The screen sits in a recess: a dark lip, a shadow cast inward.
-    canvas.drawRRect(
-      screen.inflate(3),
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [finish.lipShade, finish.lipLit],
-        ).createShader(outer),
-    );
-    canvas.save();
-    canvas.clipRRect(screen);
-    // The recess's inner shadow: gradients along each edge (no blur pass).
-    const depth = 9.0, shade = Color(0x4D000000), clear = Color(0x00000000);
-    final r = screen.outerRect;
-    for (final (rect, begin, end) in [
-      (Rect.fromLTWH(r.left, r.top, r.width, depth), Alignment.topCenter, Alignment.bottomCenter),
-      (Rect.fromLTWH(r.left, r.bottom - depth, r.width, depth), Alignment.bottomCenter, Alignment.topCenter),
-      (Rect.fromLTWH(r.left, r.top, depth, r.height), Alignment.centerLeft, Alignment.centerRight),
-      (Rect.fromLTWH(r.right - depth, r.top, depth, r.height), Alignment.centerRight, Alignment.centerLeft),
-    ]) {
-      canvas.drawRect(
-        rect,
-        Paint()
-          ..shader = LinearGradient(begin: begin, end: end, colors: const [shade, clear]).createShader(rect),
-      );
-    }
-    // A whisper of glass glare across the top-left.
-    canvas.drawRect(
-      screen.outerRect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: const Alignment(0.2, 0.1),
-          colors: [Colors.white.withValues(alpha: 0.07), Colors.white.withValues(alpha: 0)],
-        ).createShader(screen.outerRect),
-    );
-    canvas.restore();
-    // Power lamp on the chin (right) and the maker's badge (left).
-    final t = insets.bottom;
-    final y = size.height - t / 2;
-    final lamp = Offset(size.width - math.max(insets.right, 12) - 14, y);
-    canvas.drawCircle(lamp, 3.2, Paint()..color = const Color(0xFF3C6E3C));
-    canvas.drawCircle(lamp, 2.4, Paint()..color = const Color(0xFF7CFF6B));
-    canvas.drawCircle(
-      lamp,
-      7,
-      Paint()
-        ..shader = const RadialGradient(
-          colors: [Color(0x667CFF6B), Color(0x007CFF6B)],
-        ).createShader(Rect.fromCircle(center: lamp, radius: 7)),
-    );
-    final badge = TextPainter(
-      text: TextSpan(
-        text: 'DARKROOM',
-        style: TextStyle(color: finish.badge, fontSize: 7.5, fontWeight: FontWeight.w800, letterSpacing: 2),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    badge.paint(canvas, Offset(math.max(insets.left, 12) + 8, y - badge.height / 2));
-  }
-
-  @override
-  bool shouldRepaint(_BezelPainter old) => old.insets != insets || old.finish != finish;
 }

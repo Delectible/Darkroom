@@ -460,7 +460,21 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   win98_widgets.dart: Beige, Platinum, Graphite, Ocean, Tangerine;
   `win98MonitorProvider`, `PrefKeys.win98Monitor`); `ExplorerMonitor` wraps
   every Darkroom 98 screen (explorer, viewer, shut down, blue screen), so
-  the bezel never changes between them (`win98_monitor_test`). Opening a
+  the bezel never changes between them (`win98_monitor_test`).
+  The monitor's settings (`Win98Display`, `win98_display.dart`, pref
+  `ui.win98.display`, live in the static `Win98Display.current` so dialogs
+  and `Win98Scale` read it): Tube (CRT) / Flat panel, resolution (640 /
+  800 / 1024 = `Win98Scale` factor), colour (warm, cool, green, amber),
+  brightness/contrast (knobs on the bezel, `win98_monitor.dart`, eager
+  gestures so they never swipe the explorer away; OSD bar), Large fonts
+  (TextScaler 1.15 in `Win98Scale`). `Win98Glass` applies the colour
+  matrix + scan lines to the screen and to every menu/window/message box
+  (wrap new dialog panels in it). CRT degauss button (`Sfx.w98Degauss`).
+  Screen savers (`win98_savers.dart`: 3D Pipes, Starfield, 3D Text, drawn
+  live): `Win98SaverWatch` round the explorer pushes one after the wait
+  (`Win98Idle`: a global pointer route; the media player pokes it while
+  playing); tested in `win98_savers_test`, settings in
+  `explorer_screens_test` (640 + large fonts + CRT, 1024). Opening a
   file zooms its window out from where it was touched (`_lastTap`,
   `Win98ZoomTransition.origin`).
   The window sits on a strip of desktop (6 dp portrait, 4-5 landscape).

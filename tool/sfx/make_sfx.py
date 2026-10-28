@@ -12,6 +12,8 @@ no samples, no Microsoft sounds, just numpy).
   w98_exit                      short descending chime when leaving Win98
   w98_shutdown                  a few seconds of warm pad for Shut Down
   crt_off                       CRT switching off: pop, whine, crackle
+  w98_degauss                   the monitor's degauss button: a thunk and
+                                a mains hum swelling and dying away
   w98_login                     a gentle rising chime when Win98 opens
   shutter_digital               a compact's shutter key: quiet, deep click
   shutter_film                  a mechanical shutter (two-part clack) and
@@ -125,6 +127,7 @@ LEVELS = {
     'w98_exit': 0.0525,
     'w98_shutdown': 0.07,
     'crt_off': 0.0788,
+    'w98_degauss': 0.07,
     'game_bop': 0.035,
     'game_blip': 0.035,
     'game_lose': 0.042,
@@ -232,6 +235,26 @@ def crt_off():
     place(out, whine, 0.02)
     place(out, 0.5 * highpass(crackle, 1500), 0.05)
     return out
+
+
+def w98_degauss():
+    """The coil kicking in: a relay thunk, a deep 60 Hz hum with its
+    buzzy harmonics swelling and dying away, the chassis ringing faintly."""
+    n = 1.0
+    x = t(n)
+    out = np.zeros(len(x))
+    swell = np.clip(x / 0.04, 0, 1) * np.exp(-x / 0.28)
+    hum = (np.sin(2 * np.pi * 60 * x) + 0.6 * np.sin(2 * np.pi * 120 * x)
+           + 0.35 * np.sign(np.sin(2 * np.pi * 180 * x)) * 0.5)
+    out += 0.8 * lowpass(hum, 900) * swell
+    ring = np.sin(2 * np.pi * 420 * x) * 0.12 * np.exp(-x / 0.35) * (1 + 0.3 * np.sin(2 * np.pi * 7 * x))
+    out += ring
+    thunk = lowpass(noise(0.04), 600) * env(int(SR * 0.04), 0.0008, 0.012)
+    place(out, 0.9 * thunk, 0.0)
+    click = bandpass(noise(0.006), 1500, 6000) * env(int(SR * 0.006), 0.0002, 0.0015)
+    place(out, 0.4 * click, 0.0)
+    fade = np.clip((n - x) / 0.15, 0, 1)
+    return out * fade
 
 
 def w98_login():
@@ -495,6 +518,7 @@ if __name__ == '__main__':
     save('w98_exit', w98_exit(), peak=0.7)
     save('w98_shutdown', w98_shutdown(), peak=0.75)
     save('crt_off', crt_off(), peak=0.8)
+    save('w98_degauss', w98_degauss(), peak=0.8)
     save('zoom_motor', zoom_motor(), peak=0.5)
     save('w98_login', w98_login(), peak=0.7)
     save('shutter_digital', shutter_digital(), peak=0.8)

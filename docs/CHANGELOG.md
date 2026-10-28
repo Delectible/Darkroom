@@ -1320,3 +1320,4 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **57.52** Rating prompt: our own "Give us a shoutout!" sheet first
   (No thanks / Yea!); only Yea! opens the store's rating prompt. Same
   timing (once, 5th launch + 10th print). Debug > Rating Prompt shows it.
+  If the store can't open its box after Yea!, a quiet toast says thanks.

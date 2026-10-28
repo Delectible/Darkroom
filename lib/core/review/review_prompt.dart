@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:in_app_review/in_app_review.dart';
 
@@ -49,18 +49,32 @@ class ReviewPrompt {
   static Future<void> ask([BuildContext? context]) async {
     final ctx = context ?? appNavigatorKey.currentContext;
     if (ctx == null || !ctx.mounted) return;
-    if (await showRatingSheet(ctx)) await show();
+    if (!await showRatingSheet(ctx)) return;
+    if (await show() || !ctx.mounted) return;
+    // The store said no (not installed from the store, TestFlight, no
+    // services): a quiet word so "Yea!" isn't a dud.
+    ScaffoldMessenger.maybeOf(ctx)?.showSnackBar(
+      const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 3),
+        content: Text("Thanks! The store couldn't open its rating box right now."),
+      ),
+    );
   }
 
-  /// Asks the store to show its prompt. The
+  /// Asks the store to show its prompt; false when it can't (it may still
+  /// quietly skip it: the store decides). The
   /// store decides: Play only shows it to installs from Play, at most a few
   /// times a year; Apple never shows it in TestFlight builds.
-  static Future<void> show() async {
+  static Future<bool> show() async {
     try {
       final review = InAppReview.instance;
-      if (await review.isAvailable()) await review.requestReview();
+      if (!await review.isAvailable()) return false;
+      await review.requestReview();
+      return true;
     } catch (e) {
       debugPrint('Rating prompt unavailable: $e');
+      return false;
     }
   }
 }

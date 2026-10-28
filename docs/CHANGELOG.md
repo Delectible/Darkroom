@@ -1350,3 +1350,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   with its look loaded (min 1.1 s, max 5 s), then fades into it. Android
   12+'s system splash fades into it too (MainActivity). The cork tiles
   warm under it.
+- [~] **57.59** Crash reports said only "Crash": Android keeps no stack
+  trace for a Java/Kotlin crash. MainActivity's `CrashCatcher` now writes
+  it as the app goes down (picked up next launch); every Android report
+  also says whether the app was on screen, its memory, the phone; native
+  crashes keep the tombstone's readable text.

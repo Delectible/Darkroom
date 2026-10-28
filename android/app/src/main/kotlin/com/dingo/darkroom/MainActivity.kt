@@ -45,6 +45,7 @@ class MainActivity : FlutterActivity() {
     private var rotationObserver: ContentObserver? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        CrashCatcher.install(filesDir)
         super.onCreate(savedInstanceState)
         // The app turns its own screens (they already look landscape when
         // Android rotates), so no rotate animation. Seamless, not jump-cut:
@@ -344,6 +345,7 @@ class MainActivity : FlutterActivity() {
     private fun recentExits(): List<Map<String, Any?>> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
         val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
+        val javaCrash = CrashCatcher.last(filesDir)
         return try {
             am.getHistoricalProcessExitReasons(packageName, 0, 10).mapNotNull { e ->
                 val reason = when (e.reason) {
@@ -352,19 +354,35 @@ class MainActivity : FlutterActivity() {
                     android.app.ApplicationExitInfo.REASON_ANR -> "Not responding"
                     else -> null
                 } ?: return@mapNotNull null
-                // ANR traces are text; native ones are binary tombstones.
-                val trace = if (e.reason == android.app.ApplicationExitInfo.REASON_ANR) {
-                    try {
-                        e.traceInputStream?.bufferedReader()?.use { it.readText().take(8000) }
-                    } catch (_: Exception) {
-                        null
+                // Android keeps no trace for a Java/Kotlin crash: ours was
+                // written by CrashCatcher as the app went down. ANR traces
+                // are text; native ones are binary tombstones (we keep their
+                // readable strings: the library, the signal, the abort message).
+                val trace = try {
+                    when (e.reason) {
+                        android.app.ApplicationExitInfo.REASON_CRASH ->
+                            javaCrash?.takeIf { abs(it.first - e.timestamp) < 15_000 }?.second
+                        android.app.ApplicationExitInfo.REASON_ANR ->
+                            e.traceInputStream?.bufferedReader()?.use { it.readText().take(8000) }
+                        else -> e.traceInputStream?.use { readableStrings(it.readBytes()) }
                     }
-                } else {
+                } catch (_: Exception) {
                     null
                 }
+                val importance = when {
+                    e.importance <= android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND -> "on screen"
+                    e.importance <= android.app.ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE -> "visible"
+                    else -> "in the background"
+                }
+                val details = listOfNotNull(
+                    e.description?.takeIf { it.isNotBlank() },
+                    "while $importance",
+                    "memory ${e.pss / 1024} MB (rss ${e.rss / 1024} MB)",
+                    "Android ${Build.VERSION.RELEASE}, ${Build.MANUFACTURER} ${Build.MODEL}",
+                )
                 mapOf(
                     "reason" to reason,
-                    "description" to e.description,
+                    "description" to details.joinToString("\n"),
                     "time" to e.timestamp,
                     "pid" to e.pid,
                     "trace" to trace,
@@ -375,7 +393,64 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /// The readable text in a binary tombstone (runs of 6+ printable
+    /// characters), enough to see which library died and why.
+    private fun readableStrings(bytes: ByteArray): String {
+        val out = StringBuilder()
+        val run = StringBuilder()
+        for (b in bytes) {
+            val c = b.toInt() and 0xFF
+            if (c in 32..126) {
+                run.append(c.toChar())
+            } else {
+                if (run.length >= 6) out.append(run).append('\n')
+                run.setLength(0)
+                if (out.length > 8000) break
+            }
+        }
+        if (run.length >= 6) out.append(run)
+        return out.toString().take(8000)
+    }
+
     companion object {
         private const val PERMISSION_REQUEST = 7301
+    }
+}
+
+/// Writes a Java/Kotlin crash's stack trace to a file as the app goes down
+/// (Android's own exit record has none), for Help > Crash Reports on the
+/// next launch.
+private class CrashCatcher(
+    private val dir: java.io.File,
+    private val next: Thread.UncaughtExceptionHandler?,
+) : Thread.UncaughtExceptionHandler {
+    override fun uncaughtException(t: Thread, e: Throwable) {
+        try {
+            val trace = java.io.StringWriter().also { e.printStackTrace(java.io.PrintWriter(it)) }
+            java.io.File(dir, FILE).writeText("${System.currentTimeMillis()}\nThread: ${t.name}\n$trace".take(12000))
+        } catch (_: Throwable) {
+        }
+        next?.uncaughtException(t, e)
+    }
+
+    companion object {
+        const val FILE = "last_java_crash.txt"
+
+        fun install(dir: java.io.File) {
+            val current = Thread.getDefaultUncaughtExceptionHandler()
+            if (current is CrashCatcher) return
+            Thread.setDefaultUncaughtExceptionHandler(CrashCatcher(dir, current))
+        }
+
+        /// (when, trace) of the last one caught, if any.
+        fun last(dir: java.io.File): Pair<Long, String>? = try {
+            val text = java.io.File(dir, FILE).takeIf { it.exists() }?.readText()
+            text?.let {
+                val nl = it.indexOf('\n')
+                Pair(it.substring(0, nl).toLong(), it.substring(nl + 1))
+            }
+        } catch (_: Exception) {
+            null
+        }
     }
 }

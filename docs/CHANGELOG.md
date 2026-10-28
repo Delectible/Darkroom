@@ -1370,3 +1370,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   corners): edges bow out, corners tuck into black; touches mapped through
   the same curve (`_WarpHits`). Impeller only; off while the screen slides
   in or out (eases in after).
+- [~] **57.62** 3D Pipes: ball joints sometimes drew behind their own
+  pipes (sorted by the joint's depth, but a pipe's depth is its middle);
+  joints now sort half a step nearer, so they always sit over both.

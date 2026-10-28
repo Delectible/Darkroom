@@ -375,10 +375,13 @@ class _PipesPainter extends CustomPainter {
       );
       items.add(((za + zb) / 2, () => _tube(canvas, a, b, r * (ka + kb) / 2, s.colour, alpha)));
     }
+    // How much nearer half a step can bring a pipe's middle, along any axis.
+    final lead = 0.5 * [sy * cp, sp, cy * cp].map((v) => v.abs()).reduce(math.max) + 0.01;
     for (final (j, c) in p.joints) {
       final (o, k, z) = project(j.x.toDouble(), j.y.toDouble(), j.z.toDouble());
-      // a hair nearer than the pipes meeting there, so it sits over both
-      items.add((z - 0.01, () => _ball(canvas, o, r * k * 1.32, c, alpha)));
+      // Nearer than either pipe meeting there (a pipe's depth is its
+      // middle, up to half a step nearer than the joint), so it sits over both.
+      items.add((z - lead, () => _ball(canvas, o, r * k * 1.32, c, alpha)));
     }
     items.sort((x, y) => y.$1.compareTo(x.$1));
     for (final (_, draw) in items) {

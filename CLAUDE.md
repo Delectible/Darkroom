@@ -484,8 +484,10 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   `CrtWarp.sourceOf`; the picture sits in the tube with an even black rim,
   `ExplorerMonitor.tubeRim`, under the glass (`CrtGlassPainter`, radius 26 =
   the opening's); the portrait chin is `ExplorerMonitor.chin` / gesture strip
-  + 16, its parts `chinInset` in); Impeller only, and only once the route has arrived
-  (a shader filter under a moving transition draws in the wrong place).
+  + 16, its parts `chinInset` in); Impeller only. A shader filter under a moving
+  transition draws in the wrong place, so while the route slides `CrtWarp` paints
+  a still of the flat screen through the same shader (`_StillBulge`, a paint
+  shader follows its canvas) and the live filter takes over on landing.
   Screen savers (`win98_savers.dart`: 3D Pipes, Starfield, 3D Text, drawn
   live): `Win98SaverWatch` round the explorer pushes one after the wait
   (`Win98Idle`: a global pointer route; the media player pokes it while

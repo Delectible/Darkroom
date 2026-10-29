@@ -1430,3 +1430,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   falloff) is drawn over the whole opening. Taller chin
   (`ExplorerMonitor.chin`, gesture strip + 16), bigger knobs, badge / knobs /
   lamp kept `chinInset` in from the phone's rounded corners.
+- [x] **57.73** → 2.0.3 · The CRT bulge holds while Darkroom 98 slides in and out:
+  a shader filter can't run under the moving route, so `CrtWarp` draws a
+  still of the flat screen (`_flat` boundary, `toImageSync`, refreshed each
+  frame while sliding in) through the same shader as a paint
+  (`_StillBulge`), and the live filter takes over at full strength on
+  landing (no ease-in pop).

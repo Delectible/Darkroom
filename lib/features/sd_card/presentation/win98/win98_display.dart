@@ -436,9 +436,10 @@ class CrtGlassPainter extends CustomPainter {
 /// through ImageFilter.shader): the edges bow outward, the corners fall away
 /// into black. Touches are mapped the same way, so a tap lands on what's
 /// drawn under the finger. Only where the engine runs shader filters
-/// (Impeller), and only while [still] (a shader filter under a moving
-/// transition draws in the wrong place): it eases in once the screen has
-/// arrived and drops out as it leaves.
+/// (Impeller). A shader filter under a moving transition draws in the wrong
+/// place, so while the screen slides in or out a still of it is drawn
+/// through the same shader as a paint instead, and the live filter takes
+/// over when it lands.
 class CrtWarp extends StatefulWidget {
   const CrtWarp({super.key, required this.on, required this.child});
 
@@ -459,15 +460,20 @@ class CrtWarp extends StatefulWidget {
     return Offset((0.5 + dx * f) * size.width, (0.5 + dy * f) * size.height);
   }
 
-
   @override
   State<CrtWarp> createState() => _CrtWarpState();
 }
 
 class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
   final _content = GlobalKey();
+  final _flat = GlobalKey();
   late final _ease = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
   ui.FragmentShader? _shader;
+
+  /// The same shader drawn as a paint (it moves with its canvas, unlike a
+  /// filter) over [_still] while the screen slides in or out.
+  ui.FragmentShader? _paint;
+  ui.Image? _still;
   Animation<double>? _route;
 
   @override
@@ -476,7 +482,12 @@ class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
     if (ui.ImageFilter.isShaderFilterSupported) {
       CrtWarp._program ??= ui.FragmentProgram.fromAsset('shaders/crt_bulge.frag');
       CrtWarp._program!.then((p) {
-        if (mounted) setState(() => _shader = p.fragmentShader());
+        if (!mounted) return;
+        setState(() {
+          _shader = p.fragmentShader();
+          _paint = p.fragmentShader();
+        });
+        _settle(_route?.status ?? AnimationStatus.completed);
       }, onError: (Object _) {});
     }
   }
@@ -486,33 +497,97 @@ class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
     super.didChangeDependencies();
     final a = ModalRoute.of(context)?.animation;
     if (a != _route) {
-      _route?.removeStatusListener(_settle);
-      _route = a?..addStatusListener(_settle);
+      _route
+        ?..removeStatusListener(_settle)
+        ..removeListener(_tick);
+      _route = a
+        ?..addStatusListener(_settle)
+        ..addListener(_tick);
       _settle(a?.status ?? AnimationStatus.completed);
     }
   }
 
+  /// Sliding in, the screen may still be filling (files loading): the
+  /// picture follows it frame by frame, so the hand-over doesn't jump.
+  void _tick() {
+    if (_still != null && _route?.status == AnimationStatus.forward) _snap();
+  }
+
   void _settle(AnimationStatus s) {
-    if (s == AnimationStatus.completed) {
-      _ease.forward();
-    } else {
-      _ease.value = 0;
+    switch (s) {
+      case AnimationStatus.completed:
+        // Arrived: the live bulge takes over where the still left off.
+        if (_still != null) {
+          _ease.value = 1;
+          _drop();
+        } else {
+          _ease.forward();
+        }
+      case AnimationStatus.forward:
+        _ease.value = 0;
+        // Sliding in: once the screen has drawn, bulge a picture of it.
+        WidgetsBinding.instance.addPostFrameCallback((_) => _snap());
+      case AnimationStatus.reverse:
+        _ease.value = 0;
+        _snap();
+      case AnimationStatus.dismissed:
+        break;
     }
+  }
+
+  /// A picture of the flat screen, to draw bulged while it moves.
+  void _snap() {
+    if (!mounted || !widget.on || _paint == null || _route?.status == AnimationStatus.completed) return;
+    final box = _flat.currentContext?.findRenderObject();
+    if (box is! RenderRepaintBoundary || !box.attached || box.size.isEmpty) return;
+    try {
+      final image = box.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context));
+      _still?.dispose();
+      setState(() => _still = image);
+    } catch (_) {
+      // not drawn yet: it slides flat
+    }
+  }
+
+  void _drop() {
+    final old = _still;
+    if (old == null) return;
+    setState(() => _still = null);
+    WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
   }
 
   @override
   void dispose() {
-    _route?.removeStatusListener(_settle);
+    _route
+      ?..removeStatusListener(_settle)
+      ..removeListener(_tick);
     _ease.dispose();
     _shader?.dispose();
+    _paint?.dispose();
+    _still?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final child = KeyedSubtree(key: _content, child: widget.child);
-    final shader = _shader;
-    if (shader == null || !widget.on) return child;
+    final child = RepaintBoundary(
+      key: _flat,
+      child: KeyedSubtree(key: _content, child: widget.child),
+    );
+    final shader = _shader, paint = _paint, still = _still;
+    if (shader == null || paint == null || !widget.on) return child;
+    if (still != null) {
+      // Moving: the bulged picture on top of the (flat) screen.
+      return Stack(
+        fit: StackFit.passthrough,
+        children: [
+          child,
+          Positioned.fill(
+            child: IgnorePointer(child: CustomPaint(painter: _StillBulge(paint, still, CrtWarp.amount))),
+          ),
+        ],
+      );
+    }
     return AnimatedBuilder(
       animation: _ease,
       builder: (context, _) {
@@ -527,6 +602,28 @@ class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
       },
     );
   }
+}
+
+/// A still of the screen drawn through the bulge shader as a paint.
+class _StillBulge extends CustomPainter {
+  _StillBulge(this.shader, this.image, this.k);
+
+  final ui.FragmentShader shader;
+  final ui.Image image;
+  final double k;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    shader
+      ..setFloat(0, size.width)
+      ..setFloat(1, size.height)
+      ..setFloat(2, k)
+      ..setImageSampler(0, image);
+    canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
+  }
+
+  @override
+  bool shouldRepaint(_StillBulge old) => old.image != image || old.k != k;
 }
 
 /// Hit testing through the bulge: a touch at a point goes to the content

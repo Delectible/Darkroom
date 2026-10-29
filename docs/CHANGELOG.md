@@ -1441,3 +1441,6 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the window zooms open; a see-through screen's tube and glass fade in with
   its route instead of doubling) and no second bulge (the live filter comes
   on at full strength, no ease-in).
+- [x] **57.75** → 2.0.3 · A print opened the first time no longer zooms up white:
+  until the full photo has decoded, the viewer shows the board's small copy
+  (same file and size as the board's, so already in memory).

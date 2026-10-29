@@ -362,6 +362,22 @@ class _Print extends StatelessWidget {
     ),
   );
 
+  /// The full photo; until it has decoded (a big print takes a moment the
+  /// first time), the board's small copy of it, already in memory.
+  Widget _photo(String path) {
+    final thumb = item.thumbPath;
+    return Image.file(
+      File(path),
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.medium,
+      gaplessPlayback: true,
+      frameBuilder: (context, child, frame, sync) => frame == null && !sync && thumb != null
+          // (the board's size, so it's the copy it already decoded)
+          ? Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 420, gaplessPlayback: true)
+          : child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final path = item.outputPath;
@@ -370,14 +386,7 @@ class _Print extends StatelessWidget {
         InstantPrint(
           note: item.note,
           onNoteTap: onWrite,
-          picture: path == null
-              ? const ColoredBox(color: Colors.black12)
-              : Image.file(
-                  File(path),
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.medium,
-                  gaplessPlayback: true,
-                ),
+          picture: path == null ? const ColoredBox(color: Colors.black12) : _photo(path),
         ),
       );
     }
@@ -391,14 +400,7 @@ class _Print extends StatelessWidget {
             color: Color(0xFFFBF8F1),
             boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, 12))],
           ),
-          child: path == null
-              ? const ColoredBox(color: Colors.black12)
-              : Image.file(
-                  File(path),
-                  fit: BoxFit.cover,
-                  filterQuality: FilterQuality.medium,
-                  gaplessPlayback: true,
-                ),
+          child: path == null ? const ColoredBox(color: Colors.black12) : _photo(path),
         ),
       ),
     );

@@ -61,7 +61,7 @@ the owner in a console / on a phone, C = Claude in the repo).
   the macOS runner (instead of the unsigned .ipa). (O creates the key, C
   wires CI: done, build-apk.yml ios job, secrets APPSTORE_KEY_ID /
   APPSTORE_ISSUER_ID / APPSTORE_KEY / APPLE_TEAM_ID; iPhone only)
-- [ ] App Store Connect listing: name ("Darkroom: A Film Camera"; "Darkroom" and "Darkroom: Film Camera" were taken; Play stays "Darkroom"), subtitle, description, keywords,
+- [x] App Store Connect listing: name ("Darkroom: A Film Camera"; "Darkroom" and "Darkroom: Film Camera" were taken; Play stays "Darkroom"), subtitle, description, keywords,
   support + privacy URLs, screenshots (6.9" and 6.5" iPhone), age rating,
   App Privacy = "Data Not Collected". iPhone only (no iPad) to start. (O / C
   drafts the text) Age rating confirmed 2026-10-29.
@@ -69,7 +69,7 @@ the owner in a console / on a phone, C = Claude in the repo).
   = false (no export paperwork). (C)
 - [~] TestFlight: internal testers, then external testers (external group in beta review, 2026-10-23) (needs a light
   beta review). (O)
-- [~] App Review submission, then release. (O) Submitted 2026-10-24 (1.8.3, build 142, with Darkroom Pro). After the first version: `appstore-release.yml` submits later builds (C runs it on "release to iPhone").
+- [~] App Review submission, then release. (O) Submitted 2026-10-24 (1.8.3, build 142, with Darkroom Pro; pulled 10-27); resubmitted 2026-10-29 as 2.0.3 (build 162) with Darkroom Pro, in review. After the first version: `appstore-release.yml` submits later builds (C runs it on "release to iPhone").
 
 ## Log
 

@@ -74,7 +74,10 @@ export async function build(THREE) {
   sk(-15.5, 21, callMat); sk(15.5, 21, endMat);
   // mic slot
   const mic = rbox(5, 1.2, 0.6, 0.5, new THREE.MeshStandardMaterial({ color: 0x050505 })); mic.position.set(0, -HB / 2 + 5, T / 2 + 0.5); base.add(mic);
-  root.add(base);
+  // the keypad half swings forward from the hinge (its foot toward you), so
+  // the phone stands on it with the screen half upright
+  const basePivot = new THREE.Group();
+  root.add(basePivot);
 
   // hinge barrel
   const hingeY = HB / 2 + 1.0;
@@ -98,10 +101,13 @@ export async function build(THREE) {
   const brand = decal(24, 4, (c, w, h) => { c.fillStyle = '#c7ccd4'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `800 ${h * 0.7}px "Inter Display"`; c.fillText('DARKROOM', w / 2, h / 2); }, { px: 40, rough: 0.3, metal: 0.7 });
   brand.position.set(0, HL / 2 - 23.5, T * 0.4 + 0.55); lid.add(brand);
   lid.position.set(0, hingeY, -0.6);
-  lid.rotation.x = 0.26; // opened past flat would face away: tilt the screen half toward the viewer
   root.add(lid);
+  basePivot.position.y = hingeY;
+  base.position.y = -hingeY;
+  basePivot.add(base);
+  basePivot.rotation.x = -0.26;
 
   root.rotation.y = 0.42; root.rotation.x = -0.08;
-  const holder = new THREE.Group(); holder.add(root); holder.position.y = HB / 2 + 6;
+  const holder = new THREE.Group(); holder.add(root); holder.position.y = HB / 2 + 3;
   return { object: holder, floorY: 0, exposure: 1.15, env: { ambient: 0.22 }, camera: { fov: 20, position: [0, 120, 520], target: [0, 92, 0] } };
 }

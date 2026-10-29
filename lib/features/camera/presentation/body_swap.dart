@@ -74,7 +74,7 @@ class SwapStage extends StatelessWidget {
           width: bw,
           child: MediaQuery(
             data: mq.copyWith(size: Size(bw, mq.size.height)),
-            child: _stage(context),
+            child: _StageWidth(width: mq.size.width, child: Builder(builder: _stage)),
           ),
         ),
       );
@@ -948,7 +948,14 @@ extension on SwapBody {
               ],
             ),
           ),
-        LiveBodyView(key: const ValueKey('model'), body: live, fit: fit, pose: m),
+        // On a wide screen the body is narrower than the screen: the model is
+        // drawn across all of it (same height, same centre), so its rounded
+        // ends show on the desk instead of being cut off at the body's width.
+        OverflowBox(
+          minWidth: _StageWidth.of(context, size.width),
+          maxWidth: _StageWidth.of(context, size.width),
+          child: LiveBodyView(key: const ValueKey('model'), body: live, fit: fit, pose: m),
+        ),
         Transform(
           key: const ValueKey('face'),
           // (at rest too: the face plane is unchanged, labels lifted onto
@@ -972,6 +979,19 @@ extension on SwapBody {
       ],
     );
   }
+}
+
+/// The whole screen's width, where the stage is narrower than the screen.
+class _StageWidth extends InheritedWidget {
+  const _StageWidth({required this.width, required super.child});
+
+  final double width;
+
+  static double of(BuildContext context, double fallback) =>
+      context.dependOnInheritedWidgetOfExactType<_StageWidth>()?.width ?? fallback;
+
+  @override
+  bool updateShouldNotify(_StageWidth old) => old.width != width;
 }
 
 /// What a whole-body swap needs for each body.

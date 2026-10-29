@@ -1373,3 +1373,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [~] **57.62** 3D Pipes: ball joints sometimes drew behind their own
   pipes (sorted by the joint's depth, but a pipe's depth is its middle);
   joints now sort half a step nearer, so they always sit over both.
+- [~] **57.63** Tablets, Fancy graphics: black bars cut off the 3D body's
+  sides (its ends were drawn only within the body's width). The model's
+  view now spans the whole screen (`_StageWidth` + OverflowBox in
+  body_swap.dart), so the rounded ends show on the desk, at rest and mid-toss.

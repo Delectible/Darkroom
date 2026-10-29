@@ -110,6 +110,13 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
     final d = ref.watch(win98DisplayProvider);
     final land = MediaQuery.sizeOf(context).aspectRatio > 1;
     final radius = d.crt ? CrtGlassPainter.radius : 6.0;
+    // A screen opened over another (the viewer zooming open on the
+    // explorer's screen): its tube and glass fade in over the ones below
+    // instead of doubling them (or blacking the screen out) at once.
+    final route = ModalRoute.of(context);
+    Widget seeThrough(Widget child) => route == null || route.opaque || route.animation == null
+        ? child
+        : FadeTransition(opacity: route.animation!, child: child);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // status-bar icons that read on the plastic
       value: finish.darkIcons ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
@@ -130,7 +137,8 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
                       fit: StackFit.expand,
                       children: [
                         // A CRT's tube: an even black rim round the picture.
-                        if (d.crt) const ColoredBox(color: Color(0xFF060607)),
+                        if (d.crt)
+                          seeThrough(CustomPaint(painter: _TubeRim(radius, ExplorerMonitor.tubeRim))),
                         Padding(
                           padding: EdgeInsets.all(d.crt ? ExplorerMonitor.tubeRim : 0),
                           child: ClipRRect(
@@ -188,13 +196,15 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
                         // The glass over it, shaped like the opening: its dark
                         // rim covers the bulged picture's corners.
                         if (d.crt)
-                          IgnorePointer(
-                            child: RepaintBoundary(
-                              child: CustomPaint(
-                                painter: CrtGlassPainter(
-                                  pitch: d.res.scanline,
-                                  lines: false,
-                                  ratio: MediaQuery.devicePixelRatioOf(context),
+                          seeThrough(
+                            IgnorePointer(
+                              child: RepaintBoundary(
+                                child: CustomPaint(
+                                  painter: CrtGlassPainter(
+                                    pitch: d.res.scanline,
+                                    lines: false,
+                                    ratio: MediaQuery.devicePixelRatioOf(context),
+                                  ),
                                 ),
                               ),
                             ),
@@ -697,4 +707,22 @@ class _BezelPainter extends CustomPainter {
   @override
   bool shouldRepaint(_BezelPainter old) =>
       old.insets != insets || old.finish != finish || old.radius != radius;
+}
+
+/// The black of the tube round a CRT's picture: a ring between the opening
+/// and the picture's own rounded edge (the middle is left clear).
+class _TubeRim extends CustomPainter {
+  const _TubeRim(this.radius, this.rim);
+
+  final double radius, rim;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final outer = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
+    final inner = RRect.fromRectAndRadius((Offset.zero & size).deflate(rim), Radius.circular(radius - rim));
+    canvas.drawDRRect(outer, inner, Paint()..color = const Color(0xFF060607));
+  }
+
+  @override
+  bool shouldRepaint(_TubeRim old) => old.radius != radius || old.rim != rim;
 }

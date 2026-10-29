@@ -464,10 +464,12 @@ class CrtWarp extends StatefulWidget {
   State<CrtWarp> createState() => _CrtWarpState();
 }
 
-class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
+class _CrtWarpState extends State<CrtWarp> {
   final _content = GlobalKey();
   final _flat = GlobalKey();
-  late final _ease = AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+
+  /// The live filter: only once the screen has landed.
+  bool _live = false;
   ui.FragmentShader? _shader;
 
   /// The same shader drawn as a paint (it moves with its canvas, unlike a
@@ -486,8 +488,8 @@ class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
         setState(() {
           _shader = p.fragmentShader();
           _paint = p.fragmentShader();
+          _settle(_route?.status ?? AnimationStatus.completed);
         });
-        _settle(_route?.status ?? AnimationStatus.completed);
       }, onError: (Object _) {});
     }
   }
@@ -498,10 +500,10 @@ class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
     final a = ModalRoute.of(context)?.animation;
     if (a != _route) {
       _route
-        ?..removeStatusListener(_settle)
+        ?..removeStatusListener(_onStatus)
         ..removeListener(_tick);
       _route = a
-        ?..addStatusListener(_settle)
+        ?..addStatusListener(_onStatus)
         ..addListener(_tick);
       _settle(a?.status ?? AnimationStatus.completed);
     }
@@ -513,22 +515,23 @@ class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
     if (_still != null && _route?.status == AnimationStatus.forward) _snap();
   }
 
+  void _onStatus(AnimationStatus s) {
+    if (mounted) setState(() => _settle(s));
+  }
+
   void _settle(AnimationStatus s) {
     switch (s) {
       case AnimationStatus.completed:
-        // Arrived: the live bulge takes over where the still left off.
-        if (_still != null) {
-          _ease.value = 1;
-          _drop();
-        } else {
-          _ease.forward();
-        }
+        // Arrived: the live bulge takes over where the still left off (at
+        // full strength: an ease-in would show the bulge growing again).
+        _live = true;
+        _drop();
       case AnimationStatus.forward:
-        _ease.value = 0;
+        _live = false;
         // Sliding in: once the screen has drawn, bulge a picture of it.
         WidgetsBinding.instance.addPostFrameCallback((_) => _snap());
       case AnimationStatus.reverse:
-        _ease.value = 0;
+        _live = false;
         _snap();
       case AnimationStatus.dismissed:
         break;
@@ -552,16 +555,15 @@ class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
   void _drop() {
     final old = _still;
     if (old == null) return;
-    setState(() => _still = null);
+    _still = null; // (called from _settle, inside a rebuild)
     WidgetsBinding.instance.addPostFrameCallback((_) => old.dispose());
   }
 
   @override
   void dispose() {
     _route
-      ?..removeStatusListener(_settle)
+      ?..removeStatusListener(_onStatus)
       ..removeListener(_tick);
-    _ease.dispose();
     _shader?.dispose();
     _paint?.dispose();
     _still?.dispose();
@@ -588,18 +590,13 @@ class _CrtWarpState extends State<CrtWarp> with SingleTickerProviderStateMixin {
         ],
       );
     }
-    return AnimatedBuilder(
-      animation: _ease,
-      builder: (context, _) {
-        final k = CrtWarp.amount * Curves.easeOut.transform(_ease.value);
-        if (k <= 0) return child;
-        shader.setFloat(2, k);
-        return _WarpHits(
-          k: k,
-          // A fresh filter each time: the engine snapshots the uniforms.
-          child: ImageFiltered(imageFilter: ui.ImageFilter.shader(shader), child: child),
-        );
-      },
+    if (!_live) return child;
+    const k = CrtWarp.amount;
+    shader.setFloat(2, k);
+    return _WarpHits(
+      k: k,
+      // A fresh filter each build: the engine snapshots the uniforms.
+      child: ImageFiltered(imageFilter: ui.ImageFilter.shader(shader), child: child),
     );
   }
 }

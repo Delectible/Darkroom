@@ -1436,3 +1436,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   frame while sliding in) through the same shader as a paint
   (`_StillBulge`), and the live filter takes over at full strength on
   landing (no ease-in pop).
+- [x] **57.74** → 2.0.3 · Opening a file in Darkroom 98: no black flash (the tube's
+  black is a ring, `_TubeRim`, not a fill, so the explorer shows through while
+  the window zooms open; a see-through screen's tube and glass fade in with
+  its route instead of doubling) and no second bulge (the live filter comes
+  on at full strength, no ease-in).

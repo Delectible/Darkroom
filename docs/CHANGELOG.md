@@ -1422,3 +1422,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   viewfinder now; `jpeg_pixel.frag` counts pixels along the long edge (toy
   cam's were 4/3 too small). `viewfinder_match_test` (`SRC=photo
   SHOTS=dir`: before | viewfinder | photo); catalog test ties the sizes.
+- [x] **57.72** → 2.0.2 · CRT fills the monitor: the bulge is normalised per axis
+  (`crt_bulge.frag`, `CrtWarp.sourceOf`) so each edge's middle stays on the
+  edge and only the corners bow in; the glass (rim falloff, now thinner) is
+  drawn over the bulged picture in the opening's shape (radius 26), so no
+  square corner pokes out. Taller chin (`ExplorerMonitor.chin`, gesture
+  strip + 16), bigger knobs, badge / knobs / lamp kept `chinInset` in from
+  the phone's rounded corners.

@@ -29,14 +29,23 @@ class ExplorerMonitor extends ConsumerStatefulWidget {
 
   static const bezel = 12.0;
 
+  /// The chin's least height (portrait).
+  static const chin = 36.0;
+
+  /// How far the chin's badge, knobs and lamp keep in from the sides: clear
+  /// of a phone's rounded screen corners.
+  static const chinInset = 34.0;
+
   static EdgeInsets bezelOf(BuildContext context) {
     final mq = MediaQuery.of(context);
     if (mq.size.aspectRatio > 1) return const EdgeInsets.symmetric(horizontal: 24, vertical: 4);
+    // The chin holds the badge, knobs and lamp: tall enough to use them,
+    // clear of the gesture strip.
     return EdgeInsets.fromLTRB(
       bezel,
       math.max(bezel, mq.padding.top + 4),
       bezel,
-      math.max(bezel + 4, mq.padding.bottom + 4),
+      math.max(chin, mq.padding.bottom + 16),
     );
   }
 
@@ -97,7 +106,7 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
     final finish = MonitorFinish.byName(ref.watch(win98MonitorProvider));
     final d = ref.watch(win98DisplayProvider);
     final land = MediaQuery.sizeOf(context).aspectRatio > 1;
-    final radius = d.crt ? 22.0 : 6.0;
+    final radius = d.crt ? CrtGlassPainter.radius : 6.0;
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // status-bar icons that read on the plastic
       value: finish.darkIcons ? SystemUiOverlayStyle.dark : SystemUiOverlayStyle.light,
@@ -114,52 +123,70 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
                   padding: bezel,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(radius),
-                    child: RepaintBoundary(
-                      // A CRT's picture bulges (the scan lines with it).
-                      child: CrtWarp(
-                        on: d.crt,
-                        child: Win98Glass(
-                          screen: true,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              AnimatedBuilder(
-                                animation: _degauss,
-                                // the insets are the monitor's; inside it is all screen
-                                child: MediaQuery.removePadding(
-                                  context: context,
-                                  removeTop: true,
-                                  removeBottom: true,
-                                  removeLeft: true,
-                                  removeRight: true,
-                                  child: widget.child,
-                                ),
-                                // Always a Transform (identity at rest): swapping it
-                                // in and out would rebuild the screen's state.
-                                builder: (context, child) => Transform(
-                                  alignment: Alignment.center,
-                                  transform: _degauss.isAnimating
-                                      ? _wobble(_degauss.value)
-                                      : Matrix4.identity(),
-                                  child: child,
-                                ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        RepaintBoundary(
+                          // A CRT's picture bulges (the scan lines with it).
+                          child: CrtWarp(
+                            on: d.crt,
+                            child: Win98Glass(
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  AnimatedBuilder(
+                                    animation: _degauss,
+                                    // the insets are the monitor's; inside it is all screen
+                                    child: MediaQuery.removePadding(
+                                      context: context,
+                                      removeTop: true,
+                                      removeBottom: true,
+                                      removeLeft: true,
+                                      removeRight: true,
+                                      child: widget.child,
+                                    ),
+                                    // Always a Transform (identity at rest): swapping it
+                                    // in and out would rebuild the screen's state.
+                                    builder: (context, child) => Transform(
+                                      alignment: Alignment.center,
+                                      transform: _degauss.isAnimating
+                                          ? _wobble(_degauss.value)
+                                          : Matrix4.identity(),
+                                      child: child,
+                                    ),
+                                  ),
+                                  IgnorePointer(
+                                    child: AnimatedBuilder(
+                                      animation: _degauss,
+                                      builder: (context, _) => _degauss.isAnimating
+                                          ? CustomPaint(painter: _RainbowPainter(_degauss.value))
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ),
+                                  if (_osd case (final label, final v))
+                                    IgnorePointer(
+                                      child: _Osd(label: label, value: v),
+                                    ),
+                                ],
                               ),
-                              IgnorePointer(
-                                child: AnimatedBuilder(
-                                  animation: _degauss,
-                                  builder: (context, _) => _degauss.isAnimating
-                                      ? CustomPaint(painter: _RainbowPainter(_degauss.value))
-                                      : const SizedBox.shrink(),
-                                ),
-                              ),
-                              if (_osd case (final label, final v))
-                                IgnorePointer(
-                                  child: _Osd(label: label, value: v),
-                                ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
+                        // The glass over it, shaped like the opening: its dark
+                        // rim covers the bulged picture's corners.
+                        if (d.crt)
+                          IgnorePointer(
+                            child: RepaintBoundary(
+                              child: CustomPaint(
+                                painter: CrtGlassPainter(
+                                  pitch: d.res.scanline,
+                                  lines: false,
+                                  ratio: MediaQuery.devicePixelRatioOf(context),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -184,14 +211,14 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
       if (land) {
         c = Offset(size.width - bezel.right / 2, size.height - 34 - i * 30);
       } else {
-        final lamp = size.width - math.max(bezel.right, 12) - 14;
-        c = Offset(lamp - 24 - i * 28, size.height - bezel.bottom / 2);
+        final lamp = size.width - ExplorerMonitor.chinInset;
+        c = Offset(lamp - 30 - i * 34, size.height - bezel.bottom / 2);
       }
       out.add(Positioned(left: c.dx - w / 2, top: c.dy - h / 2, width: w, height: h, child: child));
     }
 
-    final knob = land ? 15.0 : (bezel.bottom - 6).clamp(10.0, 17.0);
-    final hitW = land ? bezel.right : 26.0, hitH = land ? 28.0 : bezel.bottom;
+    final knob = land ? 15.0 : (bezel.bottom - 14).clamp(12.0, 21.0);
+    final hitW = land ? bezel.right : 32.0, hitH = land ? 28.0 : bezel.bottom;
     for (final (i, bright) in [(0, false), (1, true)]) {
       place(
         i,
@@ -624,7 +651,8 @@ class _BezelPainter extends CustomPainter {
     // Power lamp on the chin (right) and the maker's badge (left).
     final t = insets.bottom;
     final y = size.height - t / 2;
-    final lamp = Offset(size.width - math.max(insets.right, 12) - 14, y);
+    final land = size.aspectRatio > 1;
+    final lamp = Offset(size.width - (land ? math.max(insets.right, 12) + 14 : ExplorerMonitor.chinInset), y);
     canvas.drawCircle(lamp, 3.2, Paint()..color = const Color(0xFF3C6E3C));
     canvas.drawCircle(lamp, 2.4, Paint()..color = const Color(0xFF7CFF6B));
     canvas.drawCircle(
@@ -638,11 +666,19 @@ class _BezelPainter extends CustomPainter {
     final badge = TextPainter(
       text: TextSpan(
         text: 'DARKROOM',
-        style: TextStyle(color: finish.badge, fontSize: 7.5, fontWeight: FontWeight.w800, letterSpacing: 2),
+        style: TextStyle(
+          color: finish.badge,
+          fontSize: land ? 7.5 : 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 2.4,
+        ),
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    badge.paint(canvas, Offset(math.max(insets.left, 12) + 8, y - badge.height / 2));
+    badge.paint(
+      canvas,
+      Offset(land ? math.max(insets.left, 12) + 8 : ExplorerMonitor.chinInset - 6, y - badge.height / 2),
+    );
   }
 
   @override

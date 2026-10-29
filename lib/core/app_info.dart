@@ -3,15 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.0.1';
+  static const version = '2.0.2';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'New: How it works, a quick refresher with animated moves, in Settings and Darkroom 98 Help '
-      '(and in the welcome tour). Prints now zoom up off the corkboard when you tap them. The digital '
-      'viewfinders now show the photo you will get: same pixels, same rough JPEG.';
+      'Darkroom 98\'s CRT now fills its monitor: the picture curves away under the glass at the corners, '
+      'and the monitor\'s chin is taller, so the knobs are easier to reach. Also in 2.0: How it works, '
+      'prints that zoom off the corkboard, and digital viewfinders that show the photo you will get.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

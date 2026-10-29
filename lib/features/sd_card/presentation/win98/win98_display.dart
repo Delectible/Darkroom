@@ -324,13 +324,18 @@ class _Win98GlassState extends State<Win98Glass> {
 /// The glass (all soft shapes) is drawn once per size into a half-res
 /// picture; only the lines are drawn live.
 class CrtGlassPainter extends CustomPainter {
-  const CrtGlassPainter({required this.pitch, this.screen = true, this.ratio = 1});
+  const CrtGlassPainter({required this.pitch, this.screen = true, this.lines = true, this.ratio = 1});
 
   final double pitch;
   final bool screen;
+
+  /// The scan lines (off for the glass laid over the bulged picture, which
+  /// carries its own lines).
+  final bool lines;
   final double ratio;
 
-  static const radius = 22.0;
+  /// The tube's corners: the monitor's opening has the same.
+  static const radius = 26.0;
   static ui.Image? _glass;
   static Size? _glassSize;
 
@@ -345,6 +350,7 @@ class CrtGlassPainter extends CustomPainter {
         Paint()..filterQuality = FilterQuality.medium,
       );
     }
+    if (!lines) return;
     // Scan lines: the gap between the beam's lines.
     final h = pitch * 0.38;
     final path = Path();
@@ -369,9 +375,9 @@ class CrtGlassPainter extends CustomPainter {
       face,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = short * 0.09
+        ..strokeWidth = short * 0.05
         ..color = const Color(0x8C000000)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, short * 0.04),
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, short * 0.025),
     );
     // A whisper of vignette toward the corners.
     c.drawRect(
@@ -422,7 +428,8 @@ class CrtGlassPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CrtGlassPainter old) => old.pitch != pitch || old.screen != screen || old.ratio != ratio;
+  bool shouldRepaint(CrtGlassPainter old) =>
+      old.pitch != pitch || old.screen != screen || old.lines != lines || old.ratio != ratio;
 }
 
 /// A CRT's picture bulging out of the curved glass (`shaders/crt_bulge.frag`
@@ -438,7 +445,8 @@ class CrtWarp extends StatefulWidget {
   final bool on;
   final Widget child;
 
-  /// How far it bulges: the corners pull in about this fraction.
+  /// How far it bulges (the middle of each edge stays put; the corners pull
+  /// in a few percent).
   static const amount = 0.05;
 
   static Future<ui.FragmentProgram>? _program;
@@ -449,8 +457,11 @@ class CrtWarp extends StatefulWidget {
     final a = size.width / size.height;
     final dx = p.dx / size.width - 0.5, dy = p.dy / size.height - 0.5;
     final r2 = (dx * dx * a * a + dy * dy) / (0.25 * (a * a + 1));
-    final f = 1 + k * r2;
-    return Offset((0.5 + dx * f) * size.width, (0.5 + dy * f) * size.height);
+    final f = 1 + k * r2, e = 1 / (a * a + 1);
+    return Offset(
+      (0.5 + dx * f / (1 + k * a * a * e)) * size.width,
+      (0.5 + dy * f / (1 + k * e)) * size.height,
+    );
   }
 
   @override

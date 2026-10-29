@@ -526,3 +526,44 @@ class GestureCard extends StatelessWidget {
     );
   }
 }
+
+/// Every move, in rows of three (two on narrow screens).
+class GestureGrid extends StatelessWidget {
+  const GestureGrid({super.key, this.size = 72, this.ink = Colors.white, this.muted = Colors.white70});
+
+  final double size;
+  final Color ink, muted;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, box) {
+        final columns = box.maxWidth >= 300 ? 3 : 2;
+        const moves = GestureMove.values;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var r = 0; r < moves.length; r += columns)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var c = r; c < r + columns; c++)
+                      Expanded(
+                        child: c < moves.length
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: GestureCard(move: moves[c], size: size, ink: ink, muted: muted),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}

@@ -16,6 +16,7 @@ import 'core/theme/retro_theme.dart';
 import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/camera_screen.dart';
+import 'features/help/how_it_works_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
 class DarkroomApp extends ConsumerStatefulWidget {
@@ -141,8 +142,30 @@ class _HomeState extends ConsumerState<_Home> {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 450),
       child: _tour
-          ? OnboardingScreen(key: const ValueKey('tour'), onDone: () => setState(() => _tour = false))
+          ? OnboardingScreen(key: const ValueKey('tour'), onDone: _toured)
           : const CameraScreen(key: ValueKey('camera')),
     );
+  }
+
+  /// Skipped the moves: once the camera is up, a quiet "New here?".
+  void _toured() {
+    setState(() => _tour = false);
+    final prefs = ref.read(sharedPrefsProvider);
+    if (prefs.getBool(PrefKeys.tourSkipped) != true) return;
+    unawaited(prefs.remove(PrefKeys.tourSkipped));
+    Future<void>.delayed(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 8),
+          content: const Text("New here? Here's how it works."),
+          action: SnackBarAction(
+            label: 'Show me',
+            onPressed: () => appNavigatorKey.currentState?.push(HowItWorksScreen.route()),
+          ),
+        ),
+      );
+    });
   }
 }

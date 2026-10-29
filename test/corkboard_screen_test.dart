@@ -6,9 +6,11 @@ import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/corkboard/presentation/corkboard_screen.dart';
+import 'package:darkroom/features/corkboard/presentation/print_viewer.dart';
 import 'package:darkroom/features/darkroom/application/darkroom_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -41,6 +43,17 @@ void main() {
           ? const FakeViewPadding(left: 150, bottom: 60)
           : const FakeViewPadding(top: 150, bottom: 60);
       addTearDown(tester.view.reset);
+      // The shake detector stops and starts as the viewer covers the board.
+      for (final c in ['user_accel', 'accelerometer']) {
+        tester.binding.defaultBinaryMessenger.setMockStreamHandler(
+          EventChannel('dev.fluttercommunity.plus/sensors/$c'),
+          MockStreamHandler.inline(onListen: (_, _) {}),
+        );
+      }
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel('dev.fluttercommunity.plus/sensors/method'),
+        (_) async => null,
+      );
 
       final dir = Directory.systemTemp.createTempSync('board');
       final pic = img.Image(width: 300, height: 200);
@@ -106,6 +119,31 @@ void main() {
             '$shots/corkboard_${land ? 'land' : 'port'}.png',
           ).writeAsBytes(png!.buffer.asUint8List());
         });
+      }
+      if (!land) {
+        // Tap a print: it lifts off the board into the viewer (frames saved
+        // mid-flight with SHOTS), and goes back the same way.
+        await tester.tap(find.byType(PinnedPrint).first);
+        for (var f = 0; f < 6; f++) {
+          await tester.pump(const Duration(milliseconds: 60));
+          expect(tester.takeException(), isNull);
+          if (shots != null) {
+            await tester.runAsync(() async {
+              final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+              final image = await ro.toImage(pixelRatio: 1);
+              final png = await image.toByteData(format: ui.ImageByteFormat.png);
+              await File('$shots/print_fly_$f.png').writeAsBytes(png!.buffer.asUint8List());
+            });
+          }
+        }
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.byType(PrintViewerScreen), findsOneWidget);
+        await tester.tap(find.byIcon(Icons.arrow_back).last);
+        for (var f = 0; f < 8; f++) {
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        expect(tester.takeException(), isNull);
+        expect(find.byType(PrintViewerScreen), findsNothing);
       }
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 2));

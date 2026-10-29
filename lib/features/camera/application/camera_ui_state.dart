@@ -30,6 +30,9 @@ class PrefKeys {
   static const onboarded = 'user.onboarded';
   static const userName = 'user.name';
 
+  /// Skipped the tour before its moves: the camera says "New here?" once.
+  static const tourSkipped = 'user.tourSkipped';
+
   /// The digital body's finish (the live 3D model's skins).
   static const bodyFinish = 'ui.body.finish';
 
@@ -106,6 +109,7 @@ class PrefKeys {
     explorerTree,
     onboarded,
     userName,
+    tourSkipped,
     bodyFinish,
     filmFinish,
     skinsUnlocked,

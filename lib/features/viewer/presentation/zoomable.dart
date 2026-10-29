@@ -28,6 +28,7 @@ class PhotoPager extends StatefulWidget {
     this.onDismiss,
     this.maxScale = 6,
     this.doubleTapScale = 2.5,
+    this.clip = true,
   });
 
   final PageController controller;
@@ -40,6 +41,9 @@ class PhotoPager extends StatefulWidget {
   final VoidCallback? onDismiss;
   final double maxScale;
   final double doubleTapScale;
+
+  /// Off while a page flies in from outside (the print viewer's lift).
+  final bool clip;
 
   /// How far a finger moves before it counts as a swipe (more than the
   /// usual touch slop: room for the second finger of a pinch to land).
@@ -325,6 +329,7 @@ class PhotoPagerState extends State<PhotoPager> with SingleTickerProviderStateMi
                 child: PageView.builder(
                   controller: widget.controller,
                   itemCount: widget.itemCount,
+                  clipBehavior: widget.clip ? Clip.hardEdge : Clip.none,
                   // All touch handling is ours (above).
                   physics: const NeverScrollableScrollPhysics(),
                   onPageChanged: (i) {
@@ -338,6 +343,7 @@ class PhotoPagerState extends State<PhotoPager> with SingleTickerProviderStateMi
                   },
                   // Same widgets zoomed or not (the photo isn't rebuilt).
                   itemBuilder: (context, i) => ClipRect(
+                    clipBehavior: widget.clip ? Clip.hardEdge : Clip.none,
                     child: Transform(
                       transform: i != _index
                           ? Matrix4.identity()

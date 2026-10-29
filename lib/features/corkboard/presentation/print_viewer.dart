@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/media_repository.dart';
@@ -17,28 +20,40 @@ import '../../../core/device/upright.dart';
 /// Inspecting prints on a dark light-table: swipe between them, pinch to
 /// look closer, Save copies one to the phone's photo library.
 class PrintViewerScreen extends ConsumerStatefulWidget {
-  const PrintViewerScreen({super.key, required this.items, required this.initialIndex});
+  const PrintViewerScreen({super.key, required this.items, required this.initialIndex, this.originOf});
 
   final List<MediaItem> items;
   final int initialIndex;
 
+  /// Where a print sits on the board (global), so the viewer can lift it
+  /// off and put it back there; null when it isn't on screen.
+  final Rect? Function(String id)? originOf;
+
   /// Held up in front of the corkboard: the board stays behind, dimmed.
-  static Route<void> route(List<MediaItem> items, int index) => PageRouteBuilder<void>(
-    settings: UprightApp.landscape,
-    opaque: false,
-    transitionDuration: const Duration(milliseconds: 260),
-    reverseTransitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (_, _, _) => UprightPage(
-      child: PrintViewerScreen(items: items, initialIndex: index < 0 ? 0 : index),
-    ),
-    transitionsBuilder: (context, a, _, child) => FadeTransition(
-      opacity: a,
-      child: ScaleTransition(
-        scale: Tween(begin: 0.96, end: 1.0).chain(CurveTween(curve: Curves.easeOutCubic)).animate(a),
-        child: child,
-      ),
-    ),
-  );
+  /// With [originOf], the print zooms up from its spot on the board and the
+  /// rest fades in round it (back the same way); else the page fades in.
+  static Route<void> route(List<MediaItem> items, int index, {Rect? Function(String id)? originOf}) =>
+      PageRouteBuilder<void>(
+        settings: UprightApp.landscape,
+        opaque: false,
+        transitionDuration: Duration(milliseconds: originOf == null ? 260 : 340),
+        reverseTransitionDuration: Duration(milliseconds: originOf == null ? 200 : 280),
+        pageBuilder: (_, _, _) => UprightPage(
+          child: PrintViewerScreen(items: items, initialIndex: index < 0 ? 0 : index, originOf: originOf),
+        ),
+        transitionsBuilder: (context, a, _, child) => originOf != null
+            ? child
+            : FadeTransition(
+                opacity: a,
+                child: ScaleTransition(
+                  scale: Tween(
+                    begin: 0.96,
+                    end: 1.0,
+                  ).chain(CurveTween(curve: Curves.easeOutCubic)).animate(a),
+                  child: child,
+                ),
+              ),
+      );
 
   @override
   ConsumerState<PrintViewerScreen> createState() => _PrintViewerScreenState();
@@ -50,9 +65,26 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
   late final PageController _pages = PageController(initialPage: _index);
   final _printKeys = <String, GlobalKey>{};
   bool _saving = false;
+  Animation<double>? _route;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The pager clips again once the print has landed (and stops as it
+    // leaves).
+    final route = ModalRoute.of(context)?.animation;
+    if (route == _route || widget.originOf == null) return;
+    _route?.removeStatusListener(_flown);
+    _route = route?..addStatusListener(_flown);
+  }
+
+  void _flown(AnimationStatus _) {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
+    _route?.removeStatusListener(_flown);
     _pages.dispose();
     super.dispose();
   }
@@ -186,6 +218,17 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     // gets the height.
     final mq = MediaQuery.of(context);
     final landscape = mq.size.width > mq.size.height;
+    // Lifted off the board: the print flies, everything else fades round it.
+    final route = ModalRoute.of(context)?.animation;
+    final fly = widget.originOf == null || route == null
+        ? null
+        : CurvedAnimation(parent: route, curve: Curves.easeOutCubic, reverseCurve: Curves.easeInCubic);
+    Widget faded(Widget child) => fly == null
+        ? child
+        : FadeTransition(
+            opacity: CurvedAnimation(parent: route!, curve: Curves.easeOut, reverseCurve: Curves.easeIn),
+            child: child,
+          );
     final actions = _ActionBar(
       vertical: landscape,
       onWrite: spec.isInstant ? () => _writeNote(item) : null,
@@ -201,10 +244,12 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
       body: Stack(
         children: [
           // The corkboard behind, dimmed (a little more towards the edges).
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: RadialGradient(radius: 0.9, colors: [Color(0xB3100D0B), Color(0xE6100D0B)]),
+          Positioned.fill(
+            child: faded(
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(radius: 0.9, colors: [Color(0xB3100D0B), Color(0xE6100D0B)]),
+                ),
               ),
             ),
           ),
@@ -214,39 +259,45 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                 Expanded(
                   child: Column(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(4, 4, 12, 0),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white70),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.fileName,
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
-                                  ),
-                                  Text(
-                                    '${spec.name} · ${MaterialLocalizations.of(context).formatMediumDate(item.capturedAt)}',
-                                    style: const TextStyle(color: Colors.white54, fontSize: 12),
-                                  ),
-                                ],
+                      faded(
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 4, 12, 0),
+                          child: Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                                onPressed: () => Navigator.of(context).pop(),
                               ),
-                            ),
-                            Text(
-                              '${_index + 1} / ${items.length}',
-                              style: const TextStyle(color: Colors.white54),
-                            ),
-                          ],
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.fileName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${spec.name} · ${MaterialLocalizations.of(context).formatMediumDate(item.capturedAt)}',
+                                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                '${_index + 1} / ${items.length}',
+                                style: const TextStyle(color: Colors.white54),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       Expanded(
                         child: PhotoPager(
                           controller: _pages,
+                          clip: fly == null || fly.isCompleted,
                           itemCount: items.length,
                           onPageChanged: (i) => setState(() => _index = i),
                           // A tap off the print (on the dimmed board) puts it down;
@@ -268,14 +319,16 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                             printKey: _printKeys.putIfAbsent(items[i].id, GlobalKey.new),
                             item: items[i],
                             onWrite: () => _writeNote(items[i]),
+                            fly: i == _index ? fly : null,
+                            origin: () => widget.originOf?.call(items[i].id),
                           ),
                         ),
                       ),
-                      if (!landscape) actions,
+                      if (!landscape) faded(actions),
                     ],
                   ),
                 ),
-                if (landscape) actions,
+                if (landscape) faded(actions),
               ],
             ),
           ),
@@ -286,17 +339,25 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
 }
 
 class _Print extends StatelessWidget {
-  const _Print({required this.printKey, required this.item, required this.onWrite});
+  const _Print({required this.printKey, required this.item, required this.onWrite, this.fly, this.origin});
 
   /// On the print itself (taps off it put it down: see [PhotoPager.onTap]).
   final GlobalKey printKey;
   final MediaItem item;
   final VoidCallback onWrite;
 
+  /// The route's progress, while this print is lifted off the board (and
+  /// put back) from [origin].
+  final Animation<double>? fly;
+  final Rect? Function()? origin;
+
   Widget _held(Widget print) => Center(
     child: Padding(
       padding: const EdgeInsets.all(22),
-      child: KeyedSubtree(key: printKey, child: print),
+      child: KeyedSubtree(
+        key: printKey,
+        child: fly == null ? print : _FlyFrom(progress: fly!, origin: origin!, child: print),
+      ),
     ),
   );
 
@@ -435,4 +496,104 @@ class _RoundAction extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Paints its child moved and scaled from [origin] (a global rect, e.g. the
+/// print on the board) to where it's laid out, by [progress]. Read at paint
+/// time, so it follows a board that scrolled meanwhile; worked out in local
+/// coordinates, so it holds while the page is laid out turned.
+class _FlyFrom extends SingleChildRenderObjectWidget {
+  const _FlyFrom({required this.progress, required this.origin, required super.child});
+
+  final Animation<double> progress;
+  final Rect? Function() origin;
+
+  @override
+  _RenderFlyFrom createRenderObject(BuildContext context) => _RenderFlyFrom(progress, origin);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderFlyFrom renderObject) => renderObject
+    ..progress = progress
+    ..origin = origin;
+}
+
+class _RenderFlyFrom extends RenderProxyBox {
+  _RenderFlyFrom(this._progress, this.origin);
+
+  Animation<double> _progress;
+  Rect? Function() origin;
+
+  set progress(Animation<double> v) {
+    if (v == _progress) return;
+    if (attached) _progress.removeListener(markNeedsPaint);
+    _progress = v;
+    if (attached) _progress.addListener(markNeedsPaint);
+    markNeedsPaint();
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    _progress.addListener(markNeedsPaint);
+  }
+
+  @override
+  void detach() {
+    _progress.removeListener(markNeedsPaint);
+    super.detach();
+  }
+
+  /// The board's rect in our own coordinates, or null (no fly).
+  Matrix4? _matrix() {
+    final t = _progress.value;
+    if (t >= 1 || size.isEmpty) return null;
+    final from = origin();
+    if (from == null) return null;
+    final a = globalToLocal(from.topLeft), b = globalToLocal(from.bottomRight);
+    final r = Rect.fromPoints(a, b);
+    final sx = ui.lerpDouble(r.width / size.width, 1, t)!;
+    final sy = ui.lerpDouble(r.height / size.height, 1, t)!;
+    final dx = ui.lerpDouble(r.left, 0, t)!, dy = ui.lerpDouble(r.top, 0, t)!;
+    return Matrix4.identity()
+      ..translateByDouble(dx, dy, 0, 1)
+      ..scaleByDouble(sx, sy, 1, 1);
+  }
+
+  final _transform = LayerHandle<TransformLayer>();
+  final _opacity = LayerHandle<OpacityLayer>();
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final t = _progress.value;
+    final m = t < 1 ? _matrix() : null;
+    if (m != null) {
+      _opacity.layer = null;
+      _transform.layer = context.pushTransform(
+        needsCompositing,
+        offset,
+        m,
+        super.paint,
+        oldLayer: _transform.layer,
+      );
+    } else if (t < 1 && origin() == null) {
+      // No spot on the board (scrolled off, or another print): fade instead.
+      _transform.layer = null;
+      _opacity.layer = context.pushOpacity(offset, (t * 255).round(), super.paint, oldLayer: _opacity.layer);
+    } else {
+      _transform.layer = null;
+      _opacity.layer = null;
+      super.paint(context, offset);
+    }
+  }
+
+  @override
+  void dispose() {
+    _transform.layer = null;
+    _opacity.layer = null;
+    super.dispose();
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      _progress.value >= 1 && super.hitTestChildren(result, position: position);
 }

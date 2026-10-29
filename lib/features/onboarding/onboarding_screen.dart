@@ -9,6 +9,7 @@ import '../../core/device/haptics.dart';
 import '../../core/providers.dart';
 import '../camera/application/camera_session_controller.dart';
 import '../camera/application/camera_ui_state.dart';
+import '../help/gesture_demo.dart';
 
 /// First-run tour: what the app is, how to drive it (gestures), a name for
 /// the lab to write on your prints, then every permission asked for at once
@@ -38,6 +39,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final Map<_Ask, bool> _granted = {};
 
   static const _count = 7;
+  static const _gesturesPage = 4;
 
   @override
   void dispose() {
@@ -129,7 +131,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: !last
                     ? TextButton(
                         key: const ValueKey('skip'),
-                        onPressed: () => _pages.jumpToPage(_count - 1),
+                        onPressed: () {
+                          // Skipped past the moves: the camera offers them once.
+                          if (_page < _gesturesPage) {
+                            unawaited(ref.read(sharedPrefsProvider).setBool(PrefKeys.tourSkipped, true));
+                          }
+                          _pages.jumpToPage(_count - 1);
+                        },
                         child: const Text('Skip', style: TextStyle(color: _muted)),
                       )
                     : TextButton(
@@ -187,7 +195,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         'battery, change whenever you want, and a few more cameras to choose from.\n\n'
                         'A reasonable price, once, forever. Never any ads, never any pressure.',
                   ),
-                  const _Page(icon: Icons.swipe_outlined, title: 'Getting around', child: _Gestures()),
+                  const _Page(
+                    hero: SizedBox.shrink(),
+                    title: 'Getting around',
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 14),
+                      child: GestureGrid(size: 84, ink: _ink, muted: _muted),
+                    ),
+                  ),
                   _Page(
                     icon: Icons.waving_hand_outlined,
                     title: 'What should we call you?',
@@ -367,65 +382,6 @@ class _Page extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _Gestures extends StatelessWidget {
-  const _Gestures();
-
-  @override
-  Widget build(BuildContext context) {
-    const rows = [
-      (Icons.swap_horiz, 'Swipe the camera sideways', 'Toss it aside for the other one: film or digital.'),
-      (Icons.swipe_up_outlined, 'Swipe up', 'Pick a film or a camera.'),
-      (Icons.east, 'Swipe right on film', 'Your corkboard slides in.'),
-      (Icons.west, 'Swipe left on digital', 'The 1998 computer boots up. Brace yourself.'),
-      (Icons.volume_up_outlined, 'Volume buttons', 'Take the picture, like a real shutter.'),
-      (Icons.touch_app_outlined, 'Tap a print in the darkroom', 'Watch it come up in the tray.'),
-    ];
-    return Padding(
-      padding: const EdgeInsets.only(top: 14),
-      child: Column(
-        children: [
-          for (final (icon, what, does) in rows)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 7),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1C1B20),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: _OnboardingScreenState._ink, size: 22),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          what,
-                          style: const TextStyle(
-                            color: _OnboardingScreenState._ink,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          does,
-                          style: const TextStyle(color: _OnboardingScreenState._muted, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
       ),
     );
   }

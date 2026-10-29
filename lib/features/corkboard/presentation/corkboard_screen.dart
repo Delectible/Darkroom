@@ -403,12 +403,24 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
   /// to its new order: see [_reflow]).
   Future<void> _discard(MediaItem item) => deleteMedia(ref.read(filmRepositoryProvider), item);
 
+  /// A print's rect on screen (global), if it's on the board and in view.
+  Rect? _spotOf(String id) {
+    final box = _keys[id]?.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null || !box.attached || !box.hasSize) return null;
+    final rect = Rect.fromPoints(
+      box.localToGlobal(Offset.zero),
+      box.localToGlobal(box.size.bottomRight(Offset.zero)),
+    );
+    final screen = Offset.zero & MediaQuery.sizeOf(context);
+    return rect.overlaps(screen) ? rect : null;
+  }
+
   void _open(BuildContext context, List<MediaItem> developed, MediaItem item) {
     final reels = developed.where((m) => m.isVideo).toList();
     final prints = developed.where((m) => !m.isVideo).toList();
     final route = item.isVideo
         ? ProjectorScreen.route(reels, reels.indexOf(item))
-        : PrintViewerScreen.route(prints, prints.indexOf(item));
+        : PrintViewerScreen.route(prints, prints.indexOf(item), originOf: _spotOf);
     PerfRecorder.mark(item.isVideo ? 'projector open' : 'print viewer open');
     Navigator.of(context).push(route);
   }

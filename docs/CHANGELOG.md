@@ -1403,3 +1403,13 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the last week's crash report; `core/support/support.dart`), Privacy policy
   link (same places), version under Settings, "Restore Purchases" wording.
   47.5 done.
+- [x] **57.69** → 2.0.1 · How it works (`features/help/how_it_works_screen.dart`):
+  six drawn, looping gesture demos (`gesture_demo.dart`: swipe up, right,
+  left, drag the camera, volume button, tap a print) plus three facts
+  (5 minutes, nothing in the gallery until Save, a roll a day). Top of
+  Settings, Darkroom 98 Help > How It Works..., and the tour's "Getting
+  around" page. Skipping the tour before that page leaves a one-time
+  "New here?" snackbar on the camera (`PrefKeys.tourSkipped`).
+- [x] **57.70** → 2.0.1 · Tapping a print on the corkboard lifts it off its
+  spot into the viewer (and back on close); the dim and buttons fade round
+  it (`PrintViewerScreen.route(originOf:)`, `_FlyFrom`).

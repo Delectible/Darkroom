@@ -13,6 +13,7 @@ import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys, win98ThemeProvider;
 import '../../../onboarding/onboarding_screen.dart';
+import '../../../help/how_it_works_screen.dart';
 import 'debug_menu.dart';
 import 'explorer_dialogs.dart';
 import 'explorer_panes.dart';
@@ -794,6 +795,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                   Win98MenuItem(
                                     'Tip of the Day...',
                                     onSelected: () => showTipOfTheDay(context),
+                                  ),
+                                  Win98MenuItem(
+                                    'How It Works...',
+                                    onSelected: () => Navigator.of(context).push(HowItWorksScreen.route()),
                                   ),
                                   Win98MenuItem(
                                     'Welcome Tour...',

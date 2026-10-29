@@ -13,6 +13,7 @@ import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../../core/settings/settings_repository.dart';
 import '../../../core/support/support.dart';
+import '../../help/how_it_works_screen.dart';
 import '../../../core/theme/retro_theme.dart';
 import '../../camera/application/camera_ui_state.dart';
 import '../../cameras/domain/camera_catalog.dart';
@@ -58,6 +59,21 @@ class _SettingsSheet extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 16),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.swipe_outlined, color: p.text),
+          title: Text(
+            'How it works',
+            style: TextStyle(color: p.text, fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text(
+            'The moves, and a few things worth knowing.',
+            style: TextStyle(color: p.textMuted, fontSize: 12),
+          ),
+          trailing: Icon(Icons.chevron_right, color: p.textMuted),
+          onTap: () => Navigator.of(context).push(HowItWorksScreen.route()),
+        ),
+        const SizedBox(height: 8),
         _Heading('GLOBAL', p),
         _ProRow(pro: ref.watch(proProvider)),
         ListTile(
@@ -123,7 +139,10 @@ class _SettingsSheet extends ConsumerWidget {
         _Heading('HELP', p),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('Send feedback', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
+          title: Text(
+            'Send feedback',
+            style: TextStyle(color: p.text, fontWeight: FontWeight.w700),
+          ),
           subtitle: Text(
             'Found a bug or have an idea? Opens an email to the developer.',
             style: TextStyle(color: p.textMuted, fontSize: 12),
@@ -139,7 +158,10 @@ class _SettingsSheet extends ConsumerWidget {
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text('Privacy policy', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
+          title: Text(
+            'Privacy policy',
+            style: TextStyle(color: p.text, fontWeight: FontWeight.w700),
+          ),
           subtitle: Text(
             "Nothing you shoot leaves your phone unless you share it.",
             style: TextStyle(color: p.textMuted, fontSize: 12),

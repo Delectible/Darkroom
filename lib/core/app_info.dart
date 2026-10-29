@@ -3,19 +3,27 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.0.0';
+  static const version = '2.0.1';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 2.0. Shoot on film and wait for it to develop, or go digital and transfer to '
-      'your 98 desktop. New: Send feedback and the privacy policy in Settings, a smoother start, '
-      'Darkroom 98 monitor settings and screen savers, and lots of polish.';
+      'New: How it works, a quick refresher with animated moves, in Settings and Darkroom 98 Help '
+      '(and in the welcome tour). Prints now zoom up off the corkboard when you tap them.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
-    ('2.0', ['Public release', 'Send feedback from the app', 'Privacy policy in Settings']),
+    (
+      '2.0',
+      [
+        'Public release',
+        'Send feedback from the app',
+        'Privacy policy in Settings',
+        'How it works page',
+        'Prints zoom off the board',
+      ],
+    ),
     (
       '1.9',
       [

@@ -422,7 +422,8 @@ Film Mode
   safelight (image comes up in DEV); reels turn in a developing tank; instant
   prints develop in the open. Tap one for a close-up of it developing
   (`showDarkroomCloseUp`). The print viewer is see-through: the board stays
-  behind it, dimmed.
+  behind it, dimmed. A tapped print zooms up from its spot on the board
+  and back (`originOf`, `_FlyFrom`; the pager stops clipping meanwhile).
 - Video audio: Super 8 = sound-stripe chain, camcorder = tape chain
   (`VideoProfile.super8Audio` / `camcorderAudio`).
 - **Polaroid 600** (`printStyle: instant`): square only, 8-shot packs,
@@ -746,6 +747,11 @@ UI
   with `veryHigh` (`presetFor`), so changing stock / camera only reopens the
   camera between stills and video.
 
+- How it works (`features/help/`): looping drawn gesture demos
+  (`GestureDemo`, CustomPaint, `GestureGrid`) + three facts; Settings top,
+  Darkroom 98 Help, the tour's gestures page, and a one-time "New here?"
+  snackbar after a tour skipped before that page (`PrefKeys.tourSkipped`).
+  Pages with them never settle: tests pump, not pumpAndSettle.
 - `OnboardingScreen` (features, gestures, name, permissions with reasons,
   one Allow all) shows once (`PrefKeys.onboarded`); Win98 Help > Welcome
   Tour replays it. Camera + mic are asked by opening a CameraController

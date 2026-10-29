@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
+import 'package:darkroom/features/help/how_it_works_screen.dart';
 import 'package:darkroom/features/onboarding/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -62,11 +63,40 @@ void main() {
         }
         if (page < 6) {
           await tester.tap(find.byType(FilledButton));
-          await tester.pumpAndSettle();
+          // (the moves page loops for ever: pump, don't settle)
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
         }
       }
       expect(find.text('Allow all'), findsOneWidget);
       expect(find.text('A few quick yeses'), findsOneWidget);
+    });
+  }
+
+  for (final scale in [1.0, 1.3]) {
+    testWidgets('how it works, text x$scale', (tester) async {
+      tester.view.physicalSize = const Size(1280, 2856);
+      tester.view.devicePixelRatio = 3.1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(
+        RepaintBoundary(
+          key: boundary,
+          child: const MaterialApp(debugShowCheckedModeBanner: false, home: HowItWorksScreen()),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 1500));
+      if (shots != null) {
+        await tester.runAsync(() async {
+          final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+          final image = await ro.toImage(pixelRatio: 1);
+          final png = await image.toByteData(format: ui.ImageByteFormat.png);
+          await File('$shots/how_it_works_$scale.png').writeAsBytes(png!.buffer.asUint8List());
+        });
+      }
+      expect(find.text('Tap a print'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
     });
   }
 }

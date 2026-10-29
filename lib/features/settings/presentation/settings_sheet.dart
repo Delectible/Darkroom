@@ -11,6 +11,7 @@ import '../../../core/monetization/pro.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../../core/settings/settings_repository.dart';
+import '../../../core/support/support.dart';
 import '../../../core/theme/retro_theme.dart';
 import '../../camera/application/camera_ui_state.dart';
 import '../../cameras/domain/camera_catalog.dart';
@@ -116,6 +117,32 @@ class _SettingsSheet extends ConsumerWidget {
               'The volume buttons take the picture. Turn this on to zoom with them on digital cameras instead.',
           value: global.volumeZoom,
           onChanged: (v) => unawaited(g.setVolumeZoom(v)),
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text('Send feedback', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
+          subtitle: Text(
+            'Found a bug or have an idea? Opens an email to the developer.',
+            style: TextStyle(color: p.textMuted, fontSize: 12),
+          ),
+          trailing: Icon(Icons.mail_outline, color: p.textMuted),
+          onTap: () async {
+            if (!await Support.sendFeedback() && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('No mail app found. The address (${Support.email}) is copied.')),
+              );
+            }
+          },
+        ),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text('Privacy policy', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
+          subtitle: Text(
+            "Nothing you shoot leaves your phone unless you share it.",
+            style: TextStyle(color: p.textMuted, fontSize: 12),
+          ),
+          trailing: Icon(Icons.open_in_new, color: p.textMuted),
+          onTap: () => unawaited(Support.openPrivacy()),
         ),
         const SizedBox(height: 18),
         _Heading(mode == AppMode.film ? 'FILM STOCKS' : 'CAMERAS', p),

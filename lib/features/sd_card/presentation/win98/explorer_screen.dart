@@ -8,6 +8,7 @@ import '../../../../core/audio/sfx.dart';
 
 import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/support/support.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys, win98ThemeProvider;
@@ -817,6 +818,19 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                           "you haven't opened yet.",
                                     ),
                                   ),
+                                  Win98MenuItem(
+                                    'Send Feedback...',
+                                    onSelected: () async {
+                                      if (!await Support.sendFeedback() && mounted) {
+                                        await _box(
+                                          'Send Feedback',
+                                          'No mail program was found.\n\nWrite to ${Support.email} (the address '
+                                              'is on the clipboard).',
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  Win98MenuItem('Privacy Policy', onSelected: () => Support.openPrivacy()),
                                   Win98MenuItem('Debug...', onSelected: () => showDebugMenu(context)),
                                   const Win98MenuItem.separator(),
                                   Win98MenuItem(

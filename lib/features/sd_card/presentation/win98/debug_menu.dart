@@ -13,6 +13,7 @@ import '../../../../core/device/battery.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/debug_flags.dart';
 import '../../../../core/diagnostics/develop_stats.dart';
+import '../../../../core/diagnostics/fps_meter.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
@@ -140,6 +141,15 @@ final _tools = <_Tool>[
     "Flutter's performance overlay: frame times for the UI and the GPU. Spikes over the line are dropped frames.",
     (_, ref) async => ref.read(perfOverlayProvider.notifier).toggle(),
     on: (ref) => ref.watch(perfOverlayProvider),
+  ),
+  _Tool(
+    PixelIcon.views,
+    'FPS Counter',
+    'Frames drawn per second, live, with the last 15 seconds as a chart and the slowest recent frame. Sits '
+        'bottom left, so it can run with the frame timing graphs. A still screen reads low: Flutter only draws '
+        'when something changes.',
+    (_, ref) async => ref.read(fpsMeterProvider.notifier).toggle(),
+    on: (ref) => ref.watch(fpsMeterProvider),
   ),
   _Tool(
     PixelIcon.hourglass,
@@ -454,7 +464,7 @@ class _DebugMenu extends ConsumerStatefulWidget {
 const _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Film', ['Darkroom Pro', 'Refill Film & Battery']),
-  ('Performance', ['Performance Recorder', 'Performance Report', 'Frame Timing Graphs', 'Slow Motion']),
+  ('Performance', ['Performance Recorder', 'Performance Report', 'Frame Timing Graphs', 'FPS Counter', 'Slow Motion']),
   ('Cosmetics', ['Unlock All Skins']),
   ('Diagnostics', ['Camera Log', 'Crash Reports', 'System Info', 'Test Crash']),
   ('First Run & Store', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt']),

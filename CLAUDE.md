@@ -578,7 +578,8 @@ UI
   add new tools there and name them in a `_groups` folder: Darkroom, Pro &
   Film, Performance, Cosmetics, Diagnostics, First Run & Store; a Win98
   tree with [+]/[-] folders) also has Camera Log, the tour, develop-now, frame
-  graphs (`perfOverlayProvider`), slow motion, system info, a test crash,
+  graphs (`perfOverlayProvider`, top), an FPS counter with a 15 s chart
+  (`fpsMeterProvider`, `fps_meter.dart`, bottom left: both can be on), slow motion, system info, a test crash,
   and the Performance Recorder (`core/diagnostics/perf_recorder.dart`:
   `PerfRecorder.mark('label')` tags the next frames; the report splits UI
   vs GPU time per label). Mark new heavy moments with it.

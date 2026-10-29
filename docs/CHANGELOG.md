@@ -1377,3 +1377,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   sides (its ends were drawn only within the body's width). The model's
   view now spans the whole screen (`_StageWidth` + OverflowBox in
   body_swap.dart), so the rounded ends show on the desk, at rest and mid-toss.
+- [~] **57.64** Debug > FPS Counter (`core/diagnostics/fps_meter.dart`,
+  `fpsMeterProvider`): frames drawn per second from FrameTiming, the last
+  15 s as bars (dashed line at the screen's refresh rate), slowest frame of
+  the last second. Bottom left, so it runs alongside Frame Timing Graphs.

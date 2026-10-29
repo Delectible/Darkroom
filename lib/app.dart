@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/diagnostics/debug_flags.dart';
+import 'core/diagnostics/fps_meter.dart';
 import 'core/device/upright.dart';
 import 'core/navigation.dart';
 import 'core/providers.dart';
@@ -94,11 +95,26 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       // printed labels and the sheets' layouts break.
       // The launch screen stays up (with a line of chatter) until the camera
       // is live, then fades away.
-      builder: (context, child) => LaunchCurtain(
-        isReady: _ready,
-        line: _line,
-        child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
-      ),
+      builder: (context, child) {
+        final app = LaunchCurtain(
+          isReady: _ready,
+          line: _line,
+          child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
+        );
+        if (!ref.watch(fpsMeterProvider)) return app;
+        // Debug > FPS Counter: bottom left, clear of the frame graphs (top).
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            app,
+            Positioned(
+              left: 10,
+              bottom: MediaQuery.paddingOf(context).bottom + 70,
+              child: const Directionality(textDirection: TextDirection.ltr, child: FpsMeter()),
+            ),
+          ],
+        );
+      },
     );
   }
 }

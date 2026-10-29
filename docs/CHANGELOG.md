@@ -966,8 +966,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [~] **47.1 Monetization**: built in 1.7.0 (48.x); Play product still to create
 - [ ] **47.2 Bug fixes and cleanup**
 - [ ] **47.3 Store page**: finish the listing, take new screenshots
-- [ ] **47.4 New films**
-- [ ] **47.5 In-app bug reports and feature requests** to the developer
+- [x] **47.4 New films** → 1.9.x
+- [x] **47.5 In-app bug reports and feature requests** to the developer → 2.0.0 (Send feedback)
 - [ ] **47.6 Google's publishing info**: the Play Console forms needed to
   publish (App content, production access questionnaire)
 
@@ -1388,13 +1388,18 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   Fancy graphics on, over the camera, asks once ever ("Things feeling
   slow?": Keep it fancy / Smooth it out = Fancy graphics off;
   `PrefKeys.lagAsked`). Debug > Lag Prompt shows it.
-- [~] **57.66** Store art: `tool/store/make_header.py` draws a darkroom
+- [x] **57.66** → 2.0.0 · Store art: `tool/store/make_header.py` draws a darkroom
   wall under the safelight, prints drying on a line between two nails, the
   films, an open DEV bottle (cap beside it), STOP/FIX, a tray with a print
   coming up and tongs, the single-use and floppy cameras, an SD card and a
   floppy on the desk, everything at true scale (rolls half the instant
   camera's height), a contact shadow at every foot; tagline "Photos worth waiting for." Sizes: Play
   1024x500, Apple 3840x1646 and 5244x2950 (`docs/store/`).
-- [~] **57.67** Flip phone artwork re-rendered (`tool/render/items/flip.js`):
+- [x] **57.67** → 2.0.0 · Flip phone artwork re-rendered (`tool/render/items/flip.js`):
   the screen half upright, the keypad half angled toward you (was the
   other way round).
+- [x] **57.68** → 2.0.0 · Release: Send feedback (Settings > HELP and
+  Darkroom 98 Help: an email to the developer with the version, system and
+  the last week's crash report; `core/support/support.dart`), Privacy policy
+  link (same places), version under Settings, "Restore Purchases" wording.
+  47.5 done.

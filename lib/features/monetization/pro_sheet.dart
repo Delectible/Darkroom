@@ -379,7 +379,7 @@ class _ProSheetState extends ConsumerState<_ProSheet> {
                 children: [
                   TextButton(
                     onPressed: _busy ? null : () => _run(store.restore),
-                    child: Text('Restore purchase', style: TextStyle(color: p.textMuted)),
+                    child: Text('Restore Purchases', style: TextStyle(color: p.textMuted)),
                   ),
                   const Spacer(),
                   FilledButton(

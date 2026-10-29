@@ -572,6 +572,10 @@ UI
   events for them never arrived) are the shutter
   while the camera itself is on screen; setting "Volume buttons zoom" makes
   them the zoom on digital bodies. Elsewhere they change the volume.
+- Send feedback / Privacy policy (2.0, `core/support/support.dart`): Settings
+  > HELP and Darkroom 98 Help open a mailto to `Support.email` (the owner's,
+  his choice) with the version, OS and the last week's crash report, and the
+  privacy policy (`docs/PRIVACY.md` on GitHub). Nothing is sent by the app.
 - Crash reports stay on the phone (`core/diagnostics/crash_log.dart`):
   Dart errors + Android ApplicationExitInfo; Win98 Help > Debug... >
   Crash Reports. The Debug window (`win98/debug_menu.dart`, list `_tools`;

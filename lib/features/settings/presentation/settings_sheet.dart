@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../skins/presentation/camera_shop_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/app_info.dart';
 import '../../../core/audio/sfx.dart';
 import '../../../core/device/upright.dart';
 import '../../../core/monetization/pro.dart';
@@ -118,6 +119,8 @@ class _SettingsSheet extends ConsumerWidget {
           value: global.volumeZoom,
           onChanged: (v) => unawaited(g.setVolumeZoom(v)),
         ),
+        const SizedBox(height: 18),
+        _Heading('HELP', p),
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: Text('Send feedback', style: TextStyle(color: p.text, fontWeight: FontWeight.w700)),
@@ -143,6 +146,10 @@ class _SettingsSheet extends ConsumerWidget {
           ),
           trailing: Icon(Icons.open_in_new, color: p.textMuted),
           onTap: () => unawaited(Support.openPrivacy()),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text('Darkroom ${AppInfo.version}', style: TextStyle(color: p.textMuted, fontSize: 11)),
         ),
         const SizedBox(height: 18),
         _Heading(mode == AppMode.film ? 'FILM STOCKS' : 'CAMERAS', p),

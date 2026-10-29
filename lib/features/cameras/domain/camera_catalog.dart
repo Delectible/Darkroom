@@ -231,6 +231,8 @@ class CameraCatalog {
       chromaNoise: 0.06,
       bloom: 0.12,
       smear: 0.1,
+      pixels: 640,
+      artifact: 0.3,
     ),
     quality: CaptureQuality.low,
     output: OutputProfile(maxLongEdge: 640, jpegQuality: 88, lowResLongEdge: 640, lowResJpegQuality: 60),
@@ -424,7 +426,8 @@ class CameraCatalog {
       chromaNoise: 0.14,
       bloom: 0.2,
       smear: 0.15,
-      lowRes: 320,
+      pixels: 320,
+      artifact: 0.35,
     ),
     quality: CaptureQuality.low,
     output: OutputProfile(

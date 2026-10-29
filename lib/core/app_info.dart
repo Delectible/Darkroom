@@ -10,7 +10,8 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'New: How it works, a quick refresher with animated moves, in Settings and Darkroom 98 Help '
-      '(and in the welcome tour). Prints now zoom up off the corkboard when you tap them.';
+      '(and in the welcome tour). Prints now zoom up off the corkboard when you tap them. The digital '
+      'viewfinders now show the photo you will get: same pixels, same rough JPEG.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -22,6 +23,7 @@ class AppInfo {
         'Privacy policy in Settings',
         'How it works page',
         'Prints zoom off the board',
+        'Honest digital viewfinders',
       ],
     ),
     (

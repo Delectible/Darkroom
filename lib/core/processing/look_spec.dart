@@ -61,6 +61,7 @@ class LookSpec {
     this.jitter = 0,
     this.tracking = 0,
     this.lines = 240,
+    this.pixels = 0,
   });
 
   final ShaderKind kind;
@@ -100,8 +101,8 @@ class LookSpec {
   final double smear;
 
   // JPEG / flip phone
-  /// Number of (fat) pixels across the frame width, e.g. 240 for a VGA-era
-  /// phone sensor shown at 1/3 resolution.
+  /// Number of (fat) pixels along the frame's long edge: the saved photo's
+  /// `OutputProfile.lowResLongEdge`.
   final double lowRes;
   final double posterize;
   final double artifact;
@@ -109,6 +110,11 @@ class LookSpec {
   /// Ordered (4x4 Bayer) dithering before [posterize], 0..1: the Game Boy
   /// Camera's way of getting gradients out of a few levels.
   final double dither;
+
+  /// CCD bodies that save a small photo: its long edge in pixels (the
+  /// catalog's `OutputProfile.lowResLongEdge`), so the viewfinder draws at
+  /// that size, with [artifact] standing in for its JPEG. 0 = full size.
+  final double pixels;
 
   // VHS
   final double scanline;
@@ -214,10 +220,9 @@ class LookSpec {
   /// Shader-specific uniforms that follow the common block (index 29+).
   List<double> extraUniforms() => switch (kind) {
     ShaderKind.film => const [],
-    ShaderKind.ccd => [sharpen, chromaNoise, bloom, smear],
-    // Positive sharpen only: the flip phone's negative one is its soft lens
-    // (stills only).
-    ShaderKind.jpegPixel => [lowRes, posterize, artifact, dither, math.max(0, sharpen)],
+    ShaderKind.ccd => [sharpen, chromaNoise, bloom, smear, pixels, artifact],
+    // Negative sharpen = the flip phone's soft lens, in the viewfinder too.
+    ShaderKind.jpegPixel => [lowRes, posterize, artifact, dither, sharpen],
     ShaderKind.vhs => [scanline, bleed, jitter, tracking, lines],
   };
 }

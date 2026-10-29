@@ -1413,3 +1413,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **57.70** → 2.0.1 · Tapping a print on the corkboard lifts it off its
   spot into the viewer (and back on close); the dim and buttons fade round
   it (`PrintViewerScreen.route(originOf:)`, `_FlyFrom`).
+- [x] **57.71** → 2.0.1 · Digital viewfinders show the saved photo: the CCD shader
+  draws at the photo's size (`LookSpec.pixels` = `lowResLongEdge`: Floppy
+  Cam 640, Webcam 320) with a JPEG stand-in (4:2:0 colour, 8x8 blocks,
+  noise damped like the real encode); the flip phone's soft lens is in its
+  viewfinder now; `jpeg_pixel.frag` counts pixels along the long edge (toy
+  cam's were 4/3 too small). `viewfinder_match_test` (`SRC=photo
+  SHOTS=dir`: before | viewfinder | photo); catalog test ties the sizes.

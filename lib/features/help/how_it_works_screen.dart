@@ -36,7 +36,7 @@ class HowItWorksScreen extends StatelessWidget {
             _Fact(
               icon: Icons.hourglass_bottom,
               title: 'Prints take about 5 minutes',
-              body: 'They develop in the darkroom, then get pinned to the corkboard. Go make a coffee.',
+              body: 'They develop in the darkroom, then get pinned to the corkboard. Go make a coffee while you wait.',
             ),
             _Fact(
               icon: Icons.photo_library_outlined,

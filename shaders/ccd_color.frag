@@ -28,6 +28,8 @@ uniform float uSharpen;      // 29
 uniform float uChromaNoise;  // 30
 uniform float uBloom;        // 31
 uniform float uSmear;        // 32  vertical CCD smear from bright lights
+uniform float uPixels;       // 33  long edge of the saved photo in pixels, 0 = full res
+uniform float uArtifact;     // 34  its JPEG's blockiness (cheap stand-in for the real encode)
 
 uniform sampler2D uTexture;
 
@@ -67,15 +69,41 @@ vec3 grade(vec3 rgb, vec2 cropUv) {
   return tone(clamp(c, 0.0, 1.0));
 }
 
+vec3 rgb2ycc(vec3 c) {
+  float y = dot(c, vec3(0.299, 0.587, 0.114));
+  return vec3(y, (c.b - y) * 0.564, (c.r - y) * 0.713);
+}
+
+vec3 ycc2rgb(vec3 y) {
+  return vec3(y.x + 1.403 * y.z, y.x - 0.344 * y.y - 0.714 * y.z, y.x + 1.773 * y.y);
+}
+
+vec2 cropOf(vec2 p) {
+  return (p / uSize - uCrop.xy) / max(uCrop.zw, vec2(1e-4));
+}
+
 void main() {
   vec2 frag = FlutterFragCoord().xy;
-  vec2 uv = sampleUv(frag);
-  vec2 cropUv = (frag / uSize - uCrop.xy) / max(uCrop.zw, vec2(1e-4));
-  float scale = max(1.0, (uSize.x * uCrop.z) / 1080.0);
+  // A small saved photo (uPixels): draw it at its own pixel size, on a grid
+  // anchored to the visible crop, so the viewfinder shows what the file is.
+  vec2 visible = uSize * uCrop.zw;
+  float px = uPixels > 0.0 ? max(1.0, max(visible.x, visible.y) / uPixels) : 0.0;
+  vec2 origin = uCrop.xy * uSize;
+  vec2 cell = floor((frag - origin) / max(px, 1.0));
+  vec2 at = px > 0.0 ? origin + (cell + 0.5) * px : frag;
+  vec2 uv = sampleUv(at);
+  vec2 cropUv = cropOf(at);
+  float scale = px > 0.0 ? px : max(1.0, visible.x / 1080.0);
   vec2 texel = scale / uSize;
 
   // Unsharp mask (4-tap cross) => the bright/dark halos of in-camera sharpening.
   vec3 c0 = texture(uTexture, uv).rgb;
+  if (px > 1.5) {
+    // The pixel's whole area (the still is shrunk by averaging).
+    vec2 q = vec2(px * 0.25) / uSize;
+    c0 = (c0 + texture(uTexture, uv + vec2(q.x, q.y)).rgb + texture(uTexture, uv + vec2(-q.x, q.y)).rgb +
+          texture(uTexture, uv + vec2(q.x, -q.y)).rgb + texture(uTexture, uv - q).rgb) * 0.2;
+  }
   vec3 n4 = texture(uTexture, uv + vec2(texel.x, 0.0)).rgb +
             texture(uTexture, uv - vec2(texel.x, 0.0)).rgb +
             texture(uTexture, uv + vec2(0.0, texel.y)).rgb +
@@ -99,7 +127,7 @@ void main() {
     float sm = 0.0;
     for (int i = 0; i < 12; i++) {
       float fy = (float(i) + 0.5) / 12.0;
-      vec2 p = vec2(frag.x, (uCrop.y + uCrop.w * fy) * uSize.y);
+      vec2 p = vec2(at.x, (uCrop.y + uCrop.w * fy) * uSize.y);
       vec3 v = texture(uTexture, sampleUv(p)).rgb * uExposure;
       sm += max(0.0, dot(v, kLuma) - 0.92);
     }
@@ -108,12 +136,32 @@ void main() {
 
   // Chroma noise concentrated in the shadows, refreshed at sensor frame rate.
   float t = floor(uTime * 30.0);
-  vec2 cell = floor(frag / (scale * max(uGrainSize, 1.0))) + vec2(t * 3.1, t * 5.7);
-  vec3 nc = vec3(hash12(cell), hash12(cell + 7.7), hash12(cell + 13.3)) * 2.0 - 1.0;
+  vec2 nCell = floor(at / (scale * max(uGrainSize, 1.0))) + vec2(t * 3.1, t * 5.7);
+  vec3 nc = vec3(hash12(nCell), hash12(nCell + 7.7), hash12(nCell + 13.3)) * 2.0 - 1.0;
   float l = dot(c, kLuma);
-  c += nc * uChromaNoise * (1.0 - l) * (1.0 - l);
-  float ln = hash12(cell + 31.0) * 2.0 - 1.0;
-  c += ln * uGrainAmount * (0.35 + 2.6 * l * (1.0 - l));
+  // (a rough JPEG smooths most of the noise away)
+  float keep = 1.0 - min(uArtifact * 2.0, 0.75) * step(0.5, px);
+  c += nc * uChromaNoise * keep * (1.0 - l) * (1.0 - l);
+  float ln = hash12(nCell + 31.0) * 2.0 - 1.0;
+  c += ln * uGrainAmount * keep * (0.35 + 2.6 * l * (1.0 - l));
+
+  // The saved JPEG: 4:2:0 colour (one per 2x2 pixels), 8x8 blocks pulled
+  // towards their mean where flat, faint ringing and seams where busy.
+  if (px > 0.0 && uArtifact > 0.0) {
+    c = clamp(c, 0.0, 1.0);
+    vec3 ycc = rgb2ycc(c);
+    vec2 cc = origin + (floor(cell / 2.0) * 2.0 + 1.0) * px;
+    ycc.yz = rgb2ycc(grade(texture(uTexture, sampleUv(cc)).rgb, cropOf(cc))).yz;
+    vec2 bc = origin + (floor(cell / 8.0) * 8.0 + 4.0) * px;
+    float blockY = rgb2ycc(grade(texture(uTexture, sampleUv(bc)).rgb, cropOf(bc))).x;
+    float contrast = abs(ycc.x - blockY);
+    vec2 inBlock = mod(cell, 8.0);
+    float ring = cos(inBlock.x * 4.7124) * cos(inBlock.y * 4.7124);
+    ycc.x = mix(ycc.x, blockY, uArtifact * 0.35 * (1.0 - smoothstep(0.0, 0.25, contrast)));
+    ycc.x += ring * contrast * uArtifact * 0.18;
+    ycc.x -= (step(7.0, inBlock.x) + step(7.0, inBlock.y)) * contrast * uArtifact * 0.08;
+    c = ycc2rgb(ycc);
+  }
 
   fragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
 }

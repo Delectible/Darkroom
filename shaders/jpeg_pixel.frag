@@ -24,11 +24,11 @@ uniform float uGrainSize;    // 23
 uniform float uFlash;        // 24
 uniform vec4 uCrop;          // 25-28
 // --- JPEG-specific ---
-uniform float uLowRes;       // 29  fat pixels across the visible frame width
+uniform float uLowRes;       // 29  fat pixels along the visible frame's long edge
 uniform float uPosterize;    // 30  levels per channel
 uniform float uArtifact;     // 31  0..1 block/ringing strength
 uniform float uDither;       // 32  0..1 ordered (Bayer 4x4) dither before posterize
-uniform float uEdge;         // 33  edge enhancement per fat pixel (unsharp)
+uniform float uEdge;         // 33  edge enhancement per fat pixel (unsharp; < 0 softens)
 
 uniform sampler2D uTexture;
 
@@ -83,14 +83,16 @@ void main() {
   vec2 frag = FlutterFragCoord().xy;
   // Fat-pixel grid anchored to the visible crop so the export (which really is
   // rendered at uLowRes and upscaled with nearest-neighbour) lines up.
-  float px = max(1.0, (uSize.x * uCrop.z) / max(uLowRes, 1.0));
+  // (uLowRes is the saved photo's long edge)
+  float px = max(1.0, max(uSize.x * uCrop.z, uSize.y * uCrop.w) / max(uLowRes, 1.0));
   vec2 origin = uCrop.xy * uSize;
   vec2 cell = floor((frag - origin) / px);
   vec2 cellCentre = origin + (cell + 0.5) * px;
 
   vec3 lumaSrc = texture(uTexture, toUv(cellCentre)).rgb;
-  if (uEdge > 0.0) {
-    // Edge enhancement across neighbouring fat pixels (Game Boy Camera).
+  if (uEdge != 0.0) {
+    // Edge enhancement across neighbouring fat pixels (Game Boy Camera);
+    // negative = a soft plastic lens (flip phone).
     vec3 avg = (texture(uTexture, toUv(cellCentre + vec2(px, 0.0))).rgb +
                 texture(uTexture, toUv(cellCentre - vec2(px, 0.0))).rgb +
                 texture(uTexture, toUv(cellCentre + vec2(0.0, px))).rgb +
@@ -126,7 +128,7 @@ void main() {
   // Cheap sensor noise per fat pixel, refreshed at 15 fps like the real thing.
   float t = floor(uTime * 15.0);
   float n = hash12(floor(cell / max(uGrainSize, 1.0)) + vec2(t * 3.3, t * 1.9)) * 2.0 - 1.0;
-  c += n * uGrainAmount;
+  c += n * uGrainAmount * (1.0 - min(uArtifact, 0.6)); // (the JPEG smooths most of it away)
 
   // Reduced colour depth (the banding of a 4096-colour screen).
   float levels = max(uPosterize, 2.0);

@@ -65,6 +65,16 @@ void main() {
           expect(c.look!.kind, isNot(ShaderKind.film));
           expect(FilmProfile.forStock(c.id), isNull);
         });
+        if (c.look?.kind == ShaderKind.jpegPixel) {
+          test('digital: the viewfinder\'s pixels are the saved photo\'s', () {
+            expect(c.look!.lowRes, c.output.lowResLongEdge?.toDouble());
+          });
+        }
+        if (c.look?.kind == ShaderKind.ccd) {
+          test('digital: the viewfinder draws at the saved photo\'s size', () {
+            expect(c.look!.pixels, (c.output.lowResLongEdge ?? 0).toDouble());
+          });
+        }
         test('digital: stills only use plain prints', () => expect(c.printStyle, PrintStyle.print));
         test('digital: zoom is set and sane', () {
           expect(c.zoom, isNotNull, reason: 'every digital body has zoom buttons');

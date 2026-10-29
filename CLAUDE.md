@@ -779,7 +779,9 @@ UI
 ## Backlog
 
 1. Tidier camcorder viewfinder in its artwork.
-2. Digital camera looks: tune against reference photos when the owner sends them
+2. (The viewfinder must match the saved photo: CCD bodies that save small
+   set `LookSpec.pixels`, jpegPixel `lowRes` = the long edge; checked by
+   `viewfinder_match_test`, `SRC=photo SHOTS=dir`.) Digital camera looks: tune against reference photos when the owner sends them
    (1999 Floppy Cam done in 1.6.8, 2003 CCD Compact in 1.6.10, Y2K Flip Phone in
    1.6.14: 480 px square, soft lens via negative `sharpen`, 16 levels; Toy Pixel Cam (1.9.7) after the
    Game Boy Camera: 160 px, edge enhancement, 4x4 Bayer `dither`; `CAMERA=id dart run tool/look_preview.dart

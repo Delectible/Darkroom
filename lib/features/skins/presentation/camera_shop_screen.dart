@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/sfx.dart';
 import '../../../core/device/haptics.dart';
+import '../../../core/device/upright.dart';
 import '../../../core/skins/camera_skins.dart';
 import '../../cameras/domain/camera_spec.dart';
 import 'skin_camera_painter.dart';
@@ -18,9 +19,11 @@ import 'skin_camera_painter.dart';
 /// along you are.
 Future<void> showCameraShop(BuildContext context, {AppMode? mode}) => Navigator.of(context).push(
   PageRouteBuilder<void>(
+    // turns with the phone (the cabinet beside the counter, sideways)
+    settings: UprightApp.landscape,
     transitionDuration: const Duration(milliseconds: 320),
     reverseTransitionDuration: const Duration(milliseconds: 240),
-    pageBuilder: (_, _, _) => CameraShopScreen(initialMode: mode ?? AppMode.film),
+    pageBuilder: (_, _, _) => UprightPage(child: CameraShopScreen(initialMode: mode ?? AppMode.film)),
     transitionsBuilder: (_, a, _, child) => FadeTransition(
       opacity: CurvedAnimation(parent: a, curve: Curves.easeOut),
       child: child,
@@ -82,40 +85,74 @@ class _CameraShopScreenState extends ConsumerState<CameraShopScreen> {
         children: [
           const RepaintBoundary(child: CustomPaint(painter: _Backdrop())),
           SafeArea(
-            child: Column(
-              children: [
-                _TopBar(onClose: () => Navigator.of(context).pop()),
-                const _Sign(),
-                const SizedBox(height: 12),
-                _ModeTags(mode: _mode, onPick: _setMode),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: _Cabinet(
-                    top: _Display(skin: skin, locked: !has),
-                    shelf: _Case(
-                      skins: _skins,
-                      looking: _looking,
-                      wearing: wearing,
-                      owns: owned.owns,
-                      onLook: _look,
-                    ),
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final cabinet = _Cabinet(
+                  top: _Display(skin: skin, locked: !has),
+                  shelf: _Case(
+                    skins: _skins,
+                    looking: _looking,
+                    wearing: wearing,
+                    owns: owned.owns,
+                    onLook: _look,
                   ),
-                ),
-                const SizedBox(height: 10),
-                _Caption(skin: skin, has: has, progress: progress),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                  child: _BrassButton(
-                    label: inUse
-                        ? 'ON YOUR CAMERA'
-                        : has
-                        ? 'PUT IT ON'
-                        : 'LOCKED',
-                    enabled: has && !inUse,
-                    onTap: () => unawaited(_use(skin)),
-                  ),
-                ),
-              ],
+                );
+                final button = _BrassButton(
+                  label: inUse
+                      ? 'ON YOUR CAMERA'
+                      : has
+                      ? 'PUT IT ON'
+                      : 'LOCKED',
+                  enabled: has && !inUse,
+                  onTap: () => unawaited(_use(skin)),
+                );
+                if (box.maxWidth > box.maxHeight) {
+                  // Held sideways: the cabinet on the left, the sign, tags,
+                  // tag line and button beside it.
+                  return Row(
+                    children: [
+                      Expanded(flex: 3, child: cabinet),
+                      Expanded(
+                        flex: 2,
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(8, 4, 16, 12),
+                          child: Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: IconButton(
+                                  tooltip: 'Leave the shop',
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  icon: const Icon(Icons.close, color: Color(0xCCF1E6CC)),
+                                ),
+                              ),
+                              const _Sign(),
+                              const SizedBox(height: 12),
+                              _ModeTags(mode: _mode, onPick: _setMode),
+                              const SizedBox(height: 12),
+                              _Caption(skin: skin, has: has, progress: progress),
+                              Padding(padding: const EdgeInsets.fromLTRB(8, 8, 8, 0), child: button),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    _TopBar(onClose: () => Navigator.of(context).pop()),
+                    const _Sign(),
+                    const SizedBox(height: 12),
+                    _ModeTags(mode: _mode, onPick: _setMode),
+                    const SizedBox(height: 12),
+                    Expanded(child: cabinet),
+                    const SizedBox(height: 10),
+                    _Caption(skin: skin, has: has, progress: progress),
+                    Padding(padding: const EdgeInsets.fromLTRB(24, 8, 24, 16), child: button),
+                  ],
+                );
+              },
             ),
           ),
         ],

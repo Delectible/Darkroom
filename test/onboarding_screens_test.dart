@@ -73,9 +73,9 @@ void main() {
     });
   }
 
-  for (final scale in [1.0, 1.3]) {
-    testWidgets('how it works, text x$scale', (tester) async {
-      tester.view.physicalSize = const Size(1280, 2856);
+  for (final (scale, land) in [(1.0, false), (1.3, false), (1.0, true)]) {
+    testWidgets('how it works, text x$scale${land ? ', landscape' : ''}', (tester) async {
+      tester.view.physicalSize = land ? const Size(2856, 1280) : const Size(1280, 2856);
       tester.view.devicePixelRatio = 3.1;
       addTearDown(tester.view.reset);
       tester.platformDispatcher.textScaleFactorTestValue = scale;
@@ -92,7 +92,7 @@ void main() {
           final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
           final image = await ro.toImage(pixelRatio: 1);
           final png = await image.toByteData(format: ui.ImageByteFormat.png);
-          await File('$shots/how_it_works_$scale.png').writeAsBytes(png!.buffer.asUint8List());
+          await File('$shots/how_it_works_$scale${land ? '_land' : ''}.png').writeAsBytes(png!.buffer.asUint8List());
         });
       }
       expect(find.text('Tap a print'), findsOneWidget);

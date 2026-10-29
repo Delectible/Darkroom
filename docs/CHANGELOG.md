@@ -1444,3 +1444,11 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **57.75** → 2.0.3 · A print opened the first time no longer zooms up white:
   until the full photo has decoded, the viewer shows the board's small copy
   (same file and size as the board's, so already in memory).
+- [x] **57.76** → 2.0.3 · Landscape: the corkboard / Darkroom 98 no longer flash
+  upright as the app turns (MainActivity rotation animation CROSSFADE: a
+  frozen picture of the screen fades into the first landscape frame;
+  seamless and jump-cut both showed the old frame turned). Camera Shop and
+  How it works turn with the phone (`UprightApp.landscape` + `UprightPage`;
+  the shop puts the cabinet beside the counter, How it works shows the six
+  moves in one row); the Pro / limit / roll sheets scroll when held
+  sideways instead of cutting off their buttons.

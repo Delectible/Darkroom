@@ -29,6 +29,7 @@ void main() {
   for (final (name, size, dpr) in [
     ('phone', const Size(1280, 2856), 3.1),
     ('tablet', const Size(1600, 2560), 2.0),
+    ('phone_landscape', const Size(2856, 1280), 3.1),
   ]) {
     testWidgets('shop $name', (tester) async {
       tester.view.physicalSize = size;

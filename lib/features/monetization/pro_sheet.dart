@@ -20,10 +20,14 @@ Future<void> showLimitSheet(BuildContext context, Blocked why, CameraSpec spec) 
     backgroundColor: palette.body,
     builder: (_, {required landscape}) => Theme(
       data: palette.toTheme(),
-      child: _LimitSheet(why: why, spec: spec),
+      child: _fits(landscape, _LimitSheet(why: why, spec: spec)),
     ),
   );
 }
+
+/// Held sideways the panel is short: it scrolls rather than cut off its
+/// buttons.
+Widget _fits(bool landscape, Widget sheet) => landscape ? SingleChildScrollView(child: sheet) : sheet;
 
 /// What the user chose when asked to load today's roll.
 enum LoadChoice { load, pickOther }
@@ -79,7 +83,10 @@ Future<T?> _showRollSheet<T>(
     backgroundColor: palette.body,
     builder: (_, {required landscape}) => Theme(
       data: palette.toTheme(),
-      child: _RollSheet<T>(spec: spec, title: title, amount: amount, body: body, other: other, main: main),
+      child: _fits(
+        landscape,
+        _RollSheet<T>(spec: spec, title: title, amount: amount, body: body, other: other, main: main),
+      ),
     ),
   );
 }
@@ -178,7 +185,8 @@ Future<void> showProSheet(BuildContext context) {
   return showUprightSheet<void>(
     context,
     backgroundColor: palette.body,
-    builder: (_, {required landscape}) => Theme(data: palette.toTheme(), child: const _ProSheet()),
+    builder: (_, {required landscape}) =>
+        Theme(data: palette.toTheme(), child: _fits(landscape, const _ProSheet())),
   );
 }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/device/upright.dart';
 import 'gesture_demo.dart';
 
 /// A refresher for anyone who skipped the tour: the moves, drawn, and the
@@ -13,7 +14,11 @@ class HowItWorksScreen extends StatelessWidget {
   static const _muted = Color(0xFF9C978F);
   static const _accent = Color(0xFFFF5A4F);
 
-  static Route<void> route() => MaterialPageRoute<void>(builder: (_) => const HowItWorksScreen());
+  /// Turns with the phone, like the corkboard.
+  static Route<void> route() => MaterialPageRoute<void>(
+    settings: UprightApp.landscape,
+    builder: (_) => const UprightPage(child: HowItWorksScreen()),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +41,8 @@ class HowItWorksScreen extends StatelessWidget {
             _Fact(
               icon: Icons.hourglass_bottom,
               title: 'Prints take about 5 minutes',
-              body: 'They develop in the darkroom, then get pinned to the corkboard. Go make a coffee while you wait.',
+              body:
+                  'They develop in the darkroom, then get pinned to the corkboard. Go make a coffee while you wait.',
             ),
             _Fact(
               icon: Icons.photo_library_outlined,

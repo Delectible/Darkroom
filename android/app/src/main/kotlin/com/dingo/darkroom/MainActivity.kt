@@ -48,13 +48,14 @@ class MainActivity : FlutterActivity() {
         CrashCatcher.install(filesDir)
         super.onCreate(savedInstanceState)
         // The app turns its own screens (they already look landscape when
-        // Android rotates), so no rotate animation. Seamless, not jump-cut:
-        // a jump cut shows the last portrait frame turned for a frame (the
-        // page flickered upright as it landed); seamless keeps showing it
-        // as it was until the first landscape frame (full screen windows;
-        // else Android cross-fades).
+        // Android rotates), so no rotate animation. Cross-fade: Android
+        // freezes a picture of the screen as it was and fades it into the
+        // first landscape frame, which looks the same. Jump-cut and seamless
+        // both showed the last portrait frame turned for a frame or two (the
+        // page flashed upright as it landed): a Flutter surface can't redraw
+        // rotated in step with the display.
         window.attributes = window.attributes.also {
-            it.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_SEAMLESS
+            it.rotationAnimation = WindowManager.LayoutParams.ROTATION_ANIMATION_CROSSFADE
         }
         refreshRate(fast = true)
         // Android 12+ draws its own splash; fade it into the app's launch

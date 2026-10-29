@@ -9,9 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98\'s CRT now keeps its curve while the monitor slides in and out, instead of '
-      'snapping into shape once it lands. Also in 2.0: the CRT picture sits in the tube with an even '
-      'black rim, a taller monitor chin with bigger knobs, How it works, and prints that zoom off the corkboard.';
+      'Smoother landscape: the corkboard and Darkroom 98 no longer flash as they turn, and the Camera Shop, '
+      'How it works and the Pro sheet now work sideways. Darkroom 98\'s CRT keeps its curve while it slides, '
+      'opening a picture no longer flashes black, and prints no longer zoom up blank the first time.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

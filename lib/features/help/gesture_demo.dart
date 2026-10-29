@@ -527,7 +527,8 @@ class GestureCard extends StatelessWidget {
   }
 }
 
-/// Every move, in rows of three (two on narrow screens).
+/// Every move, in rows of three (two on narrow screens, one row of six on
+/// wide ones).
 class GestureGrid extends StatelessWidget {
   const GestureGrid({super.key, this.size = 72, this.ink = Colors.white, this.muted = Colors.white70});
 
@@ -538,7 +539,8 @@ class GestureGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, box) {
-        final columns = box.maxWidth >= 300 ? 3 : 2;
+        // all six in a row when there's the width (sideways)
+        final columns = box.maxWidth >= 640 ? 6 : (box.maxWidth >= 300 ? 3 : 2);
         const moves = GestureMove.values;
         return Column(
           mainAxisSize: MainAxisSize.min,

@@ -176,9 +176,10 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
   `upright_app_test`). No pop: each landscape page is wrapped in
   `UprightPage`, which lays it out turned (RotatedBox) while the app is
   still portrait and the phone is sideways, so it slides in already
-  landscape; MainActivity sets ROTATION_ANIMATION_SEAMLESS so the real
-  rotation is invisible (JUMPCUT showed the last portrait frame turned for
-  a frame: a flicker as the page landed). Turning the phone while such a page is up fades
+  landscape; MainActivity sets ROTATION_ANIMATION_CROSSFADE so the real
+  rotation is invisible (JUMPCUT and SEAMLESS both showed the last portrait
+  frame turned for a frame or two: a flash as the page landed). Camera Shop
+  and How it works are landscape pages too. Turning the phone while such a page is up fades
   it out (`UprightApp.veil`; it keeps its layout via `UprightApp.held`),
   turns the app, and fades it back in once the size settles
   (`didChangeMetrics`). Only with auto-rotate on (`AutoRotate`, channel

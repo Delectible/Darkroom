@@ -1,8 +1,8 @@
 #version 460 core
-// Darkroom 98's CRT: the picture bulging out of the curved glass. Each
-// pixel samples a little further from the centre than it sits (more toward
-// the corners), so the lines bow and the corners fall away into the black
-// round the tube (no y-flip: see the contract test).
+// Darkroom 98's CRT: the picture bulging out of the curved glass. The
+// middle is magnified a little and the edges not at all, so straight lines
+// bow outward while the picture's outline stays where it is (no y-flip:
+// see the contract test).
 #include <flutter/runtime_effect.glsl>
 
 precision mediump float;
@@ -16,16 +16,10 @@ out vec4 fragColor;
 void main() {
   vec2 uv = FlutterFragCoord().xy / uSize;
   vec2 d = uv - 0.5;
-  float a = uSize.x / uSize.y;
-  // squared distance from the centre, 1.0 at the corners
-  float r2 = (d.x * d.x * a * a + d.y * d.y) / (0.25 * (a * a + 1.0));
-  // Normalised per axis so the middle of each edge stays on the edge: the
-  // picture fills the glass and only its corners bow in.
-  float e = 1.0 / (a * a + 1.0);
-  vec2 src = 0.5 + d * (1.0 + uK * r2) / (1.0 + uK * vec2(a * a * e, e));
-  // Fade to the tube's black over a pixel at the picture's edge (no jaggies
-  // where the corners curve away).
-  vec2 inPx = min(src, 1.0 - src) * uSize;
-  float inside = clamp(min(inPx.x, inPx.y) + 0.5, 0.0, 1.0);
-  fragColor = vec4(texture(uTexture, clamp(src, 0.0, 1.0)).rgb * inside, 1.0);
+  // 0 at the centre, 1 at the edges, per axis.
+  vec2 e = 4.0 * d * d;
+  // The middle swells toward you; the edges stay put, so the picture keeps
+  // its outline (an even black rim round it) and the lines bow out.
+  vec2 src = 0.5 + d * (1.0 - uK * (1.0 - e.x) * (1.0 - e.y));
+  fragColor = texture(uTexture, clamp(src, 0.0, 1.0));
 }

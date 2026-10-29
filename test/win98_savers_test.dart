@@ -116,13 +116,17 @@ void main() {
     }
   });
 
-  test('CRT bulge: the centre stays put, the edges pull content in from further out', () {
+  test('CRT bulge: centre and outline stay put, lines in between bow out', () {
     const size = Size(388, 800);
     const k = CrtWarp.amount;
     expect(CrtWarp.sourceOf(size.center(Offset.zero), size, k), size.center(Offset.zero));
-    final corner = CrtWarp.sourceOf(Offset.zero, size, k);
-    expect(corner.dx, lessThan(0));
-    expect(corner.dy, lessThan(0));
+    // the picture's outline: corners and edges show exactly what's there
+    expect(CrtWarp.sourceOf(Offset.zero, size, k), Offset.zero);
+    expect(CrtWarp.sourceOf(const Offset(388, 400), size, k), const Offset(388, 400));
+    // between, content is drawn further out than it sits (magnified middle)
+    final q = CrtWarp.sourceOf(const Offset(97, 200), size, k);
+    expect(q.dx, greaterThan(97));
+    expect(q.dy, greaterThan(200));
     // a few dp at most where you'd tap
     final mid = CrtWarp.sourceOf(const Offset(194, 60), size, k);
     expect((mid - const Offset(194, 60)).distance, lessThan(25));

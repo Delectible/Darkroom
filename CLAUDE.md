@@ -479,11 +479,12 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   matrix + scan lines to the screen and to every menu/window/message box
   (wrap new dialog panels in it). CRT degauss button (`Sfx.w98Degauss`).
   The CRT's picture really bulges (`CrtWarp`, `shaders/crt_bulge.frag`
-  through ImageFilter.shader, `CrtWarp.amount` 0.05, normalised per axis so the
-  edges' middles stay put and only the corners bow in; hits mapped through
-  `CrtWarp.sourceOf`; the glass (`CrtGlassPainter`, radius 26 = the opening's)
-  is drawn over the bulged picture so its rim hides the corners; the portrait
-  chin is `ExplorerMonitor.chin` / gesture strip + 16, its parts `chinInset` in); Impeller only, and only once the route has arrived
+  through ImageFilter.shader, `CrtWarp.amount` 0.05: the centre magnified, the
+  edges fixed, so the picture keeps its outline; hits mapped through
+  `CrtWarp.sourceOf`; the picture sits in the tube with an even black rim,
+  `ExplorerMonitor.tubeRim`, under the glass (`CrtGlassPainter`, radius 26 =
+  the opening's); the portrait chin is `ExplorerMonitor.chin` / gesture strip
+  + 16, its parts `chinInset` in); Impeller only, and only once the route has arrived
   (a shader filter under a moving transition draws in the wrong place).
   Screen savers (`win98_savers.dart`: 3D Pipes, Starfield, 3D Text, drawn
   live): `Win98SaverWatch` round the explorer pushes one after the wait

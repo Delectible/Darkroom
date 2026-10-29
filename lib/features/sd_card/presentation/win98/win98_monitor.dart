@@ -29,6 +29,9 @@ class ExplorerMonitor extends ConsumerStatefulWidget {
 
   static const bezel = 12.0;
 
+  /// The black of the tube round a CRT's picture.
+  static const tubeRim = 6.0;
+
   /// The chin's least height (portrait).
   static const chin = 36.0;
 
@@ -126,48 +129,58 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
                     child: Stack(
                       fit: StackFit.expand,
                       children: [
-                        RepaintBoundary(
-                          // A CRT's picture bulges (the scan lines with it).
-                          child: CrtWarp(
-                            on: d.crt,
-                            child: Win98Glass(
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  AnimatedBuilder(
-                                    animation: _degauss,
-                                    // the insets are the monitor's; inside it is all screen
-                                    child: MediaQuery.removePadding(
-                                      context: context,
-                                      removeTop: true,
-                                      removeBottom: true,
-                                      removeLeft: true,
-                                      removeRight: true,
-                                      child: widget.child,
-                                    ),
-                                    // Always a Transform (identity at rest): swapping it
-                                    // in and out would rebuild the screen's state.
-                                    builder: (context, child) => Transform(
-                                      alignment: Alignment.center,
-                                      transform: _degauss.isAnimating
-                                          ? _wobble(_degauss.value)
-                                          : Matrix4.identity(),
-                                      child: child,
-                                    ),
+                        // A CRT's tube: an even black rim round the picture.
+                        if (d.crt) const ColoredBox(color: Color(0xFF060607)),
+                        Padding(
+                          padding: EdgeInsets.all(d.crt ? ExplorerMonitor.tubeRim : 0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(
+                              d.crt ? radius - ExplorerMonitor.tubeRim : radius,
+                            ),
+                            child: RepaintBoundary(
+                              // A CRT's picture bulges (the scan lines with it).
+                              child: CrtWarp(
+                                on: d.crt,
+                                child: Win98Glass(
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      AnimatedBuilder(
+                                        animation: _degauss,
+                                        // the insets are the monitor's; inside it is all screen
+                                        child: MediaQuery.removePadding(
+                                          context: context,
+                                          removeTop: true,
+                                          removeBottom: true,
+                                          removeLeft: true,
+                                          removeRight: true,
+                                          child: widget.child,
+                                        ),
+                                        // Always a Transform (identity at rest): swapping it
+                                        // in and out would rebuild the screen's state.
+                                        builder: (context, child) => Transform(
+                                          alignment: Alignment.center,
+                                          transform: _degauss.isAnimating
+                                              ? _wobble(_degauss.value)
+                                              : Matrix4.identity(),
+                                          child: child,
+                                        ),
+                                      ),
+                                      IgnorePointer(
+                                        child: AnimatedBuilder(
+                                          animation: _degauss,
+                                          builder: (context, _) => _degauss.isAnimating
+                                              ? CustomPaint(painter: _RainbowPainter(_degauss.value))
+                                              : const SizedBox.shrink(),
+                                        ),
+                                      ),
+                                      if (_osd case (final label, final v))
+                                        IgnorePointer(
+                                          child: _Osd(label: label, value: v),
+                                        ),
+                                    ],
                                   ),
-                                  IgnorePointer(
-                                    child: AnimatedBuilder(
-                                      animation: _degauss,
-                                      builder: (context, _) => _degauss.isAnimating
-                                          ? CustomPaint(painter: _RainbowPainter(_degauss.value))
-                                          : const SizedBox.shrink(),
-                                    ),
-                                  ),
-                                  if (_osd case (final label, final v))
-                                    IgnorePointer(
-                                      child: _Osd(label: label, value: v),
-                                    ),
-                                ],
+                                ),
                               ),
                             ),
                           ),

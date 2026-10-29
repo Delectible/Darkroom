@@ -445,8 +445,8 @@ class CrtWarp extends StatefulWidget {
   final bool on;
   final Widget child;
 
-  /// How far it bulges (the middle of each edge stays put; the corners pull
-  /// in a few percent).
+  /// How far it bulges: the centre is magnified by this fraction, the
+  /// edges not at all.
   static const amount = 0.05;
 
   static Future<ui.FragmentProgram>? _program;
@@ -454,15 +454,11 @@ class CrtWarp extends StatefulWidget {
   /// The pixel of content drawn at [p] on a [size] screen bulging by [k]
   /// (the shader's mapping).
   static Offset sourceOf(Offset p, Size size, double k) {
-    final a = size.width / size.height;
     final dx = p.dx / size.width - 0.5, dy = p.dy / size.height - 0.5;
-    final r2 = (dx * dx * a * a + dy * dy) / (0.25 * (a * a + 1));
-    final f = 1 + k * r2, e = 1 / (a * a + 1);
-    return Offset(
-      (0.5 + dx * f / (1 + k * a * a * e)) * size.width,
-      (0.5 + dy * f / (1 + k * e)) * size.height,
-    );
+    final f = 1 - k * (1 - 4 * dx * dx) * (1 - 4 * dy * dy);
+    return Offset((0.5 + dx * f) * size.width, (0.5 + dy * f) * size.height);
   }
+
 
   @override
   State<CrtWarp> createState() => _CrtWarpState();

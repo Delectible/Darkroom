@@ -64,7 +64,7 @@ the owner in a console / on a phone, C = Claude in the repo).
 - [ ] App Store Connect listing: name ("Darkroom: A Film Camera"; "Darkroom" and "Darkroom: Film Camera" were taken; Play stays "Darkroom"), subtitle, description, keywords,
   support + privacy URLs, screenshots (6.9" and 6.5" iPhone), age rating,
   App Privacy = "Data Not Collected". iPhone only (no iPad) to start. (O / C
-  drafts the text)
+  drafts the text) Age rating confirmed 2026-10-29.
 - [x] Info.plist: permission texts reviewed; `ITSAppUsesNonExemptEncryption`
   = false (no export paperwork). (C)
 - [~] TestFlight: internal testers, then external testers (external group in beta review, 2026-10-23) (needs a light

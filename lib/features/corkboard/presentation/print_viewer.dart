@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -27,12 +28,12 @@ class PrintViewerScreen extends ConsumerStatefulWidget {
 
   /// Where a print sits on the board (global), so the viewer can lift it
   /// off and put it back there; null when it isn't on screen.
-  final Rect? Function(String id)? originOf;
+  final PrintSpot? Function(String id)? originOf;
 
   /// Held up in front of the corkboard: the board stays behind, dimmed.
   /// With [originOf], the print zooms up from its spot on the board and the
   /// rest fades in round it (back the same way); else the page fades in.
-  static Route<void> route(List<MediaItem> items, int index, {Rect? Function(String id)? originOf}) =>
+  static Route<void> route(List<MediaItem> items, int index, {PrintSpot? Function(String id)? originOf}) =>
       PageRouteBuilder<void>(
         settings: UprightApp.landscape,
         opaque: false,
@@ -349,7 +350,7 @@ class _Print extends StatelessWidget {
   /// The route's progress, while this print is lifted off the board (and
   /// put back) from [origin].
   final Animation<double>? fly;
-  final Rect? Function()? origin;
+  final PrintSpot? Function()? origin;
 
   Widget _held(Widget print) => Center(
     child: Padding(
@@ -498,6 +499,9 @@ class _RoundAction extends StatelessWidget {
   }
 }
 
+/// Where a print hangs on the board: its untilted rect (global) and tilt.
+typedef PrintSpot = ({Rect rect, double angle});
+
 /// Paints its child moved and scaled from [origin] (a global rect, e.g. the
 /// print on the board) to where it's laid out, by [progress]. Read at paint
 /// time, so it follows a board that scrolled meanwhile; worked out in local
@@ -506,7 +510,7 @@ class _FlyFrom extends SingleChildRenderObjectWidget {
   const _FlyFrom({required this.progress, required this.origin, required super.child});
 
   final Animation<double> progress;
-  final Rect? Function() origin;
+  final PrintSpot? Function() origin;
 
   @override
   _RenderFlyFrom createRenderObject(BuildContext context) => _RenderFlyFrom(progress, origin);
@@ -521,7 +525,7 @@ class _RenderFlyFrom extends RenderProxyBox {
   _RenderFlyFrom(this._progress, this.origin);
 
   Animation<double> _progress;
-  Rect? Function() origin;
+  PrintSpot? Function() origin;
 
   set progress(Animation<double> v) {
     if (v == _progress) return;
@@ -549,14 +553,18 @@ class _RenderFlyFrom extends RenderProxyBox {
     if (t >= 1 || size.isEmpty) return null;
     final from = origin();
     if (from == null) return null;
-    final a = globalToLocal(from.topLeft), b = globalToLocal(from.bottomRight);
+    final a = globalToLocal(from.rect.topLeft), b = globalToLocal(from.rect.bottomRight);
     final r = Rect.fromPoints(a, b);
-    final sx = ui.lerpDouble(r.width / size.width, 1, t)!;
-    final sy = ui.lerpDouble(r.height / size.height, 1, t)!;
-    final dx = ui.lerpDouble(r.left, 0, t)!, dy = ui.lerpDouble(r.top, 0, t)!;
+    // One scale for both sides (the print keeps its shape), turned straight
+    // from its tilt on the board as it comes up.
+    final s0 = math.sqrt(r.width * r.height / (size.width * size.height));
+    final scale = ui.lerpDouble(s0, 1, t)!;
+    final centre = Offset.lerp(r.center, size.center(Offset.zero), t)!;
     return Matrix4.identity()
-      ..translateByDouble(dx, dy, 0, 1)
-      ..scaleByDouble(sx, sy, 1, 1);
+      ..translateByDouble(centre.dx, centre.dy, 0, 1)
+      ..rotateZ(from.angle * (1 - t))
+      ..scaleByDouble(scale, scale, 1, 1)
+      ..translateByDouble(-size.width / 2, -size.height / 2, 0, 1);
   }
 
   final _transform = LayerHandle<TransformLayer>();

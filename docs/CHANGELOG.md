@@ -1412,7 +1412,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   "New here?" snackbar on the camera (`PrefKeys.tourSkipped`).
 - [x] **57.70** → 2.0.1 · Tapping a print on the corkboard lifts it off its
   spot into the viewer (and back on close); the dim and buttons fade round
-  it (`PrintViewerScreen.route(originOf:)`, `_FlyFrom`).
+  it (`PrintViewerScreen.route(originOf:)`, `_FlyFrom`): from the print's own
+  box (`spotKey`, one scale so it keeps its shape), straightening its tilt
+  on the way up (`PinnedPrint.angleOf`) and tilting back on the way down.
 - [x] **57.71** → 2.0.1 · Digital viewfinders show the saved photo: the CCD shader
   draws at the photo's size (`LookSpec.pixels` = `lowResLongEdge`: Floppy
   Cam 640, Webcam 320) with a JPEG stand-in (4:2:0 colour, 8x8 blocks,

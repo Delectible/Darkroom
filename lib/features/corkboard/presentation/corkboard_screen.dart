@@ -403,16 +403,25 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
   /// to its new order: see [_reflow]).
   Future<void> _discard(MediaItem item) => deleteMedia(ref.read(filmRepositoryProvider), item);
 
-  /// A print's rect on screen (global), if it's on the board and in view.
-  Rect? _spotOf(String id) {
-    final box = _keys[id]?.currentContext?.findRenderObject() as RenderBox?;
+  /// Each print's own box (untilted), for the viewer's zoom.
+  final _spots = <String, GlobalKey>{};
+
+  /// Where a print hangs on screen: its untilted rect (global) and tilt, if
+  /// it's on the board and in view.
+  PrintSpot? _spotOf(String id) {
+    final box = _spots[id]?.currentContext?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached || !box.hasSize) return null;
     final rect = Rect.fromPoints(
       box.localToGlobal(Offset.zero),
       box.localToGlobal(box.size.bottomRight(Offset.zero)),
     );
-    final screen = Offset.zero & MediaQuery.sizeOf(context);
-    return rect.overlaps(screen) ? rect : null;
+    if (!rect.overlaps(Offset.zero & MediaQuery.sizeOf(context))) return null;
+    final item = _developed.where((m) => m.id == id).firstOrNull;
+    if (item == null) return null;
+    final angle = CameraCatalog.byId(item.cameraId).isInstant
+        ? PinnedInstant.angleOf(item)
+        : PinnedPrint.angleOf(item);
+    return (rect: rect, angle: angle);
   }
 
   void _open(BuildContext context, List<MediaItem> developed, MediaItem item) {
@@ -556,12 +565,14 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                               : CameraCatalog.byId(m.cameraId).isInstant
                                               ? PinnedInstant(
                                                   item: m,
+                                                  spotKey: _spots.putIfAbsent(m.id, GlobalKey.new),
                                                   onOpen: open,
                                                   onPinTap: unpin,
                                                   showPin: !falling,
                                                 )
                                               : PinnedPrint(
                                                   item: m,
+                                                  spotKey: _spots.putIfAbsent(m.id, GlobalKey.new),
                                                   onOpen: open,
                                                   onPinTap: unpin,
                                                   showPin: !falling,
@@ -1008,7 +1019,14 @@ class PinnedPrint extends StatelessWidget {
     required this.onOpen,
     this.onPinTap,
     this.showPin = true,
+    this.spotKey,
   });
+
+  /// On the print itself, untilted (the viewer zooms it up from there).
+  final GlobalKey? spotKey;
+
+  /// How far the print hangs off straight (radians), the same every time.
+  static double angleOf(MediaItem item) => (math.Random(item.id.hashCode).nextDouble() - 0.5) * 0.14;
 
   final MediaItem item;
   final VoidCallback onOpen;
@@ -1040,76 +1058,79 @@ class PinnedPrint extends StatelessWidget {
           child: Center(
             child: AspectRatio(
               aspectRatio: aspect,
-              child: Transform.rotate(
-                angle: angle,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned.fill(
-                      child: _FlipCard(
-                        back: _PrintBack(item: item),
-                        front: Container(
-                          padding: const EdgeInsets.all(7),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFFBF8F1),
-                            boxShadow: [
-                              BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(3, 5)),
-                            ],
-                          ),
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              if (thumb != null)
-                                Image.file(
-                                  File(thumb),
-                                  fit: BoxFit.cover,
-                                  cacheWidth: 420,
-                                  gaplessPlayback: true,
-                                  // Developing-paper tone until decoded, not a hole.
-                                  frameBuilder: (context, child, frame, sync) => frame == null && !sync
-                                      ? const ColoredBox(color: Color(0xFFE9E2D3))
-                                      : child,
-                                  errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
-                                ),
-                              // Glossy paper sheen.
-                              const DecoratedBox(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [Color(0x22FFFFFF), Color(0x00FFFFFF), Color(0x14000000)],
+              child: KeyedSubtree(
+                key: spotKey,
+                child: Transform.rotate(
+                  angle: angle,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned.fill(
+                        child: _FlipCard(
+                          back: _PrintBack(item: item),
+                          front: Container(
+                            padding: const EdgeInsets.all(7),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFBF8F1),
+                              boxShadow: [
+                                BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(3, 5)),
+                              ],
+                            ),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                if (thumb != null)
+                                  Image.file(
+                                    File(thumb),
+                                    fit: BoxFit.cover,
+                                    cacheWidth: 420,
+                                    gaplessPlayback: true,
+                                    // Developing-paper tone until decoded, not a hole.
+                                    frameBuilder: (context, child, frame, sync) => frame == null && !sync
+                                        ? const ColoredBox(color: Color(0xFFE9E2D3))
+                                        : child,
+                                    errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
+                                  ),
+                                // Glossy paper sheen.
+                                const DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [Color(0x22FFFFFF), Color(0x00FFFFFF), Color(0x14000000)],
+                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    // Pencilled tick on the border once it's in the library.
-                    if (item.isSaved)
-                      const Positioned(
-                        right: 3,
-                        bottom: -1,
-                        child: Text(
-                          '✓',
-                          style: TextStyle(
-                            color: Color(0xFF6D6D6D),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
+                      // Pencilled tick on the border once it's in the library.
+                      if (item.isSaved)
+                        const Positioned(
+                          right: 3,
+                          bottom: -1,
+                          child: Text(
+                            '✓',
+                            style: TextStyle(
+                              color: Color(0xFF6D6D6D),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
+                      // The pin: head centred in the top border of the print.
+                      Positioned(
+                        top: -7,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: _Pin(color: pin, visible: showPin, onTap: onPinTap),
+                        ),
                       ),
-                    // The pin: head centred in the top border of the print.
-                    Positioned(
-                      top: -7,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: _Pin(color: pin, visible: showPin, onTap: onPinTap),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1128,7 +1149,14 @@ class PinnedInstant extends StatelessWidget {
     required this.onOpen,
     this.onPinTap,
     this.showPin = true,
+    this.spotKey,
   });
+
+  /// On the print itself, untilted (the viewer zooms it up from there).
+  final GlobalKey? spotKey;
+
+  /// How far the print hangs off straight (radians), the same every time.
+  static double angleOf(MediaItem item) => (math.Random(item.id.hashCode).nextDouble() - 0.5) * 0.12;
 
   final MediaItem item;
   final VoidCallback onOpen;
@@ -1154,37 +1182,41 @@ class PinnedInstant extends StatelessWidget {
         child: Transform.translate(
           offset: Offset(dx, 0),
           child: Center(
-            child: Transform.rotate(
-              angle: angle,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  _FlipCard(
-                    back: _PrintBack(item: item, instant: true),
-                    front: InstantPrint(
-                      note: item.note,
-                      picture: thumb == null
-                          ? const ColoredBox(color: Colors.black12)
-                          : Image.file(
-                              File(thumb),
-                              fit: BoxFit.cover,
-                              cacheWidth: 420,
-                              gaplessPlayback: true,
-                              frameBuilder: (context, child, frame, sync) =>
-                                  frame == null && !sync ? const ColoredBox(color: Color(0xFFE9E2D3)) : child,
-                              errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
-                            ),
+            child: KeyedSubtree(
+              key: spotKey,
+              child: Transform.rotate(
+                angle: angle,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _FlipCard(
+                      back: _PrintBack(item: item, instant: true),
+                      front: InstantPrint(
+                        note: item.note,
+                        picture: thumb == null
+                            ? const ColoredBox(color: Colors.black12)
+                            : Image.file(
+                                File(thumb),
+                                fit: BoxFit.cover,
+                                cacheWidth: 420,
+                                gaplessPlayback: true,
+                                frameBuilder: (context, child, frame, sync) => frame == null && !sync
+                                    ? const ColoredBox(color: Color(0xFFE9E2D3))
+                                    : child,
+                                errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
+                              ),
+                      ),
                     ),
-                  ),
-                  Positioned(
-                    top: -9,
-                    left: 0,
-                    right: 0,
-                    child: Center(
-                      child: _Pin(color: pin, visible: showPin, onTap: onPinTap),
+                    Positioned(
+                      top: -9,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: _Pin(color: pin, visible: showPin, onTap: onPinTap),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

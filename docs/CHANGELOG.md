@@ -1391,8 +1391,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [~] **57.66** Store art: `tool/store/make_header.py` draws a darkroom
   wall under the safelight, prints drying on a line between two nails, the
   films, an open DEV bottle (cap beside it), STOP/FIX, a tray with a print
-  coming up and tongs, the flip phone, the floppy camera, an SD card and a
-  floppy on the desk; tagline "Photos worth waiting for." Sizes: Play
+  coming up and tongs, the single-use and floppy cameras, an SD card and a
+  floppy on the desk, everything at true scale (rolls half the instant
+  camera's height), a contact shadow at every foot; tagline "Photos worth waiting for." Sizes: Play
   1024x500, Apple 3840x1646 and 5244x2950 (`docs/store/`).
 - [~] **57.67** Flip phone artwork re-rendered (`tool/render/items/flip.js`):
   the screen half upright, the keypad half angled toward you (was the

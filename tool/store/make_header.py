@@ -361,7 +361,7 @@ def stage(OW, OH):
 
     # the drying line: tied to a nail at each end, sagging between them
     x0, x1 = 360.0, Lw - ox - 34
-    line_y = lambda x: 66 + 30 * math.sin(math.pi * (x - x0) / (x1 - x0))  # noqa: E731
+    line_y = lambda x: 58 + 28 * math.sin(math.pi * (x - x0) / (x1 - x0))  # noqa: E731
     d2 = ImageDraw.Draw(img)
     d2.line([(X(x), Y(line_y(x))) for x in np.linspace(x0, x1, 120)], fill=(200, 190, 170, 255), width=max(1, int(K(2))))
     for nx in (x0, x1):
@@ -405,48 +405,75 @@ def stage(OW, OH):
 
     base = 418.0
 
-    def shadow(x, w, y, depth=14):
-        # a soft shadow tucked under the thing, darkest right at its foot
+    def shadow(x, w, y, depth=12, foot=None):
+        # a soft shadow tucked under the thing, and a tight dark line where
+        # it actually touches the desk (the part that sells "resting on it")
         m = Image.new('L', (W, H), 0)
         md = ImageDraw.Draw(m)
-        md.ellipse([X(x) - w * 0.5, Y(y - depth), X(x) + w * 0.5, Y(y + 3)], fill=150)
-        md.ellipse([X(x) - w * 0.42, Y(y - 3), X(x) + w * 0.42, Y(y + 2)], fill=235)
-        m = m.filter(ImageFilter.GaussianBlur(K(5)))
+        md.ellipse([X(x) - w * 0.52, Y(y - depth), X(x) + w * 0.52, Y(y + 4)], fill=120)
+        m = m.filter(ImageFilter.GaussianBlur(K(6)))
+        c = Image.new('L', (W, H), 0)
+        fw = (foot or w * 0.9) / 2
+        ImageDraw.Draw(c).rounded_rectangle([X(x) - fw, Y(y) - K(3), X(x) + fw, Y(y) + K(2.5)], radius=K(2), fill=235)
+        c = c.filter(ImageFilter.GaussianBlur(K(1.6)))
+        m = Image.fromarray(np.maximum(np.array(m), np.array(c)))
         sh = Image.new('RGBA', (W, H), (0, 0, 0, 0))
         sh.putalpha(m)
         img.alpha_composite(sh)
 
     def lit(a):
+        # the room's light: a touch of the safelight's red, and the lower
+        # part of everything a little darker (the desk shades it)
         px = np.array(a, float)
         px[..., :3] = px[..., :3] * np.array([1.0, 0.86, 0.82]) + np.array([14, 0, 0])
+        ramp = np.clip((np.arange(a.height) / max(1, a.height) - 0.7) / 0.3, 0, 1) * 0.18
+        px[..., :3] *= (1 - ramp)[:, None, None]
         return Image.fromarray(px.clip(0, 255).astype(np.uint8))
+
+    def foot_width(a, foot):
+        al = np.array(a.split()[-1])
+        cols = np.where(al[max(0, foot - 2)] > 200)[0]
+        return (cols[-1] - cols[0]) if len(cols) else a.width * 0.9
 
     def stand(a, x, y=base, foot=None):
         foot = a.height if foot is None else foot
-        shadow(x, a.width, y)
-        img.alpha_composite(lit(a), (int(X(x) - a.width / 2), int(Y(y) - foot)))
+        shadow(x, a.width, y, foot=foot_width(a, foot) if foot < a.height else None)
+        img.alpha_composite(lit(a), (int(X(x) - a.width / 2), int(Y(y) - foot + K(1))))
 
-    def render(name, h, x, y=base):
+    def render(name, h, x, y=base, turn=0):
+        """A rendered thing, [h] tall from its foot to its top (true scale:
+        the instant camera ~10 cm = 120, a film canister ~5 cm = 62)."""
         a = art(name)
+        if turn:
+            a = a.rotate(turn, resample=Image.BICUBIC, expand=True)
+            a = a.crop(a.getbbox())
         f = foot_of(a)
-        s = K(h) / f  # h = the object's own height, foot to top
+        s = K(h) / f
         a = a.resize((max(1, int(a.width * s)), max(1, int(a.height * s))), Image.LANCZOS)
         stand(a, x, y, int(f * s))
 
-    render('polaroid600', 146, 120)
-    render('portra400', 132, 266)
-    render('gold200', 132, 338, base + 4)
-    # the chemistry: three bottles at the back, DEV opened, its cap beside it
-    for x, glass, text, capped, tilt in [(452, (120, 60, 20), 'DEV', False, 2), (502, (110, 56, 22), 'STOP', True, -1),
-                                         (552, (120, 60, 20), 'FIX', True, 3)]:
-        stand(bottle(int(K(42)), int(K(118)), glass, (236, 228, 210), text, capped, tilt), x, base - 32)
-    c = cap(int(K(20)))
-    stand(c, 392, base + 14)
-    stand(tray(int(K(196)), int(K(58)), (186, 66, 54), 'sea', k), 502, base + 16)
-    render('flipphone', 142, 674)
-    render('floppy99', 100, 806)
-    for im, x, y in [(flat(floppy(int(K(74))), 0.42, 12), 925, base + 18), (flat(sd_card(int(K(34))), 0.45, -24), 742, base + 20)]:
-        shadow(x, im.width, y, 6)
+    # left: the instant camera, a roll standing and one lying beside it
+    render('polaroid600', 144, 112)
+    render('portra400', 74, 246, base + 2)
+    render('gold200', 48, 304, base + 14, turn=88)
+    # the chemistry: three bottles at the back, DEV opened, its cap set
+    # down right beside it
+    bh, bw = 154, 50
+    for x, glass, text, capped, tilt in [(386, (120, 60, 20), 'DEV', False, 2), (440, (110, 56, 22), 'STOP', True, -1),
+                                         (494, (120, 60, 20), 'FIX', True, 3)]:
+        stand(bottle(int(K(bw)), int(K(bh)), glass, (236, 228, 210), text, capped, tilt), x, base - 30)
+    lid = Image.new('RGBA', (int(K(bw * 0.44)), int(K(bh * 0.11))), (0, 0, 0, 0))
+    ldr = ImageDraw.Draw(lid)
+    ldr.rounded_rectangle([0, 0, lid.width - 1, lid.height - 1], radius=K(3), fill=(24, 22, 22, 255))
+    ldr.rectangle([0, lid.height * 0.18, K(5), lid.height * 0.9], fill=(60, 58, 56, 255))
+    stand(lid, 346, base - 28)
+    stand(tray(int(K(222)), int(K(68)), (186, 66, 54), 'sea', k), 472, base + 18)
+    # right: the single-use camera, the digital camera and its media, a roll
+    render('superia400', 72, 644, base + 4)
+    render('floppy99', 100, 816)
+    render('cinestill800t', 74, 972, base - 6)
+    for im, x, y in [(flat(sd_card(int(K(36))), 0.45, -20), 718, base + 20), (flat(floppy(int(K(84))), 0.42, 10), 906, base + 22)]:
+        shadow(x, im.width, y, 4)
         img.alpha_composite(lit(im), (int(X(x) - im.width / 2), int(Y(y) - im.height)))
 
     # the name on masking tape, stuck to the wall
@@ -468,7 +495,13 @@ def stage(OW, OH):
     img.alpha_composite(tsh, (int(X(44)), int(Y(80))))
     img.alpha_composite(tape, (int(X(40)), int(Y(74))))
     ImageDraw.Draw(img).text((X(60), Y(176)), TAGLINE, font=ImageFont.truetype(FONT, int(K(32))), fill=(238, 222, 200, 230))
-    return img.convert('RGB')
+    # the finish: a soft vignette and a whisper of grain over everything
+    out = np.array(img.convert('RGB'), float)
+    yy, xx = np.mgrid[0:H, 0:W]
+    v = ((xx / W - 0.5) ** 2 * 1.2 + (yy / H - 0.45) ** 2 * 1.6)
+    out *= (1 - np.clip(v * 0.55, 0, 0.35))[..., None]
+    out += np.random.default_rng(3).normal(0, 2.2, (H, W, 1))
+    return Image.fromarray(out.clip(0, 255).astype(np.uint8))
 
 
 TAGLINE = 'Photos worth waiting for.'

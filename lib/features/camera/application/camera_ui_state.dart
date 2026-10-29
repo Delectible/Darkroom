@@ -75,6 +75,9 @@ class PrefKeys {
   /// The launch screen's last line (the next launch shows another).
   static const launchLine = 'launch.line';
 
+  /// The "Things feeling slow?" sheet was shown (it asks once, ever).
+  static const lagAsked = 'lag.asked';
+
   /// Notes from the lab waiting for their prints to develop (shot id ->
   /// note, JSON); shown with the print as it comes out.
   static const labNotes = 'lab.notes';
@@ -119,6 +122,7 @@ class PrefKeys {
     developed,
     reviewAsked,
     launchLine,
+    lagAsked,
     labNotes,
     developStats,
     galleryLinks,

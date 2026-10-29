@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/diagnostics/debug_flags.dart';
 import 'core/diagnostics/fps_meter.dart';
+import 'core/diagnostics/lag_watch.dart';
 import 'core/device/upright.dart';
 import 'core/navigation.dart';
 import 'core/providers.dart';
@@ -33,11 +34,16 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
     // Single source of truth for lifecycle: the camera session and the
     // darkroom clock both react to this provider.
     _lifecycle = AppLifecycleListener(onStateChange: (s) => ref.read(appLifecycleProvider.notifier).set(s));
+    _lag.start();
   }
+
+  /// Offers once to turn Fancy graphics off if the phone can't keep up.
+  late final _lag = LagWatch(ref);
 
   @override
   void dispose() {
     _lifecycle.dispose();
+    _lag.stop();
     super.dispose();
   }
 

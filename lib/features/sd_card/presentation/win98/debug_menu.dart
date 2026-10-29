@@ -14,6 +14,7 @@ import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/debug_flags.dart';
 import '../../../../core/diagnostics/develop_stats.dart';
 import '../../../../core/diagnostics/fps_meter.dart';
+import '../../../../core/diagnostics/lag_watch.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
@@ -150,6 +151,15 @@ final _tools = <_Tool>[
         'when something changes.',
     (_, ref) async => ref.read(fpsMeterProvider.notifier).toggle(),
     on: (ref) => ref.watch(fpsMeterProvider),
+  ),
+  _Tool(
+    PixelIcon.views,
+    'Lag Prompt',
+    'Shows the "Things feeling slow?" sheet now (normally once, only if the 3D cameras keep the screen under '
+        '20 fps for a while); Smooth it out turns Fancy graphics off.',
+    (context, ref) async {
+      if (await showLagSheet(context)) await ref.read(globalSettingsProvider.notifier).setControls3d(false);
+    },
   ),
   _Tool(
     PixelIcon.hourglass,
@@ -464,7 +474,7 @@ class _DebugMenu extends ConsumerStatefulWidget {
 const _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Film', ['Darkroom Pro', 'Refill Film & Battery']),
-  ('Performance', ['Performance Recorder', 'Performance Report', 'Frame Timing Graphs', 'FPS Counter', 'Slow Motion']),
+  ('Performance', ['Performance Recorder', 'Performance Report', 'Frame Timing Graphs', 'FPS Counter', 'Lag Prompt', 'Slow Motion']),
   ('Cosmetics', ['Unlock All Skins']),
   ('Diagnostics', ['Camera Log', 'Crash Reports', 'System Info', 'Test Crash']),
   ('First Run & Store', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt']),

@@ -1381,3 +1381,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   `fpsMeterProvider`): frames drawn per second from FrameTiming, the last
   15 s as bars (dashed line at the screen's refresh rate), slowest frame of
   the last second. Bottom left, so it runs alongside Frame Timing Graphs.
+- [~] **57.65** Lag watch (`core/diagnostics/lag_watch.dart`, started in
+  app.dart): from 20 s after launch, adds up the engine's frame timings;
+  every 10 s, a window with >= 30 drawn frames averaging over 50 ms (the
+  slower of build/raster: under 20 fps) is slow; 3 slow of the last 6 with
+  Fancy graphics on, over the camera, asks once ever ("Things feeling
+  slow?": Keep it fancy / Smooth it out = Fancy graphics off;
+  `PrefKeys.lagAsked`). Debug > Lag Prompt shows it.

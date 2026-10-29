@@ -579,7 +579,10 @@ UI
   Film, Performance, Cosmetics, Diagnostics, First Run & Store; a Win98
   tree with [+]/[-] folders) also has Camera Log, the tour, develop-now, frame
   graphs (`perfOverlayProvider`, top), an FPS counter with a 15 s chart
-  (`fpsMeterProvider`, `fps_meter.dart`, bottom left: both can be on), slow motion, system info, a test crash,
+  (`fpsMeterProvider`, `fps_meter.dart`, bottom left: both can be on), slow motion,
+  the lag prompt (`LagWatch`, `lag_watch.dart`: with Fancy graphics on,
+  frames drawn averaging over 50 ms in 3 of the last six 10 s windows ->
+  "Things feeling slow?" once ever, `PrefKeys.lagAsked`), system info, a test crash,
   and the Performance Recorder (`core/diagnostics/perf_recorder.dart`:
   `PerfRecorder.mark('label')` tags the next frames; the report splits UI
   vs GPU time per label). Mark new heavy moments with it.

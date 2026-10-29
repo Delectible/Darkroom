@@ -114,16 +114,133 @@ def print_card(kind, w, h, seed, rot):
     sh.paste((0, 0, 0, 150), (pad + 6, pad + 10, pad + w + 6, pad + h + 10))
     sh = sh.filter(ImageFilter.GaussianBlur(9))
     sh.alpha_composite(card, (pad, pad))
-    # a wooden peg at the top
+    # a wooden peg at the top, gripping the line at (cx, grip)
     d = ImageDraw.Draw(sh)
-    cx = pad + w // 2
-    d.rounded_rectangle([cx - 6, pad - 22, cx + 6, pad + 16], radius=3, fill=(196, 160, 112, 255))
-    d.rounded_rectangle([cx - 6, pad - 22, cx - 2, pad + 16], radius=2, fill=(222, 190, 140, 255))
-    d.rectangle([cx - 8, pad - 6, cx + 8, pad - 2], fill=(150, 150, 155, 255))
-    return sh.rotate(rot, resample=Image.BICUBIC, expand=True, center=(cx, pad - 20))
+    cx, grip = pad + w // 2, pad - 12
+    d.rounded_rectangle([cx - 6, grip - 12, cx + 6, pad + 16], radius=3, fill=(196, 160, 112, 255))
+    d.rounded_rectangle([cx - 6, grip - 12, cx - 2, pad + 16], radius=2, fill=(222, 190, 140, 255))
+    d.line([(cx - 6, grip), (cx + 6, grip)], fill=(120, 92, 60, 255), width=2)  # the jaw on the line
+    d.rectangle([cx - 8, pad - 4, cx + 8, pad], fill=(150, 150, 155, 255))
+    # swing it about the grip: a square canvas centred on that point
+    side = 2 * int(math.hypot(max(cx, sh.width - cx), max(grip, sh.height - grip))) + 2
+    big = Image.new('RGBA', (side, side), (0, 0, 0, 0))
+    big.alpha_composite(sh, (side // 2 - cx, side // 2 - grip))
+    return big.rotate(rot, resample=Image.BICUBIC)
 
 
-# --- the room --------------------------------------------------------------
+# --- things on the desk, drawn ---------------------------------------------
+
+LABEL = os.path.join(ROOT, 'assets', 'fonts', 'BarlowCondensed-SemiBold.ttf')
+
+
+def shaded(w, h, dark, light, hi=0.3):
+    """A cylinder's horizontal shading, dark edges, a highlight at [hi]."""
+    x = np.linspace(0, 1, w)
+    k = np.clip(np.sin(np.pi * x), 0, 1) ** 0.6 * 0.8 + 0.2
+    spec = np.exp(-((x - hi) ** 2) / 0.003) * 0.6
+    row = np.array(dark) + (np.array(light) - np.array(dark)) * k[:, None] + spec[:, None] * 255
+    return np.repeat(row[None], h, axis=0)
+
+
+def bottle(w, h, glass, label, text):
+    """A chemistry bottle: shouldered glass, black cap, a paper label."""
+    im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    body = Image.fromarray(shaded(w, h, [c * 0.35 for c in glass], glass).clip(0, 255).astype(np.uint8)).convert('RGBA')
+    mask = Image.new('L', (w, h), 0)
+    md = ImageDraw.Draw(mask)
+    neck = w * 0.34
+    md.rounded_rectangle([0, h * 0.28, w - 1, h - 1], radius=int(w * 0.12), fill=255)
+    md.polygon([(0, h * 0.34), (w / 2 - neck / 2, h * 0.16), (w / 2 + neck / 2, h * 0.16), (w - 1, h * 0.34)], fill=255)
+    md.rectangle([w / 2 - neck / 2, h * 0.08, w / 2 + neck / 2, h * 0.2], fill=255)
+    im.paste(body, (0, 0), mask)
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([w / 2 - neck / 2 - 2, 0, w / 2 + neck / 2 + 2, h * 0.11], radius=3, fill=(24, 22, 22, 255))
+    d.rectangle([w / 2 - neck / 2 - 2, h * 0.02, w / 2 - neck / 2 + 3, h * 0.1], fill=(60, 58, 56, 255))
+    # the label, a little curved by the shading under it
+    ly0, ly1 = int(h * 0.48), int(h * 0.82)
+    lab = shaded(int(w * 0.84), ly1 - ly0, [c * 0.7 for c in label], label, hi=0.35)
+    lim = Image.fromarray(lab.clip(0, 255).astype(np.uint8)).convert('RGBA')
+    ld = ImageDraw.Draw(lim)
+    f = ImageFont.truetype(LABEL, int((ly1 - ly0) * 0.5))
+    ld.text((lim.width / 2, lim.height * 0.45), text, font=f, fill=(30, 26, 24, 255), anchor='mm')
+    fs = ImageFont.truetype(LABEL, max(8, int((ly1 - ly0) * 0.18)))
+    ld.text((lim.width / 2, lim.height * 0.82), 'DARKROOM', font=fs, fill=(80, 70, 60, 255), anchor='mm')
+    im.alpha_composite(lim, (int(w * 0.08), ly0))
+    return im
+
+
+def tray(w, h, colour, print_kind):
+    """A developing tray seen from a little above: rim, the bath, a print
+    coming up in it, its front face."""
+    im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    top = h * 0.72  # the rim's depth on screen
+    inset = w * 0.06
+    rim = [(inset, 0), (w - inset, 0), (w, top), (0, top)]
+    d.polygon(rim, fill=tuple(int(c * 1.0) for c in colour) + (255,))
+    # the bath inside the rim
+    b = 5
+    bath = [(inset + b, b), (w - inset - b, b), (w - b * 1.4, top - b), (b * 1.4, top - b)]
+    d.polygon(bath, fill=(74, 52, 40, 255))
+    # the print, coming up: a pale card with the picture half there
+    pw, ph = int(w * 0.46), int(top * 0.7)
+    pic = photo(print_kind, pw, ph, 77).convert('RGBA')
+    px = np.array(pic, float)
+    px[..., :3] = px[..., :3] * 0.8 + 255 * 0.14  # coming up
+    pic = Image.fromarray(px.clip(0, 255).astype(np.uint8))
+    card = Image.new('RGBA', (pw + 8, ph + 8), (236, 232, 220, 255))
+    card.alpha_composite(pic, (4, 4))
+    # squash it into the bath's perspective
+    card = card.resize((card.width, int(card.height * 0.9)))
+    im.alpha_composite(card, (int(w / 2 - card.width / 2), int(top / 2 - card.height / 2)))
+    # liquid sheen over it
+    sheen = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    ImageDraw.Draw(sheen).polygon(bath, fill=(255, 150, 120, 46))
+    im.alpha_composite(sheen)
+    # the front face below the rim
+    face = [(0, top), (w, top), (w - 3, h), (3, h)]
+    d.polygon(face, fill=tuple(int(c * 0.72) for c in colour) + (255,))
+    d.line([(0, top), (w, top)], fill=tuple(min(255, int(c * 1.15)) for c in colour) + (255,), width=2)
+    return im
+
+
+def flat(im, squash=0.42, turn=0):
+    """Something lying on the desk: turned, then seen at a low angle."""
+    im = im.rotate(turn, resample=Image.BICUBIC, expand=True)
+    return im.resize((im.width, max(1, int(im.height * squash))), Image.LANCZOS)
+
+
+def sd_card(w):
+    h = int(w * 1.33)
+    im = Image.new('RGBA', (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    cut = w * 0.22
+    d.polygon([(0, 0), (w - cut, 0), (w, cut), (w, h), (0, h)], fill=(28, 52, 110, 255))
+    d.rectangle([w * 0.1, h * 0.36, w * 0.9, h * 0.86], fill=(232, 232, 236, 255))
+    f = ImageFont.truetype(LABEL, int(w * 0.3))
+    d.text((w / 2, h * 0.52), 'SD', font=f, fill=(28, 52, 110, 255), anchor='mm')
+    f2 = ImageFont.truetype(LABEL, int(w * 0.16))
+    d.text((w / 2, h * 0.74), '128MB', font=f2, fill=(60, 60, 70, 255), anchor='mm')
+    for i in range(6):
+        d.rectangle([w * 0.12 + i * w * 0.12, h * 0.04, w * 0.12 + i * w * 0.12 + w * 0.07, h * 0.16], fill=(200, 170, 80, 255))
+    return im
+
+
+def floppy(w):
+    im = Image.new('RGBA', (w, w), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    d.rounded_rectangle([0, 0, w - 1, w - 1], radius=int(w * 0.03), fill=(30, 30, 34, 255))
+    d.rectangle([w * 0.22, 0, w * 0.74, w * 0.3], fill=(170, 172, 178, 255))  # the metal shutter
+    d.rectangle([w * 0.52, w * 0.04, w * 0.64, w * 0.26], fill=(40, 40, 44, 255))
+    d.rectangle([w * 0.12, w * 0.42, w * 0.88, w], fill=(236, 232, 220, 255))  # the label
+    f = ImageFont.truetype(FONT, int(w * 0.14))
+    d.text((w / 2, w * 0.62), 'holiday 99', font=f, fill=(40, 60, 140, 255), anchor='mm')
+    for y in (0.8, 0.9):
+        d.line([(w * 0.18, w * y), (w * 0.82, w * y)], fill=(170, 160, 150, 255), width=1)
+    return im
+
+
+# --- the room# --- the room --------------------------------------------------------------
 
 def walnut(w, h, seed, base, along=False):
     r = np.random.default_rng(seed)
@@ -176,7 +293,7 @@ def stage():
     for i, (kind, x, rot) in enumerate([('sea', 400, 3), ('lake', 548, -4), ('city', 690, 2),
                                          ('hills', 830, -3), ('palms', 960, 4)]):
         c = print_card(kind, 116, 142, 40 + i, rot)
-        img.alpha_composite(c, (int(x - c.width / 2), int(line_y(x) - 8)))
+        img.alpha_composite(c, (int(x - c.width / 2), int(line_y(x) - c.height / 2)))
 
     # the desk: its top running back to the wall, then its front edge
     top = walnut(W, front - desk_y, 7, (92, 60, 36), along=True)
@@ -195,24 +312,46 @@ def stage():
     warm.putalpha(pool)
     img.alpha_composite(warm)
 
-    # the things on it, standing on the desk's top edge
+    # the things on it: films and the instant camera on the left, the
+    # chemistry in the middle (bottles behind a tray with a print coming
+    # up), the digital camera and its media on the right
     base = desk_y + 58
-    for name, x, h in [('polaroid600', 130, 150), ('portra400', 285, 136), ('gold200', 360, 136),
-                       ('super8', 505, 118), ('flipphone', 628, 146), ('camcorder90', 772, 108),
-                       ('floppy99', 925, 100)]:
-        a = art(name)
-        a = a.resize((int(a.width * h / a.height), h), Image.LANCZOS)
-        shadow = Image.new('L', (W, H), 0)
-        ImageDraw.Draw(shadow).ellipse([x - a.width * 0.46, base - 16, x + a.width * 0.46, base + 2], fill=230)
-        shadow = shadow.filter(ImageFilter.GaussianBlur(8))
+
+    def shadow(x, w, y=base, depth=18):
+        m = Image.new('L', (W, H), 0)
+        ImageDraw.Draw(m).ellipse([x - w * 0.48, y - depth, x + w * 0.48, y + 2], fill=230)
+        m = m.filter(ImageFilter.GaussianBlur(8))
         sh = Image.new('RGBA', (W, H), (0, 0, 0, 0))
-        sh.putalpha(shadow)
+        sh.putalpha(m)
         img.alpha_composite(sh)
+
+    def lit(a):
         # lit by the room: a little of the safelight's red on everything
         px = np.array(a, float)
         px[..., :3] = px[..., :3] * np.array([1.0, 0.86, 0.82]) + np.array([14, 0, 0])
-        a = Image.fromarray(px.clip(0, 255).astype(np.uint8))
-        img.alpha_composite(a, (int(x - a.width / 2), base - h))
+        return Image.fromarray(px.clip(0, 255).astype(np.uint8))
+
+    def stand(a, x, y=base):
+        shadow(x, a.width, y)
+        img.alpha_composite(lit(a), (int(x - a.width / 2), y - a.height))
+
+    def sized(name, h):
+        a = art(name)
+        return a.resize((int(a.width * h / a.height), h), Image.LANCZOS)
+
+    stand(sized('polaroid600', 150), 120)
+    stand(sized('portra400', 136), 268)
+    stand(sized('gold200', 136), 340)
+    # chemistry: three bottles at the back, the tray in front of them
+    for x, glass, text in [(450, (120, 60, 20), 'DEV'), (500, (110, 56, 22), 'STOP'), (550, (120, 60, 20), 'FIX')]:
+        stand(bottle(42, 118, glass, (236, 228, 210), text), x, base - 22)
+    stand(tray(190, 72, (186, 66, 54), 'sea'), 500, base + 16)
+    stand(sized('flipphone', 146), 668)
+    stand(sized('floppy99', 104), 800)
+    # its media, lying on the desk in front
+    for im, x, y in [(flat(floppy(74), 0.42, 12), 922, base + 18), (flat(sd_card(34), 0.45, -24), 742, base + 20)]:
+        shadow(x, im.width, y, 10)
+        img.alpha_composite(lit(im), (int(x - im.width / 2), y - im.height))
 
     # the name on masking tape, stuck to the wall
     tape = Image.new('RGBA', (300, 92), (0, 0, 0, 0))

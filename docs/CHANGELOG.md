@@ -1365,23 +1365,23 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   order, ball joints only at bends, box shaped like the screen. CRT: far
   less vignette, lighter scan lines, a convex bulge (soft dark rim,
   sheen, glint; drawn once into a half-res picture).
-- [~] **57.61** CRT bulge is a real warp now (`shaders/crt_bulge.frag`
+- [x] **57.61** → 1.9.13 · CRT bulge is a real warp now (`shaders/crt_bulge.frag`
   via ImageFilter.shader, `CrtWarp` in win98_display.dart, 5% at the
   corners): edges bow out, corners tuck into black; touches mapped through
   the same curve (`_WarpHits`). Impeller only; off while the screen slides
   in or out (eases in after).
-- [~] **57.62** 3D Pipes: ball joints sometimes drew behind their own
+- [x] **57.62** → 1.9.13 · 3D Pipes: ball joints sometimes drew behind their own
   pipes (sorted by the joint's depth, but a pipe's depth is its middle);
   joints now sort half a step nearer, so they always sit over both.
-- [~] **57.63** Tablets, Fancy graphics: black bars cut off the 3D body's
+- [x] **57.63** → 1.9.13 · Tablets, Fancy graphics: black bars cut off the 3D body's
   sides (its ends were drawn only within the body's width). The model's
   view now spans the whole screen (`_StageWidth` + OverflowBox in
   body_swap.dart), so the rounded ends show on the desk, at rest and mid-toss.
-- [~] **57.64** Debug > FPS Counter (`core/diagnostics/fps_meter.dart`,
+- [x] **57.64** → 1.9.13 · Debug > FPS Counter (`core/diagnostics/fps_meter.dart`,
   `fpsMeterProvider`): frames drawn per second from FrameTiming, the last
   15 s as bars (dashed line at the screen's refresh rate), slowest frame of
   the last second. Bottom left, so it runs alongside Frame Timing Graphs.
-- [~] **57.65** Lag watch (`core/diagnostics/lag_watch.dart`, started in
+- [x] **57.65** → 1.9.13 · Lag watch (`core/diagnostics/lag_watch.dart`, started in
   app.dart): from 20 s after launch, adds up the engine's frame timings;
   every 10 s, a window with >= 30 drawn frames averaging over 50 ms (the
   slower of build/raster: under 20 fps) is slow; 3 slow of the last 6 with

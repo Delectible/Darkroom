@@ -3,16 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '1.9.12';
+  static const version = '1.9.13';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98: files zoom open over the explorer again, the picture sliders no longer '
-      'jump Options back to its first tab, Options now lives in the Tools menu, 3D Pipes looks '
-      'and moves like the real thing, and the CRT screen is gentler with a rounder bulge. '
-      'Crash reports now say much more about what went wrong.';
+      'Darkroom 98\'s CRT screen now really bulges like curved glass. Tablets: no more black bars '
+      'cutting off the 3D camera. 3D Pipes joints sit right. If the 3D cameras make your phone '
+      'lag, Darkroom now offers once to switch to simpler graphics.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

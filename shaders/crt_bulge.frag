@@ -23,9 +23,9 @@ void main() {
   // picture fills the glass and only its corners bow in.
   float e = 1.0 / (a * a + 1.0);
   vec2 src = 0.5 + d * (1.0 + uK * r2) / (1.0 + uK * vec2(a * a * e, e));
-  if (src.x < 0.0 || src.y < 0.0 || src.x > 1.0 || src.y > 1.0) {
-    fragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    return;
-  }
-  fragColor = texture(uTexture, src);
+  // Fade to the tube's black over a pixel at the picture's edge (no jaggies
+  // where the corners curve away).
+  vec2 inPx = min(src, 1.0 - src) * uSize;
+  float inside = clamp(min(inPx.x, inPx.y) + 0.5, 0.0, 1.0);
+  fragColor = vec4(texture(uTexture, clamp(src, 0.0, 1.0)).rgb * inside, 1.0);
 }

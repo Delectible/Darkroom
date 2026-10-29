@@ -3,9 +3,12 @@ prints drying on a line, the films and cameras on a walnut desk, and the
 name on a strip of masking tape.
 
     python3 tool/store/make_header.py OUT_DIR [W H ...]   (Pillow + numpy)
+    SAFE=0.14 python3 tool/store/make_header.py OUT 3840 1646 5244 2950 3840 2560
 
 Writes header_WxH.png for each size (default 1024x500, Play's feature
-graphic; Apple's header / search art: 5244 2950 and 3840 1646). Each is
+graphic). Apple (App Store Connect, product page header / search
+results): 3840x1646 (21:9), 5244x2950 (16:9, PNG only), 3840x2560 (3:2
+search); PNG, no transparency, key art in the centre (SAFE). Each is
 drawn at its own size from a 1024x500 layout; taller ones get more wall,
 wider ones a longer line and desk. The prints are
 drawn here (sunset sea, hills, a city at dusk...), not anyone's photos.
@@ -319,14 +322,17 @@ def foot_of(a):
     return int(rows[-1]) if len(rows) else a.height
 
 
-def stage(OW, OH):
+def stage(OW, OH, safe=0.0):
     """The scene at OW x OH pixels: laid out on a stage 1024 units wide (more
     if the picture is wider than 2.05:1) and 500 tall (more if taller), the
-    desk along the bottom, the extra room going to the wall and the line."""
-    Lw = max(1024.0, 500.0 * OW / OH)
+    desk along the bottom, the extra room going to the wall and the line.
+    [safe] (0..1) keeps that much of the width as margin round the scene, so
+    nothing that matters sits near an edge (Apple crops its art per device);
+    the extra height then goes half above, half below."""
+    Lw = max(1024.0, 500.0 * OW / OH) / (1 - safe)
     Lh = Lw * OH / OW
     k = OW / Lw
-    ox, oy = (Lw - 1024) / 2, Lh - 500
+    ox, oy = (Lw - 1024) / 2, (Lh - 500) * (0.5 if safe else 1.0)
     X = lambda v: (v + ox) * k  # noqa: E731
     Y = lambda v: (v + oy) * k  # noqa: E731
     K = lambda v: v * k  # noqa: E731
@@ -360,7 +366,7 @@ def stage(OW, OH):
     img.alpha_composite(lamp)
 
     # the drying line: tied to a nail at each end, sagging between them
-    x0, x1 = 360.0, Lw - ox - 34
+    x0, x1 = 360.0, (990.0 if safe else Lw - ox - 34)
     line_y = lambda x: 58 + 28 * math.sin(math.pi * (x - x0) / (x1 - x0))  # noqa: E731
     d2 = ImageDraw.Draw(img)
     d2.line([(X(x), Y(line_y(x))) for x in np.linspace(x0, x1, 120)], fill=(200, 190, 170, 255), width=max(1, int(K(2))))
@@ -511,6 +517,7 @@ if __name__ == '__main__':
     out = sys.argv[1]
     sizes = [int(v) for v in sys.argv[2:]] or [1024, 500]
     os.makedirs(out, exist_ok=True)
+    safe = float(os.environ.get('SAFE', '0'))
     for w, h in zip(sizes[::2], sizes[1::2]):
-        stage(w, h).save(os.path.join(out, f'header_{w}x{h}.png'))
+        stage(w, h, safe).save(os.path.join(out, f'header_{w}x{h}.png'), optimize=True)
         print(f'header_{w}x{h}.png')

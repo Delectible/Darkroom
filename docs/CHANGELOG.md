@@ -1462,3 +1462,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   Darkroom 98's Missing from Photos box) now says "deleted, or moved to the
   cloud by a backup app": a backup app's "free up space" removes the phone's
   copy just like a delete, and re-saving them made new copies.
+- [x] **57.79** → 2.0.4 · Debug FPS counter read 0 for ever: it compared FrameTiming's
+  engine-clock timestamps with the wall clock. Frames are now counted on the
+  app's clock (one persistent frame callback); FrameTiming only gives the
+  slowest frame (release builds report it in batches about once a second).

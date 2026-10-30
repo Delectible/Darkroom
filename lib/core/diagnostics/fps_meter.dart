@@ -13,8 +13,8 @@ import 'debug_flags.dart';
 /// the slowest frame of the last second. Sits bottom left, clear of
 /// Flutter's frame graphs (top), so both can be on together.
 ///
-/// Counts frames the engine actually drew (FrameTiming), so a screen with
-/// nothing moving reads low: that's Flutter not redrawing, not a stall.
+/// Counts the frames Flutter drew, so a screen with nothing moving reads
+/// low: that's Flutter not redrawing, not a stall.
 final fpsMeterProvider = NotifierProvider<DebugFlag, bool>(DebugFlag.new);
 
 class FpsMeter extends StatefulWidget {
@@ -28,9 +28,15 @@ class FpsMeter extends StatefulWidget {
 }
 
 class _FpsMeterState extends State<FpsMeter> {
-  /// When each recent frame finished (raster), µs since the epoch, with
-  /// its total build + raster time (µs).
-  final _frames = <(int, int)>[];
+  /// Each frame Flutter drew, on the app's own clock (µs since the epoch).
+  /// FrameTiming's timestamps are on the engine's clock, and in release
+  /// builds they arrive in batches about once a second, so they can't be
+  /// lined up with "now": they only give the slowest frame.
+  static final _drawn = <int>[];
+  static bool _counting = false;
+
+  /// Recent frames' build + raster time (µs), with when they were reported.
+  final _spans = <(int, int)>[];
   final _fps = <double>[];
   double _now = 0;
   double _worstMs = 0;
@@ -39,21 +45,33 @@ class _FpsMeterState extends State<FpsMeter> {
   @override
   void initState() {
     super.initState();
+    if (!_counting) {
+      // Persistent callbacks can't be removed: one for the app's lifetime,
+      // cheap (a timestamp per frame, trimmed by the meter while it's up).
+      _counting = true;
+      SchedulerBinding.instance.addPersistentFrameCallback((_) {
+        _drawn.add(DateTime.now().microsecondsSinceEpoch);
+        if (_drawn.length > 600) _drawn.removeRange(0, _drawn.length - 300);
+      });
+    }
     SchedulerBinding.instance.addTimingsCallback(_timings);
     _tick = Timer.periodic(const Duration(milliseconds: 250), (_) => _sample());
   }
 
   void _timings(List<ui.FrameTiming> timings) {
+    final at = DateTime.now().microsecondsSinceEpoch;
     for (final t in timings) {
-      _frames.add((t.timestampInMicroseconds(ui.FramePhase.rasterFinish), t.totalSpan.inMicroseconds));
+      _spans.add((at, t.totalSpan.inMicroseconds));
     }
   }
 
   void _sample() {
     final now = DateTime.now().microsecondsSinceEpoch;
-    _frames.removeWhere((f) => f.$1 < now - 1000000);
-    _now = _frames.length.toDouble();
-    _worstMs = _frames.fold<int>(0, (m, f) => math.max(m, f.$2)) / 1000;
+    _drawn.removeWhere((t) => t < now - 1000000);
+    // (timings come in batches: look back a little further for the slowest)
+    _spans.removeWhere((f) => f.$1 < now - 2000000);
+    _now = _drawn.length.toDouble();
+    _worstMs = _spans.fold<int>(0, (m, f) => math.max(m, f.$2)) / 1000;
     _fps.add(_now);
     if (_fps.length > FpsMeter.history) _fps.removeAt(0);
     if (mounted) setState(() {});

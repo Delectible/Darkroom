@@ -26,6 +26,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 250));
     }
     expect(find.text('FPS'), findsOneWidget);
+    // It counts the frames drawn (it once read 0 for ever: the engine's
+    // frame timestamps aren't on the wall clock).
+    expect(find.text('0'), findsNothing);
     expect(tester.takeException(), isNull);
     final shots = Platform.environment['SHOTS'];
     if (shots != null) {

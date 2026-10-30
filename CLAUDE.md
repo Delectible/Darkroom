@@ -111,11 +111,12 @@ Read this first. It's the hand-off from the earlier development sessions
   already on internal testing to the closed track (`alpha`), which Play
   reviews. Internal testing stays the instant path for the owner.
   The store listing (title, descriptions, icon, feature graphic) lives in
-  `fastlane/metadata/android/en-AU/` (the owner's own wording since 2026-10-30,
-  also used word for word on the App Store: change both together, and copy
-  edits he makes in the Play Console back here before the next listing push); `play-listing.yml` publishes it when
-  it changes (fastlane supply, same service account). Screenshots aren't in
-  the repo yet. Privacy policy for the listing: `docs/PRIVACY.md`.
+  `fastlane/metadata/android/en-AU/`, as a reference only: since 2026-10-30
+  the owner edits the listing himself in the Play Console (the same wording
+  on the App Store), so the Console is the real copy. `play-listing.yml`
+  (fastlane supply, same service account) runs only by hand and would
+  overwrite the Console: never run it unless he asks. Screenshots aren't in
+  the repo. Privacy policy for the listing: `docs/PRIVACY.md`.
 - Release builds are signed with the owner's **private upload key** (alias
   `upload`), which CI decodes from the repo secrets `ANDROID_KEYSTORE_BASE64`
   and `ANDROID_KEYSTORE_PASSWORD`. Never commit it. Without the secrets

@@ -10,7 +10,8 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'Photos and clips you save now carry the date they were taken, so your phone\'s photo app keeps '
-      'them in order instead of floating them to the top.';
+      'them in order instead of floating them to the top. If a backup app moves saved prints off your phone, '
+      'Darkroom now says so instead of calling them deleted.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

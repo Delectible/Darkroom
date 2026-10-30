@@ -175,7 +175,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     final what = n == 1 ? "'${ask.first.fileName}' is" : '$n files on Local Disk (C:) are';
     final r = await _box(
       'Missing from Photos',
-      "$what no longer in your phone's Darkroom album. Copy ${n == 1 ? 'it' : 'them'} back?",
+      "$what no longer in your phone's Darkroom album: deleted, or moved to the cloud by a "
+          "backup app. Copy ${n == 1 ? 'it' : 'them'} back?",
       icon: Win98MessageIcon.question,
       buttons: const ['Yes', 'No'],
     );

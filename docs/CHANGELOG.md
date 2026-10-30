@@ -1458,3 +1458,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   DateTimeDigitized + OffsetTimeOriginal (`core/processing/taken_date.dart`,
   photo_pipeline and the instant-print export), every clip an MP4
   `creation_time` (video_pipeline). Copies saved before 2.0.4 keep no date.
+- [x] **57.78** → 2.0.4 · "No longer in your photos" (corkboard snackbar, now 7 s, and
+  Darkroom 98's Missing from Photos box) now says "deleted, or moved to the
+  cloud by a backup app": a backup app's "free up space" removes the phone's
+  copy just like a delete, and re-saving them made new copies.

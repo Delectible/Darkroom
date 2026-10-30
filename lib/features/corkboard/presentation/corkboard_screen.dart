@@ -195,10 +195,15 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     final what = n == 1 ? (tell.first.isVideo ? 'A reel' : 'A print') : '$n prints';
     final bar = ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        duration: const Duration(seconds: 5),
+        duration: const Duration(seconds: 7),
         persist: false,
         showCloseIcon: true,
-        content: Text("$what you saved ${n == 1 ? 'is' : 'are'} no longer in your photos."),
+        // (the phone can't tell a deleted copy from one a backup app moved
+        // to the cloud to free up space)
+        content: Text(
+          "$what you saved ${n == 1 ? 'is' : 'are'} no longer on your phone: deleted, or moved to "
+          'the cloud by a backup app.',
+        ),
         action: SnackBarAction(
           label: 'Save again',
           onPressed: () async {

@@ -7,6 +7,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:image/image.dart' as img;
 
+import 'taken_date.dart';
+
 /// Proportions of an integral instant print (square picture, thin sides and
 /// top, deep writing strip at the bottom), as fractions of the picture side.
 /// One source for the corkboard, the viewer and exported files.
@@ -71,6 +73,7 @@ class InstantFrame {
     required String picturePath,
     required String? note,
     required String outPath,
+    DateTime? takenAt,
   }) async {
     // Decoded straight at the export size: a full-resolution decode of a
     // 12 MP shot was most of the wait.
@@ -127,16 +130,17 @@ class InstantFrame {
     picture.dispose();
     final rgba = await framed.toByteData(format: ui.ImageByteFormat.rawRgba);
     framed.dispose();
-    final jpeg = await compute(_encode, (rgba!.buffer.asUint8List(), w, h));
+    final jpeg = await compute(_encode, (rgba!.buffer.asUint8List(), w, h, takenAt?.millisecondsSinceEpoch));
     final out = File(outPath);
     await out.parent.create(recursive: true);
     await out.writeAsBytes(jpeg, flush: true);
     return outPath;
   }
 
-  static Uint8List _encode((Uint8List, int, int) a) {
-    final (bytes, w, h) = a;
+  static Uint8List _encode((Uint8List, int, int, int?) a) {
+    final (bytes, w, h, taken) = a;
     final image = img.Image.fromBytes(width: w, height: h, bytes: bytes.buffer, numChannels: 4);
+    if (taken != null) TakenDate.stamp(image.exif, DateTime.fromMillisecondsSinceEpoch(taken));
     return img.encodeJpg(image, quality: 92);
   }
 }

@@ -10,6 +10,7 @@ import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 
 import 'isolate_jobs.dart';
+import 'taken_date.dart';
 import 'video_plan.dart';
 
 export 'video_plan.dart' show VideoJob;
@@ -66,15 +67,18 @@ class VideoPipeline {
       final plan = await planVideoInIsolate(job, info.width, info.height);
 
       // 3. Encode; fat-pixel looks get a nearest-neighbour upscale pass.
+      final dated = TakenDate.ffmpegArgs(DateTime.fromMillisecondsSinceEpoch(job.capturedAtMs));
       await _ffmpeg([
         ...plan.mainInputArgs,
         ..._encoder(plan.bitrateKbps),
+        ...dated,
         ...plan.mainOutputArgs,
       ], timeout: encodeTimeout);
       if (plan.upscale > 1) {
         await _ffmpeg([
           ...plan.upscaleInputArgs(),
           ..._encoder(1500),
+          ...dated,
           '-movflags',
           '+faststart',
           job.outputPath,

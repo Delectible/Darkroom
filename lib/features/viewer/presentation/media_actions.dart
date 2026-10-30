@@ -29,7 +29,12 @@ Future<String?> exportPathFor(MediaItem item) async {
       // Written next to the final name and moved into place, so a half-
       // written file (the app killed mid-encode) is never picked up.
       final part = '${out.path}.part';
-      await InstantFrame.exportJpeg(picturePath: path, note: item.note, outPath: part);
+      await InstantFrame.exportJpeg(
+        picturePath: path,
+        note: item.note,
+        outPath: part,
+        takenAt: item.capturedAt,
+      );
       await File(part).rename(out.path);
       return out.path;
     } catch (e) {
@@ -171,7 +176,9 @@ Future<String?> renameMedia(
   final dot = item.fileName.lastIndexOf('.');
   final ext = dot > 0 ? item.fileName.substring(dot) : (item.isVideo ? '.MP4' : '.JPG');
   var stem = name.replaceAll(RegExp(r'[\\/:*?"<>|\x00-\x1F]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
-  if (stem.toLowerCase().endsWith(ext.toLowerCase())) stem = stem.substring(0, stem.length - ext.length).trim();
+  if (stem.toLowerCase().endsWith(ext.toLowerCase())) {
+    stem = stem.substring(0, stem.length - ext.length).trim();
+  }
   if (stem.length > maxLength) stem = stem.substring(0, maxLength).trim();
   if (stem.isEmpty) return null;
   if ('$stem$ext' == item.fileName) return stem;

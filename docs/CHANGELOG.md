@@ -1452,3 +1452,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the shop puts the cabinet beside the counter, How it works shows the six
   moves in one row); the Pro / limit / roll sheets scroll when held
   sideways instead of cutting off their buttons.
+- [x] **57.77** → 2.0.4 · Saved shots kept floating to the top of the phone's photo
+  app: they had no "date taken", so the app sorted them by the file's own
+  date. Every still now carries EXIF DateTime / DateTimeOriginal /
+  DateTimeDigitized + OffsetTimeOriginal (`core/processing/taken_date.dart`,
+  photo_pipeline and the instant-print export), every clip an MP4
+  `creation_time` (video_pipeline). Copies saved before 2.0.4 keep no date.

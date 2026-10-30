@@ -13,6 +13,7 @@ import 'film/film_process.dart';
 import 'film/film_renderer.dart';
 import 'look_renderer.dart';
 import 'look_spec.dart';
+import 'taken_date.dart';
 
 enum FlashSetting { auto, on, off }
 
@@ -260,6 +261,7 @@ class PhotoPipeline {
       ..make = 'Darkroom'
       ..model = spec.name
       ..software = 'Darkroom';
+    TakenDate.stamp(image.exif, DateTime.fromMillisecondsSinceEpoch(job.capturedAtMs));
     final out = img.encodeJpg(image, quality: profile.jpegQuality);
     _writeAtomic(job.outputPath, out);
 

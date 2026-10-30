@@ -3,15 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.0.3';
+  static const version = '2.0.4';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Smoother landscape: the corkboard and Darkroom 98 no longer flash as they turn, and the Camera Shop, '
-      'How it works and the Pro sheet now work sideways. Darkroom 98\'s CRT keeps its curve while it slides, '
-      'opening a picture no longer flashes black, and prints no longer zoom up blank the first time.';
+      'Photos and clips you save now carry the date they were taken, so your phone\'s photo app keeps '
+      'them in order instead of floating them to the top.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

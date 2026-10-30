@@ -1,12 +1,11 @@
 name: Play Store listing
 # Publishes the store listing in fastlane/metadata/android (title, short and
 # full description, icon, feature graphic) to Google Play with the same
-# service account the build uploads with. Runs when those files change on
-# main, or by hand from the Actions tab. App builds are not touched.
+# service account the build uploads with. By hand only (Actions tab): since
+# 2026-10-30 the owner edits the listing in the Play Console, which is the
+# real copy; the files here are a reference and never overwrite it on their
+# own. App builds are not touched.
 on:
-  push:
-    branches: [main]
-    paths: ['fastlane/metadata/**', '.github/workflows/play-listing.yml']
   workflow_dispatch:
 permissions:
   contents: read

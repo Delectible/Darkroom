@@ -7,6 +7,8 @@ like a mis-converged CRT. Where the three overlap they add up to white.
 
 Writes:
   App      assets/artwork/rabbit_mark.png, the welcome tour's rabbit.
+  Splash   drawable-*/splash_rabbit.png: that rabbit at 96 dp on Android's
+           288 dp splash canvas (the launch curtain's size and place).
   Android  adaptive icon (background colour, foreground, monochrome for
            Android 13+ themed icons), legacy round icon for API 24-25,
            status-bar notification glyph.
@@ -167,6 +169,17 @@ def intro_mark(px):
     return _out(px, rgb, a)
 
 
+def splash_rabbit(k):
+    """The launch screen's rabbit at density [k]: the curtain's 96 dp rabbit
+    (rabbit_mark) centred on the 288 dp canvas Android 12+ gives a splash
+    icon with no backing, so the system splash and the app's curtain show
+    the same thing in the same place (no jump at the hand-over)."""
+    canvas = Image.new('RGBA', (round(288 * k),) * 2, (0, 0, 0, 0))
+    rabbit = intro_mark(round(96 * k))
+    canvas.paste(rabbit, ((canvas.width - rabbit.width) // 2, (canvas.height - rabbit.height) // 2), rabbit)
+    return canvas
+
+
 def status_glyph(px):
     """Notification icon: white glyph, 24dp with ~2dp padding."""
     S = px * SS
@@ -232,6 +245,7 @@ def main():
         save(foreground(round(108 * k)), *res, f'mipmap-{name}', 'ic_launcher_foreground.png')
         save(monochrome(round(108 * k)), *res, f'mipmap-{name}', 'ic_launcher_monochrome.png')
         save(status_glyph(round(24 * k)), *res, f'drawable-{name}', 'ic_stat_darkroom.png')
+        save(splash_rabbit(k), *res, f'drawable-{name}', 'splash_rabbit.png')
 
     os.makedirs(os.path.join(ROOT, *res, 'mipmap-anydpi-v26'), exist_ok=True)
     with open(os.path.join(ROOT, *res, 'mipmap-anydpi-v26', 'ic_launcher.xml'), 'w') as f:

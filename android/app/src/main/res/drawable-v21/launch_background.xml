@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Launch screen before Android 12: the rabbit on near-black. -->
+<!-- Launch screen before Android 12: the rabbit on near-black, as the
+     launch curtain draws it (splash_rabbit). -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/launch_background" />
     <item>
-        <bitmap android:gravity="center" android:src="@mipmap/ic_launcher_foreground" />
+        <bitmap android:gravity="center" android:src="@drawable/splash_rabbit" />
     </item>
 </layer-list>

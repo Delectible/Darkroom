@@ -140,7 +140,9 @@ Read this first. It's the hand-off from the earlier development sessions
   `PrefKeys.launchLine`), held until `_ready` (camera session open, look
   shaders + LUT/grain loaded, 450 ms of stream; or the tour / a pushed
   screen / no permission), min 1.1 s, max 5 s, then faded out. Android
-  12+'s splash fades into it (MainActivity `setOnExitAnimationListener`).
+  12+'s splash fades into it (MainActivity `setOnExitAnimationListener`);
+  the splash shows `drawable-*/splash_rabbit` (the same 96 dp rabbit on the
+  288 dp splash canvas, `make_icons.py`), so nothing moves at the hand-over.
 - UI checks without a phone: `test/*_screens_test.dart` pump screens at
   Pixel 9 Pro size (fail on overflow); `SHOTS=dir FLUTTER_ROOT=<sdk>` also
   saves PNGs with real fonts. `camcorder_osd_ffmpeg_test` runs the camcorder

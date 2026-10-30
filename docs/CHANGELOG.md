@@ -1466,3 +1466,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   engine-clock timestamps with the wall clock. Frames are now counted on the
   app's clock (one persistent frame callback); FrameTiming only gives the
   slowest frame (release builds report it in batches about once a second).
+- [x] **57.80** → 2.0.4 · Start-up: Android's splash showed the icon's cropped,
+  enlarged foreground, then the curtain swapped in the 96 dp rabbit (a jump).
+  The splash (and the pre-12 launch screen) now uses `splash_rabbit`: the
+  curtain's own rabbit at 96 dp, centred on Android's 288 dp splash canvas
+  (`tool/icon/make_icons.py` `splash_rabbit`), so the hand-over is seamless.

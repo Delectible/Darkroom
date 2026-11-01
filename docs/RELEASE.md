@@ -40,6 +40,7 @@ the owner in a console / on a phone, C = Claude in the repo).
   in App content. (O)
 - [ ] Screenshots uploaded (from section 1). (O / C via fastlane)
 - [x] **12+ testers opted in to closed testing for 14 days in a row** (done 2026-10-30; production access applied for the same day)
+- [~] Production access: refused 2026-11-01 ("requires more testing"). Keep the closed test going with active testers, regular closed releases and feedback through Play, then reapply.
   (Google's rule for new personal developer accounts). Then Dashboard >
   "Apply for production access" (a short questionnaire about the test). (O)
 - [ ] Optional: open testing (anyone can join from the store page).

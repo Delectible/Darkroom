@@ -1481,3 +1481,16 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   `AVCaptureEventInteraction` in AppDelegate on the `darkroom/volume` channel
   (iOS 17.2+). Camera Control's swipe-to-zoom and launching Darkroom from it
   are not possible without much bigger work (see the chat of 2026-11-02).
+
+## 58. Ideas after 2.0 (2026-11-02)
+
+- [ ] **58.1 Request the film strip from the lab:** every print belongs to its
+  roll; in the print viewer a "Request film from lab" button asks the lab for
+  that roll's strip (the whole roll, or a stretch of it around this print,
+  so the file stays a sensible size). Choose **negatives** (inverted, orange
+  mask for colour, frame numbers and edge print along the rebate) or the
+  **corrected scan** (the prints as developed). It comes back as one long
+  image with all the shots in a row, made for sharing (e.g. social media),
+  maybe with a short "the lab is cutting your strip" wait to match the rest
+  of the app. Open questions: which films (35 mm only, or instant / Super 8
+  too), strip vs contact-sheet layout, how many frames per strip, Free or Pro.

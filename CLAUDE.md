@@ -585,6 +585,11 @@ UI
   events for them never arrived) are the shutter
   while the camera itself is on screen; setting "Volume buttons zoom" makes
   them the zoom on digital bodies. Elsewhere they change the volume.
+  iOS 17.2+: the same channel from AppDelegate's `AVCaptureEventInteraction`
+  (volume down + Camera Control press = primary, volume up = secondary; it
+  only takes them while the camera session runs). Camera Control's slider /
+  zoom (`AVCaptureSession.controls`) needs the camera plugin's session: not
+  done.
 - Send feedback / Privacy policy (2.0, `core/support/support.dart`): Settings
   > HELP and Darkroom 98 Help open a mailto to `Support.email` (the owner's,
   his choice) with the version, OS and the last week's crash report, and the

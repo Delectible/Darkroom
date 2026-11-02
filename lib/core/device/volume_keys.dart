@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// The phone's volume buttons as camera buttons (Android). MainActivity
+/// The phone's volume buttons as camera buttons. Android: MainActivity
 /// takes them before anything else sees them, but only while [capture] is
-/// on, so everywhere else they still change the volume. Flutter's own key
-/// events for them didn't arrive reliably, hence the native route.
+/// on, so everywhere else they still change the volume (Flutter's own key
+/// events for them didn't arrive reliably, hence the native route). iOS
+/// 17.2+: AppDelegate's capture-event interaction (volume down and the
+/// iPhone 16's Camera Control press = down, volume up = up).
 class VolumeKeys {
   VolumeKeys._();
 
@@ -24,7 +26,7 @@ class VolumeKeys {
   }
 
   static Future<void> capture(bool on) async {
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     try {
       await _channel.invokeMethod<void>('capture', on);
     } on PlatformException catch (_) {

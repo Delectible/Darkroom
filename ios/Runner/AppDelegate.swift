@@ -1,4 +1,5 @@
 import AVFoundation
+import AVKit
 import Flutter
 import Photos
 import UIKit
@@ -9,6 +10,11 @@ import UserNotifications
   /// Held while shots are still being processed (BackgroundTime in Dart), so
   /// leaving the app right after a shot doesn't pause it until next launch.
   private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+
+  /// darkroom/volume: while the camera is on screen the volume buttons (and
+  /// the iPhone 16's Camera Control press) are the shutter, as on Android.
+  private var volumeChannel: FlutterMethodChannel?
+  private var captureInteraction: AnyObject?
 
   override func application(
     _ application: UIApplication,
@@ -108,6 +114,19 @@ import UserNotifications
         result(FlutterMethodNotImplemented)
       }
     }
+    // Volume buttons / Camera Control as the shutter (iOS 17.2+: Apple's
+    // capture-event API; it only takes them while the app's camera runs, and
+    // the volume changes as usual otherwise).
+    let volume = FlutterMethodChannel(name: "darkroom/volume", binaryMessenger: registrar.messenger())
+    volumeChannel = volume
+    volume.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "capture" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      self?.captureButtons(call.arguments as? Bool == true)
+      result(nil)
+    }
     let channel = FlutterMethodChannel(name: "darkroom/background", binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { [weak self] call, result in
       switch call.method {
@@ -160,6 +179,39 @@ import UserNotifications
       }
     }
     return out
+  }
+
+  /// Volume down and the Camera Control press come in as the primary
+  /// capture event, volume up as the secondary: Dart's VolumeKeys gets
+  /// (up?, pressed / released) like Android's keys.
+  private func captureButtons(_ on: Bool) {
+    guard #available(iOS 17.2, *) else { return }
+    if let interaction = captureInteraction as? AVCaptureEventInteraction {
+      interaction.isEnabled = on
+      return
+    }
+    guard on, let view = Self.rootView() else { return }
+    let send: (Bool, AVCaptureEvent) -> Void = { [weak self] up, event in
+      let down: Bool
+      switch event.phase {
+      case .began: down = true
+      case .ended, .cancelled: down = false
+      @unknown default: return
+      }
+      self?.volumeChannel?.invokeMethod("key", arguments: ["up": up, "down": down])
+    }
+    let interaction = AVCaptureEventInteraction(
+      primary: { event in send(false, event) },
+      secondary: { event in send(true, event) }
+    )
+    view.addInteraction(interaction)
+    captureInteraction = interaction
+  }
+
+  private static func rootView() -> UIView? {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let window = scenes.flatMap { $0.windows }.first { $0.isKeyWindow } ?? scenes.first?.windows.first
+    return window?.rootViewController?.view
   }
 
   private func beginBackgroundTime() {

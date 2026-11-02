@@ -10,7 +10,8 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'When a print runs past its developing time, the darkroom now says so: the lab has asked for '
-      'extra time on it, and it\'ll be out shortly.';
+      'extra time on it, and it\'ll be out shortly. On iPhone the volume buttons (and the Camera Control '
+      'button) now take the picture.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

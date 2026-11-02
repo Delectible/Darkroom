@@ -1476,3 +1476,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the darkroom strip says "The lab has asked for extra time on this one /
   these N. It'll / They'll be out shortly, sooner with Darkroom open."
   (`_Tray.overdue`; was a bare "fixing…", or a frozen 0:00 on instant prints).
+- [x] **57.82** → 2.0.5 · iPhone: the volume buttons and the iPhone 16's Camera
+  Control press take the picture (or zoom, with "Volume buttons zoom"), via
+  `AVCaptureEventInteraction` in AppDelegate on the `darkroom/volume` channel
+  (iOS 17.2+). Camera Control's swipe-to-zoom and launching Darkroom from it
+  are not possible without much bigger work (see the chat of 2026-11-02).

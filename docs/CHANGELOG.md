@@ -1484,13 +1484,17 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 
 ## 58. Ideas after 2.0 (2026-11-02)
 
-- [ ] **58.1 Request the film strip from the lab:** every print belongs to its
-  roll; in the print viewer a "Request film from lab" button asks the lab for
-  that roll's strip (the whole roll, or a stretch of it around this print,
-  so the file stays a sensible size). Choose **negatives** (inverted, orange
-  mask for colour, frame numbers and edge print along the rebate) or the
-  **corrected scan** (the prints as developed). It comes back as one long
-  image with all the shots in a row, made for sharing (e.g. social media),
-  maybe with a short "the lab is cutting your strip" wait to match the rest
-  of the app. Open questions: which films (35 mm only, or instant / Super 8
-  too), strip vs contact-sheet layout, how many frames per strip, Free or Pro.
+- [ ] **58.1 Request the film from the lab** (Pro only): every print belongs to
+  its roll; in the print viewer "Request film from lab" offers:
+  - **One strip:** the 6 frames of the roll's quarter the print is in
+    (1-6, 7-12, 13-18, 19-24).
+  - **The whole roll:** all 24 frames on a contact sheet (rows of strips,
+    the photos keeping their shape; more practical than one long strip).
+  Either as **negatives** (inverted, orange mask for colour, frame numbers
+  and edge print along the rebate) or as the **corrected scan** (the prints
+  as developed). Comes back as one image, made for sharing.
+  - 35 mm first. Instant: not a roll, so something else, maybe a collage
+    of the pack (could overlap a built-in collage feature, 58.2: decide
+    together). Video stocks (Super 8, Epic 70): to figure out later.
+- [ ] **58.2 Collage** (idea): a built-in collage of prints; may cover the
+  instant-pack case of 58.1.

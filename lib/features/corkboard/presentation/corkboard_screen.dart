@@ -1512,6 +1512,14 @@ class _DarkroomStrip extends ConsumerWidget {
               itemBuilder: (context, i) => _Tray(item: items[i], now: now),
             ),
           ),
+          if (items.where((m) => _Tray.overdue(m, now)).length case final late when late > 0) ...[
+            const SizedBox(height: 8),
+            Text(
+              'The lab has asked for extra time on ${late == 1 ? 'this one' : 'these $late'}. '
+              "${late == 1 ? "It'll" : "They'll"} be out shortly, sooner with Darkroom open.",
+              style: const TextStyle(color: Color(0xCCFF8A80), fontSize: 12, height: 1.3),
+            ),
+          ],
         ],
       ),
     );
@@ -1523,6 +1531,12 @@ class _Tray extends ConsumerWidget {
 
   final MediaItem item;
   final DateTime now;
+
+  /// Past its time and still being processed (a big frame on a slow phone,
+  /// or on an iPhone the app was closed: it only develops while it runs).
+  /// A short grace first: a print usually lands within seconds of its time.
+  static bool overdue(MediaItem item, DateTime now) =>
+      item.status == MediaStatus.processing && now.difference(item.readyAt) > const Duration(seconds: 15);
 
   /// What went wrong in the darkroom, as the darkroom would tell it. The
   /// real (technical) error is one tap away: Copy error report.
@@ -1582,6 +1596,7 @@ class _Tray extends ConsumerWidget {
     final progress = (1 - left.inMilliseconds / total).clamp(0.0, 1.0);
     final failed = item.status == MediaStatus.failed;
     final processing = item.status == MediaStatus.processing;
+    final late = _Tray.overdue(item, now);
     final mm = left.inMinutes.clamp(0, 99).toString();
     final ss = (left.inSeconds % 60).clamp(0, 59).toString().padLeft(2, '0');
     final thumb = item.thumbPath;
@@ -1606,7 +1621,9 @@ class _Tray extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                processing && left.isNegative
+                late
+                    ? 'extra time'
+                    : processing && left.isNegative
                     ? 'fixing…'
                     : '${DevelopingTankPainter.stageFor(progress)} $mm:$ss',
                 maxLines: 1,
@@ -1639,7 +1656,7 @@ class _Tray extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                '0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}',
+                late ? 'extra time' : '0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}',
                 style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
               ),
             ],
@@ -1660,7 +1677,11 @@ class _Tray extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                processing && left.isNegative ? 'fixing…' : '${stage.label} $mm:$ss',
+                late
+                    ? 'extra time'
+                    : processing && left.isNegative
+                    ? 'fixing…'
+                    : '${stage.label} $mm:$ss',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
@@ -1729,7 +1750,11 @@ class _Tray extends ConsumerWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              failed ? spec.name : (processing && left.isNegative ? 'fixing…' : '$mm:$ss'),
+              failed
+                  ? spec.name
+                  : late
+                  ? 'extra time'
+                  : (processing && left.isNegative ? 'fixing…' : '$mm:$ss'),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),

@@ -67,14 +67,21 @@ void main() {
       File(thumb).writeAsBytesSync(img.encodeJpg(pic));
       final now = DateTime.now();
       var n = 0;
-      MediaItem item(String camera, {MediaKind kind = MediaKind.photo, bool developing = false}) => MediaItem(
+      MediaItem item(
+        String camera, {
+        MediaKind kind = MediaKind.photo,
+        bool developing = false,
+        bool late = false,
+      }) => MediaItem(
         id: '${camera}_${n++}',
         cameraId: camera,
         kind: kind,
-        status: MediaStatus.ready,
+        status: late ? MediaStatus.processing : MediaStatus.ready,
         fileName: kind == MediaKind.video ? 'REEL003.MP4' : 'ROLL001_07.JPG',
         capturedAt: now.subtract(const Duration(minutes: 2)),
-        readyAt: developing ? now.add(const Duration(minutes: 3)) : now.subtract(const Duration(minutes: 1)),
+        readyAt: developing
+            ? now.add(const Duration(minutes: 3))
+            : now.subtract(Duration(minutes: late ? 2 : 1)),
         thumbPath: thumb,
         outputPath: thumb,
         width: 3,
@@ -85,6 +92,8 @@ void main() {
       final items = [
         item('portra400', developing: true),
         item('super8', kind: MediaKind.video, developing: true),
+        // past its time, still being processed: the lab's note
+        item('ektar100', late: true),
         for (var i = 0; i < 4; i++) item('portra400'),
         item('polaroid600'),
         item('super8', kind: MediaKind.video),
@@ -109,6 +118,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
       }
       expect(tester.takeException(), isNull);
+      expect(find.text('extra time'), findsOneWidget);
+      expect(find.textContaining('The lab has asked for extra time on this one'), findsOneWidget);
 
       if (shots != null) {
         await tester.runAsync(() async {

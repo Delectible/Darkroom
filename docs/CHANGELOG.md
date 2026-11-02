@@ -1471,3 +1471,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   The splash (and the pre-12 launch screen) now uses `splash_rabbit`: the
   curtain's own rabbit at 96 dp, centred on Android's 288 dp splash canvas
   (`tool/icon/make_icons.py` `splash_rabbit`), so the hand-over is seamless.
+- [x] **57.81** → 2.0.5 · A print still processing 15 s past its time (on an iPhone
+  the app only develops while it's open) shows "extra time" on its tray, and
+  the darkroom strip says "The lab has asked for extra time on this one /
+  these N. It'll / They'll be out shortly, sooner with Darkroom open."
+  (`_Tray.overdue`; was a bare "fixing…", or a frozen 0:00 on instant prints).

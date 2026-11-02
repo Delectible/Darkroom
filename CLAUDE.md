@@ -30,8 +30,12 @@ Read this first. It's the hand-off from the earlier development sessions
   shows them as bullets; keep them short).
 - **Commit messages:** plain messages only, no Claude session links and no
   Co-Authored-By trailers (the owner's wish, 2026-10-16).
-- **Release roadmap:** `docs/RELEASE.md` is the checklist to the public
-  Play / App Store release; tick items as they land.
+- **"The checklist"** (when the owner says "add to the checklist") is the
+  artifact page **Darkroom Release Sweep**,
+  https://claude.ai/artifact/KrvhMZrV3RUNie7YHxYewQ (read it, edit, republish
+  to the same URL; ticks live in his browser, he pastes them back). Finished
+  items are taken off it, not ticked. Mirror new feature ideas in
+  `docs/CHANGELOG.md`. `docs/RELEASE.md` is the repo's own release log.
 - **Change log:** `docs/CHANGELOG.md` tracks every requested change by item
   number. Mark items `[~]` when starting and `[x] → version · date · commit`
   when they land; add new requests there. New stocks/cameras arrive on the

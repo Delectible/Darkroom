@@ -114,6 +114,37 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     });
   }
 
+  /// Skip asks first; skipped past the moves, the camera offers them once.
+  Future<void> _skip() async {
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A20),
+        title: const Text('Are you sure?', style: TextStyle(color: _ink)),
+        content: const Text(
+          'The tour shows how to swap cameras, open the corkboard and more. '
+          'You can find it again under How it works.',
+          style: TextStyle(color: _muted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Keep going', style: TextStyle(color: _ink)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Skip', style: TextStyle(color: _accent)),
+          ),
+        ],
+      ),
+    );
+    if (sure != true || !mounted) return;
+    if (_page < _gesturesPage) {
+      unawaited(ref.read(sharedPrefsProvider).setBool(PrefKeys.tourSkipped, true));
+    }
+    _pages.jumpToPage(_count - 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     final last = _page == _count - 1;
@@ -131,13 +162,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 child: !last
                     ? TextButton(
                         key: const ValueKey('skip'),
-                        onPressed: () {
-                          // Skipped past the moves: the camera offers them once.
-                          if (_page < _gesturesPage) {
-                            unawaited(ref.read(sharedPrefsProvider).setBool(PrefKeys.tourSkipped, true));
-                          }
-                          _pages.jumpToPage(_count - 1);
-                        },
+                        onPressed: () => unawaited(_skip()),
                         child: const Text('Skip', style: TextStyle(color: _muted)),
                       )
                     : TextButton(

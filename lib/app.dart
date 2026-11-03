@@ -159,6 +159,9 @@ class _HomeState extends ConsumerState<_Home> {
         SnackBar(
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 8),
+          // Goes by itself after 8 s (an action would keep it up), or the X.
+          persist: false,
+          showCloseIcon: true,
           content: const Text("New here? Here's how it works."),
           action: SnackBarAction(
             label: 'Show me',

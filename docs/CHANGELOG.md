@@ -1481,6 +1481,11 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   `AVCaptureEventInteraction` in AppDelegate on the `darkroom/volume` channel
   (iOS 17.2+). Camera Control's swipe-to-zoom and launching Darkroom from it
   are not possible without much bigger work (see the chat of 2026-11-02).
+- [x] **57.83** → 2.0.5 · Selfie camera easier to find: a "Turn the lens dial"
+  demo in How it works (grid now centres its rows), and the lens dial pulses
+  every 12 s until it's first turned (`PrefKeys.lensFound`).
+- [x] **57.84** → 2.0.5 · Skip in the intro asks "Are you sure?" first.
+- [x] **57.85** → 2.0.5 · The "New here?" note has an X and goes after 8 s.
 
 ## 58. Ideas after 2.0 (2026-11-02)
 

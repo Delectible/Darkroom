@@ -11,7 +11,8 @@ enum GestureMove {
   computer('Swipe left', 'Your digital shots, on the computer'),
   swap('Drag the camera', 'Swap film and digital'),
   shutter('Volume button', 'Takes the picture'),
-  print('Tap a print', 'Look closer, save or share');
+  print('Tap a print', 'Look closer, save or share'),
+  selfie('Turn the lens dial', 'Top right: flip to the front camera');
 
   const GestureMove(this.title, this.caption);
 
@@ -121,6 +122,8 @@ class _DemoPainter extends CustomPainter {
         _camera(canvas, scr, film: true, flash: _flash);
       case GestureMove.print:
         _printZoom(canvas, scr, _progress);
+      case GestureMove.selfie:
+        _camera(canvas, scr, film: true, dial: true, selfie: _selfie);
     }
     canvas.restore();
     // the side buttons; the volume key presses in for the shutter
@@ -143,6 +146,13 @@ class _DemoPainter extends CustomPainter {
   double get _keyPress => math.sin(math.pi * ((t - 0.2) / 0.25).clamp(0.0, 1.0));
   double get _flash => (1 - ((t - 0.32) / 0.25).abs() * 4).clamp(0.0, 1.0);
 
+  /// The front camera coming in after the dial's tap, and back out.
+  double get _selfie => _ease(((t - 0.3) / 0.15).clamp(0.0, 1.0)) * (1 - _back);
+
+  /// Where the lens dial sits on the demo camera (as on the real bodies:
+  /// the top row, right, beside the menu key).
+  static Offset _dialAt(Rect s) => Offset(s.left + s.width * 0.66, s.top + s.height * 0.07);
+
   /// A camera body filling the screen: viewfinder, shutter, a strip of
   /// controls.
   void _camera(
@@ -152,6 +162,8 @@ class _DemoPainter extends CustomPainter {
     double flash = 0,
     double dx = 0,
     double tilt = 0,
+    bool dial = false,
+    double selfie = 0,
   }) {
     canvas.save();
     canvas.translate(dx, 0);
@@ -199,7 +211,66 @@ class _DemoPainter extends CustomPainter {
       ..close();
     canvas.drawPath(hills, Paint()..color = const Color(0xFF3F4E3A));
     if (flash > 0) canvas.drawRect(vf, Paint()..color = Colors.white.withValues(alpha: flash * 0.9));
+    if (selfie > 0) {
+      // the front camera: a face looking back, on a warm indoor wall
+      canvas.drawRect(vf, Paint()..color = const Color(0xFF8C6F5A).withValues(alpha: selfie));
+      final head = Offset(vf.center.dx, vf.top + vf.height * 0.5);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset(head.dx, vf.bottom), width: vf.width * 0.8, height: vf.height * 0.5),
+        Paint()..color = const Color(0xFF3B4A5C).withValues(alpha: selfie),
+      );
+      canvas.drawCircle(
+        head,
+        vf.width * 0.22,
+        Paint()..color = const Color(0xFFE8B996).withValues(alpha: selfie),
+      );
+      final eye = Paint()..color = const Color(0xFF2A2522).withValues(alpha: selfie);
+      for (final x in [-0.08, 0.08]) {
+        canvas.drawCircle(head + Offset(vf.width * x, -vf.width * 0.03), vf.width * 0.025, eye);
+      }
+      canvas.drawArc(
+        Rect.fromCenter(
+          center: head + Offset(0, vf.width * 0.04),
+          width: vf.width * 0.16,
+          height: vf.width * 0.1,
+        ),
+        0.2,
+        2.7,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4
+          ..color = const Color(0xFF2A2522).withValues(alpha: selfie),
+      );
+    }
     canvas.restore();
+    if (dial) {
+      // the lens dial in the top row: a knurled knob whose index turns over
+      final c = _dialAt(s), r = s.width * 0.075;
+      canvas.drawCircle(c, r, Paint()..color = const Color(0xFFB9BCC2));
+      canvas.drawCircle(c, r * 0.55, Paint()..color = const Color(0xFF8E9298));
+      final a = -math.pi / 2 + math.pi * selfie;
+      canvas.drawLine(
+        c + Offset.fromDirection(a) * r * 0.2,
+        c + Offset.fromDirection(a) * r * 0.85,
+        Paint()
+          ..strokeWidth = 1.6
+          ..strokeCap = StrokeCap.round
+          ..color = _accent,
+      );
+      // the menu key beside it
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: c + Offset(s.width * 0.18, 0),
+            width: s.width * 0.14,
+            height: s.width * 0.1,
+          ),
+          Radius.circular(s.width * 0.02),
+        ),
+        Paint()..color = const Color(0xFF45403B),
+      );
+    }
     // the shutter and two controls under the viewfinder
     final cy = s.top + s.height * 0.82;
     canvas.drawCircle(
@@ -426,6 +497,7 @@ class _DemoPainter extends CustomPainter {
           Offset(s.center.dx, s.top + s.height * 0.45),
           Offset(s.center.dx, s.top + s.height * 0.45),
         ),
+        GestureMove.selfie => (_dialAt(s), _dialAt(s)),
       };
       return Offset.lerp(a, b, p)!;
     }
@@ -438,7 +510,7 @@ class _DemoPainter extends CustomPainter {
     final pos = at(p);
     final r = size.width * 0.11;
     // the trail
-    if (move != GestureMove.shutter && move != GestureMove.print && p > 0.02) {
+    if (move != GestureMove.shutter && move != GestureMove.print && move != GestureMove.selfie && p > 0.02) {
       final trail = Path()..moveTo(at(0).dx, at(0).dy);
       for (var i = 1; i <= 20; i++) {
         final q = at(p * i / 20);
@@ -460,7 +532,10 @@ class _DemoPainter extends CustomPainter {
     }
     // the touch ring as it presses, then the fingertip
     final ring =
-        (1 - _press) + (move == GestureMove.print ? math.max(0, 1 - ((t - 0.35) / 0.15).abs() * 3) : 0);
+        (1 - _press) +
+        (move == GestureMove.print || move == GestureMove.selfie
+            ? math.max(0, 1 - ((t - 0.35) / 0.15).abs() * 3)
+            : 0);
     if (ring > 0) {
       canvas.drawCircle(
         pos,
@@ -527,8 +602,8 @@ class GestureCard extends StatelessWidget {
   }
 }
 
-/// Every move, in rows of three (two on narrow screens, one row of six on
-/// wide ones).
+/// Every move, in rows of three (two on narrow screens, one row on wide
+/// ones).
 class GestureGrid extends StatelessWidget {
   const GestureGrid({super.key, this.size = 72, this.ink = Colors.white, this.muted = Colors.white70});
 
@@ -539,9 +614,11 @@ class GestureGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, box) {
-        // all six in a row when there's the width (sideways)
-        final columns = box.maxWidth >= 640 ? 6 : (box.maxWidth >= 300 ? 3 : 2);
+        // all in one row when there's the width (sideways); a short last
+        // row is centred
         const moves = GestureMove.values;
+        final columns = box.maxWidth >= 640 ? moves.length : (box.maxWidth >= 300 ? 3 : 2);
+        final cell = box.maxWidth / columns;
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -549,16 +626,16 @@ class GestureGrid extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (var c = r; c < r + columns; c++)
-                      Expanded(
-                        child: c < moves.length
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 4),
-                                child: GestureCard(move: moves[c], size: size, ink: ink, muted: muted),
-                              )
-                            : const SizedBox.shrink(),
+                    for (var c = r; c < math.min(r + columns, moves.length); c++)
+                      SizedBox(
+                        width: cell,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          child: GestureCard(move: moves[c], size: size, ink: ink, muted: muted),
+                        ),
                       ),
                   ],
                 ),

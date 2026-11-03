@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/db/media_repository.dart';
 import '../../../../core/monetization/allowance.dart';
@@ -233,7 +234,10 @@ class AspectButton extends ConsumerWidget {
                 fit: BoxFit.scaleDown,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  children: [if (locked) Icon(Icons.lock, size: 7, color: ink), text],
+                  children: [
+                    if (locked) Icon(Icons.lock, size: 7, color: ink),
+                    text,
+                  ],
                 ),
               ),
             ),
@@ -242,7 +246,10 @@ class AspectButton extends ConsumerWidget {
         return Upright(
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [if (locked) Icon(Icons.lock, size: 10, color: ink), text],
+            children: [
+              if (locked) Icon(Icons.lock, size: 10, color: ink),
+              text,
+            ],
           ),
         );
       }
@@ -1470,12 +1477,62 @@ class LensFlipButton extends ConsumerStatefulWidget {
   ConsumerState<LensFlipButton> createState() => _LensFlipButtonState();
 }
 
-class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
+class _LensFlipButtonState extends ConsumerState<LensFlipButton> with SingleTickerProviderStateMixin {
   double _turns = 0;
+
+  /// Until the dial has been turned once, a soft ring pulses round it now
+  /// and then, so the selfie camera can be found.
+  AnimationController? _pulse;
+  Timer? _again;
+
+  SharedPreferencesWithCache? get _prefs {
+    try {
+      return ref.read(sharedPrefsProvider);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final prefs = _prefs;
+    if (prefs != null && !(prefs.getBool(PrefKeys.lensFound) ?? false)) {
+      _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
+      _again = Timer(const Duration(seconds: 3), _ping);
+    }
+  }
+
+  void _ping() {
+    final pulse = _pulse;
+    if (pulse == null || !mounted) return;
+    unawaited(
+      pulse.forward(from: 0).then((_) {
+        if (mounted && _pulse != null) _again = Timer(const Duration(seconds: 12), _ping);
+      }),
+    );
+  }
+
+  void _stopPulse() {
+    _again?.cancel();
+    _pulse?.dispose();
+    _pulse = null;
+    unawaited(_prefs?.setBool(PrefKeys.lensFound, true));
+  }
+
+  @override
+  void dispose() {
+    _again?.cancel();
+    _pulse?.dispose();
+    super.dispose();
+  }
 
   void _flip() {
     unawaited(Haptics.mediumImpact());
-    setState(() => _turns += 0.5);
+    setState(() {
+      _turns += 0.5;
+      if (_pulse != null) _stopPulse();
+    });
     ref.read(lensProvider.notifier).toggle();
   }
 
@@ -1485,7 +1542,8 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
     final front = ref.watch(lensProvider) == CameraLensDirection.front;
     final mode = ref.watch(appModeProvider);
     final art = ref.watch(photoBodyProvider(mode));
-    return Semantics(
+    final pulse = _pulse;
+    final button = Semantics(
       button: true,
       label: front ? 'Use back camera' : 'Use front camera',
       // Pressed on contact, opaque (the rendered knob ignores touches).
@@ -1534,7 +1592,49 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
         ),
       ),
     );
+    if (pulse == null || !widget.enabled) return button;
+    return Stack(
+      alignment: Alignment.center,
+      clipBehavior: Clip.none,
+      children: [
+        IgnorePointer(
+          child: CustomPaint(size: const Size(40, 40), painter: _LensPulsePainter(pulse, palette.accent)),
+        ),
+        button,
+      ],
+    );
   }
+}
+
+/// Two soft rings that swell out from the lens dial and fade (drawn with
+/// alpha colours: no opacity layer on the camera's face).
+class _LensPulsePainter extends CustomPainter {
+  _LensPulsePainter(this.t, this.color) : super(repaint: t);
+
+  final Animation<double> t;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (t.value == 0 || t.value == 1) return;
+    final c = size.center(Offset.zero);
+    for (final start in const [0.0, 0.35]) {
+      final k = ((t.value - start) / 0.65).clamp(0.0, 1.0);
+      if (k == 0 || k == 1) continue;
+      final e = Curves.easeOut.transform(k);
+      canvas.drawCircle(
+        c,
+        size.width / 2 + 2 + e * 16,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3 - e * 2
+          ..color = color.withValues(alpha: 0.85 * (1 - k)),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LensPulsePainter old) => old.color != color || old.t != t;
 }
 
 class _LensFlipPainter extends CustomPainter {

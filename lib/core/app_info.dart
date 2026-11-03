@@ -11,7 +11,8 @@ class AppInfo {
   static const latest =
       'When a print runs past its developing time, the darkroom now says so: the lab has asked for '
       'extra time on it, and it\'ll be out shortly. On iPhone the volume buttons (and the Camera Control '
-      'button) now take the picture.';
+      'button) now take the picture. The selfie camera is easier to find (the lens dial pulses until '
+      'you first turn it, and How it works shows it), and skipping the intro asks first.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -771,7 +771,9 @@ UI
 - How it works (`features/help/`): looping drawn gesture demos
   (`GestureDemo`, CustomPaint, `GestureGrid`) + three facts; Settings top,
   Darkroom 98 Help, the tour's gestures page, and a one-time "New here?"
-  snackbar after a tour skipped before that page (`PrefKeys.tourSkipped`).
+  snackbar (8 s, X) after a tour skipped before that page (`PrefKeys.tourSkipped`;
+  Skip asks "Are you sure?"). The lens dial pulses until first turned
+  (`PrefKeys.lensFound`).
   Pages with them never settle: tests pump, not pumpAndSettle.
 - `OnboardingScreen` (features, gestures, name, permissions with reasons,
   one Allow all) shows once (`PrefKeys.onboarded`); Win98 Help > Welcome

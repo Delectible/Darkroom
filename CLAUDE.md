@@ -380,6 +380,8 @@ Film Mode
   if it was playing) and stop at the ends; START is one press. Seeks are
   coalesced (`_seek`). A reel that has ended re-threads a fresh player on
   PLAY (`_ended`; Android's player sticks), plus a one-shot stall watchdog.
+  Prev/next blank only the screen while the next reel threads; the deck
+  stays (on the old, paused player, keys idle: `_threading`).
   No swiping or tapping on the screen; only the keys. No REC badge in the Super 8 viewfinder. Always landscape
   (`CameraSpec.landscapeOnly`: held upright it records a landscape slice,
   `CropMath` `acrossShortSide`). Reels are scanned a touch wide (`CineStrip`,

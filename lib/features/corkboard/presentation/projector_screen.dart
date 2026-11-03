@@ -60,6 +60,10 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   String? _error;
   bool _saving = false;
 
+  /// The next reel is threading: the screen blanks (its shape may change)
+  /// but the deck stays up on the old player, keys idle, until it's in.
+  bool _threading = false;
+
   /// Drives the lamp flicker (picture and room) and shuttle artefacts.
   late final AnimationController _run = AnimationController(
     vsync: this,
@@ -126,20 +130,28 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     final old = _c;
     if (!rethread) {
       _stopShuttle();
-      _c = null;
       _error = null;
-      if (mounted) setState(() {});
+      _threading = old != null;
       old?.removeListener(_onTick);
-      await old?.dispose();
+      unawaited(old?.pause());
+      _run.stop();
+      if (mounted) setState(() {});
     }
+    Future<void> dropOld() async {
+      if (rethread || old == null) return;
+      if (mounted) setState(() => _c = null);
+      _threading = false;
+      await old.dispose();
+    }
+
     final live = {for (final m in ref.read(filmItemsProvider).value ?? widget.reels) m.id: m};
     final path = _item(live).outputPath;
-    if (path == null) return;
+    if (path == null) return dropOld();
     final c = VideoPlayerController.file(File(path));
     try {
       await c.initialize();
       if (!mounted) {
-        await c.dispose();
+        await c.dispose(); // (the old player went with the screen)
         return;
       }
       if (startAt > Duration.zero) await c.seekTo(startAt);
@@ -147,8 +159,11 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
       _ended = false;
       _seekTarget = null;
       _scrubPos = null;
-      setState(() => _c = c);
-      if (rethread && old != null) {
+      setState(() {
+        _c = c;
+        _threading = false;
+      });
+      if (old != null) {
         old.removeListener(_onTick);
         WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(old.dispose()));
       }
@@ -158,6 +173,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
       }
     } catch (_) {
       await c.dispose();
+      await dropOld();
       if (mounted) setState(() => _error = 'This reel cannot be played.');
     }
   }
@@ -524,7 +540,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     // The screen. Everything is on the deck's keys: no taps or swipes.
     final screen = IgnorePointer(
       child: ProjectorRoom(
-        aspect: c?.value.aspectRatio,
+        aspect: _threading ? null : c?.value.aspectRatio,
         run: _run,
         placeholder: Text(
           _error ?? 'Threading the film…',
@@ -532,7 +548,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white38),
         ),
-        picture: c == null
+        picture: c == null || _threading
             ? const SizedBox.shrink()
             : AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
@@ -547,21 +563,24 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     );
     final deck = c == null
         ? null
-        : ProjectorDeck(
-            playback: c,
-            item: item,
-            run: _run,
-            shuttle: _shuttle,
-            cuePos: _shuttle == ReelShuttle.none ? _scrubPos : _shuttlePos,
-            onRename: () => _rename(item),
-            onSeek: _scrub,
-            onScrub: _scrubbing,
-            onStart: _toStart,
-            onRewind: (down) => _hold(ReelShuttle.rewind, down),
-            onPlay: _togglePlay,
-            onForward: (down) => _hold(ReelShuttle.forward, down),
-            onPrev: _index > 0 ? () => _step(-1) : null,
-            onNext: _index < _ids.length - 1 ? () => _step(1) : null,
+        : IgnorePointer(
+            ignoring: _threading,
+            child: ProjectorDeck(
+              playback: c,
+              item: item,
+              run: _run,
+              shuttle: _shuttle,
+              cuePos: _shuttle == ReelShuttle.none ? _scrubPos : _shuttlePos,
+              onRename: () => _rename(item),
+              onSeek: _scrub,
+              onScrub: _scrubbing,
+              onStart: _toStart,
+              onRewind: (down) => _hold(ReelShuttle.rewind, down),
+              onPlay: _togglePlay,
+              onForward: (down) => _hold(ReelShuttle.forward, down),
+              onPrev: _index > 0 ? () => _step(-1) : null,
+              onNext: _index < _ids.length - 1 ? () => _step(1) : null,
+            ),
           );
     final actions = Padding(
       padding: const EdgeInsets.fromLTRB(24, 4, 24, 10),

@@ -498,6 +498,9 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   transition draws in the wrong place, so while the route slides `CrtWarp` paints
   a still of the flat screen through the same shader (`_StillBulge`, a paint
   shader follows its canvas) and the live filter takes over on landing.
+  The Start menu is drawn in the explorer's own Stack (`StartMenuPanel`,
+  `_startPick`), so it bulges with the screen; other menus and message
+  boxes are still routes over the monitor.
   Screen savers (`win98_savers.dart`: 3D Pipes, Starfield, 3D Text, drawn
   live): `Win98SaverWatch` round the explorer pushes one after the wait
   (`Win98Idle`: a global pointer route; the media player pokes it while

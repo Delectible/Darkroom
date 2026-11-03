@@ -1153,105 +1153,94 @@ class _DefragState extends State<_Defrag> {
 
 enum StartAction { camera, pictures, options, help, run, profile, shutDown }
 
-Future<StartAction?> showStartMenu(BuildContext context) {
-  final bottom = MediaQuery.paddingOf(context).bottom + 32;
-  return showGeneralDialog<StartAction>(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: 'start',
-    barrierColor: Colors.transparent,
-    transitionDuration: const Duration(milliseconds: 120),
-    transitionBuilder: (context, a, _, child) => SlideTransition(
-      position: Tween(begin: const Offset(0, 0.08), end: Offset.zero).animate(a),
-      child: child,
-    ),
-    pageBuilder: (context, _, _) => Win98Scale(
-      child: Stack(
-        children: [
-          Positioned(
-            left: 6,
-            bottom: bottom,
-            child: Win98Glass(
-              child: Material(
-                type: MaterialType.transparency,
-                child: Win98Bevel(
-                  style: BevelStyle.window,
-                  padding: const EdgeInsets.all(2),
-                  child: IntrinsicHeight(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(
-                          width: 24,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [W98.navy, W98.titleEnd],
-                            ),
-                          ),
-                          padding: const EdgeInsets.only(top: 6, bottom: 8),
-                          child: Column(
-                            children: [
-                              const PixelIconView(PixelIcon.rabbit),
-                              const Spacer(),
-                              RotatedBox(
-                                quarterTurns: 3,
-                                child: Text.rich(
-                                  TextSpan(
-                                    children: [
-                                      TextSpan(
-                                        text: 'Darkroom',
-                                        style: W98.text.copyWith(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: '98',
-                                        style: W98.text.copyWith(color: Colors.white70, fontSize: 16),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(
-                          width: 190,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _startItem(context, PixelIcon.camera, 'Camera', StartAction.camera),
-                              _startItem(context, PixelIcon.folder, 'My Pictures', StartAction.pictures),
-                              _startItem(context, PixelIcon.views, 'Settings', StartAction.options),
-                              _startItem(context, PixelIcon.question, 'Help', StartAction.help),
-                              _startItem(context, PixelIcon.upFolder, 'Run...', StartAction.run),
-                              Divider(height: 6, color: W98.shadow),
-                              _startItem(context, PixelIcon.rabbit, 'User Profile...', StartAction.profile),
-                              _startItem(context, PixelIcon.computer, 'Shut Down...', StartAction.shutDown),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+/// The Start menu: drawn on the explorer's own screen (in its Stack, so
+/// the CRT's bulge and glass take it like everything else on the screen),
+/// just above the taskbar. [onPick] gets the item.
+class StartMenuPanel extends StatelessWidget {
+  const StartMenuPanel({super.key, required this.onPick});
+
+  final ValueChanged<StartAction> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget item(PixelIcon icon, String label, StartAction action) =>
+        _startItemOf(icon, label, () => onPick(action));
+    // (already under the screen's Win98Glass)
+    return Material(
+      type: MaterialType.transparency,
+      child: Win98Bevel(
+        style: BevelStyle.window,
+        padding: const EdgeInsets.all(2),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: 24,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [W98.navy, W98.titleEnd],
                   ),
                 ),
+                padding: const EdgeInsets.only(top: 6, bottom: 8),
+                child: Column(
+                  children: [
+                    const PixelIconView(PixelIcon.rabbit),
+                    const Spacer(),
+                    RotatedBox(
+                      quarterTurns: 3,
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Darkroom',
+                              style: W98.text.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                              ),
+                            ),
+                            TextSpan(
+                              text: '98',
+                              style: W98.text.copyWith(color: Colors.white70, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+              SizedBox(
+                width: 190,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    item(PixelIcon.camera, 'Camera', StartAction.camera),
+                    item(PixelIcon.folder, 'My Pictures', StartAction.pictures),
+                    item(PixelIcon.views, 'Settings', StartAction.options),
+                    item(PixelIcon.question, 'Help', StartAction.help),
+                    item(PixelIcon.upFolder, 'Run...', StartAction.run),
+                    Divider(height: 6, color: W98.shadow),
+                    item(PixelIcon.rabbit, 'User Profile...', StartAction.profile),
+                    item(PixelIcon.computer, 'Shut Down...', StartAction.shutDown),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
-Widget _startItem(BuildContext context, PixelIcon icon, String label, StartAction action) => InkWell(
+Widget _startItemOf(PixelIcon icon, String label, VoidCallback onTap) => InkWell(
   onTap: () {
     Sfx.w98Click.play();
-    Navigator.of(context).pop(action);
+    onTap();
   },
   hoverColor: W98.navy,
   child: Padding(

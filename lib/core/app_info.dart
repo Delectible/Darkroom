@@ -10,7 +10,8 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'The lens dial now has FLIP engraved under it, so the selfie camera is easy to find (no more '
-      'pulsing ring).';
+      'pulsing ring). In Darkroom 98 the Start menu now opens on the monitor\'s screen, curved with the '
+      'tube like everything else.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -1486,6 +1486,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   every 12 s until it's first turned (`PrefKeys.lensFound`).
 - [x] **57.86** → 2.0.6 · The pulsing ring (57.83) was too much: instead "FLIP"
   is engraved in the body under the lens dial, on every body and skin.
+- [x] **57.87** → 2.0.6 · Darkroom 98's Start menu was a route over the whole
+  phone (off the monitor's screen, no CRT bulge): now `StartMenuPanel` in the
+  explorer's own Stack, inside `CrtWarp`.
 - [x] **57.84** → 2.0.5 · Skip in the intro asks "Are you sure?" first.
 - [x] **57.85** → 2.0.5 · The "New here?" note has an X and goes after 8 s.
 

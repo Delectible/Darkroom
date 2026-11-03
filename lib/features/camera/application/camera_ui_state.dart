@@ -33,9 +33,6 @@ class PrefKeys {
   /// Skipped the tour before its moves: the camera says "New here?" once.
   static const tourSkipped = 'user.tourSkipped';
 
-  /// The lens dial has been turned once: it stops pulsing.
-  static const lensFound = 'ui.lensFound';
-
   /// The digital body's finish (the live 3D model's skins).
   static const bodyFinish = 'ui.body.finish';
 
@@ -113,7 +110,6 @@ class PrefKeys {
     onboarded,
     userName,
     tourSkipped,
-    lensFound,
     bodyFinish,
     filmFinish,
     skinsUnlocked,

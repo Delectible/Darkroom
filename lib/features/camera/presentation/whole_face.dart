@@ -133,8 +133,20 @@ class WholeFace extends ConsumerWidget {
                               unawaited(ref.read(cameraSettingsProvider.notifier).cycleAspect(spec.id)),
                         ),
                       ),
-                      if (session.hasFrontCamera)
+                      if (session.hasFrontCamera) ...[
+                        at(
+                          part('lens') + const Offset(0, 29),
+                          const Size(40, 12),
+                          // on the film body's top plate / the digital body's shell
+                          LensFlipCaption(
+                            ink: CameraSkins.byId(
+                              mode,
+                              ref.watch(cameraSkinProvider.select((m) => m[mode])),
+                            ).ink,
+                          ),
+                        ),
                         at(part('lens'), const Size(40, 40), LensFlipButton(enabled: !recording)),
+                      ],
                       at(
                         part(film ? 'menu' : 'pillsmall'),
                         const Size(44, 36),

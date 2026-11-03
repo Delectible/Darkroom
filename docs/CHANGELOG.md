@@ -1484,6 +1484,8 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **57.83** → 2.0.5 · Selfie camera easier to find: a "Turn the lens dial"
   demo in How it works (grid now centres its rows), and the lens dial pulses
   every 12 s until it's first turned (`PrefKeys.lensFound`).
+- [x] **57.86** → 2.0.6 · The pulsing ring (57.83) was too much: instead "FLIP"
+  is engraved in the body under the lens dial, on every body and skin.
 - [x] **57.84** → 2.0.5 · Skip in the intro asks "Are you sure?" first.
 - [x] **57.85** → 2.0.5 · The "New here?" note has an X and goes after 8 s.
 

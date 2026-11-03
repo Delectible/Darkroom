@@ -979,7 +979,8 @@ class _TopBar extends ConsumerWidget {
     final spec = ref.watch(activeSpecProvider);
     final processing = ref.watch(captureProcessorProvider).pending;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      // (room underneath for the FLIP under the lens dial)
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       child: Row(
         children: [
           const FlashButton(),
@@ -1014,7 +1015,14 @@ class _TopBar extends ConsumerWidget {
                   ),
           ),
           if (session.hasFrontCamera) ...[
-            LensFlipButton(enabled: !ref.watch(captureControllerProvider).isRecording),
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                LensFlipButton(enabled: !ref.watch(captureControllerProvider).isRecording),
+                const Positioned(bottom: -13, left: -10, right: -10, child: LensFlipCaption()),
+              ],
+            ),
             const SizedBox(width: 8),
           ],
           switch (ref.watch(photoBodyProvider(spec.mode))) {

@@ -6,7 +6,6 @@ import 'package:camera/camera.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../core/db/media_repository.dart';
 import '../../../../core/monetization/allowance.dart';
@@ -1466,6 +1465,50 @@ class _ZoomRockerState extends ConsumerState<ZoomRocker> {
   }
 }
 
+/// "FLIP" engraved in the body under the lens dial, so the selfie camera
+/// can be found: the cut is a shade darker than the body, with a thin
+/// catch of light along its lower edge.
+class LensFlipCaption extends StatelessWidget {
+  const LensFlipCaption({super.key, this.ink});
+
+  /// The skin's ink for the surface it's cut into (the 3D bodies); the
+  /// drawn bodies work it out from their palette.
+  final Color? ink;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = RetroPalette.of(context);
+    final fill =
+        ink ??
+        (palette.body.computeLuminance() < 0.2
+            ? palette.textMuted
+            : Color.lerp(palette.bodyShadow, Colors.black, 0.35)!);
+    // paint-filled (light ink) shows its cut as a shadow above; a dark cut
+    // catches the light along its lower edge
+    final light = fill.computeLuminance() > 0.3;
+    return ExcludeSemantics(
+      child: Text(
+        'FLIP',
+        textAlign: TextAlign.center,
+        textScaler: TextScaler.noScaling,
+        style: TextStyle(
+          fontSize: 8.5,
+          height: 1,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.4,
+          color: fill,
+          shadows: [
+            Shadow(
+              color: light ? const Color(0xB3000000) : const Color(0x99FFFFFF),
+              offset: Offset(0, light ? -0.6 : 0.7),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Front / back camera: a small knurled dial with a lens in it. Tapping it
 /// turns the dial half a turn, like flipping the lens around.
 class LensFlipButton extends ConsumerStatefulWidget {
@@ -1477,62 +1520,12 @@ class LensFlipButton extends ConsumerStatefulWidget {
   ConsumerState<LensFlipButton> createState() => _LensFlipButtonState();
 }
 
-class _LensFlipButtonState extends ConsumerState<LensFlipButton> with SingleTickerProviderStateMixin {
+class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
   double _turns = 0;
-
-  /// Until the dial has been turned once, a soft ring pulses round it now
-  /// and then, so the selfie camera can be found.
-  AnimationController? _pulse;
-  Timer? _again;
-
-  SharedPreferencesWithCache? get _prefs {
-    try {
-      return ref.read(sharedPrefsProvider);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    final prefs = _prefs;
-    if (prefs != null && !(prefs.getBool(PrefKeys.lensFound) ?? false)) {
-      _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 2400));
-      _again = Timer(const Duration(seconds: 3), _ping);
-    }
-  }
-
-  void _ping() {
-    final pulse = _pulse;
-    if (pulse == null || !mounted) return;
-    unawaited(
-      pulse.forward(from: 0).then((_) {
-        if (mounted && _pulse != null) _again = Timer(const Duration(seconds: 12), _ping);
-      }),
-    );
-  }
-
-  void _stopPulse() {
-    _again?.cancel();
-    _pulse?.dispose();
-    _pulse = null;
-    unawaited(_prefs?.setBool(PrefKeys.lensFound, true));
-  }
-
-  @override
-  void dispose() {
-    _again?.cancel();
-    _pulse?.dispose();
-    super.dispose();
-  }
 
   void _flip() {
     unawaited(Haptics.mediumImpact());
-    setState(() {
-      _turns += 0.5;
-      if (_pulse != null) _stopPulse();
-    });
+    setState(() => _turns += 0.5);
     ref.read(lensProvider.notifier).toggle();
   }
 
@@ -1542,8 +1535,7 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> with SingleTick
     final front = ref.watch(lensProvider) == CameraLensDirection.front;
     final mode = ref.watch(appModeProvider);
     final art = ref.watch(photoBodyProvider(mode));
-    final pulse = _pulse;
-    final button = Semantics(
+    return Semantics(
       button: true,
       label: front ? 'Use back camera' : 'Use front camera',
       // Pressed on contact, opaque (the rendered knob ignores touches).
@@ -1592,49 +1584,7 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> with SingleTick
         ),
       ),
     );
-    if (pulse == null || !widget.enabled) return button;
-    return Stack(
-      alignment: Alignment.center,
-      clipBehavior: Clip.none,
-      children: [
-        IgnorePointer(
-          child: CustomPaint(size: const Size(40, 40), painter: _LensPulsePainter(pulse, palette.accent)),
-        ),
-        button,
-      ],
-    );
   }
-}
-
-/// Two soft rings that swell out from the lens dial and fade (drawn with
-/// alpha colours: no opacity layer on the camera's face).
-class _LensPulsePainter extends CustomPainter {
-  _LensPulsePainter(this.t, this.color) : super(repaint: t);
-
-  final Animation<double> t;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (t.value == 0 || t.value == 1) return;
-    final c = size.center(Offset.zero);
-    for (final start in const [0.0, 0.35]) {
-      final k = ((t.value - start) / 0.65).clamp(0.0, 1.0);
-      if (k == 0 || k == 1) continue;
-      final e = Curves.easeOut.transform(k);
-      canvas.drawCircle(
-        c,
-        size.width / 2 + 2 + e * 16,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3 - e * 2
-          ..color = color.withValues(alpha: 0.85 * (1 - k)),
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(_LensPulsePainter old) => old.color != color || old.t != t;
 }
 
 class _LensFlipPainter extends CustomPainter {

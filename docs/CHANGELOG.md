@@ -1503,3 +1503,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
     together). Video stocks (Super 8, Epic 70): to figure out later.
 - [ ] **58.2 Collage** (idea): a built-in collage of prints; may cover the
   instant-pack case of 58.1.
+- [ ] **58.3 More camera settings** (idea): aperture / manual controls where
+  the phone allows; pick a specific lens on multi-camera phones.
+- [ ] **58.4 Fish-eye lens attachment** (idea).
+- [ ] **58.5 Digital camera effects** (idea): filters and other in-camera
+  effects of the era.
+- [ ] **58.6 Double exposure** (idea) and other physical film camera tricks.

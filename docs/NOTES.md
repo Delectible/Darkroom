@@ -7,6 +7,40 @@ section here. Keep adding detail here, not to CLAUDE.md.
 (How we work, the push/notify routine and the never-do rules are in
 CLAUDE.md.)
 
+## Where things stand (hand-off, 2026-11-04)
+
+- **Shipped:** 2.0.7 (build 108, CI run ~166) pushed to `main` 2026-11-04: the
+  big speed/memory update (skins on demand, slim 3D files, screen-size
+  print decoding, low-RAM tuning + `BodyQuality`, faster launch, Debug >
+  Memory Report / Launch Timing / 3D Quality Stats). Before it: 2.0.6
+  (FLIP caption, Start menu in the CRT, projector deck stays, six How it
+  works demos, Epic 70 "MOVIE · 24 FPS").
+- **App Store:** 2.0.3 is in App Review (resubmitted with notes + a demo
+  video after a Guideline 2.1 info request). The iPhone store is 4 builds
+  behind; when Apple approves, the owner says "release to iPhone" → run
+  `appstore-release.yml` for the newest build (check App Store Connect
+  first; never replace a pending submission).
+- **Google Play:** production access was refused on 2026-11-01 ("needs more
+  testing"). Plan: keep promoting a stable build to closed testing about
+  weekly (last: 2.0.4, build 163), then reapply. Internal testing gets every
+  `main` build.
+- **To verify on the owner's phones (not possible in the cloud):** digital
+  3D skins swapping in (grip has its own normal map: the desktop preview
+  can't draw the digital model), Launch Timing / Memory Report / 3D Quality
+  Stats numbers from the Pixel 9 Pro and the iPhone, the CRT bulge on the
+  Start menu, FLIP on the digital body.
+- **Open ideas:** CHANGELOG 58.x (request the film from the lab: Pro,
+  strip or whole roll, negative or scan; collage; more camera settings;
+  fish-eye; digital effects; double exposure) and 59.7. The checklist
+  artifact (CLAUDE.md) mirrors them.
+- **Desktop 3D preview tips:** `tool/live3d/preview.dart` builds in a copy
+  of the repo (cp lib/assets/tool/hook/pubspec into it; `flutter create
+  --platforms linux .` there, enable Flutter GPU in
+  `linux/runner/my_application.cc`, set the window to 1280x2856 for
+  Pixel-size shots). Run under Xvfb with WAIT=12+ (the scene loads after
+  the default 4 s); screenshot with ImageMagick `import -window root`.
+  Handy env in a local patch: FINISH, RSCALE (renderScale), LOWQ.
+
 Map: launch = "Build & release pipeline" (LaunchCurtain, LaunchTimer);
 film engine = "Film engine"; Free/Pro = "Free and Pro"; camera UI, 3D
 bodies, skins = "UI"; corkboard, darkroom, projector = "Film Mode";

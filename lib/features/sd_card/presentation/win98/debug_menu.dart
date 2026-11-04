@@ -96,30 +96,35 @@ final _speedTests = <(String, ValueNotifier<bool>, String)>[
 final _tools = <_Tool>[
   _Tool(
     PixelIcon.views,
-    'Run Speed Tests',
-    'Works through every speed test below on its own, the same way each time, in about '
-        '${SpeedTestRun.minutes} minutes: the camera at rest, swipes between the cameras (made by the app), '
-        'then Darkroom 98. Leave the phone alone (tap the banner to stop). The Performance Report then '
-        'opens with only the run in it, each step next to the baseline: Copy it and send it to Claude.',
+    'Run Speed Test',
+    'The one to send: about ${SpeedTestRun.minutes} minutes, hands off. The app swipes between the cameras '
+        'and through the corkboard and Darkroom 98 by itself, trying each speed setting in turn, with live '
+        'numbers on top. At the end it shows a short result to copy and send. Run it again for '
+        'the last result.',
     (context, ref) async {
+      final last = SpeedTestRun.lastResults;
       final go = await showWin98MessageBox(
         context,
-        title: 'Run Speed Tests',
+        title: 'Speed Test',
         message:
-            'This takes about ${SpeedTestRun.minutes} minutes and swipes the cameras by itself. '
-            'Leave the phone on a table and don\'t touch it.',
+            'Takes about ${SpeedTestRun.minutes} minutes. Put the phone down and don\'t touch it: '
+            'the app swipes and switches screens by itself. The panel at the top shows how long is left '
+            '(tap it to stop).',
         icon: Win98MessageIcon.question,
-        buttons: const ['Start', 'Cancel'],
+        buttons: ['Start', if (last != null) 'Last Result', 'Cancel'],
       );
-      if (go != 0 || !context.mounted) return;
+      if (!context.mounted) return;
+      if (go == 1 && last != null) return _showResults(context, last);
+      if (go != 0) return;
       final container = ProviderScope.containerOf(context, listen: false);
+      SpeedTestRun.header = () => _testHeader(container.read);
       final navigator = Navigator.of(context);
       unawaited(
         SpeedTestRun.run(
           navigator,
-          done: () {
+          done: (text) {
             final c = navigator.context;
-            if (c.mounted) unawaited(_perfReport(c, container.read));
+            if (c.mounted) unawaited(_showResults(c, text));
           },
         ),
       );
@@ -608,10 +613,10 @@ class _DebugMenu extends ConsumerStatefulWidget {
 /// The Debug window's folders, in order, and the tools in each (by name).
 /// A tool left out lands in Other.
 final _groups = <(String, List<String>)>[
+  ('Performance', ['Run Speed Test', 'Performance Report', 'FPS Counter', 'Slow Motion']),
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
-  ('Performance', ['Performance Report', 'FPS Counter', 'Slow Motion']),
-  ('Speed Tests', ['Run Speed Tests', for (final (name, _, _) in _speedTests) name]),
+  ('Speed Test Switches', [for (final (name, _, _) in _speedTests) name]),
   ('Diagnostics', ['Camera Log', 'Crash Reports', 'Test Crash']),
   ('First Run & Prompts', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt', 'Lag Prompt']),
 ];
@@ -644,7 +649,9 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
   /// The picked tool (index into [_tools]), or a folder ([_folder]).
   int? _picked;
   String? _folder;
-  final _open = <String>{};
+
+  /// (Performance open from the start: the speed test is the first thing there)
+  final _open = <String>{'Performance'};
 
   @override
   void dispose() {
@@ -877,3 +884,85 @@ String _compressionSupport() {
     return 'GPU texture compression: unknown ($e)';
   }
 }
+
+/// The speed test's own header lines: the app, Fancy graphics, the 3D
+/// textures (format and size) and what compression the GPU offers.
+String _testHeader(_Read read) {
+  final art = read(wholeArtProvider).value;
+  final tex = [
+    for (final MapEntry(key: mode, value: body) in (art?.bodies ?? const <AppMode, WholeBody>{}).entries)
+      if (body.live case final live?)
+        '${mode.name} ${(live.textureBytes() / (1 << 20)).round()} MB (${live.textureFormats()})',
+  ];
+  return [
+    '${AppInfo.name} ${AppInfo.version}, RAM ${DeviceMemory.gb?.toStringAsFixed(1) ?? '?'} GB'
+        '${DeviceMemory.low ? ' (low)' : ''}, fancy graphics ${read(globalSettingsProvider).controls3d ? 'on' : 'off'}',
+    '3D textures: ${tex.isEmpty ? 'not loaded' : tex.join('; ')}',
+    _compressionSupport().replaceFirst('GPU texture compression: ', 'GPU compression: '),
+  ].join('\n');
+}
+
+/// The speed test's result, with a big Copy button.
+Future<void> _showResults(BuildContext context, String text) => showWin98Window<void>(
+  context,
+  title: 'Speed Test Result',
+  width: 360,
+  icon: const PixelIconView(PixelIcon.info),
+  builder: (context) => StatefulBuilder(
+    builder: (context, setState) {
+      var copied = false;
+      return StatefulBuilder(
+        builder: (context, setInner) => Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                copied
+                    ? 'Copied. Paste it into a message to whoever asked for it.'
+                    : 'Done. Copy this and send it (it fits in one message).',
+                style: W98.text.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: Win98Bevel(
+                  style: BevelStyle.sunken,
+                  color: W98.white,
+                  padding: const EdgeInsets.all(6),
+                  child: SingleChildScrollView(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Text(text, style: W98.text.copyWith(fontSize: 9, fontFamily: 'monospace')),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: Win98Button(
+                      onPressed: () {
+                        unawaited(Clipboard.setData(ClipboardData(text: text)));
+                        setInner(() => copied = true);
+                      },
+                      child: Text(copied ? 'Copied!' : 'Copy to Clipboard'),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Win98Button(
+                    minWidth: 64,
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Close'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  ),
+);

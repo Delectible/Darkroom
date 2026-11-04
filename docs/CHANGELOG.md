@@ -346,10 +346,16 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [ ] **61.12** Grain on the camera's frames: not possible from Dart (a
   camera frame re-rasters without a framework frame); 12 fps grain is the
   test instead.
-- [x] **61.13** → 2.0.10 · Debug > Speed Tests > Run Speed Tests
-  (`core/diagnostics/speed_test_run.dart`): ~3 min hands-off: each switch
-  on its own after a baseline; camera rest 5 s + 4 tosses + 2 half swipes
-  (synthetic pointer events through GestureBinding, so the real drag path),
-  then Darkroom 98 redrawing every frame (`SpeedTestPulse`) 5 s per switch.
-  Frames labelled "test N: ... · activity"; recorder cleared at the start;
-  the report opens at the end. Banner on top; tap stops.
+- [x] **61.13** → 2.0.10 · Debug > Performance > Run Speed Test (top of the
+  Debug window, Performance open by default; `speed_test_run.dart`): ~4 min
+  hands-off. Camera: base, each switch alone, "light" (all camera switches),
+  classic bodies (Fancy graphics off, restored after); each 5 s rest + 4
+  tosses + 2 half swipes (synthetic pointers through GestureBinding).
+  Corkboard: rest + scrolls. Darkroom 98: base, each 98 switch, all off,
+  redrawing every frame (`SpeedTestPulse`). Live panel on top (step, stage,
+  countdown, last second's fps / UI / GPU, progress; refreshes once a
+  second; tap stops). Result: one compact monospace text (device, screen,
+  RAM, 3D texture formats + GPU compression, last launch in one line, then
+  per step: fps, UI and GPU avg/p90, late %), shown at the end with Copy to
+  Clipboard; "Last Result" from the same dialog. Old switches folder kept
+  as "Speed Test Switches" for manual checks.

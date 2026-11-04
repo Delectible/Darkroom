@@ -95,7 +95,9 @@ void main() {
       location: MediaLocation.c,
     );
     // Opened from the explorer: inside the same beige monitor.
-    await tester.pumpWidget(app(ExplorerMonitor(child: Win98ViewerScreen(items: [item, item], initialIndex: 0))));
+    await tester.pumpWidget(
+      app(ExplorerMonitor(child: Win98ViewerScreen(items: [item, item], initialIndex: 0))),
+    );
     await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
     await tester.pumpAndSettle();
     expect(find.text('Reset Zoom'), findsOneWidget);
@@ -134,14 +136,13 @@ void main() {
     await tester.enterText(find.byType(TextField), 'test-password');
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
-    // Folders, closed: tools show once one is opened.
-    expect(find.text('Performance'), findsOneWidget);
-    expect(find.text('Speed Tests'), findsOneWidget);
-    expect(find.text('Performance Report'), findsNothing);
+    // Performance starts open (the speed test on top); other folders open on a tap.
+    expect(find.text('Run Speed Test'), findsOneWidget);
+    expect(find.text('Performance Report'), findsOneWidget);
     await tester.tap(find.text('Performance'));
     await tester.pump();
-    expect(find.text('Performance Report'), findsOneWidget);
-    await tester.tap(find.text('Speed Tests'));
+    expect(find.text('Performance Report'), findsNothing);
+    await tester.tap(find.text('Speed Test Switches'));
     await tester.pump();
     expect(find.text('No Viewfinder Look'), findsOneWidget);
     await tester.tap(find.text('Pro & Unlocks'));

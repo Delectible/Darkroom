@@ -78,6 +78,24 @@ class LaunchTimer {
   static String _two(int n) => n.toString().padLeft(2, '0');
   static String _ms(int ms) => '${(ms / 1000).toStringAsFixed(2)} s';
 
+  /// The last finished launch in one line: "1.10 s to the camera (3D 0.89,
+  /// camera 0.62; 98 ms before the app's code)"; null before one is saved.
+  static String? lastSummary() {
+    final last = prefs?.getStringList(_key)?.firstOrNull;
+    if (last == null) return null;
+    String? at(String label) {
+      for (final line in last.split('\n')) {
+        if (line.trimRight().endsWith(label)) return line.trim().split(' ').first;
+      }
+      return null;
+    }
+
+    final before = RegExp(r'\+(\d+) ms before').firstMatch(last)?.group(1);
+    final total = at('curtain lifts') ?? at('curtain lifts (gave up waiting)');
+    return '${total ?? '?'} s to the camera (3D ${at('3D camera in') ?? '?'}, camera ${at('camera open') ?? '?'}'
+        '${before == null ? '' : '; $before ms before the app\'s code'})';
+  }
+
   /// This launch (so far) and the ones before it, newest first.
   static String report() {
     final saved = prefs?.getStringList(_key) ?? const <String>[];

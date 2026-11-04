@@ -215,6 +215,8 @@ class MainActivity : FlutterActivity() {
                     }
                     // ms since Android started the app's process (Launch Timing:
                     // the time before Dart's main)
+                    // the phone's maker and model (speed test results)
+                    "device" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")
                     "sinceStart" -> result.success(
                         android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime(),
                     )

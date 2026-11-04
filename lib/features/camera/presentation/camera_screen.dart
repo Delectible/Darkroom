@@ -189,10 +189,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     super.initState();
     // Debug > Speed Tests > Run Speed Tests drives the screen through these.
     SpeedTestRun.tossDirection = () => _dirFor(ref.read(appModeProvider));
-    SpeedTestRun.openExplorer = () async {
-      unawaited(_push(const ExplorerScreen()));
+    SpeedTestRun.open = (screen) async {
+      unawaited(_push(screen == 'win98' ? const ExplorerScreen() : const CorkboardScreen()));
       await Future<void>.delayed(ExplorerScreen.slideDuration);
     };
+    SpeedTestRun.fancy = () => ref.read(globalSettingsProvider).controls3d;
+    SpeedTestRun.setFancy = (on) => ref.read(globalSettingsProvider.notifier).setControls3d(on);
     GraphicsVeil.cameras++;
     unawaited(Sfx.cameraSwap.preload());
     unawaited(Sfx.zoomMotor.preload());
@@ -216,7 +218,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   @override
   void dispose() {
     SpeedTestRun.tossDirection = null;
-    SpeedTestRun.openExplorer = null;
+    SpeedTestRun.open = null;
+    SpeedTestRun.fancy = null;
+    SpeedTestRun.setFancy = null;
     GraphicsVeil.cameras--;
     VolumeKeys.listen(null);
     unawaited(VolumeKeys.capture(false));

@@ -60,6 +60,15 @@ class SpeedTests {
     'square': squareScreen,
   };
 
+  /// Every switch.
+  static Iterable<ValueNotifier<bool>> get all => _named.values;
+
+  static void allOff() {
+    for (final f in all) {
+      f.value = false;
+    }
+  }
+
   /// [flag]'s label in the report.
   static String nameOf(ValueNotifier<bool> flag) => _named.entries.firstWhere((e) => e.value == flag).key;
 

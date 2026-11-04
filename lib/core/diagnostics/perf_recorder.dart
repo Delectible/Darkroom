@@ -55,6 +55,28 @@ class PerfRecorder {
 
   static void clear() => _frames.clear();
 
+  /// The frames recorded under [label] (a speed test step): build (UI) and
+  /// raster (GPU) ms, and vsync time (µs).
+  static List<({double ui, double gpu, int vsync})> framesOf(String label) => [
+    for (final f in _frames)
+      if (f.label == label || f.label.startsWith('$label · ')) (ui: f.build, gpu: f.raster, vsync: f.vsync),
+  ];
+
+  /// The last second's frames: how many, and the average UI / GPU ms (null
+  /// before any). Frame timings arrive in batches, so it lags a little.
+  static ({int fps, double ui, double gpu})? lastSecond() {
+    if (_frames.isEmpty) return null;
+    final end = _frames.last.vsync;
+    var n = 0;
+    var ui = 0.0, gpu = 0.0;
+    for (var i = _frames.length - 1; i >= 0 && _frames[i].vsync > end - 1000000; i--) {
+      n++;
+      ui += _frames[i].build;
+      gpu += _frames[i].raster;
+    }
+    return (fps: n, ui: ui / n, gpu: gpu / n);
+  }
+
   static void _onTimings(List<ui.FrameTiming> timings) {
     final now = DateTime.now();
     final activity = now.isBefore(_labelUntil) ? _label! : 'idle $screen';

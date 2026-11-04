@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
+import '../../core/device/device_memory.dart';
 import '../../core/device/haptics.dart';
 import '../../core/providers.dart';
 import '../camera/application/camera_session_controller.dart';
@@ -50,9 +51,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     // cameras. They load now, once it's up and has slid in, ready for when
     // the tour ends.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future<void>.delayed(const Duration(milliseconds: 900), () {
+      Future<void>.delayed(const Duration(milliseconds: 900), () async {
+        await DeviceMemory.ready;
         if (!mounted) return;
         try {
+          // The slowest phones start with the simpler drawn cameras (said
+          // once the tour is done; Settings can switch them back on).
+          if (DeviceMemory.lowest && ref.read(globalSettingsProvider).controls3d) {
+            await ref.read(globalSettingsProvider.notifier).setControls3d(false);
+            await ref.read(sharedPrefsProvider).setBool(PrefKeys.lowGraphicsNote, true);
+            return;
+          }
           if (!ref.read(globalSettingsProvider).controls3d) return;
           unawaited(ref.read(wholeArtProvider.future).then((_) {}, onError: (Object _) {}));
         } catch (_) {

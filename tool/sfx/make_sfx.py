@@ -28,6 +28,11 @@ no samples, no Microsoft sounds, just numpy).
                                 launch, drain, start-up tune, sling, drop)
   zoom_motor                    a small geared lens motor, looped while
                                 the zoom moves (seamless 1 s loop)
+
+The long sounds that aren't timed to a touch (w98_shutdown, w98_login,
+w98_exit, pin_start, w98_degauss, crt_off) ship as AAC (2.0.7, half the
+sound download):  ffmpeg -i NAME.wav -c:a aac -b:a 96k NAME.m4a
+Clicks and shutters stay .wav (AAC starts with a few ms of silence).
 """
 import os
 import wave

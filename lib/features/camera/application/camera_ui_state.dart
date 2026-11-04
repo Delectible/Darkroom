@@ -36,6 +36,10 @@ class PrefKeys {
   /// The last few launches' timings (LaunchTimer, Debug > Launch Timing).
   static const launchTimes = 'debug.launchTimes';
 
+  /// The first start began with Fancy graphics off (a slow phone): say so
+  /// once the tour is done.
+  static const lowGraphicsNote = 'ui.lowGraphicsNote';
+
   /// The digital body's finish (the live 3D model's skins).
   static const bodyFinish = 'ui.body.finish';
 
@@ -114,6 +118,7 @@ class PrefKeys {
     userName,
     tourSkipped,
     launchTimes,
+    lowGraphicsNote,
     bodyFinish,
     filmFinish,
     skinsUnlocked,

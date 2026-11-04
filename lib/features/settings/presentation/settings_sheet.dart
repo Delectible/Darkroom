@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../skins/presentation/camera_shop_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/device_memory.dart';
 import '../../../core/app_info.dart';
 import '../../../core/audio/sfx.dart';
 import '../../../core/device/upright.dart';
@@ -124,7 +125,9 @@ class _SettingsSheet extends ConsumerWidget {
         ),
         _Toggle(
           title: 'Fancy graphics',
-          subtitle: "Enhances graphics for immersive experience. Doesn't affect photos. Will affect morale.",
+          subtitle:
+              "Enhances graphics for immersive experience. Doesn't affect photos. Will affect morale."
+              '${DeviceMemory.low ? '\nSome effects are reduced on this phone, to keep it smooth.' : ''}',
           value: global.controls3d,
           onChanged: (v) => unawaited(g.setControls3d(v)),
         ),

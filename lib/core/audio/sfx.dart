@@ -29,11 +29,11 @@ class Sfx {
   static final w98Click = Sfx._('assets/sfx/w98_click.wav');
   static final w98Ding = Sfx._('assets/sfx/w98_ding.wav');
   static final w98Error = Sfx._('assets/sfx/w98_error.wav');
-  static final w98Login = Sfx._('assets/sfx/w98_login.wav');
-  static final w98Exit = Sfx._('assets/sfx/w98_exit.wav');
-  static final w98Shutdown = Sfx._('assets/sfx/w98_shutdown.wav');
-  static final crtOff = Sfx._('assets/sfx/crt_off.wav');
-  static final w98Degauss = Sfx._('assets/sfx/w98_degauss.wav');
+  static final w98Login = Sfx._('assets/sfx/w98_login.m4a');
+  static final w98Exit = Sfx._('assets/sfx/w98_exit.m4a');
+  static final w98Shutdown = Sfx._('assets/sfx/w98_shutdown.m4a');
+  static final crtOff = Sfx._('assets/sfx/crt_off.m4a');
+  static final w98Degauss = Sfx._('assets/sfx/w98_degauss.m4a');
 
   static List<Sfx> get windows98 => [w98Click, w98Ding, w98Error, w98Exit, w98Login, w98Degauss];
 
@@ -53,7 +53,7 @@ class Sfx {
   static final pinWarp = Sfx._('assets/sfx/pin_warp.wav');
   static final pinLaunch = Sfx._('assets/sfx/pin_launch.wav');
   static final pinDrain = Sfx._('assets/sfx/pin_drain.wav');
-  static final pinStart = Sfx._('assets/sfx/pin_start.wav');
+  static final pinStart = Sfx._('assets/sfx/pin_start.m4a');
 
   /// Digital bodies' zoom motor: loops while the zoom moves.
   static final zoomMotor = Sfx._('assets/sfx/zoom_motor.wav', loop: true);

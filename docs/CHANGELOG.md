@@ -244,7 +244,11 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **59.5** → 2.0.7 · Low RAM (≤ 3.2 GB) is chosen for automatically:
   halation off, 60 Hz, 3D adaptive render quality (min 0.7) and ≤ 1080 px
   wide, studio light built at 512. Debug > Memory Report.
-- [ ] **59.6** Ideas not done (see chat 2026-11-04): patched 3D loader to
-  skip mip 0, WAV sound effects to a compressed format, low-RAM default of
-  drawn cameras.
+- [x] **59.6** → 2.0.7 · Six long, untimed sounds ship as AAC (.m4a): sfx 2.0 →
+  1.1 MB. The slowest phones (≤ 2.2 GB, or ≤ 3.2 GB with ≤ 4 cores:
+  `DeviceMemory.lowest`) start their first run with Fancy graphics off and a
+  note after the tour (`PrefKeys.lowGraphicsNote`); Settings' Fancy graphics
+  says effects are reduced on low-RAM phones.
+- [ ] **59.7** Not done: a patched 3D loader skipping mip 0 (two-size files
+  do the same), drawn cameras by default for existing low-end installs.
 

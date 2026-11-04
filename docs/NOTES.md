@@ -616,6 +616,9 @@ UI
   studio map 512, halation off, 60 Hz (settings_controllers `_apply`).
   Prints decode at screen size, full only zoomed (`PhotoPager.zoom`).
   Debug > Memory Report.
+  Slowest phones (`DeviceMemory.lowest`) start the first run with Fancy
+  graphics off and say so after the tour. Long untimed sounds are .m4a
+  (make_sfx.py header).
 - Memory (2.0.7): `DeviceMemory.apply()` at launch caps
   `CaptureProcessor.maxWorkers` and the image cache by RAM. The 3D model
   reads its parts right before it paints (`LiveBody.syncParts`), so keys

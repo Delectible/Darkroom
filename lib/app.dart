@@ -189,6 +189,20 @@ class _HomeState extends ConsumerState<_Home> {
     }
     setState(() => _tour = false);
     final prefs = ref.read(sharedPrefsProvider);
+    if (prefs.getBool(PrefKeys.lowGraphicsNote) == true) {
+      unawaited(prefs.remove(PrefKeys.lowGraphicsNote));
+      Future<void>.delayed(const Duration(milliseconds: 1400), () {
+        if (!mounted) return;
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 8),
+            showCloseIcon: true,
+            content: Text('Simpler graphics to keep things smooth on this phone. Settings > Fancy graphics.'),
+          ),
+        );
+      });
+    }
     if (prefs.getBool(PrefKeys.tourSkipped) != true) return;
     unawaited(prefs.remove(PrefKeys.tourSkipped));
     Future<void>.delayed(const Duration(milliseconds: 1800), () {

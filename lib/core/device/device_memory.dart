@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
@@ -21,6 +22,10 @@ class DeviceMemory {
   /// A phone with little RAM (about 3 GB or less, or Android's low-RAM flag).
   static bool low = false;
 
+  /// The slowest phones (about 2 GB, or 3 GB with 4 cores or fewer): a
+  /// first start begins with Fancy graphics off (onboarding_screen.dart).
+  static bool lowest = false;
+
   /// Completes once the RAM has been read (or couldn't be); at once if it
   /// isn't being read (tests).
   static Future<void> get ready => _started ? _ready.future : Future<void>.value();
@@ -37,6 +42,7 @@ class DeviceMemory {
       gb = total / (1024 * 1024 * 1024);
       final lowRam = m?['lowRam'] == true;
       low = lowRam || gb! <= 3.2;
+      lowest = gb! <= 2.2 || (gb! <= 3.2 && Platform.numberOfProcessors <= 4);
       CaptureProcessor.maxWorkers = workersFor(gb!, lowRam: lowRam);
       PaintingBinding.instance.imageCache.maximumSizeBytes = cacheBytesFor(gb!, lowRam: lowRam);
     } catch (_) {

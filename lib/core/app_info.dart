@@ -3,16 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.0.6';
+  static const version = '2.0.7';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The lens dial now has FLIP engraved under it, so the selfie camera is easy to find (no more '
-      'pulsing ring). In Darkroom 98 the Start menu now opens on the monitor\'s screen, curved with the '
-      'tube like everything else. The projector\'s keys stay put while the next reel threads, and the '
-      'app opens faster, most of all on slower phones.';
+      'The launch fades into the camera smoothly again, and the app gets ready a little sooner: the '
+      'camera, its film look and the 3D cameras all start loading together.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -22,6 +22,9 @@ import 'core/paths/app_paths.dart';
 import 'core/providers.dart';
 import 'core/review/review_prompt.dart';
 import 'core/settings/settings_repository.dart';
+import 'core/shaders/shader_library.dart';
+import 'core/startup/launch_curtain.dart';
+import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/whole_body.dart';
 
@@ -51,9 +54,9 @@ Future<void> _start() async {
   });
   // The camera UI is portrait-locked; landscape shots are still captured in
   // landscape (EXIF orientation follows the physical device).
-  _stage = 'orientation';
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  await SystemChrome.setEnabledSystemUIMode(UprightApp.systemUi(turned: false));
+  // (sent, not waited on: they land long before the first frame)
+  unawaited(SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]));
+  unawaited(SystemChrome.setEnabledSystemUIMode(UprightApp.systemUi(turned: false)));
 
   _stage = 'storage';
   final (paths, db, prefs) = await (
@@ -107,11 +110,13 @@ Future<void> _start() async {
     );
   }
 
-  // Startup maintenance, off the critical path:
+  // Startup maintenance, once the launch curtain has gone (redeveloping an
+  // interrupted shot fought the launch for the CPU):
   //  * resume captures interrupted by a kill,
   //  * purge orphaned un-filtered files from the capture cache,
   //  * re-arm the darkroom wake-ups (covers reboots on iOS too).
   unawaited(() async {
+    await LaunchCurtain.gone;
     final processor = container.read(captureProcessorProvider);
     await processor.recover();
     await processor.sweepOrphans();
@@ -122,8 +127,21 @@ Future<void> _start() async {
   // curtain waits for both, app.dart). On the very first run they wait
   // until the welcome tour is up (onboarding_screen.dart), so the app
   // opens straight away.
-  if (global.controls3d && prefs.getBool(PrefKeys.onboarded) == true) {
+  final onboarded = prefs.getBool(PrefKeys.onboarded) == true;
+  if (global.controls3d && onboarded) {
     unawaited(container.read(wholeArtProvider.future).then((_) {}, onError: (Object _) {}));
+  }
+  // The camera list and the viewfinder's look (shaders, film LUT, grain)
+  // start now too, not when the camera screen first builds.
+  if (onboarded) {
+    CameraSessionController.prefetch();
+    void warm(Future<Object?> f) => unawaited(f.then((_) {}, onError: (Object _) {}));
+    warm(container.read(shaderProgramsProvider.future));
+    final spec = container.read(activeSpecProvider);
+    if (spec.film != null) {
+      warm(container.read(filmLutImageProvider(spec.id).future));
+      warm(container.read(grainImageProvider.future));
+    }
   }
   // Store: listen for purchases and quietly restore an earlier Pro.
   unawaited(container.read(proStoreProvider).start());

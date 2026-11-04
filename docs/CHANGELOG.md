@@ -1500,6 +1500,12 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   first frame; the stream's 450 ms settle overlaps the other loads; curtain
   fade 650 → 400 ms (max 5 → 9 s, as 3D now waits inside it). Debug >
   Launch Timing (`LaunchTimer`) to measure on the phones.
+- [x] **57.92** → 2.0.7 · The curtain's fade was lost in 2.0.6 (the 3D camera's first
+  draw and the other model's load landed on it): fade 600 ms, lifts 200 ms
+  after everything is in, the other model and start-up maintenance wait for
+  the curtain to go. More start-up in parallel: camera list (CameraX),
+  shaders, LUT and grain from main; system UI calls and Android exit
+  reasons not awaited; curtain polled every 50 ms, minimum 1.0 s.
 - [x] **57.84** → 2.0.5 · Skip in the intro asks "Are you sure?" first.
 - [x] **57.85** → 2.0.5 · The "New here?" note has an X and goes after 8 s.
 

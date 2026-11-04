@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -28,7 +29,8 @@ class CrashLog {
       _add('Uncaught error', '$error', stack);
       return false; // still let it be reported as usual
     };
-    if (Platform.isAndroid) await _collectSystemExits();
+    // (the phone's list of past app exits: read alongside the launch)
+    if (Platform.isAndroid) unawaited(_collectSystemExits());
   }
 
   static List<CrashReport> get reports {

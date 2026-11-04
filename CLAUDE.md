@@ -78,8 +78,9 @@ section for the area you're touching before changing it) and
 
 ## Where things are (read the NOTES.md section before touching it)
 
-- **Launch**: `main.dart` (nothing heavy before `runApp`), `LaunchCurtain`
-  waits for camera + look + 3D, `LaunchTimer` marks steps.
+- **Launch**: `main.dart` (nothing heavy before `runApp`; camera, look and
+  3D start in parallel), `LaunchCurtain` waits for them, fades 600 ms;
+  later work waits on `LaunchCurtain.gone`. `LaunchTimer` marks steps.
 - **Film engine / grain / defects / instant**: `lib/core/processing/film/`.
 - **Free vs Pro**: `Allowance`, `proProvider` (NOTES "Free and Pro").
 - **Camera UI, 3D bodies, skins, swap**: NOTES "UI" + "Live 3D bodies".

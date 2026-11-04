@@ -15,7 +15,7 @@ class LaunchCurtain extends StatefulWidget {
     required this.child,
     required this.isReady,
     this.line,
-    this.minimum = const Duration(milliseconds: 1100),
+    this.minimum = const Duration(milliseconds: 1000),
     this.maximum = const Duration(seconds: 9),
   });
 
@@ -32,6 +32,11 @@ class LaunchCurtain extends StatefulWidget {
   final Duration minimum, maximum;
 
   static const background = Color(0xFF0E0E12);
+
+  /// Completes once the curtain has faded away: heavy work that can wait
+  /// (the other 3D camera) waits for it, so the fade never stutters.
+  static Future<void> get gone => _gone.future;
+  static final _gone = Completer<void>();
 
   static const lines = [
     'Loading film',
@@ -61,7 +66,7 @@ class LaunchCurtain extends StatefulWidget {
 }
 
 class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProviderStateMixin {
-  late final _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+  late final _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
   late final String _line = LaunchCurtain
       .lines[(widget.line ?? math.Random().nextInt(LaunchCurtain.lines.length)) % LaunchCurtain.lines.length];
   // Counted in polls (not a stopwatch) so tests' clocks drive it too.
@@ -72,17 +77,20 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _poll = Timer.periodic(const Duration(milliseconds: 100), (_) => _check());
+    _poll = Timer.periodic(_tick, (_) => _check());
   }
 
+  static const _tick = Duration(milliseconds: 50);
+
   void _check() {
-    final waited = const Duration(milliseconds: 100) * ++_polls;
+    final waited = _tick * ++_polls;
     if (waited < widget.minimum) return;
     if (waited < widget.maximum && !widget.isReady()) return;
     _poll?.cancel();
     LaunchTimer.finish(widget.isReady() ? 'curtain lifts' : 'curtain lifts (gave up waiting)');
     _fade.forward().whenComplete(() {
       if (mounted) setState(() => _up = false);
+      if (!LaunchCurtain._gone.isCompleted) LaunchCurtain._gone.complete();
     });
   }
 
@@ -90,6 +98,7 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
   void dispose() {
     _poll?.cancel();
     _fade.dispose();
+    if (!LaunchCurtain._gone.isCompleted) LaunchCurtain._gone.complete();
     super.dispose();
   }
 

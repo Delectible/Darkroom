@@ -1,5 +1,4 @@
 import 'dart:async';
-import '../../../core/diagnostics/launch_timer.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -12,6 +11,8 @@ import 'package:flutter_scene/scene.dart' as fs;
 import 'package:vector_math/vector_math.dart' as vm;
 import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
 
+import '../../../core/diagnostics/launch_timer.dart';
+import '../../../core/startup/launch_curtain.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../application/camera_ui_state.dart' show appModeProvider;
 import '../../settings/application/settings_controllers.dart';
@@ -279,8 +280,11 @@ final wholeArtProvider = FutureProvider<WholeArt?>((ref) async {
   final art = await WholeArt.load(first: ref.read(appModeProvider));
   LaunchTimer.once('3D camera in');
   if (art != null) {
-    // After the first frames, so the opening stays smooth.
-    unawaited(Future<void>.delayed(const Duration(milliseconds: 400), art.loadRest));
+    // The other camera once the launch curtain has gone (it stuttered the
+    // fade), and after the first frames when 3D is switched on later.
+    unawaited(
+      LaunchCurtain.gone.then((_) => Future<void>.delayed(const Duration(milliseconds: 400), art.loadRest)),
+    );
   }
   return art;
 });

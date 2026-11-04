@@ -63,6 +63,10 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
 
   DateTime? _liveSince;
 
+  /// When everything was first in: a moment more lets the 3D camera and the
+  /// stream draw a few frames, so the fade runs smooth over a settled picture.
+  DateTime? _allSince;
+
   /// Lift the curtain once the camera is open with its look loaded (or
   /// won't open: no permission, no camera), or something else is on top
   /// (the tour, a shortcut's screen).
@@ -99,9 +103,15 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       final art = ref.read(wholeArtProvider);
       if (art.isLoading || !(art.value?.isReady(ref.read(appModeProvider)) ?? true)) ready = false;
     }
-    if (!ready) return false;
+    if (!ready) {
+      _allSince = null;
+      return false;
+    }
     LaunchTimer.once('all loaded');
-    return DateTime.now().difference(_liveSince!) > const Duration(milliseconds: 450);
+    final now = DateTime.now();
+    final all = _allSince ??= now;
+    return now.difference(_liveSince!) > const Duration(milliseconds: 450) &&
+        now.difference(all) > const Duration(milliseconds: 200);
   }
 
   @override

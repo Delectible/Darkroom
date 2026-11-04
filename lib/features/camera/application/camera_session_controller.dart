@@ -87,6 +87,12 @@ class CameraSessionController extends Notifier<CameraSessionState> {
   _Config? _controllerConfig;
   List<CameraDescription>? _cameras;
 
+  /// The phone's camera list, asked for at launch (main.dart) alongside the
+  /// rest of the start-up: on Android the first ask also starts CameraX,
+  /// which takes a while on slower phones.
+  static Future<List<CameraDescription>>? _early;
+  static void prefetch() => _early ??= availableCameras();
+
   bool _screenVisible = true;
   bool _appVisible = true;
   bool _permissionBlocked = false;
@@ -221,7 +227,9 @@ class CameraSessionController extends Notifier<CameraSessionState> {
   Future<void> _acquire(_Config cfg) async {
     state = state.copyWith(status: SessionStatus.initializing, clearController: true);
     try {
-      _cameras ??= await availableCameras();
+      final early = _early;
+      _early = null;
+      _cameras ??= await (early ?? availableCameras());
     } on CameraException catch (e) {
       state = state.copyWith(status: SessionStatus.error, message: e.description);
       return;

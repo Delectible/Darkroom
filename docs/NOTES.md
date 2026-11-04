@@ -110,14 +110,20 @@ CLAUDE.md.)
   `PrefKeys.launchLine`), held until `_ready` (camera session open, look
   shaders + LUT/grain loaded, the 3D camera in hand with Fancy graphics,
   450 ms since the session opened (counted while the rest loads); or the
-  tour / a pushed screen / no permission), min 1.1 s, max 9 s, then faded
-  out (400 ms). Launch speed (2.0.6): nothing heavy runs before `runApp`;
+  tour / a pushed screen / no permission; then 200 ms more so the 3D camera
+  and stream have drawn), min 1.0 s, max 9 s, polled every 50 ms, then
+  faded out (600 ms: at 400 ms, with work landing on it, it read as a cut). Launch speed (2.0.6): nothing heavy runs before `runApp`;
   the 3D bodies load alongside the camera opening (main.dart kicks
   `wholeArtProvider`), on the first run only once the welcome tour is up
   (`OnboardingScreen.initState`; `_toured` lets them land before the
   camera shows); WorkManager starts after the first frame
   (`WorkmanagerDevelopScheduler.ready`); the notification launch payload
-  is read after it. `LaunchTimer` (core/diagnostics) marks each step;
+  is read after it. Also started before `runApp` (onboarded only): the
+  camera list (`CameraSessionController.prefetch`, starts CameraX), the
+  look's shaders, LUT and grain. After the curtain (`LaunchCurtain.gone`):
+  the other 3D camera (`loadRest`), capture recovery / orphan sweep /
+  darkroom reschedule. System UI calls and Android exit-reason reading
+  aren't awaited. `LaunchTimer` (core/diagnostics) marks each step;
   Debug > Launch Timing shows the last 5 launches (`PrefKeys.launchTimes`). Android
   12+'s splash fades into it (MainActivity `setOnExitAnimationListener`);
   the splash shows `drawable-*/splash_rabbit` (the same 96 dp rabbit on the

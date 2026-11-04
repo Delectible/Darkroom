@@ -25,6 +25,10 @@ class PerfRecorder {
 
   static String? _label;
 
+  /// The Run Speed Tests step under way ("test 3: camera still swipe"):
+  /// its frames are labelled with it, in front of the activity.
+  static String? test;
+
   /// The screen on top, for frames nothing labelled ("idle camera"...).
   static String screen = 'camera';
   static DateTime _labelUntil = DateTime(0);
@@ -53,7 +57,9 @@ class PerfRecorder {
 
   static void _onTimings(List<ui.FrameTiming> timings) {
     final now = DateTime.now();
-    final label = '${now.isBefore(_labelUntil) ? _label! : 'idle $screen'}${SpeedTests.tag}';
+    final activity = now.isBefore(_labelUntil) ? _label! : 'idle $screen';
+    final t = test;
+    final label = t != null ? '$t · $activity' : '$activity${SpeedTests.tag}';
     for (final t in timings) {
       _frames.add(
         _Frame(
@@ -100,8 +106,19 @@ class PerfRecorder {
     for (final f in _frames) {
       (byLabel[f.label] ??= []).add(f);
     }
+    // A speed test run's steps in order (baseline first), then the rest by
+    // how many frames were slow.
+    int? step(String l) => l.startsWith('test ') ? int.tryParse(l.substring(5).split(':').first) : null;
     final labels = byLabel.keys.toList()
-      ..sort((a, c) => _slow(byLabel[c]!, budget).compareTo(_slow(byLabel[a]!, budget)));
+      ..sort((a, c) {
+        final sa = step(a), sc = step(c);
+        if (sa != null || sc != null) {
+          if (sa == null) return 1;
+          if (sc == null) return -1;
+          return sa != sc ? sa.compareTo(sc) : a.compareTo(c);
+        }
+        return _slow(byLabel[c]!, budget).compareTo(_slow(byLabel[a]!, budget));
+      });
     for (final l in labels) {
       final fs = byLabel[l]!;
       final ui_ = fs.map((f) => f.build).toList(), gpu = fs.map((f) => f.raster).toList();

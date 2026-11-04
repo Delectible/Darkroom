@@ -11,6 +11,7 @@ import '../../../../core/device/haptics.dart';
 import '../../../camera/application/camera_ui_state.dart' show win98MonitorProvider;
 import 'win98_display.dart';
 import 'win98_widgets.dart';
+import '../../../../core/diagnostics/speed_test_run.dart';
 import '../../../../core/diagnostics/speed_tests.dart';
 
 /// The beige monitor round the explorer: a moulded plastic bezel with a
@@ -203,6 +204,8 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
                                       : const SizedBox.shrink(),
                                 ),
                               ),
+                              // (Run Speed Tests: keeps the screen redrawing)
+                              const IgnorePointer(child: SpeedTestPulse()),
                               if (_osd case (final label, final v))
                                 IgnorePointer(
                                   child: _Osd(label: label, value: v),

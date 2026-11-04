@@ -673,7 +673,10 @@ UI
   before main and each 3D load step, 3D quality, memory); the frame
   recorder is always on. Debug > Speed Tests (`core/diagnostics/
   speed_tests.dart`, listed in debug_menu `_speedTests`) switch off one
-  cost each and tag the frames; they reset on restart. Launch curtain since
+  cost each and tag the frames; they reset on restart. Run Speed Tests
+  (`speed_test_run.dart`) works through them hands-off (synthetic swipes via
+  hooks the camera screen sets: `tossDirection`, `openExplorer`) and opens
+  the report: ask the owner for that rather than manual switching. Launch curtain since
   2.0.9: 0.3 s minimum, 150 ms after the camera opens, 300 ms fade.
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and

@@ -346,3 +346,10 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [ ] **61.12** Grain on the camera's frames: not possible from Dart (a
   camera frame re-rasters without a framework frame); 12 fps grain is the
   test instead.
+- [x] **61.13** → 2.0.10 · Debug > Speed Tests > Run Speed Tests
+  (`core/diagnostics/speed_test_run.dart`): ~3 min hands-off: each switch
+  on its own after a baseline; camera rest 5 s + 4 tosses + 2 half swipes
+  (synthetic pointer events through GestureBinding, so the real drag path),
+  then Darkroom 98 redrawing every frame (`SpeedTestPulse`) 5 s per switch.
+  Frames labelled "test N: ... · activity"; recorder cleared at the start;
+  the report opens at the end. Banner on top; tap stops.

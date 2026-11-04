@@ -41,6 +41,7 @@ import 'whole_face.dart';
 import 'widgets/camera_controls.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
+import '../../../core/diagnostics/speed_test_run.dart';
 import '../../../core/diagnostics/speed_tests.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
@@ -186,6 +187,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   @override
   void initState() {
     super.initState();
+    // Debug > Speed Tests > Run Speed Tests drives the screen through these.
+    SpeedTestRun.tossDirection = () => _dirFor(ref.read(appModeProvider));
+    SpeedTestRun.openExplorer = () async {
+      unawaited(_push(const ExplorerScreen()));
+      await Future<void>.delayed(ExplorerScreen.slideDuration);
+    };
     GraphicsVeil.cameras++;
     unawaited(Sfx.cameraSwap.preload());
     unawaited(Sfx.zoomMotor.preload());
@@ -208,6 +215,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   @override
   void dispose() {
+    SpeedTestRun.tossDirection = null;
+    SpeedTestRun.openExplorer = null;
     GraphicsVeil.cameras--;
     VolumeKeys.listen(null);
     unawaited(VolumeKeys.capture(false));

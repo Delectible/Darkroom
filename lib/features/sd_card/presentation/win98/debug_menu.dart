@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show ProviderListenable;
 import 'package:flutter_scene/scene.dart' as fs show takeMemoryReport;
 
 import '../../../../core/app_info.dart';
@@ -19,6 +20,7 @@ import '../../../../core/diagnostics/fps_meter.dart';
 import '../../../../core/diagnostics/lag_watch.dart';
 import '../../../../core/diagnostics/launch_timer.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
+import '../../../../core/diagnostics/speed_test_run.dart';
 import '../../../../core/diagnostics/speed_tests.dart';
 import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
@@ -48,6 +50,10 @@ class _Tool {
   final Future<void> Function(BuildContext context, WidgetRef ref) run;
   final bool Function(WidgetRef ref)? on;
 }
+
+/// Reads a provider (a widget's ref, or the app's container once the Debug
+/// window has closed).
+typedef _Read = T Function<T>(ProviderListenable<T> provider);
 
 /// Debug > Speed Tests: (name, switch, what it does).
 final _speedTests = <(String, ValueNotifier<bool>, String)>[
@@ -89,6 +95,37 @@ final _speedTests = <(String, ValueNotifier<bool>, String)>[
 
 final _tools = <_Tool>[
   _Tool(
+    PixelIcon.views,
+    'Run Speed Tests',
+    'Works through every speed test below on its own, the same way each time, in about '
+        '${SpeedTestRun.minutes} minutes: the camera at rest, swipes between the cameras (made by the app), '
+        'then Darkroom 98. Leave the phone alone (tap the banner to stop). The Performance Report then '
+        'opens with only the run in it, each step next to the baseline: Copy it and send it to Claude.',
+    (context, ref) async {
+      final go = await showWin98MessageBox(
+        context,
+        title: 'Run Speed Tests',
+        message:
+            'This takes about ${SpeedTestRun.minutes} minutes and swipes the cameras by itself. '
+            'Leave the phone on a table and don\'t touch it.',
+        icon: Win98MessageIcon.question,
+        buttons: const ['Start', 'Cancel'],
+      );
+      if (go != 0 || !context.mounted) return;
+      final container = ProviderScope.containerOf(context, listen: false);
+      final navigator = Navigator.of(context);
+      unawaited(
+        SpeedTestRun.run(
+          navigator,
+          done: () {
+            final c = navigator.context;
+            if (c.mounted) unawaited(_perfReport(c, container.read));
+          },
+        ),
+      );
+    },
+  ),
+  _Tool(
     PixelIcon.rabbit,
     'Darkroom Pro',
     'On: unlimited film and battery, as if Pro was bought. Off: the free version with its daily roll '
@@ -121,7 +158,7 @@ final _tools = <_Tool>[
     'Everything in one report to copy and send: this phone and its settings, the last launches step by '
         'step, every frame since the app started (by activity, with any Speed Tests on), the 3D camera\'s '
         'quality and memory. Clear starts a fresh recording.',
-    (context, ref) => _perfReport(context, ref),
+    (context, ref) => _perfReport(context, ref.read),
   ),
   _Tool(
     PixelIcon.hourglass,
@@ -239,15 +276,15 @@ final _tools = <_Tool>[
 
 /// Debug > Performance Report: the phone, the launches, the frames, the 3D
 /// camera and memory, in one text to copy.
-Future<void> _perfReport(BuildContext context, WidgetRef ref) async {
+Future<void> _perfReport(BuildContext context, _Read read) async {
   final battery = await Battery.level();
   if (!context.mounted) return;
   String all() => [
-    _phoneReport(ref, battery),
+    _phoneReport(read, battery),
     PerfRecorder.report(),
     LaunchTimer.report(),
     '3D QUALITY\n${BodyQuality.report()}',
-    'MEMORY\n${_memoryReport(ref)}',
+    'MEMORY\n${_memoryReport(read)}',
   ].join('\n\n');
   await showWin98Window<void>(
     context,
@@ -306,9 +343,9 @@ Future<void> _perfReport(BuildContext context, WidgetRef ref) async {
   );
 }
 
-String _phoneReport(WidgetRef ref, int? battery) {
-  final settings = ref.read(globalSettingsProvider);
-  final preview = ref.read(cameraSessionProvider).controller?.value.previewSize;
+String _phoneReport(_Read read, int? battery) {
+  final settings = read(globalSettingsProvider);
+  final preview = read(cameraSessionProvider).controller?.value.previewSize;
   return [
     'PHONE',
     '${AppInfo.name} ${AppInfo.version}, ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
@@ -316,12 +353,12 @@ String _phoneReport(WidgetRef ref, int? battery) {
         '${Platform.numberOfProcessors} cores, battery ${battery == null ? '?' : '$battery%'}',
     'Fancy graphics: ${settings.controls3d ? 'on' : 'off'}',
     'Camera stream: ${preview == null ? 'closed' : '${preview.width.round()} x ${preview.height.round()}'}',
-    'Prints and reels: ${ref.read(filmItemsProvider).value?.length ?? '?'}, '
-        'SD card files: ${ref.read(sdCardFilesProvider).length}, crash reports: ${CrashLog.reports.length}',
+    'Prints and reels: ${read(filmItemsProvider).value?.length ?? '?'}, '
+        'SD card files: ${read(sdCardFilesProvider).length}, crash reports: ${CrashLog.reports.length}',
   ].join('\n');
 }
 
-String _memoryReport(WidgetRef ref) {
+String _memoryReport(_Read read) {
   final cache = PaintingBinding.instance.imageCache;
   String mb(int b) => (b / (1 << 20)).toStringAsFixed(1);
   final b = StringBuffer()
@@ -332,7 +369,7 @@ String _memoryReport(WidgetRef ref) {
     )
     ..writeln()
     ..writeln('3D cameras:');
-  final art = ref.read(wholeArtProvider).value;
+  final art = read(wholeArtProvider).value;
   for (final MapEntry(key: mode, value: body) in (art?.bodies ?? const <AppMode, WholeBody>{}).entries) {
     final live = body.live;
     b.writeln(
@@ -574,7 +611,7 @@ final _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
   ('Performance', ['Performance Report', 'FPS Counter', 'Slow Motion']),
-  ('Speed Tests', [for (final (name, _, _) in _speedTests) name]),
+  ('Speed Tests', ['Run Speed Tests', for (final (name, _, _) in _speedTests) name]),
   ('Diagnostics', ['Camera Log', 'Crash Reports', 'Test Crash']),
   ('First Run & Prompts', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt', 'Lag Prompt']),
 ];

@@ -8,6 +8,7 @@ import 'core/device/upright.dart';
 import 'core/diagnostics/fps_meter.dart';
 import 'core/diagnostics/lag_watch.dart';
 import 'core/diagnostics/launch_timer.dart';
+import 'core/diagnostics/speed_test_run.dart';
 import 'core/navigation.dart';
 import 'core/providers.dart';
 import 'core/shaders/shader_library.dart';
@@ -129,16 +130,23 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
           fade: const Duration(milliseconds: 300),
           child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
         );
-        if (!ref.watch(fpsMeterProvider)) return app;
-        // Debug > FPS Counter: bottom left, clear of the frame graphs (top).
         return Stack(
           fit: StackFit.expand,
           children: [
             app,
+            // Debug > FPS Counter: bottom left.
+            if (ref.watch(fpsMeterProvider))
+              Positioned(
+                left: 10,
+                bottom: MediaQuery.paddingOf(context).bottom + 70,
+                child: const Directionality(textDirection: TextDirection.ltr, child: FpsMeter()),
+              ),
+            // Debug > Run Speed Tests: what's running; a tap stops it.
             Positioned(
-              left: 10,
-              bottom: MediaQuery.paddingOf(context).bottom + 70,
-              child: const Directionality(textDirection: TextDirection.ltr, child: FpsMeter()),
+              left: 12,
+              right: 12,
+              top: MediaQuery.paddingOf(context).top + 8,
+              child: const SpeedTestBanner(),
             ),
           ],
         );

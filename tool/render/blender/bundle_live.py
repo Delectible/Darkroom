@@ -2,7 +2,7 @@
 
     python3 bundle_live.py OUT assets/body3d
 
-<mode>.glb, <mode>_hd.glb and <mode>_skin_<name>.glb (split by
+<mode>.glb and <mode>_skin_<name>.glb (split by
 slim_glb.py so the app loads only the skin on show; all turned into
 Flutter Scene packages by hook/build.dart),
 studio.hdr, and one manifest.json: design space, each body's layout,

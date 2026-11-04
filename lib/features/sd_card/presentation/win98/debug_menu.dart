@@ -306,7 +306,7 @@ String _memoryReport(WidgetRef ref) {
       live == null
           ? '  ${mode.name}: not loaded'
           : '  ${mode.name}: ${mb(live.textureBytes())} MB of textures (skin ${live.finish}'
-                '${live.hd ? ', full-size body maps' : ''})',
+                ')',
     );
   }
   b.writeln('Engine caches:');

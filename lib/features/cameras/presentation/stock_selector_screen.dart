@@ -102,7 +102,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
   int _precachedPx = 0;
 
   void _precacheArt(BuildContext context, double side) {
-    final px = (side * MediaQuery.devicePixelRatioOf(context)).round().clamp(64, 1024);
+    final px = (side * MediaQuery.devicePixelRatioOf(context)).round().clamp(64, 800);
     if (px == _precachedPx) return;
     _precachedPx = px;
     for (final spec in _specs) {

@@ -2,10 +2,8 @@
 it shows (2.0.7):
 
   <body>.glb            the body, its parts and ONE finish (the default skin),
-                        body maps at 2048 (enough for screens up to ~1080 px
-                        wide: the 4096 level was never sampled there)
-  <body>_hd.glb         the body maps at full size (4096), swapped in on
-                        sharper screens (a swatch: one triangle + material)
+                        body maps at 2048 (side by side with 4096 on a
+                        1280 px phone there was no telling them apart)
   <body>_skin_<k>.glb   each other skin's maps (a swatch): base colour, and
                         metal-rough / normal only where they differ from the
                         default's (most skins share them)
@@ -247,12 +245,6 @@ def main(src, out_dir, default):
         sj, sc = swatch(f'{body}-skin-{k}', maps, sampler)
         write_glb(out / f'{body}_skin_{k}.glb', sj, sc)
         print(f'{body}_skin_{k}.glb: {sorted(maps)}')
-
-    # Full-size body maps, for sharp screens.
-    body_maps = maps_of(f'{body}-body')
-    hj, hc = swatch(f'{body}-hd', {r: (view_bytes(j, binary, v), m) for r, (v, m) in body_maps.items()}, sampler)
-    write_glb(out / f'{body}_hd.glb', hj, hc)
-    print(f'{body}_hd.glb: {sorted(body_maps)}')
 
     # The base: one finish (the other finish nodes stay, empty, so their
     # names still list the skins), body maps at LO.

@@ -52,7 +52,6 @@ class WholeArt {
   Map<String, dynamic>? _manifest;
   fs.EnvironmentMap? _env;
   final _ready = <AppMode, Completer<void>>{};
-  bool _hd = true;
   String? Function(AppMode mode)? _skinOf;
 
   /// Whether [mode]'s model is loaded (or failed to). Until then it can't
@@ -66,12 +65,10 @@ class WholeArt {
   /// tests or on phones without it, which get the classic bodies), the
   /// model of [first] (the camera in hand). The other model loads after,
   /// with [loadRest], so the app opens sooner.
-  /// [hd]: the full-size body maps (sharper screens); [skin]: the skin each
-  /// body is wearing, put on before it's first seen.
+  /// [skin]: the skin each body is wearing, put on before it's first seen.
   static Future<WholeArt?> load({
     bool scenes = true,
     AppMode first = AppMode.film,
-    bool hd = true,
     String? Function(AppMode mode)? skin,
   }) async {
     try {
@@ -123,7 +120,6 @@ class WholeArt {
       if (!scenes) return art;
       art
         .._manifest = j
-        .._hd = hd
         .._skinOf = skin
         .._env = env;
       for (final mode in bodies.keys) {
@@ -170,11 +166,11 @@ class WholeArt {
         dist: dist,
         band: band,
       );
-      // The skin it's wearing and, on a sharp screen, the full-size body
-      // maps, before it's first seen; then let go of the loader's cached
+      // The skin it's wearing, before it's first seen; then let go of the
+      // loader's cached
       // copy of the file (we never make a second model from it).
       final live = body.live!;
-      await Future.wait([if (_hd) live.useHd(), live.wear(_skinOf?.call(mode))]);
+      await live.wear(_skinOf?.call(mode));
       unawaited(fs.releaseScene(scenePath));
       // Compile its shaders now, not on the first frame it's seen.
       try {
@@ -299,14 +295,9 @@ final _want3dProvider = NotifierProvider<_Want3d, bool>(_Want3d.new);
 /// ([WholeArt.isReady]).
 final wholeArtProvider = FutureProvider<WholeArt?>((ref) async {
   if (!ref.watch(_want3dProvider)) return null;
-  // Sharp screens get the full-size body maps (unless the phone is short of
-  // RAM); 2048 already covers a screen up to ~1080 px wide.
   await DeviceMemory.ready;
-  final view = WidgetsBinding.instance.platformDispatcher.views.firstOrNull;
-  final px = view?.physicalSize.shortestSide ?? 0;
   final art = await WholeArt.load(
     first: ref.read(appModeProvider),
-    hd: !DeviceMemory.low && px >= 1100,
     skin: (mode) => ref.read(cameraSkinProvider)[mode],
   );
   LaunchTimer.once('3D camera in');
@@ -368,6 +359,12 @@ class LiveBody extends ChangeNotifier {
       // and never wider than 1080 px (the body maps hold no more detail)
       final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
       if (px > 1080) scene.renderScale = 1080 / px;
+    } else {
+      // Sharper screens draw the body at 90%: no visible difference (the
+      // labels and controls are drawn on top, at full sharpness) for a
+      // fifth less GPU work and render memory.
+      final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
+      if (px >= 1100) scene.renderScale = 0.9;
     }
     scene.add(node);
     void index(fs.Node n) {
@@ -402,7 +399,7 @@ class LiveBody extends ChangeNotifier {
     _finish = _defaultFinish;
   }
 
-  /// Where this body's files are: `<prefix>.glb`, `<prefix>_hd.glb`,
+  /// Where this body's files are: `<prefix>.glb` and
   /// `<prefix>_skin_<name>.glb`.
   final String prefix;
 
@@ -467,26 +464,8 @@ class LiveBody extends ChangeNotifier {
     return bytes;
   }
 
-  /// Whether the full-size body maps are on.
-  bool get hd => _hdOn;
-  bool _hdOn = false;
-
   /// The skin on show.
   String? get finish => _finish;
-
-  /// The body's maps at full size (4096: sharper screens; the model comes
-  /// with 2048, plenty up to ~1080 px wide).
-  Future<void> useHd() async {
-    final hd = await _swatch('hd');
-    if (hd == null) return;
-    _hdOn = true;
-    for (final m in _bodyMats) {
-      if (hd.base != null) m.baseColorTexture = hd.base;
-      if (hd.mr != null) m.metallicRoughnessTexture = hd.mr;
-      if (hd.normal != null) m.normalTexture = hd.normal;
-    }
-    _changed();
-  }
 
   /// Model to scene: z turned round.
   static v64.Vector3 _scene(vm.Vector3 v) => v64.Vector3(v.x, v.y, -v.z);

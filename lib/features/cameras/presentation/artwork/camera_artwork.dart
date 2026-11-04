@@ -21,7 +21,7 @@ class CameraArtwork extends StatelessWidget {
           box.hasBoundedWidth ? box.maxWidth : 320.0,
           box.hasBoundedHeight ? box.maxHeight : 320.0,
         );
-        final px = (side * dpr).round().clamp(64, 1024);
+        final px = (side * dpr).round().clamp(64, 800);
         return Image.asset(
           spec.artwork,
           fit: BoxFit.contain,

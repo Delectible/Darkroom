@@ -233,7 +233,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   and the image cache (40 / 64 / 100 MB). RAM shown in Debug > Development Stats.
 - [x] **59.3** → 2.0.7 · 3D textures: `slim_glb.py` (run by bundle_live.py)
   splits each body into a base (one skin, body maps 2048, 9 maps), `_hd`
-  (4096 body maps, swapped in on screens >= 1100 px unless RAM is low) and
+  (dropped later, 59.8) and
   `_skin_<k>` swatches (base colour + only the maps that differ). The app
   swaps a swatch's textures onto the one set of finish panels
   (`LiveBody.wear`) and releases each scene template after loading.
@@ -249,6 +249,11 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   `DeviceMemory.lowest`) start their first run with Fancy graphics off and a
   note after the tour (`PrefKeys.lowGraphicsNote`); Settings' Fancy graphics
   says effects are reduced on low-RAM phones.
+- [x] **59.8** → 2.0.7 · Sharp (4096) body maps dropped after a side-by-side at
+  Pixel size (only brushed-metal streaks a touch crisper): the `_hd`
+  files are gone (3D packages ~34.6 MB). Screens >= 1100 px draw the 3D
+  body at 90% (`renderScale`; labels and controls are on top, full
+  sharpness). Artwork re-saved at 800 px (1.46 → 0.86 MB).
 - [ ] **59.7** Not done: a patched 3D loader skipping mip 0 (two-size files
   do the same), drawn cameras by default for existing low-end installs.
 

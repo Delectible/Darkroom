@@ -20,6 +20,7 @@ import '../../../../core/theme/surfaces.dart';
 import '../../../../core/utils/pixel_font.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../cameras/domain/camera_spec.dart';
+import '../body_quality.dart';
 import '../photo_body.dart';
 import '../whole_body.dart';
 import '../../application/camera_ui_state.dart';
@@ -201,26 +202,33 @@ class AspectButton extends ConsumerWidget {
       Widget inked(double alpha) {
         final ink = (film ? const Color(0xFF151515) : const Color(0xFFE4E6E9)).withValues(alpha: alpha);
         final locked = spec.aspectLocked && !sideways;
-        final text = Text(
-          aspect.label,
-          style: film
-              // Engraved into the chrome dial: a condensed camera face,
-              // its paint fill sunk below a catch of light.
-              ? TextStyle(
-                  fontFamily: 'Dial',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                  letterSpacing: 0.3,
-                  height: 1,
-                  color: ink,
-                  shadows: [
-                    Shadow(
-                      color: const Color(0xFFFFFFFF).withValues(alpha: 0.55 * alpha),
-                      offset: const Offset(0, 0.6),
-                    ),
-                  ],
-                )
-              : photoLabel(onMetal: false).copyWith(fontSize: 11, color: ink),
+        // (softened with the 3D body when it's drawn below full sharpness:
+        // a blur in the paint, no layer, so it keeps its lift onto the cap)
+        final text = BodyQualityText(
+          builder: (context, blur) => Text(
+            aspect.label,
+            style: _soft(
+              film
+                  // Engraved into the chrome dial: a condensed camera face,
+                  // its paint fill sunk below a catch of light.
+                  ? TextStyle(
+                      fontFamily: 'Dial',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      letterSpacing: 0.3,
+                      height: 1,
+                      color: ink,
+                      shadows: [
+                        Shadow(
+                          color: const Color(0xFFFFFFFF).withValues(alpha: 0.55 * alpha),
+                          offset: const Offset(0, 0.6),
+                        ),
+                      ],
+                    )
+                  : photoLabel(onMetal: false).copyWith(fontSize: 11, color: ink),
+              blur,
+            ),
+          ),
         );
         if (film) {
           // On the dial's round face: a small lock over the format, both
@@ -1487,27 +1495,43 @@ class LensFlipCaption extends StatelessWidget {
     // catches the light along its lower edge
     final light = fill.computeLuminance() > 0.3;
     return ExcludeSemantics(
-      child: Text(
-        'FLIP',
-        textAlign: TextAlign.center,
-        textScaler: TextScaler.noScaling,
-        style: TextStyle(
-          fontSize: 8.5,
-          height: 1,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.4,
-          color: fill,
-          shadows: [
-            Shadow(
-              color: light ? const Color(0xB3000000) : const Color(0x99FFFFFF),
-              offset: Offset(0, light ? -0.6 : 0.7),
+      child: BodyQualityText(
+        builder: (context, blur) => Text(
+          'FLIP',
+          textAlign: TextAlign.center,
+          textScaler: TextScaler.noScaling,
+          style: _soft(
+            TextStyle(
+              fontSize: 8.5,
+              height: 1,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
+              color: fill,
+              shadows: [
+                Shadow(
+                  color: light ? const Color(0xB3000000) : const Color(0x99FFFFFF),
+                  offset: Offset(0, light ? -0.6 : 0.7),
+                ),
+              ],
             ),
-          ],
+            blur,
+          ),
         ),
       ),
     );
   }
 }
+
+/// [style] drawn [blur] logical px soft (the 3D body under it is drawn
+/// below full sharpness on this phone: see BodyQuality).
+TextStyle _soft(TextStyle style, double blur) => blur <= 0
+    ? style
+    : style.copyWith(
+        color: null,
+        foreground: Paint()
+          ..color = style.color ?? const Color(0xFF000000)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, blur),
+      );
 
 /// Front / back camera: a small knurled dial with a lens in it. Tapping it
 /// turns the dial half a turn, like flipping the lens around.

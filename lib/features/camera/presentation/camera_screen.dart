@@ -35,6 +35,7 @@ import '../application/zoom_controller.dart';
 import 'body_swap.dart';
 import 'photo_body.dart';
 import 'viewport.dart';
+import 'body_quality.dart';
 import 'whole_body.dart';
 import 'whole_face.dart';
 import 'widgets/camera_controls.dart';
@@ -95,6 +96,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       image == null ? const ColoredBox(color: Color(0xFF0C0B0A)) : RawImage(image: image, fit: BoxFit.cover);
 
   void _dropMoving() {
+    BodyQuality.moving(false);
     _stopMirror();
     CameraViewport.freeze.value = null;
   }
@@ -106,6 +108,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   bool _mirroring = false;
 
   void _startMoving() {
+    BodyQuality.moving(true);
     if (ref.read(globalSettingsProvider).performance) return _snapMoving();
     if (_mirroring) return;
     _mirroring = true;

@@ -254,6 +254,13 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   files are gone (3D packages ~34.6 MB). Screens >= 1100 px draw the 3D
   body at 90% (`renderScale`; labels and controls are on top, full
   sharpness). Artwork re-saved at 800 px (1.46 → 0.86 MB).
+- [x] **59.9** → 2.0.7 · Low-RAM 3D quality is steered by our own `BodyQuality`
+  (Flutter Scene's adaptive mode judged frame periods, so at 60 Hz it could
+  never step back up): during swaps, 30-frame windows of build/raster time;
+  6+ frames over 16.7 ms = 15% step down (then 2 windows' pause), no late
+  frame and mean < 10 ms = 15% step up. Floor 60%, and never under 648 px
+  wide. FLIP and the format dial's label soften with the body (`_soft`,
+  a paint mask blur: no layer, keeps the OnTop lift).
 - [ ] **59.7** Not done: a patched 3D loader skipping mip 0 (two-size files
   do the same), drawn cameras by default for existing low-end installs.
 

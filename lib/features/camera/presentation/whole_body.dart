@@ -14,6 +14,7 @@ import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
 import '../../../core/device/device_memory.dart';
 import '../../../core/diagnostics/launch_timer.dart';
 import '../../../core/skins/camera_skins.dart';
+import 'body_quality.dart';
 import '../../../core/startup/launch_curtain.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../application/camera_ui_state.dart' show appModeProvider;
@@ -349,16 +350,16 @@ class LiveBody extends ChangeNotifier {
       ..environmentTransform = vm.Matrix3.rotationY(math.pi)
       ..exposure = exposure
       ..toneMapping = fs.ToneMappingMode.agx;
-    // Phones with little RAM (and so a modest GPU): the renderer drops its
-    // resolution a step at a time, then its anti-aliasing, if frames run
-    // late, and climbs back once they don't. Others hold full quality.
+    // Phones with little RAM (and so a modest GPU): drawn no wider than
+    // 1080 px (the body maps hold no more detail), and a step softer at a
+    // time if frames run late in a swap, back up once they don't
+    // (BodyQuality). Others hold full quality.
     if (DeviceMemory.low) {
-      scene.renderQuality
-        ..adaptive = true
-        ..minRenderScale = 0.5;
-      // and never wider than 1080 px (the body maps hold no more detail)
       final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
-      if (px > 1080) scene.renderScale = 1080 / px;
+      BodyQuality.enable(px);
+      void steer() => scene.renderScale = BodyQuality.base * BodyQuality.detail.value;
+      steer();
+      BodyQuality.detail.addListener(steer);
     } else {
       // Sharper screens draw the body at 90%: no visible difference (the
       // labels and controls are drawn on top, at full sharpness) for a

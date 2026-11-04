@@ -190,8 +190,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // Debug > Speed Tests > Run Speed Tests drives the screen through these.
     SpeedTestRun.tossDirection = () => _dirFor(ref.read(appModeProvider));
     SpeedTestRun.open = (screen) async {
-      unawaited(_push(screen == 'win98' ? const ExplorerScreen() : const CorkboardScreen()));
-      await Future<void>.delayed(ExplorerScreen.slideDuration);
+      switch (screen) {
+        case 'picker':
+          unawaited(_openSelector());
+        case 'settings':
+          unawaited(showSettingsSheet(context));
+        default:
+          unawaited(_push(screen == 'win98' ? const ExplorerScreen() : const CorkboardScreen()));
+          await Future<void>.delayed(ExplorerScreen.slideDuration);
+      }
     };
     SpeedTestRun.fancy = () => ref.read(globalSettingsProvider).controls3d;
     SpeedTestRun.setFancy = (on) => ref.read(globalSettingsProvider.notifier).setControls3d(on);

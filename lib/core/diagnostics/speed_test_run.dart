@@ -12,37 +12,42 @@ import 'launch_timer.dart';
 import 'perf_recorder.dart';
 import 'speed_tests.dart';
 
-/// What a step does on its screen.
-enum _Where { camera, corkboard, win98 }
-
-/// One step of the run: a short name for the results, where it runs, and
-/// what it changes (switches turned on, and Fancy graphics off).
-class _Step {
-  const _Step(this.name, this.where, {this.flags = const [], this.classic = false});
-
-  final String name;
-  final _Where where;
-  final List<ValueNotifier<bool>> flags;
-
-  /// Fancy graphics off (the drawn bodies).
-  final bool classic;
-}
-
-/// A phase a step is measured in, and how long it takes (for the countdown).
+/// A part of a step: what it does, about how long that takes (for the
+/// countdown), and whether it's about motion (judged on the frames drawn
+/// while something moved) or the screen at rest (all its frames).
 class _Phase {
-  const _Phase(this.name, this.seconds);
+  const _Phase(this.name, this.seconds, this.act, {this.motion = true});
+
   final String name;
   final double seconds;
+  final Future<void> Function(NavigatorState nav) act;
+  final bool motion;
 }
 
-/// Debug > Performance > Run Speed Test: works through the app's costly
-/// pieces one at a time, the same way on every phone, with the phone left
-/// alone: the camera at rest and swiped between the bodies (real touches,
-/// made up by the app) with each switch on its own and a few together, the
-/// drawn bodies, the corkboard scrolling, and Darkroom 98 redrawing. A
-/// panel on top shows the step, a countdown and the live frame rate (it
-/// changes once a second: a frame a second on top of the test's own). At
-/// the end, one compact text to copy and send.
+/// One step of the run: phases on one screen, with switches on (and Fancy
+/// graphics off for [classic]).
+class _Step {
+  const _Step(this.name, this.phases, {this.flags = const [], this.classic = false, this.variant = false});
+
+  final String name;
+  final List<_Phase> phases;
+  final List<ValueNotifier<bool>> flags;
+  final bool classic;
+
+  /// In the second part: the camera swipe again, with a switch on.
+  final bool variant;
+}
+
+/// Debug > Performance > Run Speed Test: the same few minutes on every
+/// phone, hands off. Part one goes through the app as a person would (the
+/// camera at rest and swiped between the bodies, the film picker, the
+/// settings, the corkboard and Darkroom 98 sliding in, scrolling, sliding
+/// out); part two swipes the camera again with each speed switch on its
+/// own, all of them, and the drawn bodies. Moving parts are judged on the
+/// frames drawn while something moved (frame rate against the screen's,
+/// share of frames dropped); still screens on all their frames. A panel on
+/// top shows the step, a countdown and the live frame rate (it changes
+/// once a second). At the end, one compact text to copy and send.
 class SpeedTestRun {
   SpeedTestRun._();
 
@@ -56,8 +61,8 @@ class SpeedTestRun {
   /// the camera in hand to the other one.
   static int Function()? tossDirection;
 
-  /// Set by the camera screen: slides 'win98' or 'corkboard' in (completes
-  /// once it's up).
+  /// Set by the camera screen: slides 'win98' or 'corkboard' in, or opens
+  /// 'picker' / 'settings' (completes once it's on its way).
   static Future<void> Function(String screen)? open;
 
   /// Set by the camera screen: Fancy graphics on or off, and whether it's on.
@@ -76,46 +81,93 @@ class SpeedTestRun {
 
   static bool get running => status.value != null;
 
+  // ---- what it does
+
+  static final _rest = _Phase('rest', 5, (_) => _wait(5), motion: false);
+  static final _swipes = _Phase('swipe', 12, (_) async {
+    for (var k = 0; k < 4 && !_stop; k++) {
+      await _swipe(Offset(0.75 * _toss(), 0), 320);
+      await _wait(1.5);
+    }
+    for (var k = 0; k < 2 && !_stop; k++) {
+      await _swipe(Offset(0.25 * _toss(), 0), 700, slow: true);
+      await _wait(1.0);
+    }
+  });
+
+  /// Opens [screen] and closes it again, twice (sheets that slide up).
+  static _Phase _openClose(String screen) => _Phase('open/close', 6.5, (nav) async {
+    for (var k = 0; k < 2 && !_stop; k++) {
+      await open?.call(screen);
+      await _wait(1.6);
+      await nav.maybePop();
+      await _wait(1.6);
+    }
+  });
+
+  static _Phase _slideIn(String screen) => _Phase('slide in', 3, (_) async {
+    await open?.call(screen);
+    await _wait(1.2);
+  });
+
+  static _Phase _slideOut() => _Phase('slide out', 2.5, (nav) async {
+    nav.popUntil((r) => r.isFirst);
+    await _wait(2.5);
+  });
+
   static List<_Step> get _plan => [
-    const _Step('base', _Where.camera),
-    _Step('no look', _Where.camera, flags: [SpeedTests.noLook]),
-    _Step('grain 12', _Where.camera, flags: [SpeedTests.slowGrain]),
-    _Step('still vf', _Where.camera, flags: [SpeedTests.stillSwipe]),
-    _Step('no strap', _Where.camera, flags: [SpeedTests.noStrap]),
-    _Step('fxaa', _Where.camera, flags: [SpeedTests.cheapEdges]),
-    _Step('3D 70%', _Where.camera, flags: [SpeedTests.small3d]),
+    _Step('camera', [_rest, _swipes]),
+    _Step('picker', [_openClose('picker')]),
+    _Step('settings', [_openClose('settings')]),
+    _Step('corkboard', [
+      _slideIn('corkboard'),
+      _Phase('scroll', 6, (_) async {
+        for (final dy in [-0.45, -0.45, 0.3, -0.3]) {
+          if (_stop) break;
+          await _swipe(Offset(0, dy), 350);
+          await _wait(1.1);
+        }
+      }),
+      _slideOut(),
+    ]),
+    _Step('win98', [
+      _slideIn('win98'),
+      _Phase('redraw', 4, (_) async {
+        pulse.value = true;
+        await _wait(4);
+        pulse.value = false;
+      }),
+      _slideOut(),
+    ]),
+    _Step('no look', [_swipes], flags: [SpeedTests.noLook], variant: true),
+    _Step('grain 12', [_rest], flags: [SpeedTests.slowGrain], variant: true),
+    _Step('still vf', [_swipes], flags: [SpeedTests.stillSwipe], variant: true),
+    _Step('no strap', [_swipes], flags: [SpeedTests.noStrap], variant: true),
+    _Step('fxaa', [_swipes], flags: [SpeedTests.cheapEdges], variant: true),
+    _Step('3D 70%', [_swipes], flags: [SpeedTests.small3d], variant: true),
     _Step(
-      'light',
-      _Where.camera,
+      'all light',
+      [_swipes],
       flags: [
+        SpeedTests.noLook,
         SpeedTests.slowGrain,
         SpeedTests.stillSwipe,
         SpeedTests.noStrap,
         SpeedTests.cheapEdges,
         SpeedTests.small3d,
       ],
+      variant: true,
     ),
-    const _Step('classic', _Where.camera, classic: true),
-    const _Step('base', _Where.corkboard),
-    const _Step('base', _Where.win98),
+    _Step('drawn bodies', [_swipes], classic: true, variant: true),
   ];
 
-  static List<_Phase> _phases(_Where w) => switch (w) {
-    _Where.camera => const [_Phase('rest', 5), _Phase('swipe', 12)],
-    _Where.corkboard => const [_Phase('rest', 3), _Phase('scroll', 6)],
-    _Where.win98 => const [_Phase('redraw', 5)],
-  };
-
-  /// Settling time between steps, and moving between screens.
-  static const _settle = 0.8, _move = 2.0, _fancyTime = 4.0;
+  /// Settling time before each step, and Fancy graphics changing.
+  static const _settle = 0.8, _fancyTime = 4.0;
 
   static double get _plannedSeconds {
     var t = 1.5;
-    var at = _Where.camera;
     for (final s in _plan) {
-      if (s.where != at) t += _move * 2;
-      at = s.where;
-      t += _settle + _phases(s.where).fold(0.0, (a, p) => a + p.seconds);
+      t += _settle + s.phases.fold(0.0, (a, p) => a + p.seconds);
       if (s.classic) t += _fancyTime + 3;
     }
     return t;
@@ -134,7 +186,7 @@ class SpeedTestRun {
     final clock = Stopwatch()..start();
     SpeedTests.allOff();
     final wasFancy = fancy?.call() ?? true;
-    final rows = <String>[];
+    final screens = <String>[], variants = <String>[];
     var stepNo = 0;
     var stage = 'Getting ready';
     void show() => status.value = SpeedTestStatus(
@@ -149,25 +201,10 @@ class SpeedTestRun {
     navigator.popUntil((r) => r.isFirst);
     await _wait(1.5);
     PerfRecorder.clear();
-    var at = _Where.camera;
     try {
       for (final s in plan) {
         if (_stop) break;
         stepNo++;
-        final where = s.where.name;
-        if (s.where != at) {
-          stage = 'Opening $where';
-          show();
-          if (at != _Where.camera) {
-            navigator.popUntil((r) => r.isFirst);
-            await _wait(_move);
-          }
-          if (s.where != _Where.camera) {
-            await open?.call(where);
-            await _wait(_move);
-          }
-          at = s.where;
-        }
         for (final f in s.flags) {
           f.value = true;
         }
@@ -178,18 +215,24 @@ class SpeedTestRun {
           await _wait(_fancyTime);
         }
         await _wait(_settle);
-        final key = 'step $stepNo';
-        final cells = <String>[];
-        for (final p in _phases(s.where)) {
+        for (final p in s.phases) {
           if (_stop) break;
-          stage = '$where ${s.name}: ${p.name}';
+          stage = '${s.variant ? 'swipe, ${s.name}' : s.name}: ${p.name}';
           show();
-          PerfRecorder.test = '$key ${p.name}';
-          await _act(s.where, p);
+          final key = 'step $stepNo ${p.name}';
+          final renders = PerfRecorder.scene3d;
+          final time = Stopwatch()..start();
+          PerfRecorder.test = key;
+          await p.act(navigator);
           PerfRecorder.test = null;
-          cells.add(_cell(p.name, PerfRecorder.framesOf('$key ${p.name}')));
+          final perSecond = (PerfRecorder.scene3d - renders) / math.max(0.1, time.elapsedMilliseconds / 1000);
+          final name = s.variant || s.phases.length == 1 && p.name == 'open/close'
+              ? s.name
+              : '${s.name} ${p.name}';
+          (s.variant ? variants : screens).add(
+            _row(name, PerfRecorder.framesOf(key), motion: p.motion, renders3d: perSecond),
+          );
         }
-        rows.add('${'${where.substring(0, 3)} ${s.name}'.padRight(13)}${cells.join('\n${' ' * 13}')}');
         for (final f in s.flags) {
           f.value = false;
         }
@@ -206,65 +249,53 @@ class SpeedTestRun {
       tick.cancel();
       SpeedTests.allOff();
       if ((fancy?.call() ?? wasFancy) != wasFancy) await setFancy?.call(wasFancy);
-      if (at != _Where.camera) navigator.popUntil((r) => r.isFirst);
+      navigator.popUntil((r) => r.isFirst);
       status.value = null;
-      final text = await _results(rows, stopped: _stop, seconds: clock.elapsed.inSeconds);
+      final text = await _results(screens, variants, stopped: _stop, seconds: clock.elapsed.inSeconds);
       lastResults = text;
       done(text);
     }
   }
 
-  /// What a phase does: the camera at rest, then swipes (4 tosses and 2
-  /// half swipes let go); the corkboard scrolled; Darkroom 98 redrawing.
-  static Future<void> _act(_Where w, _Phase p) async {
-    switch ((w, p.name)) {
-      case (_Where.camera, 'swipe'):
-        for (var k = 0; k < 4 && !_stop; k++) {
-          await _swipe(Offset(0.75 * _toss(), 0), 320);
-          await _wait(1.5);
-        }
-        for (var k = 0; k < 2 && !_stop; k++) {
-          await _swipe(Offset(0.25 * _toss(), 0), 700, slow: true);
-          await _wait(1.0);
-        }
-      case (_Where.corkboard, 'scroll'):
-        for (final dy in [-0.45, -0.45, 0.3, -0.3]) {
-          if (_stop) break;
-          await _swipe(Offset(0, dy), 350);
-          await _wait(1.1);
-        }
-      case (_Where.win98, _):
-        pulse.value = true;
-        await _wait(p.seconds);
-        pulse.value = false;
-      default:
-        await _wait(p.seconds);
-    }
-  }
+  @visibleForTesting
+  static String rowForTest(
+    String name,
+    List<({double ui, double gpu, int vsync, bool moving})> frames, {
+    bool motion = true,
+  }) => _row(name, frames, motion: motion, renders3d: 0);
 
   static double _toss() => (tossDirection?.call() ?? 1).toDouble();
 
   static double get _hz => ui.PlatformDispatcher.instance.implicitView?.display.refreshRate ?? 60;
 
-  /// A phase's numbers: fps (frames a second while drawing), UI and GPU ms
-  /// (average/90th percentile), and the share of frames over the screen's
-  /// budget on either thread.
-  static String _cell(String phase, List<({double ui, double gpu, int vsync})> fs) {
-    if (fs.length < 3) return '${phase.padRight(6)}  (too few frames)';
-    var gapSum = 0, gaps = 0;
+  static const _nameWidth = 17;
+
+  /// One line of results. Moving: the frame rate while moving and the share
+  /// of the screen's refreshes that got no new frame (dropped), from the
+  /// frames drawn while something moved. At rest: frames a second overall
+  /// (the camera's own rate) and no drop figure. Then UI and GPU ms
+  /// (average/90th percentile) and the 3D camera's renders a second.
+  static String _row(
+    String name,
+    List<({double ui, double gpu, int vsync, bool moving})> all, {
+    required bool motion,
+    required double renders3d,
+  }) {
+    final fs = motion ? all.where((f) => f.moving).toList() : all;
+    final head = name.padRight(_nameWidth);
+    if (fs.length < 3) return '$head(too few frames: ${all.length}, moving ${fs.length})';
+    final period = 1e6 / _hz;
+    var gapSum = 0, gaps = 0, slots = 0, dropped = 0;
     for (var i = 1; i < fs.length; i++) {
       final g = fs[i].vsync - fs[i - 1].vsync;
-      if (g > 0 && g < 100000) {
-        gapSum += g;
-        gaps++;
-      }
+      if (g <= 0 || g > (motion ? 250000 : 1000000)) continue; // (a new burst of motion)
+      gapSum += g;
+      gaps++;
+      final n = math.max(1, (g / period).round());
+      slots += n;
+      dropped += n - 1;
     }
     final fps = gaps == 0 ? 0 : (1e6 * gaps / gapSum).round();
-    final budget = 1000 / _hz * 1.05;
-    // (at rest the screen only changes with the camera's ~30 frames a
-    // second and the GPU slows its clock to match, so frames look long:
-    // late counts only while things move)
-    final late = phase == 'rest' ? null : fs.where((f) => f.ui > budget || f.gpu > budget).length;
     String ap(Iterable<double> v) {
       final s = v.toList()..sort();
       final avg = s.reduce((a, b) => a + b) / s.length;
@@ -272,11 +303,17 @@ class SpeedTestRun {
       return '${avg.toStringAsFixed(1)}/${p90.toStringAsFixed(1)}';
     }
 
-    return '${phase.padRight(6)}${fps.toString().padLeft(4)}${ap(fs.map((f) => f.ui)).padLeft(10)}'
-        '${ap(fs.map((f) => f.gpu)).padLeft(10)}${(late == null ? '-' : '${(100 * late / fs.length).round()}%').padLeft(5)}';
+    final drop = motion && slots > 0 ? '${(100 * dropped / slots).round()}%' : '-';
+    return '$head${fps.toString().padLeft(4)}${drop.padLeft(5)}${ap(fs.map((f) => f.ui)).padLeft(10)}'
+        '${ap(fs.map((f) => f.gpu)).padLeft(10)}${renders3d.round().toString().padLeft(5)}';
   }
 
-  static Future<String> _results(List<String> rows, {required bool stopped, required int seconds}) async {
+  static Future<String> _results(
+    List<String> screens,
+    List<String> variants, {
+    required bool stopped,
+    required int seconds,
+  }) async {
     final view = ui.PlatformDispatcher.instance.implicitView;
     var device = Platform.isIOS ? 'iPhone' : '?';
     if (Platform.isAndroid) {
@@ -286,6 +323,8 @@ class SpeedTestRun {
     }
     final px = view?.physicalSize;
     final extra = header?.call();
+    final columns =
+        '${'fps'.padLeft(4)}${'drop'.padLeft(5)}${'ui ms'.padLeft(10)}${'gpu ms'.padLeft(10)}${'3D/s'.padLeft(5)}';
     return [
       'DARKROOM SPEED TEST${stopped ? ' (stopped early)' : ''}, ${seconds}s',
       '$device, ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
@@ -294,11 +333,13 @@ class SpeedTestRun {
       ?extra,
       'launch: ${LaunchTimer.lastSummary() ?? '?'}',
       '',
-      'step         phase  fps  ui ms     gpu ms   late',
-      ...rows,
+      '${'AROUND THE APP'.padRight(_nameWidth)}$columns',
+      ...screens,
+      if (variants.isNotEmpty) ...['', 'CAMERA SWIPE WITH (or at rest, for grain)', ...variants],
       '',
-      'fps: frames a second while drawing. ms: average/90%. '
-          'late: frames over ${(1000 / _hz).toStringAsFixed(1)} ms while moving.',
+      'fps: frames a second while moving (at rest: all frames, the camera\'s rate). '
+          'drop: refreshes with no new frame while moving (the screen is ${_hz.round()} Hz). '
+          'ms: average/90%. 3D/s: 3D camera renders a second.',
     ].join('\n');
   }
 

@@ -75,4 +75,25 @@ void main() {
       await File('$shots/speed_test_panel.png').writeAsBytes(png!.buffer.asUint8List());
     });
   });
+
+  test('a moving row: the frame rate while moving and the refreshes dropped', () {
+    // 120 Hz: frames every 8.33 ms while moving, one refresh missed in four;
+    // still frames (the camera's) in between don't count.
+    final frames = <({double ui, double gpu, int vsync, bool moving})>[];
+    var t = 0;
+    for (var i = 0; i < 40; i++) {
+      t += i % 4 == 3 ? 16667 : 8333;
+      frames.add((ui: 5, gpu: 4, vsync: t, moving: true));
+      if (i % 10 == 0) frames.add((ui: 1, gpu: 9, vsync: t + 1000, moving: false));
+    }
+    final row = SpeedTestRun.rowForTest('camera swipe', frames);
+    final cells = row.substring(17).trim().split(RegExp(r' +'));
+    final hz = ui.PlatformDispatcher.instance.implicitView?.display.refreshRate ?? 60;
+    if (hz.round() == 120) {
+      expect(int.parse(cells[0]), inInclusiveRange(94, 98)); // 39 gaps in ~0.41 s
+      expect(cells[1], '20%'); // 10 missed of 49 refreshes
+    }
+    expect(cells[2], '5.0/5.0');
+    expect(row.length, lessThan(60));
+  });
 }

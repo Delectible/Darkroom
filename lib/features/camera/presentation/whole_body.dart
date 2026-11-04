@@ -15,6 +15,7 @@ import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
 
 import '../../../core/device/device_memory.dart';
 import '../../../core/diagnostics/launch_timer.dart';
+import '../../../core/diagnostics/perf_recorder.dart';
 import '../../../core/diagnostics/speed_tests.dart';
 import '../../../core/skins/camera_skins.dart';
 import 'body_quality.dart';
@@ -1075,6 +1076,7 @@ class _BodyScenePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    PerfRecorder.scene3d++;
     final area = Offset.zero & size;
     if (!_FrameRing.works) {
       scene.render(camera, canvas, viewport: area, pixelRatio: ratio);

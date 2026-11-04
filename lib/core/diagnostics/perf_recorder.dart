@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../shaders/shader_library.dart' show FilmUniforms;
@@ -45,6 +46,47 @@ class PerfRecorder {
     if (_on) return;
     _on = true;
     SchedulerBinding.instance.addTimingsCallback(_onTimings);
+    if (!_watching) {
+      _watching = true;
+      // Which frames were drawn while something moved: an animation running
+      // (a ticker asked for the next frame) or a finger on the screen. The
+      // rest are the screen standing still (the camera's own frames).
+      SchedulerBinding.instance.addPersistentFrameCallback((_) {
+        if (!_on) return;
+        final b = SchedulerBinding.instance;
+        if (b.transientCallbackCount > 0 || _down > 0) {
+          _moving.add(b.currentSystemFrameTimeStamp.inMicroseconds);
+          if (_moving.length > 2000) _moving.remove(_moving.first);
+        }
+      });
+      GestureBinding.instance.pointerRouter.addGlobalRoute((e) {
+        if (e is PointerDownEvent) _down++;
+        if (e is PointerUpEvent || e is PointerCancelEvent) _down = (_down - 1).clamp(0, 99);
+      });
+    }
+  }
+
+  /// How many times the 3D camera has been rendered (whole_body.dart counts):
+  /// the speed test reports renders a second per step.
+  static int scene3d = 0;
+
+  static bool _watching = false;
+  static int _down = 0;
+
+  /// vsync times (µs) of frames drawn while something moved, until matched.
+  static final _moving = <int>{};
+
+  /// Whether the frame of [vsync] was one drawn while something moved
+  /// (matched to the nearest ms: the two clocks are the engine's).
+  static bool _wasMoving(int vsync) {
+    if (_moving.remove(vsync)) return true;
+    for (final t in _moving) {
+      if ((t - vsync).abs() < 1000) {
+        _moving.remove(t);
+        return true;
+      }
+    }
+    return false;
   }
 
   static void stop() {
@@ -57,9 +99,10 @@ class PerfRecorder {
 
   /// The frames recorded under [label] (a speed test step): build (UI) and
   /// raster (GPU) ms, and vsync time (µs).
-  static List<({double ui, double gpu, int vsync})> framesOf(String label) => [
+  static List<({double ui, double gpu, int vsync, bool moving})> framesOf(String label) => [
     for (final f in _frames)
-      if (f.label == label || f.label.startsWith('$label · ')) (ui: f.build, gpu: f.raster, vsync: f.vsync),
+      if (f.label == label || f.label.startsWith('$label · '))
+        (ui: f.build, gpu: f.raster, vsync: f.vsync, moving: f.moving),
   ];
 
   /// The last second's frames: how many, and the average UI / GPU ms (null
@@ -90,6 +133,7 @@ class PerfRecorder {
           t.rasterDuration.inMicroseconds / 1000,
           t.totalSpan.inMicroseconds / 1000,
           t.timestampInMicroseconds(ui.FramePhase.vsyncStart),
+          _wasMoving(t.timestampInMicroseconds(ui.FramePhase.vsyncStart)),
         ),
       );
     }
@@ -191,7 +235,7 @@ class PerfRecorder {
 }
 
 class _Frame {
-  const _Frame(this.label, this.build, this.raster, this.total, this.vsync);
+  const _Frame(this.label, this.build, this.raster, this.total, this.vsync, this.moving);
 
   final String label;
   final double build;
@@ -200,4 +244,7 @@ class _Frame {
 
   /// When its vsync came (µs, the engine's clock).
   final int vsync;
+
+  /// Drawn while something moved (an animation, a finger on the screen).
+  final bool moving;
 }

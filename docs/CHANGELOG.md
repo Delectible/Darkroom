@@ -376,3 +376,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   phases.
 - [ ] **61.17** 3D maps on phones without GPU texture compression (the
   Pixel's Vulkan reports none): smaller maps there? Ask the owner (visual).
+- [x] **61.18** → 2.0.11 · Speed test, generic: part one goes round the app
+  (camera rest + swipes, picker open/close, settings open/close, corkboard
+  slide in / scroll / slide out, Darkroom 98 slide in / redraw / slide out),
+  part two swipes again with each switch, all of them, and the drawn bodies.
+  Moving phases are judged on frames drawn while something moved
+  (PerfRecorder tags each frame: a ticker running or a finger down, matched
+  by vsync time): fps while moving and "drop" = refreshes with no new frame.
+  The first run's swipe "55 fps" mixed in the still frames between swipes.
+  3D/s: 3D camera renders a second (`PerfRecorder.scene3d`).

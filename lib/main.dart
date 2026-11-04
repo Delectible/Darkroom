@@ -13,6 +13,7 @@ import 'app.dart';
 import 'core/background/background_worker.dart';
 import 'core/db/app_database.dart';
 import 'core/device/app_shortcuts.dart';
+import 'core/device/device_memory.dart';
 import 'core/device/upright.dart';
 import 'core/diagnostics/crash_log.dart';
 import 'core/diagnostics/launch_timer.dart';
@@ -68,6 +69,9 @@ Future<void> _start() async {
   ).wait;
 
   LaunchTimer.prefs = prefs;
+  // The phone's RAM sizes the work the app takes on (prints developing at
+  // once, the picture cache): read alongside the rest of the start-up.
+  unawaited(DeviceMemory.apply());
   LaunchTimer.mark('storage open');
   // Crash reports stay on the phone (Win98 Help > Crash Reports).
   _stage = 'crash log';

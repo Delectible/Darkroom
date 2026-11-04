@@ -11,7 +11,8 @@ class AppInfo {
   static const latest =
       'The launch fades into the camera smoothly again, and the app gets ready a little sooner: the '
       'camera, its film look and the 3D cameras all start loading together. The film picker takes a tap '
-      'while it\'s still sliding.';
+      'while it\'s still sliding, the camera\'s keys stay locked to the body during a swap, and phones '
+      'with less memory develop fewer prints at once so they stay responsive.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

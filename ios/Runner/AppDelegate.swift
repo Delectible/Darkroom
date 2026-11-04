@@ -42,6 +42,15 @@ import UserNotifications
       let level = UIDevice.current.batteryLevel
       result(level < 0 ? nil : Int((level * 100).rounded()))
     }
+    // The phone's total RAM, so the app can size its work to it.
+    let device = FlutterMethodChannel(name: "darkroom/device", binaryMessenger: registrar.messenger())
+    device.setMethodCallHandler { call, result in
+      guard call.method == "memory" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      result(["total": Int64(ProcessInfo.processInfo.physicalMemory), "lowRam": false])
+    }
     // Camera / microphone: granted?, ask (only while iOS still will), and
     // the app's page in Settings for when it won't.
     let permissions = FlutterMethodChannel(name: "darkroom/permissions", binaryMessenger: registrar.messenger())

@@ -222,3 +222,15 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **58.5 Digital camera effects** (idea): filters and other in-camera
   effects of the era.
 - [ ] **58.6 Double exposure** (idea) and other physical film camera tricks.
+
+## 59. Smoothness and memory (2026-11-04)
+
+- [x] **59.1** → 2.0.7 · Swap hiccup: the 3D model drew a frame behind its keys
+  (parts reported while painting, after the model). `LiveBody.syncParts`
+  reads every `LivePart` right before the model paints (`_SyncParts`).
+- [x] **59.2** → 2.0.7 · RAM: `DeviceMemory` (channel `darkroom/device`) sizes
+  prints developing at once (≤3.2 GB: 1, ≤4.5: 2, ≤6.5: 3, else cores/2 ≤ 4)
+  and the image cache (40 / 64 / 100 MB). RAM shown in Debug > Development Stats.
+- [ ] **59.3** 3D texture memory (decision pending): all finishes' textures
+  stay loaded (film ~30 maps, digital ~21; ~290 MB of GPU memory compressed).
+

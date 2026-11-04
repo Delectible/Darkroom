@@ -604,6 +604,10 @@ UI
   and the Performance Recorder (`core/diagnostics/perf_recorder.dart`:
   `PerfRecorder.mark('label')` tags the next frames; the report splits UI
   vs GPU time per label). Mark new heavy moments with it.
+- Memory (2.0.7): `DeviceMemory.apply()` at launch caps
+  `CaptureProcessor.maxWorkers` and the image cache by RAM. The 3D model
+  reads its parts right before it paints (`LiveBody.syncParts`), so keys
+  and body stay in step when a frame drops.
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and
   the cork wall's shader tiles are cached (`CorkTiles`, warmed at start).

@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/app_info.dart';
 import '../../../../core/device/battery.dart';
+import '../../../../core/device/device_memory.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/debug_flags.dart';
 import '../../../../core/diagnostics/develop_stats.dart';
@@ -356,7 +357,8 @@ class _DevelopStatsViewState extends ConsumerState<_DevelopStatsView> {
       'Average shot to print: ${n == 0 ? '-' : _secs(t.totalMs ~/ n)}',
       'Longest queue: ${t.maxQueue} waiting',
       '',
-      'Cores: ${Platform.numberOfProcessors}, developing on up to ${CaptureProcessor.maxWorkers}',
+      'Cores: ${Platform.numberOfProcessors}, RAM: ${DeviceMemory.gb?.toStringAsFixed(1) ?? '?'} GB, '
+          'developing on up to ${CaptureProcessor.maxWorkers}',
       'Now: ${p.busy} developing, ${p.waiting} waiting',
       if (t.shots >= DevelopStats.minShots && t.lateShare > DevelopStats.warnShare)
         'Over ${(DevelopStats.warnShare * 100).round()}% late: this phone is the bottleneck.',

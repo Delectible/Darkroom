@@ -173,6 +173,20 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        // darkroom/device: the phone's total RAM, so the app can size its
+        // work (prints developing side by side, image cache) to it.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/device")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "memory" -> {
+                        val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
+                        val info = android.app.ActivityManager.MemoryInfo()
+                        am.getMemoryInfo(info)
+                        result.success(mapOf("total" to info.totalMem, "lowRam" to am.isLowRamDevice))
+                    }
+                    else -> result.notImplemented()
+                }
+            }
         // darkroom/gallery: what's still in one of our albums. Android lists the
         // app's own entries without any permission (deleted or binned ones
         // drop out).

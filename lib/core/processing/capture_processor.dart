@@ -86,8 +86,10 @@ class CaptureProcessor {
   int _workers = 0;
 
   /// Shots developed side by side: half the phone's cores (at most 4, for
-  /// memory: each full-size print holds a few hundred MB while it forms).
-  static final int maxWorkers = (Platform.numberOfProcessors ~/ 2).clamp(1, 4);
+  /// memory: each full-size print holds a few hundred MB while it forms),
+  /// fewer on phones with little RAM (DeviceMemory, at launch).
+  static final int coreWorkers = (Platform.numberOfProcessors ~/ 2).clamp(1, 4);
+  static int maxWorkers = coreWorkers;
 
   /// Shots developing right now, and waiting.
   int get busy => _workers;

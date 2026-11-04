@@ -513,7 +513,29 @@ class LiveBody extends ChangeNotifier {
   /// A control's part moved: slid by ([dx], [dy]) and turned by [angle]
   /// (screen sense, radians) from its rest place, in [state] (pressed,
   /// rocked). Repaints on the next frame.
-  void setPart(String name, {double dx = 0, double dy = 0, double angle = 0, String? state}) {
+  /// The face's parts standing in for this body's moving pieces: read
+  /// again just before the model draws ([syncParts]), so the model and the
+  /// widgets on it show the same frame. (A part used to report only when it
+  /// painted, after the model had drawn: the model ran a frame behind, and a
+  /// dropped frame mid-swap showed the keys slipping on the body.)
+  final Set<_RenderLivePart> _parts = {};
+
+  /// Brings every moving piece to where its part is this frame (layout is
+  /// done by now; called from the model's paint).
+  void syncParts() {
+    for (final p in _parts) {
+      p.report(quiet: true);
+    }
+  }
+
+  void setPart(
+    String name, {
+    double dx = 0,
+    double dy = 0,
+    double angle = 0,
+    String? state,
+    bool quiet = false,
+  }) {
     final entry = _moving[name];
     if (entry == null) return;
     final n = _nodes[entry.$1];
@@ -541,7 +563,8 @@ class LiveBody extends ChangeNotifier {
     }
     if (m == n.localTransform) return;
     n.localTransform = m;
-    _changed();
+    // (from syncParts the model is drawing this very frame)
+    if (!quiet) _changed();
   }
 
   /// How far the zoom rocker tips each way (radians).
@@ -629,7 +652,10 @@ class _LiveBodyViewState extends State<LiveBodyView> {
     return IgnorePointer(
       child: KeyedSubtree(
         key: ValueKey(body),
-        child: fs.SceneView(body.scene, camera: camera, autoTick: false),
+        child: _SyncParts(
+          body: body,
+          child: fs.SceneView(body.scene, camera: camera, autoTick: false),
+        ),
       ),
     );
   }
@@ -649,6 +675,31 @@ class LiveFace extends InheritedWidget {
 
   @override
   bool updateShouldNotify(LiveFace old) => old.body != body;
+}
+
+/// Brings [body]'s moving pieces up to date right before the model draws.
+class _SyncParts extends SingleChildRenderObjectWidget {
+  const _SyncParts({required this.body, super.child});
+
+  final LiveBody body;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderSyncParts(body);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderSyncParts renderObject) => renderObject.body = body;
+}
+
+class _RenderSyncParts extends RenderProxyBox {
+  _RenderSyncParts(this.body);
+
+  LiveBody body;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    body.syncParts();
+    super.paint(context, offset);
+  }
 }
 
 /// Marks the face's coordinate space for [LivePart].
@@ -679,7 +730,7 @@ class LivePart extends LeafRenderObjectWidget {
       (renderObject as _RenderLivePart)
         ..name = name
         ..state = state
-        ..face = LiveFace.of(context);
+        ..setFace(LiveFace.of(context));
 }
 
 class _RenderLivePart extends RenderBox {
@@ -688,6 +739,26 @@ class _RenderLivePart extends RenderBox {
   String _name;
   String? _state;
   LiveFace? face;
+
+  void setFace(LiveFace? f) {
+    if (f?.body != face?.body && attached) {
+      face?.body._parts.remove(this);
+      f?.body._parts.add(this);
+    }
+    face = f;
+  }
+
+  @override
+  void attach(PipelineOwner owner) {
+    super.attach(owner);
+    face?.body._parts.add(this);
+  }
+
+  @override
+  void detach() {
+    face?.body._parts.remove(this);
+    super.detach();
+  }
 
   set name(String v) {
     if (v == _name) return;
@@ -705,9 +776,12 @@ class _RenderLivePart extends RenderBox {
   void performLayout() => size = constraints.smallest;
 
   @override
-  void paint(PaintingContext context, Offset offset) {
+  void paint(PaintingContext context, Offset offset) => report();
+
+  /// Tells the model where this part is now.
+  void report({bool quiet = false}) {
     final f = face;
-    if (f == null) return;
+    if (f == null || !attached || !hasSize) return;
     RenderObject? root = parent;
     while (root != null && root is! _RenderFaceRoot) {
       root = root.parent;
@@ -717,6 +791,13 @@ class _RenderLivePart extends RenderBox {
     final at = MatrixUtils.transformPoint(m, size.center(Offset.zero));
     final rest = f.rest(_name);
     final angle = math.atan2(m.entry(1, 0), m.entry(0, 0));
-    f.body.setPart(_name, dx: at.dx - rest.dx, dy: at.dy - rest.dy, angle: angle, state: _state);
+    f.body.setPart(
+      _name,
+      dx: at.dx - rest.dx,
+      dy: at.dy - rest.dy,
+      angle: angle,
+      state: _state,
+      quiet: quiet,
+    );
   }
 }

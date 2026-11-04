@@ -11,7 +11,6 @@ enum GestureMove {
   computer('Swipe left', 'Your digital shots, on the computer'),
   swap('Drag the camera', 'Swap film and digital'),
   shutter('Volume button', 'Takes the picture'),
-  print('Tap a print', 'Look closer, save or share'),
   selfie('Turn the lens dial', 'Top right: flip to the front camera');
 
   const GestureMove(this.title, this.caption);
@@ -120,8 +119,6 @@ class _DemoPainter extends CustomPainter {
         _swap(canvas, scr, _progress);
       case GestureMove.shutter:
         _camera(canvas, scr, film: true, flash: _flash);
-      case GestureMove.print:
-        _printZoom(canvas, scr, _progress);
       case GestureMove.selfie:
         _camera(canvas, scr, film: true, dial: true, selfie: _selfie);
     }
@@ -429,45 +426,6 @@ class _DemoPainter extends CustomPainter {
   }
 
   /// A print on the board growing to fill the screen.
-  void _printZoom(Canvas canvas, Rect s, double p) {
-    canvas.drawRect(s, Paint()..color = _cork);
-    final small = Rect.fromCenter(
-      center: Offset(s.center.dx, s.top + s.height * 0.42),
-      width: s.width * 0.5,
-      height: s.width * 0.6,
-    );
-    final big = Rect.fromCenter(center: s.center, width: s.width * 0.92, height: s.width * 1.1);
-    final r = Rect.lerp(small, big, p)!;
-    if (p > 0) canvas.drawRect(s, Paint()..color = Colors.black.withValues(alpha: 0.55 * p));
-    canvas.drawRect(r.shift(const Offset(2, 3)), Paint()..color = const Color(0x55000000));
-    canvas.drawRect(r, Paint()..color = _paper);
-    canvas.drawRect(
-      r.deflate(r.width * 0.07),
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF5B6E96), Color(0xFFE7A27A)],
-        ).createShader(r),
-    );
-    canvas.drawCircle(
-      Offset(r.left + r.width * 0.5, r.top + r.width * 0.07),
-      s.width * 0.03 * (1 - p),
-      Paint()..color = _accent,
-    );
-    // Save / Share appear under it once it's open
-    if (p > 0.6) {
-      final a = ((p - 0.6) / 0.4).clamp(0.0, 1.0);
-      for (final x in [0.3, 0.5, 0.7]) {
-        canvas.drawCircle(
-          Offset(s.left + s.width * x, s.bottom - s.height * 0.08),
-          s.width * 0.07,
-          Paint()..color = Colors.white.withValues(alpha: 0.25 * a),
-        );
-      }
-    }
-  }
-
   /// The fingertip: a soft round touch with a ring as it presses, and a
   /// fading trail along the way it went.
   void _finger(Canvas canvas, Rect s, Size size) {
@@ -493,10 +451,6 @@ class _DemoPainter extends CustomPainter {
           Offset(size.width + size.width * 0.18, size.height * 0.3),
           Offset(size.width + size.width * 0.06, size.height * 0.3),
         ),
-        GestureMove.print => (
-          Offset(s.center.dx, s.top + s.height * 0.45),
-          Offset(s.center.dx, s.top + s.height * 0.45),
-        ),
         GestureMove.selfie => (_dialAt(s), _dialAt(s)),
       };
       return Offset.lerp(a, b, p)!;
@@ -510,7 +464,7 @@ class _DemoPainter extends CustomPainter {
     final pos = at(p);
     final r = size.width * 0.11;
     // the trail
-    if (move != GestureMove.shutter && move != GestureMove.print && move != GestureMove.selfie && p > 0.02) {
+    if (move != GestureMove.shutter && move != GestureMove.selfie && p > 0.02) {
       final trail = Path()..moveTo(at(0).dx, at(0).dy);
       for (var i = 1; i <= 20; i++) {
         final q = at(p * i / 20);
@@ -532,10 +486,7 @@ class _DemoPainter extends CustomPainter {
     }
     // the touch ring as it presses, then the fingertip
     final ring =
-        (1 - _press) +
-        (move == GestureMove.print || move == GestureMove.selfie
-            ? math.max(0, 1 - ((t - 0.35) / 0.15).abs() * 3)
-            : 0);
+        (1 - _press) + (move == GestureMove.selfie ? math.max(0, 1 - ((t - 0.35) / 0.15).abs() * 3) : 0);
     if (ring > 0) {
       canvas.drawCircle(
         pos,

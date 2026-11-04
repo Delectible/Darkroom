@@ -95,7 +95,7 @@ void main() {
           await File('$shots/how_it_works_$scale${land ? '_land' : ''}.png').writeAsBytes(png!.buffer.asUint8List());
         });
       }
-      expect(find.text('Tap a print'), findsOneWidget);
+      expect(find.text('Turn the lens dial'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     });
   }

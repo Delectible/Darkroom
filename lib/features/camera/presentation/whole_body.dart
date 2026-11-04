@@ -355,7 +355,7 @@ class LiveBody extends ChangeNotifier {
     if (DeviceMemory.low) {
       scene.renderQuality
         ..adaptive = true
-        ..minRenderScale = 0.7;
+        ..minRenderScale = 0.5;
       // and never wider than 1080 px (the body maps hold no more detail)
       final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
       if (px > 1080) scene.renderScale = 1080 / px;

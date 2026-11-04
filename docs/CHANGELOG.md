@@ -242,7 +242,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **59.4** → 2.0.7 · Print viewer decodes at the screen's long edge;
   full size only for the print in view while zoomed (4096 cap on low RAM).
 - [x] **59.5** → 2.0.7 · Low RAM (≤ 3.2 GB) is chosen for automatically:
-  halation off, 60 Hz, 3D adaptive render quality (min 0.7) and ≤ 1080 px
+  halation off, 60 Hz, 3D adaptive render quality (min 0.5) and ≤ 1080 px
   wide, studio light built at 512. Debug > Memory Report.
 - [x] **59.6** → 2.0.7 · Six long, untimed sounds ship as AAC (.m4a): sfx 2.0 →
   1.1 MB. The slowest phones (≤ 2.2 GB, or ≤ 3.2 GB with ≤ 4 cores:

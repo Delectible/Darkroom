@@ -79,18 +79,6 @@ final _speedTests = <(String, ValueNotifier<bool>, String)>[
     "The 3D camera's edges smoothed by a cheap filter (FXAA) instead of multisampling.",
   ),
   ('3D at 70%', SpeedTests.small3d, 'The 3D camera drawn at 70% of its size and scaled up.'),
-  ('98: No Scan Lines', SpeedTests.noLines, 'Darkroom 98 without its scan lines.'),
-  ('98: No Glass', SpeedTests.noGlass, "Darkroom 98 without the glass's sheen and glint, or the tube's rim."),
-  (
-    '98: No Colour Filter',
-    SpeedTests.noTint,
-    "Darkroom 98 without the display's colour filter (the monitor's picture settings).",
-  ),
-  (
-    '98: Square Screen',
-    SpeedTests.squareScreen,
-    "Darkroom 98's screen with square corners (no rounded clipping).",
-  ),
 ];
 
 final _tools = <_Tool>[

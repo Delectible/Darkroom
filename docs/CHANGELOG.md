@@ -359,3 +359,20 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   per step: fps, UI and GPU avg/p90, late %), shown at the end with Copy to
   Clipboard; "Last Result" from the same dialog. Old switches folder kept
   as "Speed Test Switches" for manual checks.
+- Owner's first Run Speed Test (2.0.10, Pixel 9 Pro): swipes 53-58 fps, UI
+  5-7 ms is the limit; no strap = UI 5.3, late 19% (base 32%). Camera at
+  rest: 25-30 fps (the camera's rate), GPU 9-12 ms because the GPU clocks
+  down (no look / 3D 70% didn't lower it): not a problem. Corkboard at rest
+  61 fps (developing trays animating at full rate). Darkroom 98 redraws at
+  117 fps; its switches changed nothing. GPU reports no texture compression
+  at all (ASTC/BC/ETC2 no): 3D maps load as rgba8, 192 MB a body.
+- [x] **61.14** → 2.0.11 · Strap: stitches and the cord's weave drawn as one
+  path each (were ~190 / ~110 draw calls a frame).
+- [x] **61.15** → 2.0.11 · Corkboard: the trays' rock and the tank's turn
+  step 30 times a second (`SlowLoop`, a timer, off when covered) instead of
+  every refresh.
+- [x] **61.16** → 2.0.11 · Speed test: Darkroom 98 switches removed (no
+  effect; code reverted), one Darkroom 98 step kept; "late" only for moving
+  phases.
+- [ ] **61.17** 3D maps on phones without GPU texture compression (the
+  Pixel's Vulkan reports none): smaller maps there? Ask the owner (visual).

@@ -743,17 +743,20 @@ class _StrapPainter extends CustomPainter {
     final weave = Paint()
       ..color = Colors.white.withValues(alpha: 0.16)
       ..strokeWidth = 1.1;
+    // (one path of ticks, not a line each: ~110 draws a frame cost the
+    // swipe more than a millisecond)
+    final ticks = Path();
     for (final m in cord.computeMetrics()) {
       for (var d = 0.0; d < m.length; d += 3.2) {
         final tan = m.getTangentForOffset(d)!;
         final n = Offset(-tan.vector.dy, tan.vector.dx);
-        canvas.drawLine(
-          tan.position + n * 2 - tan.vector * 1.2,
-          tan.position - n * 2 + tan.vector * 1.2,
-          weave,
-        );
+        final a = tan.position + n * 2 - tan.vector * 1.2, b = tan.position - n * 2 + tan.vector * 1.2;
+        ticks
+          ..moveTo(a.dx, a.dy)
+          ..lineTo(b.dx, b.dy);
       }
     }
+    canvas.drawPath(ticks, weave..style = PaintingStyle.stroke);
     // Connector: a thin loop through the lug.
     canvas.drawOval(
       Rect.fromCenter(center: top, width: 9, height: 12),
@@ -822,12 +825,20 @@ class _StrapPainter extends CustomPainter {
     canvas.restore();
   }
 
+  /// Stitches: dashes along [path], drawn as one path (a draw per dash was
+  /// ~190 draws a frame).
   void _dashed(Canvas canvas, Path path, Paint paint) {
+    final dashes = Path();
     for (final metric in path.computeMetrics()) {
-      for (var d = 0.0; d < metric.length; d += 9) {
-        canvas.drawPath(metric.extractPath(d, d + 4.5), paint);
+      for (var d = 0.0; d + 4.5 < metric.length; d += 9) {
+        // (straight dashes: the line they follow is short straight pieces too)
+        final a = metric.getTangentForOffset(d)!.position, b = metric.getTangentForOffset(d + 4.5)!.position;
+        dashes
+          ..moveTo(a.dx, a.dy)
+          ..lineTo(b.dx, b.dy);
       }
     }
+    canvas.drawPath(dashes, paint);
   }
 
   @override

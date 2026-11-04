@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
-import '../../../../core/diagnostics/speed_tests.dart';
 
 /// The Darkroom 98 monitor's settings (Tools > Options > Monitor / Screen
 /// Saver): the kind of tube, the resolution the desktop runs at, the
@@ -286,16 +285,13 @@ class _Win98GlassState extends State<Win98Glass> {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      // (Debug > Speed Tests: no tint, no scan lines, no glass)
-      listenable: Listenable.merge([Win98Display.current, SpeedTests.changed]),
-      builder: (context, _) {
-        final d = Win98Display.current.value;
-        final m = SpeedTests.noTint.value ? null : d.matrix;
-        final lines = !SpeedTests.noLines.value, glass = widget.screen && !SpeedTests.noGlass.value;
+    return ValueListenableBuilder<Win98Display>(
+      valueListenable: Win98Display.current,
+      builder: (context, d, _) {
+        final m = d.matrix;
         final child = KeyedSubtree(key: _content, child: widget.child);
         Widget out = m == null ? child : ColorFiltered(colorFilter: ColorFilter.matrix(m), child: child);
-        if (d.crt && (lines || glass)) {
+        if (d.crt) {
           out = Stack(
             fit: StackFit.passthrough,
             children: [
@@ -306,8 +302,7 @@ class _Win98GlassState extends State<Win98Glass> {
                     child: CustomPaint(
                       painter: CrtGlassPainter(
                         pitch: d.res.scanline,
-                        screen: glass,
-                        lines: lines,
+                        screen: widget.screen,
                         ratio: MediaQuery.devicePixelRatioOf(context),
                       ),
                     ),
@@ -577,13 +572,12 @@ class _CrtWarpState extends State<CrtWarp> {
 
   @override
   Widget build(BuildContext context) {
-    final on = widget.on;
     final child = RepaintBoundary(
       key: _flat,
       child: KeyedSubtree(key: _content, child: widget.child),
     );
     final shader = _shader, paint = _paint, still = _still;
-    if (shader == null || paint == null || !on) return child;
+    if (shader == null || paint == null || !widget.on) return child;
     if (still != null) {
       // Moving: the bulged picture on top of the (flat) screen.
       return Stack(

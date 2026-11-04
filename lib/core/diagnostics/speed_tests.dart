@@ -6,9 +6,10 @@ import 'package:flutter/foundation.dart';
 /// frames with it ("idle camera [no look]"), so one recording compares the
 /// two. They reset when the app restarts.
 ///
-/// Measured and dropped (2.0.8, Pixel 9 Pro): the CRT bulge (no change),
-/// halation (small; off on low RAM anyway); Quick Launch became the normal
-/// launch.
+/// Measured and dropped (Pixel 9 Pro): the CRT bulge, Darkroom 98's scan
+/// lines, glass, colour filter and rounded screen (no change: it redraws at
+/// 117 fps), halation (small; off on low RAM anyway); Quick Launch became
+/// the normal launch.
 class SpeedTests {
   SpeedTests._();
 
@@ -33,19 +34,6 @@ class SpeedTests {
   /// Swipes without the hanging strap (its rope is simulated every frame).
   static final noStrap = ValueNotifier<bool>(false);
 
-  /// Darkroom 98 without the scan lines (hundreds of thin strips).
-  static final noLines = ValueNotifier<bool>(false);
-
-  /// Darkroom 98 without the glass: its sheen and glint, and the tube's rim.
-  static final noGlass = ValueNotifier<bool>(false);
-
-  /// Darkroom 98 without the display's colour filter (brightness, contrast,
-  /// colour settings over the whole screen).
-  static final noTint = ValueNotifier<bool>(false);
-
-  /// Darkroom 98's screen with square corners (no rounded clips).
-  static final squareScreen = ValueNotifier<bool>(false);
-
   /// The switches, by their label in the report.
   static final Map<String, ValueNotifier<bool>> _named = {
     'cheap edges': cheapEdges,
@@ -54,10 +42,6 @@ class SpeedTests {
     'slow grain': slowGrain,
     'still swipe': stillSwipe,
     'no strap': noStrap,
-    'no lines': noLines,
-    'no glass': noGlass,
-    'no tint': noTint,
-    'square': squareScreen,
   };
 
   /// Every switch.

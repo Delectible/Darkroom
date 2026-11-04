@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
@@ -1887,11 +1888,14 @@ class _TankTray extends StatefulWidget {
   State<_TankTray> createState() => _TankTrayState();
 }
 
-class _TankTrayState extends State<_TankTray> with SingleTickerProviderStateMixin {
-  late final AnimationController _spin = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 6),
-  )..repeat();
+class _TankTrayState extends State<_TankTray> {
+  final _spin = SlowLoop(const Duration(seconds: 6));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _spin.active = TickerMode.valuesOf(context).enabled;
+  }
 
   @override
   void dispose() {
@@ -2360,7 +2364,7 @@ class PrintTrayPainter extends CustomPainter {
 class _WaterOverPaper extends CustomPainter {
   _WaterOverPaper(this.t, {required this.flowing}) : super(repaint: t);
 
-  final Animation<double> t;
+  final ValueListenable<double> t;
   final bool flowing;
 
   @override
@@ -2430,11 +2434,14 @@ class _PrintTray extends StatefulWidget {
   State<_PrintTray> createState() => _PrintTrayState();
 }
 
-class _PrintTrayState extends State<_PrintTray> with SingleTickerProviderStateMixin {
-  late final AnimationController _rock = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 4),
-  )..repeat();
+class _PrintTrayState extends State<_PrintTray> {
+  final _rock = SlowLoop(const Duration(seconds: 4));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _rock.active = TickerMode.valuesOf(context).enabled;
+  }
 
   @override
   void dispose() {
@@ -2561,4 +2568,39 @@ Widget _instantPicture(MediaItem item, int cacheWidth) {
     gaplessPlayback: true,
     errorBuilder: (_, _, _) => const SizedBox.shrink(),
   );
+}
+
+/// A slow loop (0..1 over [period], round and round) moved on 30 times a
+/// second: the trays' rocking and the tank's turning are slow enough that
+/// the screen's full 90/120 Hz looked no different, and each step redraws
+/// the board (they ran the corkboard at 60+ frames a second while prints
+/// developed).
+class SlowLoop extends ChangeNotifier implements ValueListenable<double> {
+  SlowLoop(this.period);
+
+  final Duration period;
+  final _clock = Stopwatch();
+  Timer? _timer;
+
+  @override
+  double get value => (_clock.elapsedMicroseconds / period.inMicroseconds) % 1;
+
+  /// Off while the screen is covered (as an AnimationController's ticker).
+  set active(bool on) {
+    if (on == (_timer != null)) return;
+    if (on) {
+      _clock.start();
+      _timer = Timer.periodic(const Duration(microseconds: 33333), (_) => notifyListeners());
+    } else {
+      _clock.stop();
+      _timer?.cancel();
+      _timer = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 }

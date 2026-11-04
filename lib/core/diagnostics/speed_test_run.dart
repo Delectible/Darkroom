@@ -98,15 +98,6 @@ class SpeedTestRun {
     const _Step('classic', _Where.camera, classic: true),
     const _Step('base', _Where.corkboard),
     const _Step('base', _Where.win98),
-    _Step('no lines', _Where.win98, flags: [SpeedTests.noLines]),
-    _Step('no glass', _Where.win98, flags: [SpeedTests.noGlass]),
-    _Step('no tint', _Where.win98, flags: [SpeedTests.noTint]),
-    _Step('square', _Where.win98, flags: [SpeedTests.squareScreen]),
-    _Step(
-      'all off',
-      _Where.win98,
-      flags: [SpeedTests.noLines, SpeedTests.noGlass, SpeedTests.noTint, SpeedTests.squareScreen],
-    ),
   ];
 
   static List<_Phase> _phases(_Where w) => switch (w) {
@@ -270,7 +261,10 @@ class SpeedTestRun {
     }
     final fps = gaps == 0 ? 0 : (1e6 * gaps / gapSum).round();
     final budget = 1000 / _hz * 1.05;
-    final late = fs.where((f) => f.ui > budget || f.gpu > budget).length;
+    // (at rest the screen only changes with the camera's ~30 frames a
+    // second and the GPU slows its clock to match, so frames look long:
+    // late counts only while things move)
+    final late = phase == 'rest' ? null : fs.where((f) => f.ui > budget || f.gpu > budget).length;
     String ap(Iterable<double> v) {
       final s = v.toList()..sort();
       final avg = s.reduce((a, b) => a + b) / s.length;
@@ -279,7 +273,7 @@ class SpeedTestRun {
     }
 
     return '${phase.padRight(6)}${fps.toString().padLeft(4)}${ap(fs.map((f) => f.ui)).padLeft(10)}'
-        '${ap(fs.map((f) => f.gpu)).padLeft(10)}${'${(100 * late / fs.length).round()}%'.padLeft(5)}';
+        '${ap(fs.map((f) => f.gpu)).padLeft(10)}${(late == null ? '-' : '${(100 * late / fs.length).round()}%').padLeft(5)}';
   }
 
   static Future<String> _results(List<String> rows, {required bool stopped, required int seconds}) async {
@@ -304,7 +298,7 @@ class SpeedTestRun {
       ...rows,
       '',
       'fps: frames a second while drawing. ms: average/90%. '
-          'late: frames over ${(1000 / _hz).toStringAsFixed(1)} ms.',
+          'late: frames over ${(1000 / _hz).toStringAsFixed(1)} ms while moving.',
     ].join('\n');
   }
 

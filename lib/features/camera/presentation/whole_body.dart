@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:flutter_scene/scene.dart' as fs;
 import 'package:vector_math/vector_math.dart' as vm;
 import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
@@ -349,7 +351,11 @@ class LiveBody extends ChangeNotifier {
       // round: half a turn about y between them
       ..environmentTransform = vm.Matrix3.rotationY(math.pi)
       ..exposure = exposure
-      ..toneMapping = fs.ToneMappingMode.agx;
+      ..toneMapping = fs.ToneMappingMode.agx
+      // Never re-show the last frame because the GPU is behind (the
+      // library's default): the keys drawn over the body move on every
+      // frame, so a held body made them slip on it in a swipe.
+      ..maxGpuFramesInFlight = 0;
     // Phones with little RAM (and so a modest GPU): drawn no wider than
     // 1080 px (the body maps hold no more detail), and a step softer at a
     // time if frames run late in a swap, back up once they don't
@@ -792,7 +798,7 @@ class _LiveBodyViewState extends State<LiveBodyView> {
         key: ValueKey(body),
         child: _SyncParts(
           body: body,
-          child: fs.SceneView(body.scene, camera: camera, autoTick: false),
+          child: _BodyScene(scene: body.scene, camera: camera),
         ),
       ),
     );
@@ -938,4 +944,142 @@ class _RenderLivePart extends RenderBox {
       quiet: quiet,
     );
   }
+}
+
+/// Draws [scene] seen by [camera], in step with the widgets over it.
+///
+/// The library renders each frame into one of only two textures and draws
+/// that texture: with Flutter's frames overlapping (the UI thread a frame
+/// or two ahead of the GPU on a busy swipe) a frame could show the body
+/// already drawn for a later one, the keys on it a frame behind. Each
+/// frame's picture is copied into a ring of our own, deep enough that the
+/// GPU is done with it before it is drawn over.
+class _BodyScene extends StatefulWidget {
+  const _BodyScene({required this.scene, required this.camera});
+
+  final fs.Scene scene;
+  final fs.Camera camera;
+
+  @override
+  State<_BodyScene> createState() => _BodySceneState();
+}
+
+class _BodySceneState extends State<_BodyScene> {
+  final _ring = _FrameRing();
+
+  @override
+  void didUpdateWidget(_BodyScene old) {
+    super.didUpdateWidget(old);
+    if (old.scene != widget.scene) _ring.clear();
+  }
+
+  @override
+  void dispose() {
+    _ring.clear();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size.infinite,
+    painter: _BodyScenePainter(
+      widget.scene,
+      widget.camera,
+      View.of(context).devicePixelRatio,
+      _ring,
+      // (the library asks for a repaint when something it loads lands)
+      widget.scene.repaintRequested,
+    ),
+  );
+}
+
+/// Our own copies of the frames, used round in turn.
+class _FrameRing {
+  static const _depth = 3;
+
+  final List<gpu.Texture> _textures = [];
+  int _next = 0;
+
+  /// False once a copy failed (a backend without texture copies): the
+  /// library's own picture is drawn from then on.
+  static bool works = true;
+
+  gpu.Texture? take(gpu.Texture like) {
+    if (_textures.isNotEmpty) {
+      final t = _textures.first;
+      if (t.width != like.width || t.height != like.height || t.format != like.format) clear();
+    }
+    if (_textures.length < _depth) {
+      final t = gpu.gpuContext.createTexture(
+        gpu.StorageMode.devicePrivate,
+        like.width,
+        like.height,
+        format: like.format,
+        enableRenderTargetUsage: true,
+        enableShaderReadUsage: true,
+      );
+      _textures.add(t);
+      _next = _textures.length % _depth;
+      return t;
+    }
+    final t = _textures[_next];
+    _next = (_next + 1) % _depth;
+    return t;
+  }
+
+  void clear() {
+    _textures.clear();
+    _next = 0;
+  }
+}
+
+class _BodyScenePainter extends CustomPainter {
+  _BodyScenePainter(this.scene, this.camera, this.ratio, this.ring, Listenable repaint)
+    : super(repaint: repaint);
+
+  final fs.Scene scene;
+  final fs.Camera camera;
+  final double ratio;
+  final _FrameRing ring;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final area = Offset.zero & size;
+    if (!_FrameRing.works) {
+      scene.render(camera, canvas, viewport: area, pixelRatio: ratio);
+      return;
+    }
+    // Rendered onto a canvas that's thrown away: only its texture is kept.
+    final recorder = ui.PictureRecorder();
+    scene.render(camera, Canvas(recorder), viewport: area, pixelRatio: ratio);
+    recorder.endRecording().dispose();
+    // (on phones the library's textures are Flutter GPU's own; the cast is
+    // for the analyzer, which sees the library's stand-in type)
+    final drawn = scene.surface.lastSwapchainColorTexture() as gpu.Texture?;
+    if (drawn == null) return;
+    gpu.Texture? copy;
+    try {
+      copy = ring.take(drawn);
+      if (copy != null) {
+        final commands = gpu.gpuContext.createCommandBuffer()
+          ..copyTextureToTexture(gpu.TextureRegion(drawn), gpu.TextureDestinationRegion(copy));
+        commands.submit();
+      }
+    } catch (_) {
+      _FrameRing.works = false;
+      ring.clear();
+      copy = null;
+    }
+    final image = (copy ?? drawn).asImage();
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, drawn.width.toDouble(), drawn.height.toDouble()),
+      area,
+      Paint()..filterQuality = scene.filterQuality,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BodyScenePainter old) =>
+      old.camera != camera || old.scene != scene || old.ratio != ratio;
 }

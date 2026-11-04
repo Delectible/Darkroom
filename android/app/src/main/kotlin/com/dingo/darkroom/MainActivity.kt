@@ -14,6 +14,11 @@ import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.view.KeyEvent
+import android.view.Surface
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -69,7 +74,16 @@ class MainActivity : FlutterActivity() {
 
     /// Fast: the screen's fastest refresh rate (90/120 Hz; left alone,
     /// Android often keeps an app at 60). Else 60 Hz (performance mode).
+    /// The display mode alone isn't enough on newer Pixels: with an adaptive
+    /// (LTPO) screen Android picks the rate from what the app's surfaces ask
+    /// for, and Flutter's surface asks for nothing, so it sat near 60. So
+    /// the surface votes for the rate too, and on Android 15+ the views ask
+    /// for the "high" frame-rate category.
+    private var fastRate = true
+    private var fastHz = 0f
+
     private fun refreshRate(fast: Boolean) {
+        fastRate = fast
         @Suppress("DEPRECATION")
         val screen = (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay)
             ?: return
@@ -78,7 +92,66 @@ class MainActivity : FlutterActivity() {
             m.physicalWidth == now.physicalWidth && m.physicalHeight == now.physicalHeight
         }
         val pick = if (fast) modes.maxByOrNull { it.refreshRate } else modes.minByOrNull { abs(it.refreshRate - 60f) }
-        pick?.let { m -> window.attributes = window.attributes.also { it.preferredDisplayModeId = m.modeId } }
+        pick?.let { m ->
+            fastHz = m.refreshRate
+            window.attributes = window.attributes.also {
+                it.preferredDisplayModeId = m.modeId
+                it.preferredRefreshRate = m.refreshRate
+            }
+        }
+        voteFrameRate()
+    }
+
+    private val votedSurfaces = java.util.WeakHashMap<SurfaceView, Boolean>()
+
+    /// Asks every view (and Flutter's SurfaceView) for the chosen rate.
+    private fun voteFrameRate() {
+        val root = window?.decorView ?: return
+        root.post { vote(root) }
+    }
+
+    private fun vote(v: View) {
+        if (Build.VERSION.SDK_INT >= 35) {
+            v.requestedFrameRate =
+                if (fastRate) View.REQUESTED_FRAME_RATE_CATEGORY_HIGH else View.REQUESTED_FRAME_RATE_CATEGORY_NORMAL
+        }
+        if (v is SurfaceView && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (votedSurfaces.put(v, true) == null) {
+                // (the surface is made again after the app was in the background)
+                v.holder.addCallback(object : SurfaceHolder.Callback {
+                    override fun surfaceCreated(holder: SurfaceHolder) = surfaceRate(holder.surface)
+                    override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) =
+                        surfaceRate(holder.surface)
+                    override fun surfaceDestroyed(holder: SurfaceHolder) {}
+                })
+            }
+            surfaceRate(v.holder.surface)
+        }
+        if (v is ViewGroup) for (i in 0 until v.childCount) vote(v.getChildAt(i))
+    }
+
+    private fun surfaceRate(surface: Surface) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || !surface.isValid) return
+        val hz = if (fastRate && fastHz > 0f) fastHz else 60f
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                surface.setFrameRate(hz, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT, Surface.CHANGE_FRAME_RATE_ALWAYS)
+            } else {
+                surface.setFrameRate(hz, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+            }
+        } catch (e: Exception) {
+            // (a surface released in between)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        voteFrameRate()
+    }
+
+    override fun onFlutterUiDisplayed() {
+        super.onFlutterUiDisplayed()
+        voteFrameRate()
     }
 
     override fun onDestroy() {

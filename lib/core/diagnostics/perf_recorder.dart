@@ -58,6 +58,7 @@ class PerfRecorder {
           t.buildDuration.inMicroseconds / 1000,
           t.rasterDuration.inMicroseconds / 1000,
           t.totalSpan.inMicroseconds / 1000,
+          t.timestampInMicroseconds(ui.FramePhase.vsyncStart),
         ),
       );
     }
@@ -87,7 +88,7 @@ class PerfRecorder {
     b
       ..writeln('Frames recorded: ${_frames.length}')
       ..writeln()
-      ..writeln('activity: frames, slow (>budget), UI avg/p90/max, GPU avg/p90/max (ms)');
+      ..writeln('activity: frames, fps, slow (UI or GPU over budget), UI avg/p90/max, GPU avg/p90/max (ms)');
     if (_frames.isEmpty) {
       return (b..writeln('(nothing yet: turn the recorder on, then use the app)')).toString();
     }
@@ -101,7 +102,7 @@ class PerfRecorder {
       final fs = byLabel[l]!;
       final ui_ = fs.map((f) => f.build).toList(), gpu = fs.map((f) => f.raster).toList();
       b.writeln(
-        '$l: ${fs.length}, ${_slow(fs, budget)} slow, '
+        '$l: ${fs.length}, ${_fps(fs)} fps, ${_slow(fs, budget)} slow, '
         'UI ${_stats(ui_)}, GPU ${_stats(gpu)}',
       );
     }
@@ -117,7 +118,26 @@ class PerfRecorder {
     return b.toString();
   }
 
-  static int _slow(List<_Frame> fs, double budget) => fs.where((f) => f.total > budget * 1.05).length;
+  /// A frame misses the screen when either thread takes longer than a
+  /// refresh: the two work side by side (the UI thread builds the next
+  /// frame while the GPU draws this one), so their sum (the total) running
+  /// past the budget only delays a frame, it doesn't drop one.
+  static int _slow(List<_Frame> fs, double budget) =>
+      fs.where((f) => f.build > budget * 1.05 || f.raster > budget * 1.05).length;
+
+  /// Frames drawn per second while this was going on: from the time between
+  /// one frame and the next (gaps over 0.1 s, when nothing moved, left out).
+  static String _fps(List<_Frame> fs) {
+    var sum = 0, n = 0;
+    for (var i = 1; i < fs.length; i++) {
+      final gap = fs[i].vsync - fs[i - 1].vsync;
+      if (gap > 0 && gap < 100000) {
+        sum += gap;
+        n++;
+      }
+    }
+    return n == 0 ? '?' : (1e6 * n / sum).round().toString();
+  }
 
   static String _stats(List<double> v) {
     final s = [...v]..sort();
@@ -128,10 +148,13 @@ class PerfRecorder {
 }
 
 class _Frame {
-  const _Frame(this.label, this.build, this.raster, this.total);
+  const _Frame(this.label, this.build, this.raster, this.total, this.vsync);
 
   final String label;
   final double build;
   final double raster;
   final double total;
+
+  /// When its vsync came (µs, the engine's clock).
+  final int vsync;
 }

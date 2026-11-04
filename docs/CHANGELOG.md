@@ -268,3 +268,23 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [ ] **59.7** Not done: a patched 3D loader skipping mip 0 (two-size files
   do the same), drawn cameras by default for existing low-end installs.
 
+
+## 60. Smoothness, part two (2026-11-04)
+
+- [x] **60.1** → 2.0.8 · Debug window: a long tool description scrolls
+  (Win98 scrollbar; starts at the top for each pick).
+- [x] **60.2** → 2.0.8 · Pixel 9 Pro sat near 60 Hz: the display mode alone
+  doesn't hold an adaptive (LTPO) screen up. MainActivity now also sets
+  `preferredRefreshRate`, votes the rate on Flutter's SurfaceView
+  (`Surface.setFrameRate`, CHANGE_FRAME_RATE_ALWAYS, again when the surface
+  is made) and, on Android 15+, asks every view for the HIGH frame-rate
+  category (NORMAL in performance mode / low RAM). Performance Report: "slow"
+  is now UI or GPU over budget (the old total span counted frames that were
+  only late, not dropped), and each activity shows its real fps.
+- [x] **60.3** → 2.0.8 · Keys jittering on the body mid-swipe: Flutter Scene
+  re-showed the last body frame whenever one frame of GPU work was still
+  running (`maxGpuFramesInFlight` 1, now 0), and renders into a ring of only
+  two textures, so with the UI thread ahead of the GPU a frame could show a
+  later body. `_BodyScene` (whole_body.dart) renders, copies each frame
+  into its own ring of three, and draws that (falls back to the library's
+  picture if a backend can't copy).

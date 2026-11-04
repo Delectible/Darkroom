@@ -655,6 +655,8 @@ final Map<String, List<int>> _folders = () {
 
 class _DebugMenuState extends ConsumerState<_DebugMenu> {
   final _scroll = ScrollController();
+  final _aboutScroll = ScrollController();
+  (int?, String?) _shown = (null, null);
 
   /// The picked tool (index into [_tools]), or a folder ([_folder]).
   int? _picked;
@@ -664,6 +666,7 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
   @override
   void dispose() {
     _scroll.dispose();
+    _aboutScroll.dispose();
     super.dispose();
   }
 
@@ -765,6 +768,12 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
       }
     }
     final folderTools = _folder == null ? const <int>[] : _folders[_folder]!;
+    if ((_picked, _folder) != _shown) {
+      _shown = (_picked, _folder);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_aboutScroll.hasClients) _aboutScroll.jumpTo(0);
+      });
+    }
     return Padding(
       padding: const EdgeInsets.all(8),
       child: Column(
@@ -787,14 +796,22 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
           const SizedBox(height: 8),
           Win98GroupBox(
             label: tool?.name ?? _folder ?? 'Debug',
+            // Long descriptions scroll (back to the top for each pick).
             child: SizedBox(
-              height: 52,
-              child: Text(
-                tool?.about ??
-                    (_folder == null
-                        ? 'Open a folder to see its tools.'
-                        : [for (final i in folderTools) _tools[i].name].join(', ')),
-                style: W98.text.copyWith(fontSize: 11),
+              height: 60,
+              child: Win98Scrollbar(
+                controller: _aboutScroll,
+                child: SingleChildScrollView(
+                  controller: _aboutScroll,
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(
+                    tool?.about ??
+                        (_folder == null
+                            ? 'Open a folder to see its tools.'
+                            : [for (final i in folderTools) _tools[i].name].join(', ')),
+                    style: W98.text.copyWith(fontSize: 11),
+                  ),
+                ),
               ),
             ),
           ),

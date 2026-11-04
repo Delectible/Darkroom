@@ -659,7 +659,13 @@ UI
 - Memory (2.0.7): `DeviceMemory.apply()` at launch caps
   `CaptureProcessor.maxWorkers` and the image cache by RAM. The 3D model
   reads its parts right before it paints (`LiveBody.syncParts`), so keys
-  and body stay in step when a frame drops.
+  and body stay in step when a frame drops. (2.0.8) It's drawn by our own
+  `_BodyScene`, not `SceneView`: no GPU pacing (`maxGpuFramesInFlight = 0`;
+  a paced frame re-showed the old body under moved keys) and each frame
+  copied into a ring of 3 textures (the library's ring of 2 could be drawn
+  over before the GPU read it). Android 90/120 Hz: display mode +
+  `preferredRefreshRate` + a `Surface.setFrameRate` vote on Flutter's
+  SurfaceView + Android 15 view frame-rate category (MainActivity).
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and
   the cork wall's shader tiles are cached (`CorkTiles`, warmed at start).

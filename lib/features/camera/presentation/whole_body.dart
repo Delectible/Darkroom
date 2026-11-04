@@ -11,7 +11,9 @@ import 'package:flutter_scene/scene.dart' as fs;
 import 'package:vector_math/vector_math.dart' as vm;
 import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
 
+import '../../../core/device/device_memory.dart';
 import '../../../core/diagnostics/launch_timer.dart';
+import '../../../core/skins/camera_skins.dart';
 import '../../../core/startup/launch_curtain.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../application/camera_ui_state.dart' show appModeProvider;
@@ -50,6 +52,8 @@ class WholeArt {
   Map<String, dynamic>? _manifest;
   fs.EnvironmentMap? _env;
   final _ready = <AppMode, Completer<void>>{};
+  bool _hd = true;
+  String? Function(AppMode mode)? _skinOf;
 
   /// Whether [mode]'s model is loaded (or failed to). Until then it can't
   /// be swapped to.
@@ -62,7 +66,14 @@ class WholeArt {
   /// tests or on phones without it, which get the classic bodies), the
   /// model of [first] (the camera in hand). The other model loads after,
   /// with [loadRest], so the app opens sooner.
-  static Future<WholeArt?> load({bool scenes = true, AppMode first = AppMode.film}) async {
+  /// [hd]: the full-size body maps (sharper screens); [skin]: the skin each
+  /// body is wearing, put on before it's first seen.
+  static Future<WholeArt?> load({
+    bool scenes = true,
+    AppMode first = AppMode.film,
+    bool hd = true,
+    String? Function(AppMode mode)? skin,
+  }) async {
     try {
       final j = jsonDecode(await rootBundle.loadString('$root/manifest.json')) as Map<String, dynamic>;
       final d = j['design'] as Map<String, dynamic>;
@@ -73,7 +84,8 @@ class WholeArt {
         await fs.Scene.initializeStaticResources();
         env = await fs.EnvironmentMap.fromEquirectImageAsset(
           assetPath: '$root/studio.hdr',
-          maxWidth: 1024,
+          // (half the detail where RAM is short: quicker to build at launch)
+          maxWidth: DeviceMemory.low ? 512 : 1024,
           diffuseSphericalHarmonics: [
             for (final c in studio['diffuseSH'] as List<dynamic>)
               vm.Vector3(
@@ -111,6 +123,8 @@ class WholeArt {
       if (!scenes) return art;
       art
         .._manifest = j
+        .._hd = hd
+        .._skinOf = skin
         .._env = env;
       for (final mode in bodies.keys) {
         art._ready[mode] = Completer<void>();
@@ -143,17 +157,25 @@ class WholeArt {
       final d = j['design'] as Map<String, dynamic>;
       final studio = j['studio'] as Map<String, dynamic>;
       final b = j[mode.name] as Map<String, dynamic>;
-      final node = await fs.loadScene('$root/${b['scene']}');
+      final scenePath = '$root/${b['scene']}';
+      final node = await fs.loadScene(scenePath);
       body.live = LiveBody._(
         node,
         body,
         _env!,
+        prefix: scenePath.replaceAll(RegExp(r'\.glb$'), ''),
         exposure: (studio['exposure'] as num).toDouble(),
         design: design,
         cutY: cutY,
         dist: dist,
         band: band,
       );
+      // The skin it's wearing and, on a sharp screen, the full-size body
+      // maps, before it's first seen; then let go of the loader's cached
+      // copy of the file (we never make a second model from it).
+      final live = body.live!;
+      await Future.wait([if (_hd) live.useHd(), live.wear(_skinOf?.call(mode))]);
+      unawaited(fs.releaseScene(scenePath));
       // Compile its shaders now, not on the first frame it's seen.
       try {
         await body.live!.scene.warmUp([
@@ -277,7 +299,16 @@ final _want3dProvider = NotifierProvider<_Want3d, bool>(_Want3d.new);
 /// ([WholeArt.isReady]).
 final wholeArtProvider = FutureProvider<WholeArt?>((ref) async {
   if (!ref.watch(_want3dProvider)) return null;
-  final art = await WholeArt.load(first: ref.read(appModeProvider));
+  // Sharp screens get the full-size body maps (unless the phone is short of
+  // RAM); 2048 already covers a screen up to ~1080 px wide.
+  await DeviceMemory.ready;
+  final view = WidgetsBinding.instance.platformDispatcher.views.firstOrNull;
+  final px = view?.physicalSize.shortestSide ?? 0;
+  final art = await WholeArt.load(
+    first: ref.read(appModeProvider),
+    hd: !DeviceMemory.low && px >= 1100,
+    skin: (mode) => ref.read(cameraSkinProvider)[mode],
+  );
   LaunchTimer.once('3D camera in');
   if (art != null) {
     // The other camera once the launch curtain has gone (it stuttered the
@@ -299,6 +330,8 @@ final wholeBodyProvider = Provider.family<WholeBody?, AppMode>((ref, mode) {
 
 // ------------------------------------------------------------------ live
 
+typedef _Maps = ({fs.TextureSource? base, fs.TextureSource? mr, fs.TextureSource? normal});
+
 /// One body's model in its own scene: fitted to the phone, posed (the swap)
 /// and with its moving pieces where the controls put them.
 ///
@@ -311,6 +344,7 @@ class LiveBody extends ChangeNotifier {
     this.node,
     this.body,
     fs.EnvironmentMap env, {
+    required this.prefix,
     required double exposure,
     required this.design,
     required this.cutY,
@@ -324,6 +358,17 @@ class LiveBody extends ChangeNotifier {
       ..environmentTransform = vm.Matrix3.rotationY(math.pi)
       ..exposure = exposure
       ..toneMapping = fs.ToneMappingMode.agx;
+    // Phones with little RAM (and so a modest GPU): the renderer drops its
+    // resolution a step at a time, then its anti-aliasing, if frames run
+    // late, and climbs back once they don't. Others hold full quality.
+    if (DeviceMemory.low) {
+      scene.renderQuality
+        ..adaptive = true
+        ..minRenderScale = 0.7;
+      // and never wider than 1080 px (the body maps hold no more detail)
+      final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
+      if (px > 1080) scene.renderScale = 1080 / px;
+    }
     scene.add(node);
     void index(fs.Node n) {
       _nodes[n.name] = n;
@@ -334,13 +379,113 @@ class LiveBody extends ChangeNotifier {
     }
 
     index(node);
+    // The body's and the (one set of) finish panels' materials: the skins
+    // and the full-size body maps swap their textures in (slim_glb.py).
+    for (final MapEntry(key: name, value: n) in _nodes.entries) {
+      for (final p in n.mesh?.primitives ?? const <fs.MeshPrimitive>[]) {
+        final m = p.material;
+        if (m is! fs.PhysicallyBasedMaterial) continue;
+        if (name.startsWith('finish.')) {
+          _defaultFinish ??= name.split('.')[1];
+          _finishMats.add(m);
+        } else if (m.name.endsWith('-body')) {
+          _bodyMats.add(m);
+        }
+      }
+    }
+    if (_finishMats.isNotEmpty) _finishDefault = _mapsOf(_finishMats.first);
     // (at rest: the slides are measured in their parents' units)
     for (final n in _nodes.values) {
       if (n.name.endsWith('.slide')) _parentScale(n);
     }
     showShutter(false);
-    // the default skins (film's finishes come out of the exporter sorted)
-    setFinish(finishes.contains('classic') ? 'classic' : 'silver');
+    _finish = _defaultFinish;
+  }
+
+  /// Where this body's files are: `<prefix>.glb`, `<prefix>_hd.glb`,
+  /// `<prefix>_skin_<name>.glb`.
+  final String prefix;
+
+  /// The skin the model's finish panels came with, their materials, and the
+  /// maps they came with; any other skin's maps are loaded when it's worn.
+  String? _defaultFinish;
+  final Set<fs.PhysicallyBasedMaterial> _finishMats = {};
+  final Set<fs.PhysicallyBasedMaterial> _bodyMats = {};
+  _Maps _finishDefault = (base: null, mr: null, normal: null);
+
+  static _Maps _mapsOf(fs.PhysicallyBasedMaterial m) =>
+      (base: m.baseColorTexture, mr: m.metallicRoughnessTexture, normal: m.normalTexture);
+
+  /// A swatch's maps (a one-triangle scene made by slim_glb.py), or null.
+  /// Its scene is released straight away: only the textures stay.
+  Future<_Maps?> _swatch(String name) async {
+    final path = '${prefix}_$name.glb';
+    try {
+      final n = await fs.loadScene(path);
+      fs.PhysicallyBasedMaterial? found;
+      void find(fs.Node x) {
+        for (final p in x.mesh?.primitives ?? const <fs.MeshPrimitive>[]) {
+          if (p.material case final fs.PhysicallyBasedMaterial m) found ??= m;
+        }
+        x.children.forEach(find);
+      }
+
+      find(n);
+      unawaited(fs.releaseScene(path));
+      final m = found;
+      return m == null ? null : _mapsOf(m);
+    } catch (e) {
+      debugPrint('3D swatch $path unavailable: $e');
+      return null;
+    }
+  }
+
+  /// GPU memory this model's textures hold (each counted once, whole mip
+  /// chains): Debug > Memory Report.
+  int textureBytes() {
+    final seen = <Object>{};
+    var bytes = 0;
+    void add(fs.TextureSource? t) {
+      final g = t?.sampledTexture;
+      if (g == null || !seen.add(g)) return;
+      for (var l = 0; l < g.mipLevelCount; l++) {
+        bytes += g.getMipLevelSizeInBytes(l);
+      }
+    }
+
+    for (final n in _nodes.values) {
+      for (final p in n.mesh?.primitives ?? const <fs.MeshPrimitive>[]) {
+        if (p.material case final fs.PhysicallyBasedMaterial m) {
+          add(m.baseColorTexture);
+          add(m.metallicRoughnessTexture);
+          add(m.normalTexture);
+          add(m.emissiveTexture);
+          add(m.occlusionTexture);
+        }
+      }
+    }
+    return bytes;
+  }
+
+  /// Whether the full-size body maps are on.
+  bool get hd => _hdOn;
+  bool _hdOn = false;
+
+  /// The skin on show.
+  String? get finish => _finish;
+
+  /// The body's maps at full size (4096: sharper screens; the model comes
+  /// with 2048, plenty up to ~1080 px wide).
+  Future<void> useHd() async {
+    final hd = await _swatch('hd');
+    if (hd == null) return;
+    _hdOn = true;
+    for (final m in _bodyMats) {
+      if (hd.base != null) m.baseColorTexture = hd.base;
+      if (hd.mr != null) m.metallicRoughnessTexture = hd.mr;
+      if (hd.normal != null) m.normalTexture = hd.normal;
+    }
+    _changed();
   }
 
   /// Model to scene: z turned round.
@@ -463,7 +608,8 @@ class LiveBody extends ChangeNotifier {
     }
   }
 
-  /// The finishes this body comes in (the digital body's skins), in order.
+  /// The finishes this body comes in (its skins), in order. (Every skin
+  /// keeps an empty node in the model, so the names still list them.)
   List<String> get finishes => [
     for (final n in _nodes.keys)
       if (n.startsWith('finish.') && n.endsWith('.top')) n.split('.')[1],
@@ -471,15 +617,32 @@ class LiveBody extends ChangeNotifier {
 
   String? _finish;
 
-  /// Shows the [name] finish (unknown: the first).
-  void setFinish(String? name) {
+  /// Wears the [name] finish (unknown: the default). Another skin's maps
+  /// load first (a moment), the old ones are let go: only the skin on show
+  /// is ever in memory.
+  void setFinish(String? name) => unawaited(wear(name));
+
+  /// As [setFinish], completing once the skin is on.
+  Future<void> wear(String? name) async {
     final all = finishes;
-    if (all.isEmpty) return;
-    final f = all.contains(name) ? name! : (all.contains('silver') ? 'silver' : all.first);
+    final def = _defaultFinish;
+    if (all.isEmpty || def == null) return;
+    final f = all.contains(name) ? name! : def;
     if (f == _finish) return;
     _finish = f;
-    for (final MapEntry(key: n, value: node) in _nodes.entries) {
-      if (n.startsWith('finish.')) node.visible = n.split('.')[1] == f;
+    final _Maps maps;
+    if (f == def) {
+      maps = _finishDefault;
+    } else {
+      final s = await _swatch('skin_$f');
+      if (s == null || _finish != f) return;
+      maps = (base: s.base, mr: s.mr ?? _finishDefault.mr, normal: s.normal ?? _finishDefault.normal);
+    }
+    for (final m in _finishMats) {
+      m
+        ..baseColorTexture = maps.base
+        ..metallicRoughnessTexture = maps.mr
+        ..normalTexture = maps.normal;
     }
     _changed();
   }

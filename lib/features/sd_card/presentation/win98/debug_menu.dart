@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_scene/scene.dart' as fs show takeMemoryReport;
+import '../../../../core/shaders/shader_library.dart' show FilmUniforms;
 
 import '../../../../core/app_info.dart';
 import '../../../../core/device/battery.dart';
@@ -27,6 +29,7 @@ import '../../../../core/review/review_prompt.dart';
 import '../../../camera/application/camera_session_controller.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 import '../../../cameras/domain/camera_spec.dart';
+import '../../../camera/presentation/whole_body.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../onboarding/onboarding_screen.dart';
 import '../../application/sd_card_controller.dart';
@@ -87,6 +90,13 @@ final _tools = <_Tool>[
     'Slow frames per activity, and whether the app (UI) or the graphics chip (GPU) was the hold-up. '
         'Copy it and send it to Claude.',
     (context, _) => _perfReport(context),
+  ),
+  _Tool(
+    PixelIcon.hourglass,
+    'Memory Report',
+    'What the app holds right now: the 3D cameras\' textures and render targets, the picture cache, '
+        'and the choices made for this phone (RAM, screen, prints developing at once).',
+    (context, ref) => _textReport(context, 'Memory Report - Notepad', () => _memoryReport(ref)),
   ),
   _Tool(
     PixelIcon.hourglass,
@@ -269,6 +279,44 @@ Future<void> _perfReport(BuildContext context) => showWin98Window<void>(
     },
   ),
 );
+
+String _memoryReport(WidgetRef ref) {
+  final cache = PaintingBinding.instance.imageCache;
+  final view = WidgetsBinding.instance.platformDispatcher.views.firstOrNull;
+  final px = view?.physicalSize;
+  String mb(int b) => (b / (1 << 20)).toStringAsFixed(1);
+  final b = StringBuffer()
+    ..writeln(
+      'Phone: ${DeviceMemory.gb?.toStringAsFixed(1) ?? '?'} GB RAM${DeviceMemory.low ? ' (low: lighter settings)' : ''}',
+    )
+    ..writeln('Screen: ${px == null ? '?' : '${px.width.round()} x ${px.height.round()} px'}')
+    ..writeln('Prints developing at once: up to ${CaptureProcessor.maxWorkers}')
+    ..writeln('Viewfinder halation: ${FilmUniforms.lite ? 'off' : 'on'}')
+    ..writeln()
+    ..writeln(
+      'Picture cache: ${cache.currentSize} pictures, ${mb(cache.currentSizeBytes)} of '
+      '${mb(cache.maximumSizeBytes)} MB',
+    )
+    ..writeln()
+    ..writeln('3D cameras:');
+  final art = ref.read(wholeArtProvider).value;
+  for (final MapEntry(key: mode, value: body) in (art?.bodies ?? const <AppMode, WholeBody>{}).entries) {
+    final live = body.live;
+    b.writeln(
+      live == null
+          ? '  ${mode.name}: not loaded'
+          : '  ${mode.name}: ${mb(live.textureBytes())} MB of textures (skin ${live.finish}'
+                '${live.hd ? ', full-size body maps' : ''})',
+    );
+  }
+  b.writeln('Engine caches:');
+  try {
+    b.writeln(fs.takeMemoryReport());
+  } catch (e) {
+    b.writeln('  not loaded ($e)');
+  }
+  return b.toString();
+}
 
 /// A read-only text report with Copy (and OK).
 Future<void> _textReport(BuildContext context, String title, String Function() text) => showWin98Window<void>(

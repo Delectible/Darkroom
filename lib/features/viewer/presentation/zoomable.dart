@@ -48,6 +48,10 @@ class PhotoPager extends StatefulWidget {
   /// How far a finger moves before it counts as a swipe (more than the
   /// usual touch slop: room for the second finger of a pinch to land).
   static const swipeSlop = 24.0;
+
+  /// The zoom of the photo in view (one pager shows at a time): the print
+  /// viewer decodes the full-size print only once it's zoomed in.
+  static final zoom = ValueNotifier<double>(1);
   static const doubleTapTime = Duration(milliseconds: 300);
 
   @override
@@ -98,6 +102,7 @@ class PhotoPagerState extends State<PhotoPager> with SingleTickerProviderStateMi
       final t = Curves.easeOutCubic.transform(_anim.value);
       setState(() {
         _s = _fromS + (_toS - _fromS) * t;
+        PhotoPager.zoom.value = _s;
         _o = Offset.lerp(_fromO, _toO, t)!;
         _dy = _fromDy * (1 - t);
       });
@@ -134,6 +139,7 @@ class PhotoPagerState extends State<PhotoPager> with SingleTickerProviderStateMi
   void _zoomAround(Offset focal, double s, {required double s0, required Offset o0}) {
     final p = (focal - o0) / s0;
     _s = s;
+    PhotoPager.zoom.value = _s;
     _o = s < 1 ? _clamp(Offset.zero, s) : _clamp(focal - p * s, s);
   }
 
@@ -337,6 +343,7 @@ class PhotoPagerState extends State<PhotoPager> with SingleTickerProviderStateMi
                       _index = i;
                       _anim.stop();
                       _s = 1;
+                      PhotoPager.zoom.value = _s;
                       _o = Offset.zero;
                     });
                     widget.onPageChanged?.call(i);

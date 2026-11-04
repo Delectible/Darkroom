@@ -9,10 +9,11 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The launch fades into the camera smoothly again, and the app gets ready a little sooner: the '
-      'camera, its film look and the 3D cameras all start loading together. The film picker takes a tap '
-      'while it\'s still sliding, the camera\'s keys stay locked to the body during a swap, and phones '
-      'with less memory develop fewer prints at once so they stay responsive.';
+      'A big speed and memory update. The 3D cameras now load only the skin you\'re using and textures '
+      'sized for your screen (far less memory, a smaller download, a quicker start), prints open at '
+      'screen size and sharpen when you zoom, and phones with less memory are tuned automatically. '
+      'Also: the launch fades in smoothly again, the camera\'s keys stay locked to the body during a '
+      'swap, and the film picker takes a tap while it\'s still sliding.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -231,6 +231,20 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **59.2** → 2.0.7 · RAM: `DeviceMemory` (channel `darkroom/device`) sizes
   prints developing at once (≤3.2 GB: 1, ≤4.5: 2, ≤6.5: 3, else cores/2 ≤ 4)
   and the image cache (40 / 64 / 100 MB). RAM shown in Debug > Development Stats.
-- [ ] **59.3** 3D texture memory (decision pending): all finishes' textures
-  stay loaded (film ~30 maps, digital ~21; ~290 MB of GPU memory compressed).
+- [x] **59.3** → 2.0.7 · 3D textures: `slim_glb.py` (run by bundle_live.py)
+  splits each body into a base (one skin, body maps 2048, 9 maps), `_hd`
+  (4096 body maps, swapped in on screens >= 1100 px unless RAM is low) and
+  `_skin_<k>` swatches (base colour + only the maps that differ). The app
+  swaps a swatch's textures onto the one set of finish panels
+  (`LiveBody.wear`) and releases each scene template after loading.
+  Measured (desktop preview): film 96 MB hd / 48 MB normal, was ~208 MB.
+  Download: 3D packages 61 → 43.5 MB.
+- [x] **59.4** → 2.0.7 · Print viewer decodes at the screen's long edge;
+  full size only for the print in view while zoomed (4096 cap on low RAM).
+- [x] **59.5** → 2.0.7 · Low RAM (≤ 3.2 GB) is chosen for automatically:
+  halation off, 60 Hz, 3D adaptive render quality (min 0.7) and ≤ 1080 px
+  wide, studio light built at 512. Debug > Memory Report.
+- [ ] **59.6** Ideas not done (see chat 2026-11-04): patched 3D loader to
+  skip mip 0, WAV sound effects to a compressed format, low-RAM default of
+  drawn cameras.
 

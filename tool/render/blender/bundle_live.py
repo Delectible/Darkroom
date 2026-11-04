@@ -2,15 +2,23 @@
 
     python3 bundle_live.py OUT assets/body3d
 
-<mode>.glb (turned into Flutter Scene packages by hook/build.dart),
+<mode>.glb, <mode>_hd.glb and <mode>_skin_<name>.glb (split by
+slim_glb.py so the app loads only the skin on show; all turned into
+Flutter Scene packages by hook/build.dart),
 studio.hdr, and one manifest.json: design space, each body's layout,
 press travel, alternative shutter and strap lug, and the studio's light
 (diffuse SH, exposure, tone mapping).
 """
+import glob
 import json
 import os
 import shutil
 import sys
+
+from slim_glb import main as slim
+
+# The skin each body's model comes wearing (the app's default skins).
+DEFAULT_SKIN = {'film': 'classic', 'digital': 'silver'}
 
 W, H = 412.0, 968.0
 CAP, THICK = W * 0.2, W * 0.14
@@ -23,7 +31,9 @@ def main(src, dst):
     man = {'layout': {}, 'studio': studio}
     for mode in ('film', 'digital'):
         meta = json.load(open(os.path.join(src, f'{mode}.json')))
-        shutil.copy(os.path.join(src, f'{mode}.glb'), os.path.join(dst, f'{mode}.glb'))
+        for old in glob.glob(os.path.join(dst, f'{mode}_*.glb')):
+            os.remove(old)
+        slim(os.path.join(src, f'{mode}.glb'), dst, DEFAULT_SKIN[mode])
         w, h = meta['design']
         man['design'] = {'w': w, 'h': h, 'cutY': meta['cutY'], 'dist': meta['dist'], 'band': meta['band']}
         lay = meta['layout']

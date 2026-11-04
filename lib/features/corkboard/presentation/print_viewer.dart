@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/device/device_memory.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../cameras/domain/camera_catalog.dart';
@@ -321,6 +322,7 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                             item: items[i],
                             onWrite: () => _writeNote(items[i]),
                             fly: i == _index ? fly : null,
+                            current: i == _index,
                             origin: () => widget.originOf?.call(items[i].id),
                           ),
                         ),
@@ -340,7 +342,17 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
 }
 
 class _Print extends StatelessWidget {
-  const _Print({required this.printKey, required this.item, required this.onWrite, this.fly, this.origin});
+  const _Print({
+    required this.printKey,
+    required this.item,
+    required this.onWrite,
+    required this.current,
+    this.fly,
+    this.origin,
+  });
+
+  /// The print in view (only it ever decodes at full size, when zoomed).
+  final bool current;
 
   /// On the print itself (taps off it put it down: see [PhotoPager.onTap]).
   final GlobalKey printKey;
@@ -362,19 +374,41 @@ class _Print extends StatelessWidget {
     ),
   );
 
-  /// The full photo; until it has decoded (a big print takes a moment the
+  /// The photo; until it has decoded (a big print takes a moment the
   /// first time), the board's small copy of it, already in memory.
-  Widget _photo(String path) {
+  ///
+  /// Decoded at the screen's size (a full 8192 px print is ~180 MB once
+  /// decoded, ten times what the screen can show), and at full size only
+  /// while it's zoomed in (capped at 4096 on phones with little RAM).
+  Widget _photo(BuildContext context, String path) {
     final thumb = item.thumbPath;
-    return Image.file(
-      File(path),
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.medium,
-      gaplessPlayback: true,
-      frameBuilder: (context, child, frame, sync) => frame == null && !sync && thumb != null
-          // (the board's size, so it's the copy it already decoded)
-          ? Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 420, gaplessPlayback: true)
-          : child,
+    final mq = MediaQuery.of(context);
+    final screen = (mq.size.longestSide * mq.devicePixelRatio).round();
+    return ValueListenableBuilder<double>(
+      valueListenable: PhotoPager.zoom,
+      builder: (context, zoom, _) {
+        final detail = current && zoom > 1.15;
+        final cap = detail ? (DeviceMemory.low ? 4096 : null) : screen;
+        final ImageProvider file = FileImage(File(path));
+        return Image(
+          image: cap == null
+              ? file
+              : ResizeImage(
+                  file,
+                  width: cap,
+                  height: cap,
+                  policy: ResizeImagePolicy.fit,
+                  allowUpscaling: false,
+                ),
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.medium,
+          gaplessPlayback: true,
+          frameBuilder: (context, child, frame, sync) => frame == null && !sync && thumb != null
+              // (the board's size, so it's the copy it already decoded)
+              ? Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 420, gaplessPlayback: true)
+              : child,
+        );
+      },
     );
   }
 
@@ -386,7 +420,7 @@ class _Print extends StatelessWidget {
         InstantPrint(
           note: item.note,
           onNoteTap: onWrite,
-          picture: path == null ? const ColoredBox(color: Colors.black12) : _photo(path),
+          picture: path == null ? const ColoredBox(color: Colors.black12) : _photo(context, path),
         ),
       );
     }
@@ -400,7 +434,7 @@ class _Print extends StatelessWidget {
             color: Color(0xFFFBF8F1),
             boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, 12))],
           ),
-          child: path == null ? const ColoredBox(color: Colors.black12) : _photo(path),
+          child: path == null ? const ColoredBox(color: Colors.black12) : _photo(context, path),
         ),
       ),
     );

@@ -604,6 +604,18 @@ UI
   and the Performance Recorder (`core/diagnostics/perf_recorder.dart`:
   `PerfRecorder.mark('label')` tags the next frames; the report splits UI
   vs GPU time per label). Mark new heavy moments with it.
+- 3D files (2.0.7): `tool/render/blender/slim_glb.py` (run by
+  bundle_live.py) makes `<body>.glb` (one skin: film classic / digital
+  silver; body maps 2048), `<body>_hd.glb` and `<body>_skin_<k>.glb`
+  swatches (one triangle + material). `LiveBody.wear(skin)` /
+  `useHd()` swap swatch textures onto the base materials; the other skins'
+  finish nodes stay as empty nodes (their names list the skins). Scene
+  templates are released after loading (`fs.releaseScene`).
+  `WholeArt.load(hd:, skin:)`; hd = screen short side >= 1100 px and not
+  low RAM. Low RAM also: adaptive render quality, render <= 1080 px wide,
+  studio map 512, halation off, 60 Hz (settings_controllers `_apply`).
+  Prints decode at screen size, full only zoomed (`PhotoPager.zoom`).
+  Debug > Memory Report.
 - Memory (2.0.7): `DeviceMemory.apply()` at launch caps
   `CaptureProcessor.maxWorkers` and the image cache by RAM. The 3D model
   reads its parts right before it paints (`LiveBody.syncParts`), so keys

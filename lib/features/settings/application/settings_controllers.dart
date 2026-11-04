@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
+import '../../../core/device/device_memory.dart';
 import '../../../core/audio/sfx.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/processing/crop_math.dart';
@@ -38,11 +39,22 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
 
   /// Sounds and haptics are switched app-wide (no ref needed at call sites).
   static void _apply(GlobalSettings s) {
+    _last = s;
     Sfx.level = s.sfxVolume;
     Haptics.enabled = s.haptics;
-    FilmUniforms.lite = s.performance;
+    // Phones with little RAM (and so a modest GPU) are chosen for, without
+    // asking: no viewfinder halation (a full-screen blur pass every frame)
+    // and 60 Hz (90/120 Hz doubles the drawing), Fancy graphics or not.
+    FilmUniforms.lite = s.performance || DeviceMemory.low;
     BodyArt.faceOnly = s.performance;
-    _refreshRate(fast: !s.performance);
+    _refreshRate(fast: !s.performance && !DeviceMemory.low);
+  }
+
+  static GlobalSettings? _last;
+
+  /// Again, now that the phone's RAM is known (main.dart).
+  static void reapply() {
+    if (_last case final s?) _apply(s);
   }
 
   static const _display = MethodChannel('darkroom/display');

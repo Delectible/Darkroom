@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 
@@ -16,18 +18,31 @@ class DeviceMemory {
   /// Total RAM in GB, once read (null: unknown, tests).
   static double? gb;
 
+  /// A phone with little RAM (about 3 GB or less, or Android's low-RAM flag).
+  static bool low = false;
+
+  /// Completes once the RAM has been read (or couldn't be); at once if it
+  /// isn't being read (tests).
+  static Future<void> get ready => _started ? _ready.future : Future<void>.value();
+  static final _ready = Completer<void>();
+  static bool _started = false;
+
   /// Reads the RAM and sets the limits from it.
   static Future<void> apply() async {
+    _started = true;
     try {
       final m = await _channel.invokeMapMethod<String, Object?>('memory');
       final total = (m?['total'] as num?)?.toDouble();
       if (total == null || total <= 0) return;
       gb = total / (1024 * 1024 * 1024);
       final lowRam = m?['lowRam'] == true;
+      low = lowRam || gb! <= 3.2;
       CaptureProcessor.maxWorkers = workersFor(gb!, lowRam: lowRam);
       PaintingBinding.instance.imageCache.maximumSizeBytes = cacheBytesFor(gb!, lowRam: lowRam);
     } catch (_) {
       // unknown: the defaults stand
+    } finally {
+      if (!_ready.isCompleted) _ready.complete();
     }
   }
 

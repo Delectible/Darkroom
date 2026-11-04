@@ -7,6 +7,12 @@ section here. Keep adding detail here, not to CLAUDE.md.
 (How we work, the push/notify routine and the never-do rules are in
 CLAUDE.md.)
 
+Map: launch = "Build & release pipeline" (LaunchCurtain, LaunchTimer);
+film engine = "Film engine"; Free/Pro = "Free and Pro"; camera UI, 3D
+bodies, skins = "UI"; corkboard, darkroom, projector = "Film Mode";
+Darkroom 98 = "Digital Mode"; landscape = "Things that bite"; tour and
+How it works = "First run"; art = "Art"; backlog at the end.
+
 ## Build & release pipeline
 
 - Pushes to `main` (only when the owner asks) build; work branches don't.

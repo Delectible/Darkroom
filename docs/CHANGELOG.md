@@ -288,3 +288,26 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   later body. `_BodyScene` (whole_body.dart) renders, copies each frame
   into its own ring of three, and draws that (falls back to the library's
   picture if a backend can't copy).
+
+## 61. Speed on every phone, faster launch (2026-11-04)
+
+Measure first. Already done: 59.x (low RAM, slim 3D, prints at screen
+size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
+
+- [ ] **61.1** Measuring build: time before Dart's main (Android
+  `Process.getStartUptimeMillis`, iOS process start), Launch Timing marks
+  for each 3D step (static resources, studio light, model, skin, shader
+  warm-up), Flutter Scene's own frame stats in the Performance Report.
+- [ ] **61.2** Debug > Performance A/B switches, marked in the recorder:
+  3D anti-aliasing (auto = MSAA / FXAA / none), 3D render scale, viewfinder
+  look off, halation off, CRT bulge off, a short launch curtain (no 1 s
+  floor, 450 + 200 ms holds, 600 ms fade).
+- [ ] **61.3** Launch without waiting for the 3D body: open on the drawn
+  body, cross-fade to the 3D one when it lands (visible: show first).
+- [ ] **61.4** Studio light baked offline instead of built from studio.hdr
+  each launch (if Flutter Scene loads prefiltered maps).
+- [ ] **61.5** Settings by measured speed (a first-run GPU probe or the
+  first swaps' frame times), not just RAM: 3D scale, AA, halation, rate.
+  Covers mid-range phones, GLES-only phones (S10+) and tablets (#62).
+- [ ] **61.6** Darkroom 98 at rest: find what redraws (FPS counter > 0 with
+  nothing moving re-runs the full-screen CRT filter each frame).

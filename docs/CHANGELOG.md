@@ -1506,6 +1506,9 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   the curtain to go. More start-up in parallel: camera list (CameraX),
   shaders, LUT and grain from main; system UI calls and Android exit
   reasons not awaited; curtain polled every 50 ms, minimum 1.0 s.
+- [x] **57.93** → 2.0.7 · Carousel takes taps while it's still sliding (the PageView
+  ignores touches until it stops): the stock arriving in the middle is
+  picked once it's 80% there, any other stock is slid to (`_onTapUp`).
 - [x] **57.84** → 2.0.5 · Skip in the intro asks "Are you sure?" first.
 - [x] **57.85** → 2.0.5 · The "New here?" note has an X and goes after 8 s.
 

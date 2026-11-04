@@ -271,6 +271,32 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
     _axis = _Axis.undecided;
   }
 
+  // While the carousel glides (a flick, or sliding to a tapped stock) the
+  // PageView ignores touches until it stops, which felt sticky. Taps in that
+  // time land here instead: on the stock arriving in the middle, once it's
+  // 80% of the way there, they pick it as if it had stopped; on any other
+  // stock they slide to it.
+  final _carousel = GlobalKey();
+
+  void _onTapUp(TapUpDetails d) {
+    if (!_pages.hasClients || !_pages.position.isScrollingNotifier.value) return;
+    final box = _carousel.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    final local = box.globalToLocal(d.globalPosition);
+    if (local.dy < 0 || local.dy > box.size.height) return;
+    final page = _pages.page ?? _index.toDouble();
+    final pageW = box.size.width * _pages.viewportFraction;
+    final i = (page + (local.dx - box.size.width / 2) / pageW).round().clamp(0, _specs.length - 1);
+    if (i == page.round() && (page - i).abs() <= 0.2) {
+      if (i != _index) _select(i);
+      Navigator.of(context).pop();
+    } else {
+      unawaited(
+        _pages.animateToPage(i, duration: const Duration(milliseconds: 280), curve: Curves.easeOutCubic),
+      );
+    }
+  }
+
   void _onPanCancel() {
     _scroll?.cancel();
     _axis = _Axis.undecided;
@@ -308,6 +334,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
             onPanUpdate: _onPanUpdate,
             onPanEnd: _onPanEnd,
             onPanCancel: _onPanCancel,
+            onTapUp: _onTapUp,
             child: HeroMode(
               enabled: upright,
               child: Column(
@@ -397,6 +424,7 @@ class _StockSelectorScreenState extends ConsumerState<StockSelectorScreen> {
                             }
                             _precacheArt(context, math.min(pageW, itemH));
                             return SizedBox(
+                              key: _carousel,
                               height: itemH,
                               child: PageView.builder(
                                 controller: _pages,

@@ -17,6 +17,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:darkroom/features/cameras/presentation/artwork/camera_artwork.dart';
 
 class _Held extends PhysicalOrientationNotifier {
   _Held(this.o);
@@ -107,6 +108,42 @@ void main() {
       expect(find.text('Black & White'), findsOneWidget);
       await shoot(tester, 'picker_filter_$name');
     });
+
+    if (o == DeviceOrientation.portraitUp) {
+      testWidgets('picker takes a tap while still sliding', (tester) async {
+        await phone(tester);
+        await tester.pumpWidget(
+          app(
+            o,
+            Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(builder: (_) => const StockSelectorScreen(mode: AppMode.film)),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        final carousel = tester.getRect(find.byType(PageView));
+        // the neighbour on the right: tap it, it slides into the middle
+        final right = [
+          for (final e in find.byType(CameraArtwork).evaluate()) tester.getCenter(find.byWidget(e.widget)),
+        ].where((c) => c.dx > carousel.center.dx + 20).reduce((a, b) => a.dx < b.dx ? a : b);
+        await tester.tapAt(right);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 150)); // most of the way, still moving
+        await tester.tapAt(carousel.center);
+        await tester.pumpAndSettle();
+        expect(find.byType(StockSelectorScreen), findsNothing);
+      });
+    }
 
     testWidgets('settings $name', (tester) async {
       await phone(tester);

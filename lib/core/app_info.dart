@@ -10,7 +10,8 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'The launch fades into the camera smoothly again, and the app gets ready a little sooner: the '
-      'camera, its film look and the 3D cameras all start loading together.';
+      'camera, its film look and the 3D cameras all start loading together. The film picker takes a tap '
+      'while it\'s still sliding.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

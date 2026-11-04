@@ -323,3 +323,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   camera open ~1.1-1.4 s side by side, then the 450 ms hold. Camera at rest
   ~40 fps (film grain ticks at 24, camera 30, unsynced: idea, tick the grain
   on camera frames).
+- Owner's Speed Tests (2.0.8, Pixel 9 Pro): Quick Launch 0.96-1.26 s (was
+  1.6-1.9); the 3D model read (0.23-0.9 s) + skin (~0.17 s) is now the long
+  pole, camera open ~0.35-0.64 s. 3D 70% / FXAA: no visible loss, little
+  GPU change (swaps are UI-thread bound: UI 6-8 ms vs GPU 4-6). No CRT:
+  no change in Win98 GPU (~8-9 ms): the cost is elsewhere. Memory: each 3D
+  body 192 MB of textures = RGBA8 sizes (ASTC would be ~50): the compressed
+  textures likely fall back to uncompressed on the Pixel. Render targets
+  138 MB.

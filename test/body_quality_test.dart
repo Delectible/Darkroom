@@ -12,7 +12,7 @@ void main() {
       expect(floor(px), closeTo(f, 1e-9));
       expect(px * base(px) * floor(px), greaterThanOrEqualTo(648 - 1e-6));
     }
-    BodyQuality.enable(1440);
+    BodyQuality.init(px: 1440, low: true);
     expect(BodyQuality.base, closeTo(0.75, 1e-9));
     expect(BodyQuality.floor, closeTo(0.6, 1e-9));
     BodyQuality.detail.value = 1;
@@ -21,6 +21,8 @@ void main() {
     BodyQuality.detail.value = 0.6;
     expect(BodyQuality.textBlur(3.5), greaterThan(at75 * 3)); // 45%: soft, like the body
     BodyQuality.detail.value = 1;
+    final r = BodyQuality.report();
+    expect(r, contains('Lowest: 60% of normal = 45% (648 px wide'));
     BodyQuality.base = 1;
     expect(BodyQuality.textBlur(3.5), 0); // full: crisp
   });

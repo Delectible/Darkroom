@@ -354,19 +354,14 @@ class LiveBody extends ChangeNotifier {
     // 1080 px (the body maps hold no more detail), and a step softer at a
     // time if frames run late in a swap, back up once they don't
     // (BodyQuality). Others hold full quality.
-    if (DeviceMemory.low) {
-      final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
-      BodyQuality.enable(px);
-      void steer() => scene.renderScale = BodyQuality.base * BodyQuality.detail.value;
-      steer();
-      BodyQuality.detail.addListener(steer);
-    } else {
-      // Sharper screens draw the body at 90%: no visible difference (the
-      // labels and controls are drawn on top, at full sharpness) for a
-      // fifth less GPU work and render memory.
-      final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
-      if (px >= 1100) scene.renderScale = 0.9;
-    }
+    // Sharper screens (>= 1100 px) with enough RAM draw the body at 90%: no
+    // visible difference (the labels and controls are drawn on top, at
+    // full sharpness) for a fifth less GPU work and render memory.
+    final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
+    BodyQuality.init(px: px, low: DeviceMemory.low);
+    void steer() => scene.renderScale = BodyQuality.base * BodyQuality.detail.value;
+    steer();
+    BodyQuality.detail.addListener(steer);
     scene.add(node);
     void index(fs.Node n) {
       _nodes[n.name] = n;

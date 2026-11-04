@@ -66,6 +66,9 @@ class PerfRecorder {
 
   /// A plain-text summary to copy and send: per activity, how many frames
   /// missed the display's budget and which thread was the bottleneck.
+  /// More lines for the report's header (e.g. the 3D camera's quality).
+  static final extras = <String Function()>[];
+
   static String report() {
     final view = ui.PlatformDispatcher.instance.implicitView;
     final hz = view?.display.refreshRate ?? 60;
@@ -77,7 +80,11 @@ class PerfRecorder {
         'Screen ${view?.physicalSize.width.round()}x${view?.physicalSize.height.round()} '
         '@${view?.devicePixelRatio.toStringAsFixed(2)}x, ${hz.round()} Hz (budget ${budget.toStringAsFixed(1)} ms)',
       )
-      ..writeln('Performance mode: ${FilmUniforms.lite ? 'on' : 'off'}')
+      ..writeln('Performance mode: ${FilmUniforms.lite ? 'on' : 'off'}');
+    for (final extra in extras) {
+      b.writeln(extra());
+    }
+    b
       ..writeln('Frames recorded: ${_frames.length}')
       ..writeln()
       ..writeln('activity: frames, slow (>budget), UI avg/p90/max, GPU avg/p90/max (ms)');

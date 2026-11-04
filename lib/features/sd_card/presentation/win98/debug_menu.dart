@@ -29,6 +29,7 @@ import '../../../../core/review/review_prompt.dart';
 import '../../../camera/application/camera_session_controller.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 import '../../../cameras/domain/camera_spec.dart';
+import '../../../camera/presentation/body_quality.dart';
 import '../../../camera/presentation/whole_body.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../onboarding/onboarding_screen.dart';
@@ -90,6 +91,13 @@ final _tools = <_Tool>[
     'Slow frames per activity, and whether the app (UI) or the graphics chip (GPU) was the hold-up. '
         'Copy it and send it to Claude.',
     (context, _) => _perfReport(context),
+  ),
+  _Tool(
+    PixelIcon.views,
+    '3D Quality Stats',
+    'How sharply the 3D camera is drawn on this phone: screen, normal and lowest quality, time '
+        'spent at each level, frame times, and every step down or up this session.',
+    (context, _) => _textReport(context, '3D Quality Stats - Notepad', BodyQuality.report),
   ),
   _Tool(
     PixelIcon.hourglass,
@@ -609,6 +617,8 @@ const _groups = <(String, List<String>)>[
   (
     'Performance',
     [
+      '3D Quality Stats',
+      'Memory Report',
       'Launch Timing',
       'Performance Recorder',
       'Performance Report',

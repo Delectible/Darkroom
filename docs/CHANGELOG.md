@@ -261,6 +261,10 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   frame and mean < 10 ms = 15% step up. Floor 60%, and never under 648 px
   wide. FLIP and the format dial's label soften with the body (`_soft`,
   a paint mask blur: no layer, keeps the OnTop lift).
+- [x] **59.10** → 2.0.7 · Debug > Performance > 3D Quality Stats (`BodyQuality.report`:
+  screen, normal / lowest / current draw width, time and frame times at
+  each level, swaps, every step); steps marked in the Performance
+  Recorder, a summary line in its report (`PerfRecorder.extras`).
 - [ ] **59.7** Not done: a patched 3D loader skipping mip 0 (two-size files
   do the same), drawn cameras by default for existing low-end installs.
 

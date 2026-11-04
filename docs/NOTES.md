@@ -613,7 +613,8 @@ UI
   templates are released after loading (`fs.releaseScene`).
   `WholeArt.load(skin:)`. Low RAM: `BodyQuality` (body_quality.dart) steers
   the body's draw scale from swap frame times (floor 60%, >= 648 px wide)
-  and softens FLIP / the dial label to match. Screens >= 1100 px wide draw the body at 90%
+  and softens FLIP / the dial label to match; stats in Debug > 3D Quality
+  Stats (all phones: `BodyQuality.init`). Screens >= 1100 px wide draw the body at 90%
   (`renderScale`). Artwork is 800 px. Low RAM also: adaptive render quality, render <= 1080 px wide,
   studio map 512, halation off, 60 Hz (settings_controllers `_apply`).
   Prints decode at screen size, full only zoomed (`PhotoPager.zoom`).

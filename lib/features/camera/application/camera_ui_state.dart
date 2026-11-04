@@ -36,9 +36,6 @@ class PrefKeys {
   /// The last few launches' timings (LaunchTimer, Debug > Performance Report).
   static const launchTimes = 'debug.launchTimes';
 
-  /// Debug > Speed Tests > Quick Launch (SpeedTests.quickLaunchKey).
-  static const quickLaunch = 'debug.quickLaunch';
-
   /// The first start began with Fancy graphics off (a slow phone): say so
   /// once the tour is done.
   static const lowGraphicsNote = 'ui.lowGraphicsNote';
@@ -121,7 +118,6 @@ class PrefKeys {
     userName,
     tourSkipped,
     launchTimes,
-    quickLaunch,
     lowGraphicsNote,
     bodyFinish,
     filmFinish,

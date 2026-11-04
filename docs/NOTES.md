@@ -153,7 +153,8 @@ How it works = "First run"; art = "Art"; backlog at the end.
   450 ms since the session opened (counted while the rest loads); or the
   tour / a pushed screen / no permission; then 200 ms more so the 3D camera
   and stream have drawn), min 1.0 s, max 9 s, polled every 50 ms, then
-  faded out (600 ms: at 400 ms, with work landing on it, it read as a cut). Launch speed (2.0.6): nothing heavy runs before `runApp`;
+  faded out (600 ms: at 400 ms, with work landing on it, it read as a cut;
+  2.0.9: 0.3 s min, 150 ms hold, 300 ms fade, see Measuring). Launch speed (2.0.6): nothing heavy runs before `runApp`;
   the 3D bodies load alongside the camera opening (main.dart kicks
   `wholeArtProvider`), on the first run only once the welcome tour is up
   (`OnboardingScreen.initState`; `_toured` lets them land before the
@@ -671,8 +672,9 @@ UI
   for (phone, frames by activity, last 5 launches incl. Android's time
   before main and each 3D load step, 3D quality, memory); the frame
   recorder is always on. Debug > Speed Tests (`core/diagnostics/
-  speed_tests.dart`) switch off one cost each and tag the frames; Quick
-  Launch is saved and acts on the next launch.
+  speed_tests.dart`, listed in debug_menu `_speedTests`) switch off one
+  cost each and tag the frames; they reset on restart. Launch curtain since
+  2.0.9: 0.3 s minimum, 150 ms after the camera opens, 300 ms fade.
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and
   the cork wall's shader tiles are cached (`CorkTiles`, warmed at start).

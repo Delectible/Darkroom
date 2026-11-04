@@ -286,13 +286,16 @@ class _Win98GlassState extends State<Win98Glass> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Win98Display>(
-      valueListenable: Win98Display.current,
-      builder: (context, d, _) {
-        final m = d.matrix;
+    return ListenableBuilder(
+      // (Debug > Speed Tests: no tint, no scan lines, no glass)
+      listenable: Listenable.merge([Win98Display.current, SpeedTests.changed]),
+      builder: (context, _) {
+        final d = Win98Display.current.value;
+        final m = SpeedTests.noTint.value ? null : d.matrix;
+        final lines = !SpeedTests.noLines.value, glass = widget.screen && !SpeedTests.noGlass.value;
         final child = KeyedSubtree(key: _content, child: widget.child);
         Widget out = m == null ? child : ColorFiltered(colorFilter: ColorFilter.matrix(m), child: child);
-        if (d.crt) {
+        if (d.crt && (lines || glass)) {
           out = Stack(
             fit: StackFit.passthrough,
             children: [
@@ -303,7 +306,8 @@ class _Win98GlassState extends State<Win98Glass> {
                     child: CustomPaint(
                       painter: CrtGlassPainter(
                         pitch: d.res.scanline,
-                        screen: widget.screen,
+                        screen: glass,
+                        lines: lines,
                         ratio: MediaQuery.devicePixelRatioOf(context),
                       ),
                     ),
@@ -572,13 +576,8 @@ class _CrtWarpState extends State<CrtWarp> {
   }
 
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
-    // Debug > Speed Tests > No CRT Bulge
-    valueListenable: SpeedTests.noCrt,
-    builder: (context, off, _) => _warped(context, on: widget.on && !off),
-  );
-
-  Widget _warped(BuildContext context, {required bool on}) {
+  Widget build(BuildContext context) {
+    final on = widget.on;
     final child = RepaintBoundary(
       key: _flat,
       child: KeyedSubtree(key: _content, child: widget.child),

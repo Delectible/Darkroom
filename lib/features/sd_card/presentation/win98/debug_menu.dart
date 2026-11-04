@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_gpu/gpu.dart' as gpu;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_scene/scene.dart' as fs show takeMemoryReport;
 
@@ -47,6 +48,44 @@ class _Tool {
   final Future<void> Function(BuildContext context, WidgetRef ref) run;
   final bool Function(WidgetRef ref)? on;
 }
+
+/// Debug > Speed Tests: (name, switch, what it does).
+final _speedTests = <(String, ValueNotifier<bool>, String)>[
+  (
+    'No Viewfinder Look',
+    SpeedTests.noLook,
+    'The viewfinder shows the plain camera feed, without the film or digital look.',
+  ),
+  ('Grain at 12 fps', SpeedTests.slowGrain, 'Film grain moves 12 times a second instead of 24.'),
+  (
+    'Still Viewfinder in Swipes',
+    SpeedTests.stillSwipe,
+    'While you swipe, the viewfinder is one still picture instead of being retaken every frame.',
+  ),
+  (
+    'No Strap in Swipes',
+    SpeedTests.noStrap,
+    'No hanging strap while you swipe (its rope is worked out every frame).',
+  ),
+  (
+    'Cheaper 3D Edges',
+    SpeedTests.cheapEdges,
+    "The 3D camera's edges smoothed by a cheap filter (FXAA) instead of multisampling.",
+  ),
+  ('3D at 70%', SpeedTests.small3d, 'The 3D camera drawn at 70% of its size and scaled up.'),
+  ('98: No Scan Lines', SpeedTests.noLines, 'Darkroom 98 without its scan lines.'),
+  ('98: No Glass', SpeedTests.noGlass, "Darkroom 98 without the glass's sheen and glint, or the tube's rim."),
+  (
+    '98: No Colour Filter',
+    SpeedTests.noTint,
+    "Darkroom 98 without the display's colour filter (the monitor's picture settings).",
+  ),
+  (
+    '98: Square Screen',
+    SpeedTests.squareScreen,
+    "Darkroom 98's screen with square corners (no rounded clipping).",
+  ),
+];
 
 final _tools = <_Tool>[
   _Tool(
@@ -188,54 +227,14 @@ final _tools = <_Tool>[
     await Future<void>.delayed(const Duration(milliseconds: 100));
     if (context.mounted) await _done(context, 'Thrown. It should be at the top of Crash Reports.');
   }),
-  _Tool(
-    PixelIcon.views,
-    'Cheaper 3D Edges',
-    'The 3D camera\'s edges smoothed by a cheap filter (FXAA) instead of multisampling. Frames are labelled '
-        '[cheap edges] in the Performance Report.',
-    (_, _) async => SpeedTests.cheapEdges.value = !SpeedTests.cheapEdges.value,
-    on: (_) => SpeedTests.cheapEdges.value,
-  ),
-  _Tool(
-    PixelIcon.views,
-    '3D at 70%',
-    'The 3D camera drawn at 70% of its size and scaled up. Labelled [3D 70%].',
-    (_, _) async => SpeedTests.small3d.value = !SpeedTests.small3d.value,
-    on: (_) => SpeedTests.small3d.value,
-  ),
-  _Tool(
-    PixelIcon.views,
-    'No Viewfinder Look',
-    'The viewfinder shows the plain camera feed, without the film or digital look. Labelled [no look].',
-    (_, _) async => SpeedTests.noLook.value = !SpeedTests.noLook.value,
-    on: (_) => SpeedTests.noLook.value,
-  ),
-  _Tool(
-    PixelIcon.views,
-    'No Halation',
-    'The viewfinder without halation (the glow round highlights), as on low-memory phones. Labelled '
-        '[no halation].',
-    (_, _) async {
-      SpeedTests.noHalation.value = !SpeedTests.noHalation.value;
-      GlobalSettingsNotifier.reapply();
-    },
-    on: (_) => SpeedTests.noHalation.value,
-  ),
-  _Tool(
-    PixelIcon.views,
-    'No CRT Bulge',
-    'Darkroom 98 drawn flat, without the curved-glass effect over the whole screen. Labelled [no CRT].',
-    (_, _) async => SpeedTests.noCrt.value = !SpeedTests.noCrt.value,
-    on: (_) => SpeedTests.noCrt.value,
-  ),
-  _Tool(
-    PixelIcon.hourglass,
-    'Quick Launch',
-    'The launch screen lifts as soon as the camera and 3D camera are in: no minimum time, no extra holds, '
-        'a shorter fade. Acts on the next launch and stays on until turned off (the others reset on restart).',
-    (_, _) async => SpeedTests.setQuickLaunch(!SpeedTests.quickLaunch.value),
-    on: (_) => SpeedTests.quickLaunch.value,
-  ),
+  for (final (name, flag, about) in _speedTests)
+    _Tool(
+      PixelIcon.views,
+      name,
+      '$about Frames are labelled [${SpeedTests.nameOf(flag)}] in the Performance Report. Resets when the app restarts.',
+      (_, _) async => flag.value = !flag.value,
+      on: (_) => flag.value,
+    ),
 ];
 
 /// Debug > Performance Report: the phone, the launches, the frames, the 3D
@@ -339,10 +338,11 @@ String _memoryReport(WidgetRef ref) {
     b.writeln(
       live == null
           ? '  ${mode.name}: not loaded'
-          : '  ${mode.name}: ${mb(live.textureBytes())} MB of textures (skin ${live.finish}'
-                ')',
+          : '  ${mode.name}: ${mb(live.textureBytes())} MB of textures (skin ${live.finish}; '
+                '${live.textureFormats()})',
     );
   }
+  b.writeln(_compressionSupport());
   b.writeln('Engine caches:');
   try {
     b.writeln(fs.takeMemoryReport());
@@ -570,14 +570,11 @@ class _DebugMenu extends ConsumerStatefulWidget {
 
 /// The Debug window's folders, in order, and the tools in each (by name).
 /// A tool left out lands in Other.
-const _groups = <(String, List<String>)>[
+final _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
   ('Performance', ['Performance Report', 'FPS Counter', 'Slow Motion']),
-  (
-    'Speed Tests',
-    ['Cheaper 3D Edges', '3D at 70%', 'No Viewfinder Look', 'No Halation', 'No CRT Bulge', 'Quick Launch'],
-  ),
+  ('Speed Tests', [for (final (name, _, _) in _speedTests) name]),
   ('Diagnostics', ['Camera Log', 'Crash Reports', 'Test Crash']),
   ('First Run & Prompts', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt', 'Lag Prompt']),
 ];
@@ -826,4 +823,20 @@ class _PlusPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_PlusPainter old) => old.open != open || old.frame != frame || old.ink != ink;
+}
+
+/// Which block-compressed texture families this phone's GPU reports (the 3D
+/// textures load as the first of ASTC / BC / ETC2 it has, else rgba8).
+String _compressionSupport() {
+  try {
+    final c = gpu.gpuContext;
+    String yes(bool v) => v ? 'yes' : 'no';
+    return 'GPU texture compression: '
+        'ASTC ${yes(c.supportsTextureCompression(gpu.TextureCompressionFamily.astc))} '
+        '(format ${yes(c.supportsTextureFormat(gpu.PixelFormat.astc4x4LDR))}), '
+        'BC ${yes(c.supportsTextureCompression(gpu.TextureCompressionFamily.bc))}, '
+        'ETC2 ${yes(c.supportsTextureCompression(gpu.TextureCompressionFamily.etc2))}';
+  } catch (e) {
+    return 'GPU texture compression: unknown ($e)';
+  }
 }

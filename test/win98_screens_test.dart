@@ -143,7 +143,7 @@ void main() {
     expect(find.text('Performance Report'), findsOneWidget);
     await tester.tap(find.text('Speed Tests'));
     await tester.pump();
-    expect(find.text('Cheaper 3D Edges'), findsOneWidget);
+    expect(find.text('No Viewfinder Look'), findsOneWidget);
     await tester.tap(find.text('Pro & Unlocks'));
     await tester.pump();
     expect(find.text('Refill Film & Battery'), findsOneWidget);

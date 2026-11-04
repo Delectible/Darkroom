@@ -458,12 +458,26 @@ class LiveBody extends ChangeNotifier {
 
   /// GPU memory this model's textures hold (each counted once, whole mip
   /// chains): Debug > Performance Report (memory).
-  int textureBytes() {
+  int textureBytes() => _textures().bytes;
+
+  /// How many of its textures are in each pixel format (block-compressed
+  /// ones are a quarter of rgba8 or less).
+  String textureFormats() {
+    final n = <String, int>{};
+    for (final f in _textures().formats) {
+      n[f] = (n[f] ?? 0) + 1;
+    }
+    return [for (final MapEntry(:key, :value) in n.entries) '$value $key'].join(', ');
+  }
+
+  ({int bytes, List<String> formats}) _textures() {
     final seen = <Object>{};
     var bytes = 0;
+    final formats = <String>[];
     void add(fs.TextureSource? t) {
       final g = t?.sampledTexture;
       if (g == null || !seen.add(g)) return;
+      formats.add(g.format.name);
       for (var l = 0; l < g.mipLevelCount; l++) {
         bytes += g.getMipLevelSizeInBytes(l);
       }
@@ -480,7 +494,7 @@ class LiveBody extends ChangeNotifier {
         }
       }
     }
-    return bytes;
+    return (bytes: bytes, formats: formats);
   }
 
   /// The skin on show.

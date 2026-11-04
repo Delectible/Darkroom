@@ -331,3 +331,18 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   body 192 MB of textures = RGBA8 sizes (ASTC would be ~50): the compressed
   textures likely fall back to uncompressed on the Pixel. Render targets
   138 MB.
+- [x] **61.8** → 2.0.9 · Quick Launch is the launch: curtain 0.3 s minimum,
+  150 ms after the camera opens, 300 ms fade (was 1 s / 450 + 200 ms / 600 ms).
+- [x] **61.9** → 2.0.9 · Low RAM: the 3D body uses FXAA (no multisampled
+  render targets). The 70% switch made no visible difference on the Pixel:
+  BodyQuality already steers low-RAM sizes, so not applied.
+- [x] **61.10** → 2.0.9 · Performance Report memory: each 3D body's texture
+  formats and the GPU's reported compression support (ASTC / BC / ETC2), to
+  see why the Pixel holds 192 MB of rgba8 per body.
+- [x] **61.11** → 2.0.9 · Speed Tests round 2 (one table in debug_menu
+  `_speedTests`): grain at 12 fps, still viewfinder in swipes (the live one
+  is `toImageSync` every frame), no strap; Darkroom 98 scan lines, glass,
+  colour filter, square screen. Dropped: CRT bulge, halation, Quick Launch.
+- [ ] **61.12** Grain on the camera's frames: not possible from Dart (a
+  camera frame re-rasters without a framework frame); 12 fps grain is the
+  test instead.

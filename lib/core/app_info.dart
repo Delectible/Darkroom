@@ -3,14 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.0.8';
+  static const version = '2.0.9';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Smoother on fast screens: the app now asks 90 and 120 Hz phones for their full refresh rate, '
-      'and the camera\'s keys stay locked to the body while you swipe between cameras.';
+      'Opens about half a second faster, and phones with less memory draw the 3D cameras more lightly.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

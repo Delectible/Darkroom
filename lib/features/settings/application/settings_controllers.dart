@@ -16,7 +16,6 @@ import '../../camera/presentation/photo_body.dart' show BodyArt;
 import '../../camera/presentation/whole_body.dart' show wholeArtProvider;
 import '../../../core/settings/settings_repository.dart';
 import '../../cameras/domain/camera_catalog.dart';
-import '../../../core/diagnostics/speed_tests.dart';
 
 /// Hides the camera while Fancy graphics switches, so the change fades
 /// instead of snapping (the settings on top stay put).
@@ -46,7 +45,7 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     // Phones with little RAM (and so a modest GPU) are chosen for, without
     // asking: no viewfinder halation (a full-screen blur pass every frame)
     // and 60 Hz (90/120 Hz doubles the drawing), Fancy graphics or not.
-    FilmUniforms.lite = s.performance || DeviceMemory.low || SpeedTests.noHalation.value;
+    FilmUniforms.lite = s.performance || DeviceMemory.low;
     BodyArt.faceOnly = s.performance;
     _refreshRate(fast: !s.performance && !DeviceMemory.low);
   }

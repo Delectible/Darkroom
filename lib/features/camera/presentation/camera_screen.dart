@@ -41,6 +41,7 @@ import 'whole_face.dart';
 import 'widgets/camera_controls.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
+import '../../../core/diagnostics/speed_tests.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
@@ -109,7 +110,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   void _startMoving() {
     BodyQuality.moving(true);
-    if (ref.read(globalSettingsProvider).performance) return _snapMoving();
+    // (Debug > Speed Tests > Still Viewfinder in Swipes: as in performance mode)
+    if (ref.read(globalSettingsProvider).performance || SpeedTests.stillSwipe.value) return _snapMoving();
     if (_mirroring) return;
     _mirroring = true;
     CameraViewport.liveUnder.value = true;

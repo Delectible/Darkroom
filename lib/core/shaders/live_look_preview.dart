@@ -73,7 +73,8 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
 
   int get _targetFps {
     final film = widget.spec.film;
-    if (film != null) return film.isCine ? 18 : 24;
+    // (Debug > Speed Tests > Grain at 12 fps)
+    if (film != null) return film.isCine ? 18 : (SpeedTests.slowGrain.value ? 12 : 24);
     return switch (widget.spec.look!.kind) {
       ShaderKind.jpegPixel => 15,
       _ => 30,
@@ -95,6 +96,7 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
   void initState() {
     super.initState();
     _syncTimer();
+    SpeedTests.slowGrain.addListener(_syncTimer);
   }
 
   @override
@@ -105,6 +107,7 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
 
   @override
   void dispose() {
+    SpeedTests.slowGrain.removeListener(_syncTimer);
     _timer?.cancel();
     _time.dispose();
     for (final s in _shaders.values) {

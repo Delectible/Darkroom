@@ -18,7 +18,6 @@ import 'core/device/upright.dart';
 import 'core/diagnostics/crash_log.dart';
 import 'core/diagnostics/launch_timer.dart';
 import 'core/diagnostics/perf_recorder.dart';
-import 'core/diagnostics/speed_tests.dart';
 import 'core/monetization/pro.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/paths/app_paths.dart';
@@ -75,7 +74,6 @@ Future<void> _start() async {
   ).wait;
 
   LaunchTimer.prefs = prefs;
-  SpeedTests.load(prefs);
   // The phone's RAM sizes the work the app takes on (prints developing at
   // once, the picture cache): read alongside the rest of the start-up.
   unawaited(DeviceMemory.apply().then((_) => GlobalSettingsNotifier.reapply()));

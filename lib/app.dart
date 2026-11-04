@@ -8,7 +8,6 @@ import 'core/device/upright.dart';
 import 'core/diagnostics/fps_meter.dart';
 import 'core/diagnostics/lag_watch.dart';
 import 'core/diagnostics/launch_timer.dart';
-import 'core/diagnostics/speed_tests.dart';
 import 'core/navigation.dart';
 import 'core/providers.dart';
 import 'core/shaders/shader_library.dart';
@@ -63,10 +62,6 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
 
   DateTime? _liveSince;
 
-  /// When everything was first in: a moment more lets the 3D camera and the
-  /// stream draw a few frames, so the fade runs smooth over a settled picture.
-  DateTime? _allSince;
-
   /// Lift the curtain once the camera is open with its look loaded (or
   /// won't open: no permission, no camera), or something else is on top
   /// (the tour, a shortcut's screen).
@@ -103,16 +98,10 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       final art = ref.read(wholeArtProvider);
       if (art.isLoading || !(art.value?.isReady(ref.read(appModeProvider)) ?? true)) ready = false;
     }
-    if (!ready) {
-      _allSince = null;
-      return false;
-    }
+    if (!ready) return false;
     LaunchTimer.once('all loaded');
-    final now = DateTime.now();
-    final all = _allSince ??= now;
-    final quick = SpeedTests.quickLaunch.value;
-    return now.difference(_liveSince!) > Duration(milliseconds: quick ? 150 : 450) &&
-        now.difference(all) > Duration(milliseconds: quick ? 0 : 200);
+    // (the stream's first frames in)
+    return DateTime.now().difference(_liveSince!) > const Duration(milliseconds: 150);
   }
 
   @override
@@ -134,9 +123,10 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
         final app = LaunchCurtain(
           isReady: _ready,
           line: _line,
-          // Debug > Speed Tests > Quick Launch: no reading time, a short fade.
-          minimum: Duration(milliseconds: SpeedTests.quickLaunch.value ? 300 : 1000),
-          fade: Duration(milliseconds: SpeedTests.quickLaunch.value ? 300 : 600),
+          // (2.0.9: no time to read the line, a short fade: launches 0.6 s
+          // quicker, nothing lost)
+          minimum: const Duration(milliseconds: 300),
+          fade: const Duration(milliseconds: 300),
           child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
         );
         if (!ref.watch(fpsMeterProvider)) return app;

@@ -11,6 +11,7 @@ import '../../../core/theme/surfaces.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../../core/theme/soft_shadow.dart';
 import 'whole_body.dart';
+import '../../../core/diagnostics/speed_tests.dart';
 
 /// Film <-> Digital as two physical cameras on a desk.
 ///
@@ -74,7 +75,10 @@ class SwapStage extends StatelessWidget {
           width: bw,
           child: MediaQuery(
             data: mq.copyWith(size: Size(bw, mq.size.height)),
-            child: _StageWidth(width: mq.size.width, child: Builder(builder: _stage)),
+            child: _StageWidth(
+              width: mq.size.width,
+              child: Builder(builder: _stage),
+            ),
           ),
         ),
       );
@@ -963,7 +967,7 @@ extension on SwapBody {
           transform: camera.clone()..multiply(m),
           child: BodyYaw(yaw: capSide * pose.tilt, child: face),
         ),
-        if (moving)
+        if (moving && !SpeedTests.noStrap.value)
           Positioned.fill(
             child: IgnorePointer(
               child: _HangingStrap(

@@ -12,7 +12,8 @@ CLAUDE.md.)
 - **Shipped:** 2.0.7 (build 108, CI run ~166) pushed to `main` 2026-11-04: the
   big speed/memory update (skins on demand, slim 3D files, screen-size
   print decoding, low-RAM tuning + `BodyQuality`, faster launch, Debug >
-  Memory Report / Launch Timing / 3D Quality Stats). Before it: 2.0.6
+  Memory Report / Launch Timing / 3D Quality Stats, all in one Performance
+  Report since 2.0.8). Before it: 2.0.6
   (FLIP caption, Start menu in the CRT, projector deck stays, six How it
   works demos, Epic 70 "MOVIE · 24 FPS").
 - **App Store:** 2.0.3 is in App Review (resubmitted with notes + a demo
@@ -26,8 +27,8 @@ CLAUDE.md.)
   `main` build.
 - **To verify on the owner's phones (not possible in the cloud):** digital
   3D skins swapping in (grip has its own normal map: the desktop preview
-  can't draw the digital model), Launch Timing / Memory Report / 3D Quality
-  Stats numbers from the Pixel 9 Pro and the iPhone, the CRT bulge on the
+  can't draw the digital model), Performance Report numbers (launches, frames,
+  memory, 3D quality) and the Speed Tests switches from the Pixel 9 Pro and the iPhone, the CRT bulge on the
   Start menu, FLIP on the digital body.
 - **Open ideas:** CHANGELOG 58.x (request the film from the lab: Pro,
   strip or whole roll, negative or scan; collage; more camera settings;
@@ -666,6 +667,12 @@ UI
   over before the GPU read it). Android 90/120 Hz: display mode +
   `preferredRefreshRate` + a `Surface.setFrameRate` vote on Flutter's
   SurfaceView + Android 15 view frame-rate category (MainActivity).
+- Measuring (2.0.8): Debug > Performance Report is the one report to ask
+  for (phone, frames by activity, last 5 launches incl. Android's time
+  before main and each 3D load step, 3D quality, memory); the frame
+  recorder is always on. Debug > Speed Tests (`core/diagnostics/
+  speed_tests.dart`) switch off one cost each and tag the frames; Quick
+  Launch is saved and acts on the next launch.
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and
   the cork wall's shader tiles are cached (`CorkTiles`, warmed at start).

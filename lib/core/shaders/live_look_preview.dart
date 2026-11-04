@@ -10,6 +10,7 @@ import '../processing/crop_math.dart';
 import '../processing/film/film_profile.dart';
 import '../processing/look_spec.dart';
 import 'shader_library.dart';
+import '../diagnostics/speed_tests.dart';
 
 /// Applies a camera's look shader to [child] (the live camera texture).
 ///
@@ -113,7 +114,13 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    // Debug > Speed Tests > No Viewfinder Look: the plain feed.
+    valueListenable: SpeedTests.noLook,
+    builder: (context, off, _) => off ? RepaintBoundary(child: widget.child) : _look(context),
+  );
+
+  Widget _look(BuildContext context) {
     final programs = ref.watch(shaderProgramsProvider).value;
     final child = RepaintBoundary(child: widget.child);
     if (programs == null) return child;

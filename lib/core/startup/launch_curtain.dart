@@ -17,6 +17,7 @@ class LaunchCurtain extends StatefulWidget {
     this.line,
     this.minimum = const Duration(milliseconds: 1000),
     this.maximum = const Duration(seconds: 9),
+    this.fade = const Duration(milliseconds: 600),
   });
 
   final Widget child;
@@ -30,6 +31,9 @@ class LaunchCurtain extends StatefulWidget {
   /// Up at least this long (time to read the line), at most [maximum]
   /// (whatever isn't ready by then finishes in view).
   final Duration minimum, maximum;
+
+  /// How long it takes to fade away.
+  final Duration fade;
 
   static const background = Color(0xFF0E0E12);
 
@@ -66,7 +70,7 @@ class LaunchCurtain extends StatefulWidget {
 }
 
 class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProviderStateMixin {
-  late final _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+  late final _fade = AnimationController(vsync: this, duration: widget.fade);
   late final String _line = LaunchCurtain
       .lines[(widget.line ?? math.Random().nextInt(LaunchCurtain.lines.length)) % LaunchCurtain.lines.length];
   // Counted in polls (not a stopwatch) so tests' clocks drive it too.

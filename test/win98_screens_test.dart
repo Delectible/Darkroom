@@ -136,12 +136,15 @@ void main() {
     await tester.pumpAndSettle();
     // Folders, closed: tools show once one is opened.
     expect(find.text('Performance'), findsOneWidget);
-    expect(find.text('Cosmetics'), findsOneWidget);
-    expect(find.text('Performance Recorder'), findsNothing);
+    expect(find.text('Speed Tests'), findsOneWidget);
+    expect(find.text('Performance Report'), findsNothing);
     await tester.tap(find.text('Performance'));
     await tester.pump();
-    expect(find.text('Performance Recorder'), findsOneWidget);
-    await tester.tap(find.text('Pro & Film'));
+    expect(find.text('Performance Report'), findsOneWidget);
+    await tester.tap(find.text('Speed Tests'));
+    await tester.pump();
+    expect(find.text('Cheaper 3D Edges'), findsOneWidget);
+    await tester.tap(find.text('Pro & Unlocks'));
     await tester.pump();
     expect(find.text('Refill Film & Battery'), findsOneWidget);
     // Darkroom Pro is a switch.

@@ -8,6 +8,3 @@ class DebugFlag extends Notifier<bool> {
 
   void toggle() => state = !state;
 }
-
-/// Flutter's frame-time graphs over the whole app.
-final perfOverlayProvider = NotifierProvider<DebugFlag, bool>(DebugFlag.new);

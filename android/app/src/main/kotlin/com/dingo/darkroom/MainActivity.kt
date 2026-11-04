@@ -213,6 +213,11 @@ class MainActivity : FlutterActivity() {
                         refreshRate(call.arguments == true)
                         result.success(null)
                     }
+                    // ms since Android started the app's process (Launch Timing:
+                    // the time before Dart's main)
+                    "sinceStart" -> result.success(
+                        android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime(),
+                    )
                     else -> result.notImplemented()
                 }
             }

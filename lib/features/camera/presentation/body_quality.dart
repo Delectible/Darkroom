@@ -16,7 +16,7 @@ import '../../../core/diagnostics/perf_recorder.dart';
 /// 648 px wide; only ever below 1 on low RAM). The labels on it that are
 /// widgets (FLIP, the format dial) soften to match ([textBlur]).
 ///
-/// It keeps stats for Debug > 3D Quality Stats (and the Performance Report).
+/// It keeps stats for Debug > Performance Report.
 class BodyQuality {
   BodyQuality._();
 
@@ -174,7 +174,7 @@ class BodyQuality {
       '3D quality: ${_on ? 'steered (low RAM)' : 'fixed'}, now ${_p(base * detail.value)} '
       '(${_w(base * detail.value)}), floor ${_p(base * floor)}, $_downs down / $_ups up, $_swaps swaps';
 
-  /// Debug > 3D Quality Stats.
+  /// Debug > Performance Report (3D quality).
   static String report() {
     if (!_started) return 'The 3D cameras haven\'t loaded this run (Fancy graphics off, or no 3D here).';
     final now = _clock.elapsedMicroseconds;

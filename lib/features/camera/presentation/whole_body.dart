@@ -15,6 +15,7 @@ import 'package:vector_math/vector_math_64.dart' as v64 show Vector3;
 
 import '../../../core/device/device_memory.dart';
 import '../../../core/diagnostics/launch_timer.dart';
+import '../../../core/diagnostics/speed_tests.dart';
 import '../../../core/skins/camera_skins.dart';
 import 'body_quality.dart';
 import '../../../core/startup/launch_curtain.dart';
@@ -82,6 +83,7 @@ class WholeArt {
       fs.EnvironmentMap? env;
       if (scenes) {
         await fs.Scene.initializeStaticResources();
+        LaunchTimer.once('3D: engine ready');
         env = await fs.EnvironmentMap.fromEquirectImageAsset(
           assetPath: '$root/studio.hdr',
           // (half the detail where RAM is short: quicker to build at launch)
@@ -96,6 +98,7 @@ class WholeArt {
           ],
         );
       }
+      if (scenes) LaunchTimer.once('3D: studio light built');
       final bodies = <AppMode, WholeBody>{};
       for (final mode in AppMode.values) {
         final b = j[mode.name] as Map<String, dynamic>?;
@@ -158,6 +161,7 @@ class WholeArt {
       final b = j[mode.name] as Map<String, dynamic>;
       final scenePath = '$root/${b['scene']}';
       final node = await fs.loadScene(scenePath);
+      LaunchTimer.once('3D: model read');
       body.live = LiveBody._(
         node,
         body,
@@ -174,6 +178,7 @@ class WholeArt {
       // copy of the file (we never make a second model from it).
       final live = body.live!;
       await live.wear(_skinOf?.call(mode));
+      LaunchTimer.once('3D: skin on');
       unawaited(fs.releaseScene(scenePath));
       // Compile its shaders now, not on the first frame it's seen.
       try {
@@ -365,9 +370,21 @@ class LiveBody extends ChangeNotifier {
     // full sharpness) for a fifth less GPU work and render memory.
     final px = WidgetsBinding.instance.platformDispatcher.views.firstOrNull?.physicalSize.width ?? 0;
     BodyQuality.init(px: px, low: DeviceMemory.low);
-    void steer() => scene.renderScale = BodyQuality.base * BodyQuality.detail.value;
+    void steer() {
+      // (Debug > Speed Tests: 3D at 70%, cheaper edge smoothing)
+      scene
+        ..renderScale = BodyQuality.base * BodyQuality.detail.value * (SpeedTests.small3d.value ? 0.7 : 1)
+        ..antiAliasingMode = SpeedTests.cheapEdges.value
+            ? fs.AntiAliasingMode.fxaa
+            : fs.AntiAliasingMode.auto;
+    }
+
     steer();
     BodyQuality.detail.addListener(steer);
+    SpeedTests.changed.addListener(() {
+      steer();
+      _changed();
+    });
     scene.add(node);
     void index(fs.Node n) {
       _nodes[n.name] = n;
@@ -440,7 +457,7 @@ class LiveBody extends ChangeNotifier {
   }
 
   /// GPU memory this model's textures hold (each counted once, whole mip
-  /// chains): Debug > Memory Report.
+  /// chains): Debug > Performance Report (memory).
   int textureBytes() {
     final seen = <Object>{};
     var bytes = 0;

@@ -5,9 +5,10 @@ import 'dart:ui' as ui;
 import 'package:flutter/scheduler.dart';
 
 import '../shaders/shader_library.dart' show FilmUniforms;
+import 'speed_tests.dart';
 
 /// Records every frame's timings on the phone (Win98 Help > Debug >
-/// Performance Recorder), labelled with what the app was doing (`mark`), so
+/// Performance Report; always on), labelled with what the app was doing (`mark`), so
 /// a slow device can say exactly what is slow: the UI thread (Dart: build,
 /// layout, painting the layer tree) or the raster thread (the GPU drawing it:
 /// shaders, blurs, big images).
@@ -18,7 +19,9 @@ class PerfRecorder {
   static bool get recording => _on;
 
   static final List<_Frame> _frames = [];
-  static const _keep = 4000;
+
+  /// About two minutes at 120 Hz (the recorder is always on).
+  static const _keep = 15000;
 
   static String? _label;
 
@@ -50,7 +53,7 @@ class PerfRecorder {
 
   static void _onTimings(List<ui.FrameTiming> timings) {
     final now = DateTime.now();
-    final label = now.isBefore(_labelUntil) ? _label! : 'idle $screen';
+    final label = '${now.isBefore(_labelUntil) ? _label! : 'idle $screen'}${SpeedTests.tag}';
     for (final t in timings) {
       _frames.add(
         _Frame(
@@ -81,7 +84,8 @@ class PerfRecorder {
         'Screen ${view?.physicalSize.width.round()}x${view?.physicalSize.height.round()} '
         '@${view?.devicePixelRatio.toStringAsFixed(2)}x, ${hz.round()} Hz (budget ${budget.toStringAsFixed(1)} ms)',
       )
-      ..writeln('Performance mode: ${FilmUniforms.lite ? 'on' : 'off'}');
+      ..writeln('Viewfinder halation: ${FilmUniforms.lite ? 'off' : 'on'}')
+      ..writeln(SpeedTests.summary);
     for (final extra in extras) {
       b.writeln(extra());
     }

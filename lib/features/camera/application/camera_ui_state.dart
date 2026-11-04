@@ -33,8 +33,11 @@ class PrefKeys {
   /// Skipped the tour before its moves: the camera says "New here?" once.
   static const tourSkipped = 'user.tourSkipped';
 
-  /// The last few launches' timings (LaunchTimer, Debug > Launch Timing).
+  /// The last few launches' timings (LaunchTimer, Debug > Performance Report).
   static const launchTimes = 'debug.launchTimes';
+
+  /// Debug > Speed Tests > Quick Launch (SpeedTests.quickLaunchKey).
+  static const quickLaunch = 'debug.quickLaunch';
 
   /// The first start began with Fancy graphics off (a slow phone): say so
   /// once the tour is done.
@@ -118,6 +121,7 @@ class PrefKeys {
     userName,
     tourSkipped,
     launchTimes,
+    quickLaunch,
     lowGraphicsNote,
     bodyFinish,
     filmFinish,

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/providers.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
+import '../../../../core/diagnostics/speed_tests.dart';
 
 /// The Darkroom 98 monitor's settings (Tools > Options > Monitor / Screen
 /// Saver): the kind of tube, the resolution the desktop runs at, the
@@ -571,13 +572,19 @@ class _CrtWarpState extends State<CrtWarp> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    // Debug > Speed Tests > No CRT Bulge
+    valueListenable: SpeedTests.noCrt,
+    builder: (context, off, _) => _warped(context, on: widget.on && !off),
+  );
+
+  Widget _warped(BuildContext context, {required bool on}) {
     final child = RepaintBoundary(
       key: _flat,
       child: KeyedSubtree(key: _content, child: widget.child),
     );
     final shader = _shader, paint = _paint, still = _still;
-    if (shader == null || paint == null || !widget.on) return child;
+    if (shader == null || paint == null || !on) return child;
     if (still != null) {
       // Moving: the bulged picture on top of the (flat) screen.
       return Stack(

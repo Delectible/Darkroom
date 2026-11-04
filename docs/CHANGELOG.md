@@ -294,14 +294,15 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 Measure first. Already done: 59.x (low RAM, slim 3D, prints at screen
 size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 
-- [ ] **61.1** Measuring build: time before Dart's main (Android
+- [x] **61.1** → 2.0.8 · Measuring build: time before Dart's main (Android
   `Process.getStartUptimeMillis`, iOS process start), Launch Timing marks
   for each 3D step (static resources, studio light, model, skin, shader
-  warm-up), Flutter Scene's own frame stats in the Performance Report.
-- [ ] **61.2** Debug > Performance A/B switches, marked in the recorder:
+  warm-up). (Flutter Scene's own frame stats: not yet.)
+- [x] **61.2** → 2.0.8 · Debug > Speed Tests switches (`SpeedTests`), marked in the recorder:
   3D anti-aliasing (auto = MSAA / FXAA / none), 3D render scale, viewfinder
-  look off, halation off, CRT bulge off, a short launch curtain (no 1 s
-  floor, 450 + 200 ms holds, 600 ms fade).
+  look off, halation off, CRT bulge off, Quick Launch (saved; 0.3 s
+  floor, 150 + 0 ms holds, 300 ms fade). Frames get a "[...]" tag. (3D
+  anti-aliasing: FXAA vs auto; 3D scale: 70%.)
 - [ ] **61.3** Launch without waiting for the 3D body: open on the drawn
   body, cross-fade to the 3D one when it lands (visible: show first).
 - [ ] **61.4** Studio light baked offline instead of built from studio.hdr
@@ -309,5 +310,16 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [ ] **61.5** Settings by measured speed (a first-run GPU probe or the
   first swaps' frame times), not just RAM: 3D scale, AA, halation, rate.
   Covers mid-range phones, GLES-only phones (S10+) and tablets (#62).
-- [ ] **61.6** Darkroom 98 at rest: find what redraws (FPS counter > 0 with
+- [ ] **61.6** (Owner's 4 fps at rest was the FPS counter's own redraw.)
+  Darkroom 98 at rest: find what redraws (FPS counter > 0 with
   nothing moving re-runs the full-screen CRT filter each frame).
+- [x] **61.7** → 2.0.8 · Debug tidied: one Performance Report (phone +
+  frames + launches + 3D quality + memory, Clear / Copy), the recorder
+  always on (15,000 frames); gone: Performance Recorder, 3D Quality Stats,
+  Memory Report, Launch Timing, System Info (all in the report), Frame
+  Timing Graphs (FPS Counter + report). Folders: Darkroom, Pro & Unlocks,
+  Performance, Speed Tests, Diagnostics, First Run & Prompts.
+- Owner's numbers (2.0.7, Pixel 9 Pro): launch 1.6-1.9 s; 3D in ~1.0 s and
+  camera open ~1.1-1.4 s side by side, then the 450 ms hold. Camera at rest
+  ~40 fps (film grain ticks at 24, camera 30, unsynced: idea, tick the grain
+  on camera frames).

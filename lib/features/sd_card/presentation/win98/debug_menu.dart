@@ -8,18 +8,17 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_scene/scene.dart' as fs show takeMemoryReport;
-import '../../../../core/shaders/shader_library.dart' show FilmUniforms;
 
 import '../../../../core/app_info.dart';
 import '../../../../core/device/battery.dart';
 import '../../../../core/device/device_memory.dart';
 import '../../../../core/diagnostics/crash_log.dart';
-import '../../../../core/diagnostics/debug_flags.dart';
 import '../../../../core/diagnostics/develop_stats.dart';
 import '../../../../core/diagnostics/fps_meter.dart';
 import '../../../../core/diagnostics/lag_watch.dart';
 import '../../../../core/diagnostics/launch_timer.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
+import '../../../../core/diagnostics/speed_tests.dart';
 import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
 import '../../../../core/processing/capture_processor.dart';
@@ -78,40 +77,12 @@ final _tools = <_Tool>[
     on: (ref) => ref.watch(globalSettingsProvider).darkroomEnabled,
   ),
   _Tool(
-    PixelIcon.hourglass,
-    'Performance Recorder',
-    'Times every frame while on, labelled with what was happening (panel slides, swaps, menus...). '
-        'Turn it on, use the app normally, then open Performance Report.',
-    (_, _) async => PerfRecorder.recording ? PerfRecorder.stop() : PerfRecorder.start(),
-    on: (_) => PerfRecorder.recording,
-  ),
-  _Tool(
     PixelIcon.views,
     'Performance Report',
-    'Slow frames per activity, and whether the app (UI) or the graphics chip (GPU) was the hold-up. '
-        'Copy it and send it to Claude.',
-    (context, _) => _perfReport(context),
-  ),
-  _Tool(
-    PixelIcon.views,
-    '3D Quality Stats',
-    'How sharply the 3D camera is drawn on this phone: screen, normal and lowest quality, time '
-        'spent at each level, frame times, and every step down or up this session.',
-    (context, _) => _textReport(context, '3D Quality Stats - Notepad', BodyQuality.report),
-  ),
-  _Tool(
-    PixelIcon.hourglass,
-    'Memory Report',
-    'What the app holds right now: the 3D cameras\' textures and render targets, the picture cache, '
-        'and the choices made for this phone (RAM, screen, prints developing at once).',
-    (context, ref) => _textReport(context, 'Memory Report - Notepad', () => _memoryReport(ref)),
-  ),
-  _Tool(
-    PixelIcon.hourglass,
-    'Launch Timing',
-    'How long the last few launches took, step by step: storage, camera, film look, 3D cameras, '
-        'curtain up. Copy it and send it to Claude.',
-    (context, _) => _textReport(context, 'Launch Timing - Notepad', LaunchTimer.report),
+    'Everything in one report to copy and send: this phone and its settings, the last launches step by '
+        'step, every frame since the app started (by activity, with any Speed Tests on), the 3D camera\'s '
+        'quality and memory. Clear starts a fresh recording.',
+    (context, ref) => _perfReport(context, ref),
   ),
   _Tool(
     PixelIcon.hourglass,
@@ -168,17 +139,10 @@ final _tools = <_Tool>[
   ),
   _Tool(
     PixelIcon.views,
-    'Frame Timing Graphs',
-    "Flutter's performance overlay: frame times for the UI and the GPU. Spikes over the line are dropped frames.",
-    (_, ref) async => ref.read(perfOverlayProvider.notifier).toggle(),
-    on: (ref) => ref.watch(perfOverlayProvider),
-  ),
-  _Tool(
-    PixelIcon.views,
     'FPS Counter',
-    'Frames drawn per second, live, with the last 15 seconds as a chart and the slowest recent frame. Sits '
-        'bottom left, so it can run with the frame timing graphs. A still screen reads low: Flutter only draws '
-        'when something changes.',
+    'Frames drawn per second, live, with the last 15 seconds as a chart and the slowest recent frame. '
+        'Flutter only draws when something changes; the counter itself redraws 4 times a second, so a '
+        'still screen reads about 4.',
     (_, ref) async => ref.read(fpsMeterProvider.notifier).toggle(),
     on: (ref) => ref.watch(fpsMeterProvider),
   ),
@@ -216,12 +180,6 @@ final _tools = <_Tool>[
     },
     on: (ref) => ref.watch(unlockedSkinsProvider).isNotEmpty,
   ),
-  _Tool(
-    PixelIcon.computer,
-    'System Info',
-    'Version, phone, screen, camera stream, battery and what is stored.',
-    (context, ref) => _systemInfo(context, ref),
-  ),
   _Tool(PixelIcon.warning, 'Test Crash', 'Throws a harmless error, to check that Crash Reports catches it.', (
     context,
     _,
@@ -230,77 +188,145 @@ final _tools = <_Tool>[
     await Future<void>.delayed(const Duration(milliseconds: 100));
     if (context.mounted) await _done(context, 'Thrown. It should be at the top of Crash Reports.');
   }),
+  _Tool(
+    PixelIcon.views,
+    'Cheaper 3D Edges',
+    'The 3D camera\'s edges smoothed by a cheap filter (FXAA) instead of multisampling. Frames are labelled '
+        '[cheap edges] in the Performance Report.',
+    (_, _) async => SpeedTests.cheapEdges.value = !SpeedTests.cheapEdges.value,
+    on: (_) => SpeedTests.cheapEdges.value,
+  ),
+  _Tool(
+    PixelIcon.views,
+    '3D at 70%',
+    'The 3D camera drawn at 70% of its size and scaled up. Labelled [3D 70%].',
+    (_, _) async => SpeedTests.small3d.value = !SpeedTests.small3d.value,
+    on: (_) => SpeedTests.small3d.value,
+  ),
+  _Tool(
+    PixelIcon.views,
+    'No Viewfinder Look',
+    'The viewfinder shows the plain camera feed, without the film or digital look. Labelled [no look].',
+    (_, _) async => SpeedTests.noLook.value = !SpeedTests.noLook.value,
+    on: (_) => SpeedTests.noLook.value,
+  ),
+  _Tool(
+    PixelIcon.views,
+    'No Halation',
+    'The viewfinder without halation (the glow round highlights), as on low-memory phones. Labelled '
+        '[no halation].',
+    (_, _) async {
+      SpeedTests.noHalation.value = !SpeedTests.noHalation.value;
+      GlobalSettingsNotifier.reapply();
+    },
+    on: (_) => SpeedTests.noHalation.value,
+  ),
+  _Tool(
+    PixelIcon.views,
+    'No CRT Bulge',
+    'Darkroom 98 drawn flat, without the curved-glass effect over the whole screen. Labelled [no CRT].',
+    (_, _) async => SpeedTests.noCrt.value = !SpeedTests.noCrt.value,
+    on: (_) => SpeedTests.noCrt.value,
+  ),
+  _Tool(
+    PixelIcon.hourglass,
+    'Quick Launch',
+    'The launch screen lifts as soon as the camera and 3D camera are in: no minimum time, no extra holds, '
+        'a shorter fade. Acts on the next launch and stays on until turned off (the others reset on restart).',
+    (_, _) async => SpeedTests.setQuickLaunch(!SpeedTests.quickLaunch.value),
+    on: (_) => SpeedTests.quickLaunch.value,
+  ),
 ];
 
-Future<void> _perfReport(BuildContext context) => showWin98Window<void>(
-  context,
-  title: 'Performance Report - Notepad',
-  width: 340,
-  icon: const PixelIconView(PixelIcon.info),
-  builder: (context) => StatefulBuilder(
-    builder: (context, setState) {
-      final text = PerfRecorder.report();
-      return Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 320),
-              child: Win98Bevel(
-                style: BevelStyle.sunken,
-                color: W98.white,
-                padding: const EdgeInsets.all(6),
-                child: SingleChildScrollView(child: Text(text, style: W98.text.copyWith(fontSize: 10))),
+/// Debug > Performance Report: the phone, the launches, the frames, the 3D
+/// camera and memory, in one text to copy.
+Future<void> _perfReport(BuildContext context, WidgetRef ref) async {
+  final battery = await Battery.level();
+  if (!context.mounted) return;
+  String all() => [
+    _phoneReport(ref, battery),
+    PerfRecorder.report(),
+    LaunchTimer.report(),
+    '3D QUALITY\n${BodyQuality.report()}',
+    'MEMORY\n${_memoryReport(ref)}',
+  ].join('\n\n');
+  await showWin98Window<void>(
+    context,
+    title: 'Performance Report - Notepad',
+    width: 340,
+    icon: const PixelIconView(PixelIcon.info),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) {
+        final text = all();
+        return Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 320),
+                child: Win98Bevel(
+                  style: BevelStyle.sunken,
+                  color: W98.white,
+                  padding: const EdgeInsets.all(6),
+                  child: SingleChildScrollView(child: Text(text, style: W98.text.copyWith(fontSize: 10))),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Win98Button(
-                  minWidth: 64,
-                  onPressed: () {
-                    PerfRecorder.clear();
-                    setState(() {});
-                  },
-                  child: const Text('Clear'),
-                ),
-                const SizedBox(width: 6),
-                Win98Button(
-                  minWidth: 64,
-                  onPressed: () => unawaited(Clipboard.setData(ClipboardData(text: text))),
-                  child: const Text('Copy'),
-                ),
-                const SizedBox(width: 6),
-                Win98Button(
-                  minWidth: 64,
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-    },
-  ),
-);
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Win98Button(
+                    minWidth: 64,
+                    onPressed: () {
+                      PerfRecorder.clear();
+                      setState(() {});
+                    },
+                    child: const Text('Clear'),
+                  ),
+                  const SizedBox(width: 6),
+                  Win98Button(
+                    minWidth: 64,
+                    onPressed: () => unawaited(Clipboard.setData(ClipboardData(text: text))),
+                    child: const Text('Copy'),
+                  ),
+                  const SizedBox(width: 6),
+                  Win98Button(
+                    minWidth: 64,
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
+}
+
+String _phoneReport(WidgetRef ref, int? battery) {
+  final settings = ref.read(globalSettingsProvider);
+  final preview = ref.read(cameraSessionProvider).controller?.value.previewSize;
+  return [
+    'PHONE',
+    '${AppInfo.name} ${AppInfo.version}, ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+    'RAM ${DeviceMemory.gb?.toStringAsFixed(1) ?? '?'} GB${DeviceMemory.low ? ' (low: lighter settings)' : ''}, '
+        '${Platform.numberOfProcessors} cores, battery ${battery == null ? '?' : '$battery%'}',
+    'Fancy graphics: ${settings.controls3d ? 'on' : 'off'}',
+    'Camera stream: ${preview == null ? 'closed' : '${preview.width.round()} x ${preview.height.round()}'}',
+    'Prints and reels: ${ref.read(filmItemsProvider).value?.length ?? '?'}, '
+        'SD card files: ${ref.read(sdCardFilesProvider).length}, crash reports: ${CrashLog.reports.length}',
+  ].join('\n');
+}
 
 String _memoryReport(WidgetRef ref) {
   final cache = PaintingBinding.instance.imageCache;
-  final view = WidgetsBinding.instance.platformDispatcher.views.firstOrNull;
-  final px = view?.physicalSize;
   String mb(int b) => (b / (1 << 20)).toStringAsFixed(1);
   final b = StringBuffer()
-    ..writeln(
-      'Phone: ${DeviceMemory.gb?.toStringAsFixed(1) ?? '?'} GB RAM${DeviceMemory.low ? ' (low: lighter settings)' : ''}',
-    )
-    ..writeln('Screen: ${px == null ? '?' : '${px.width.round()} x ${px.height.round()} px'}')
     ..writeln('Prints developing at once: up to ${CaptureProcessor.maxWorkers}')
-    ..writeln('Viewfinder halation: ${FilmUniforms.lite ? 'off' : 'on'}')
-    ..writeln()
     ..writeln(
       'Picture cache: ${cache.currentSize} pictures, ${mb(cache.currentSizeBytes)} of '
       '${mb(cache.maximumSizeBytes)} MB',
@@ -325,52 +351,6 @@ String _memoryReport(WidgetRef ref) {
   }
   return b.toString();
 }
-
-/// A read-only text report with Copy (and OK).
-Future<void> _textReport(BuildContext context, String title, String Function() text) => showWin98Window<void>(
-  context,
-  title: title,
-  width: 340,
-  icon: const PixelIconView(PixelIcon.info),
-  builder: (context) {
-    final t = text();
-    return Padding(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 320),
-            child: Win98Bevel(
-              style: BevelStyle.sunken,
-              color: W98.white,
-              padding: const EdgeInsets.all(6),
-              child: SingleChildScrollView(child: Text(t, style: W98.text.copyWith(fontSize: 10))),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Win98Button(
-                minWidth: 64,
-                onPressed: () => unawaited(Clipboard.setData(ClipboardData(text: t))),
-                child: const Text('Copy'),
-              ),
-              const SizedBox(width: 6),
-              Win98Button(
-                minWidth: 64,
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  },
-);
 
 class _DevelopStatsView extends ConsumerStatefulWidget {
   const _DevelopStatsView();
@@ -477,27 +457,6 @@ class _DevelopStatsViewState extends ConsumerState<_DevelopStatsView> {
 
 Future<void> _done(BuildContext context, String text) =>
     showWin98MessageBox(context, title: 'Debug', message: text);
-
-Future<void> _systemInfo(BuildContext context, WidgetRef ref) async {
-  final battery = await Battery.level();
-  if (!context.mounted) return;
-  final media = MediaQuery.of(context);
-  final view = View.of(context);
-  final preview = ref.read(cameraSessionProvider).controller?.value.previewSize;
-  final prints = ref.read(filmItemsProvider).value?.length;
-  final text = [
-    '${AppInfo.name} ${AppInfo.version}',
-    '${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
-    'Screen: ${view.physicalSize.width.round()} x ${view.physicalSize.height.round()} px, '
-        '${media.devicePixelRatio.toStringAsFixed(2)}x',
-    'Camera stream: ${preview == null ? 'closed' : '${preview.width.round()} x ${preview.height.round()}'}',
-    'Battery: ${battery == null ? 'unknown' : '$battery%'}',
-    'Prints and reels: ${prints ?? '?'}',
-    'SD card files: ${ref.read(sdCardFilesProvider).length}',
-    'Crash reports: ${CrashLog.reports.length}',
-  ].join('\n');
-  await showWin98MessageBox(context, title: 'System Info', message: text);
-}
 
 /// Help > Debug: a scrolling list of developer tools (room for more), the
 /// picked one's description, and Run. Double-tap a tool to run it.
@@ -613,24 +572,14 @@ class _DebugMenu extends ConsumerStatefulWidget {
 /// A tool left out lands in Other.
 const _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
-  ('Pro & Film', ['Darkroom Pro', 'Refill Film & Battery']),
+  ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
+  ('Performance', ['Performance Report', 'FPS Counter', 'Slow Motion']),
   (
-    'Performance',
-    [
-      '3D Quality Stats',
-      'Memory Report',
-      'Launch Timing',
-      'Performance Recorder',
-      'Performance Report',
-      'Frame Timing Graphs',
-      'FPS Counter',
-      'Lag Prompt',
-      'Slow Motion',
-    ],
+    'Speed Tests',
+    ['Cheaper 3D Edges', '3D at 70%', 'No Viewfinder Look', 'No Halation', 'No CRT Bulge', 'Quick Launch'],
   ),
-  ('Cosmetics', ['Unlock All Skins']),
-  ('Diagnostics', ['Camera Log', 'Crash Reports', 'System Info', 'Test Crash']),
-  ('First Run & Store', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt']),
+  ('Diagnostics', ['Camera Log', 'Crash Reports', 'Test Crash']),
+  ('First Run & Prompts', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt', 'Lag Prompt']),
 ];
 
 /// Folder name -> indexes into [_tools].

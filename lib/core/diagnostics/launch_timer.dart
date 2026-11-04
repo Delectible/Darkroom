@@ -1,7 +1,10 @@
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// How long each step of a launch took, from the start of Dart's main
-/// (Win98 Help > Debug > Launch Timing). The engine's own start, before
+/// (Win98 Help > Debug > Performance Report). The engine's own start, before
 /// main, isn't in it. The last few launches are kept in prefs.
 class LaunchTimer {
   LaunchTimer._();
@@ -9,6 +12,20 @@ class LaunchTimer {
   static final Stopwatch _clock = Stopwatch();
   static final List<(String, int)> _marks = [];
   static bool _done = false;
+
+  /// Time from Android starting the process to Dart's main (engine,
+  /// plugins), once known; null on iPhone.
+  static int? beforeMain;
+
+  /// Asks Android how long ago the process started (main.dart, early).
+  static Future<void> measureBeforeMain() async {
+    if (!Platform.isAndroid) return;
+    final at = _clock.elapsedMilliseconds;
+    try {
+      final since = await const MethodChannel('darkroom/display').invokeMethod<int>('sinceStart');
+      if (since != null) beforeMain = since - at;
+    } catch (_) {}
+  }
 
   /// Where the report is kept (set once prefs are open).
   static SharedPreferencesWithCache? prefs;
@@ -49,6 +66,7 @@ class LaunchTimer {
     final b = StringBuffer(
       'Launch ${when.year}-${_two(when.month)}-${_two(when.day)} ${_two(when.hour)}:${_two(when.minute)}\n',
     );
+    if (beforeMain case final ms?) b.writeln('  (+$ms ms before the app\'s code: Android, engine, plugins)');
     var last = 0;
     for (final (label, ms) in _marks) {
       b.writeln('${_ms(ms).padLeft(7)}  (+${ms - last} ms)  $label');
@@ -66,7 +84,7 @@ class LaunchTimer {
     final now = _done ? <String>[] : ['${_current()}(still launching)\n'];
     final all = [...now, ...saved];
     if (all.isEmpty) return 'No launches timed yet.';
-    return 'Times from the start of the app\'s code (the phone\'s own start-up before it isn\'t counted).\n\n'
+    return 'Times from the start of the app\'s code; on Android the time before it is on the first line.\n\n'
         '${all.join('\n')}';
   }
 }

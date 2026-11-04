@@ -4,11 +4,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/diagnostics/debug_flags.dart';
-import 'core/diagnostics/fps_meter.dart';
-import 'core/diagnostics/launch_timer.dart';
-import 'core/diagnostics/lag_watch.dart';
 import 'core/device/upright.dart';
+import 'core/diagnostics/fps_meter.dart';
+import 'core/diagnostics/lag_watch.dart';
+import 'core/diagnostics/launch_timer.dart';
+import 'core/diagnostics/speed_tests.dart';
 import 'core/navigation.dart';
 import 'core/providers.dart';
 import 'core/shaders/shader_library.dart';
@@ -18,9 +18,9 @@ import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/camera_screen.dart';
 import 'features/camera/presentation/whole_body.dart';
-import 'features/settings/application/settings_controllers.dart';
 import 'features/help/how_it_works_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/settings/application/settings_controllers.dart';
 
 class DarkroomApp extends ConsumerStatefulWidget {
   const DarkroomApp({super.key});
@@ -110,8 +110,9 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
     LaunchTimer.once('all loaded');
     final now = DateTime.now();
     final all = _allSince ??= now;
-    return now.difference(_liveSince!) > const Duration(milliseconds: 450) &&
-        now.difference(all) > const Duration(milliseconds: 200);
+    final quick = SpeedTests.quickLaunch.value;
+    return now.difference(_liveSince!) > Duration(milliseconds: quick ? 150 : 450) &&
+        now.difference(all) > Duration(milliseconds: quick ? 0 : 200);
   }
 
   @override
@@ -120,7 +121,6 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
       title: 'Darkroom',
       navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
-      showPerformanceOverlay: ref.watch(perfOverlayProvider),
       theme: RetroPalette.film.toTheme(),
       // The camera is portrait-only, even under a screen turned to landscape.
       home: const PortraitLock(child: _Home()),
@@ -134,6 +134,9 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
         final app = LaunchCurtain(
           isReady: _ready,
           line: _line,
+          // Debug > Speed Tests > Quick Launch: no reading time, a short fade.
+          minimum: Duration(milliseconds: SpeedTests.quickLaunch.value ? 300 : 1000),
+          fade: Duration(milliseconds: SpeedTests.quickLaunch.value ? 300 : 600),
           child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
         );
         if (!ref.watch(fpsMeterProvider)) return app;

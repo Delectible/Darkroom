@@ -17,6 +17,8 @@ import 'core/device/device_memory.dart';
 import 'core/device/upright.dart';
 import 'core/diagnostics/crash_log.dart';
 import 'core/diagnostics/launch_timer.dart';
+import 'core/diagnostics/perf_recorder.dart';
+import 'core/diagnostics/speed_tests.dart';
 import 'core/monetization/pro.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/paths/app_paths.dart';
@@ -36,6 +38,9 @@ String _stage = 'starting';
 Future<void> main() async {
   LaunchTimer.begin();
   WidgetsFlutterBinding.ensureInitialized();
+  unawaited(LaunchTimer.measureBeforeMain());
+  // Debug > Performance Report: frame timings are always kept (cheap).
+  PerfRecorder.start();
   // A hang or a throw before the first frame used to leave the launch screen
   // up for good: show what got stuck instead (if the start finishes late,
   // the app replaces this screen).
@@ -70,6 +75,7 @@ Future<void> _start() async {
   ).wait;
 
   LaunchTimer.prefs = prefs;
+  SpeedTests.load(prefs);
   // The phone's RAM sizes the work the app takes on (prints developing at
   // once, the picture cache): read alongside the rest of the start-up.
   unawaited(DeviceMemory.apply().then((_) => GlobalSettingsNotifier.reapply()));

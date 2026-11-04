@@ -9,6 +9,8 @@ import '../../core/device/haptics.dart';
 import '../../core/providers.dart';
 import '../camera/application/camera_session_controller.dart';
 import '../camera/application/camera_ui_state.dart';
+import '../camera/presentation/whole_body.dart';
+import '../settings/application/settings_controllers.dart';
 import '../help/gesture_demo.dart';
 
 /// First-run tour: what the app is, how to drive it (gestures), a name for
@@ -40,6 +42,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   static const _count = 7;
   static const _gesturesPage = 4;
+
+  @override
+  void initState() {
+    super.initState();
+    // First run: the app opened on this screen without waiting for the 3D
+    // cameras. They load now, once it's up and has slid in, ready for when
+    // the tour ends.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future<void>.delayed(const Duration(milliseconds: 900), () {
+        if (!mounted) return;
+        try {
+          if (!ref.read(globalSettingsProvider).controls3d) return;
+          unawaited(ref.read(wholeArtProvider.future).then((_) {}, onError: (Object _) {}));
+        } catch (_) {
+          // (no settings here: tests)
+        }
+      });
+    });
+  }
 
   @override
   void dispose() {

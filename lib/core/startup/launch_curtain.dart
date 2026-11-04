@@ -3,6 +3,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../diagnostics/launch_timer.dart';
+
 /// The launch screen carried on into the app: the rabbit on near-black (as
 /// the system's launch screen left it) with a line of darkroom chatter,
 /// held over the app while the camera opens and its look loads, then
@@ -14,7 +16,7 @@ class LaunchCurtain extends StatefulWidget {
     required this.isReady,
     this.line,
     this.minimum = const Duration(milliseconds: 1100),
-    this.maximum = const Duration(seconds: 5),
+    this.maximum = const Duration(seconds: 9),
   });
 
   final Widget child;
@@ -59,7 +61,7 @@ class LaunchCurtain extends StatefulWidget {
 }
 
 class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProviderStateMixin {
-  late final _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 650));
+  late final _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
   late final String _line = LaunchCurtain
       .lines[(widget.line ?? math.Random().nextInt(LaunchCurtain.lines.length)) % LaunchCurtain.lines.length];
   // Counted in polls (not a stopwatch) so tests' clocks drive it too.
@@ -78,6 +80,7 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
     if (waited < widget.minimum) return;
     if (waited < widget.maximum && !widget.isReady()) return;
     _poll?.cancel();
+    LaunchTimer.finish(widget.isReady() ? 'curtain lifts' : 'curtain lifts (gave up waiting)');
     _fade.forward().whenComplete(() {
       if (mounted) setState(() => _up = false);
     });

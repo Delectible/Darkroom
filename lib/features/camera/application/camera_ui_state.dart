@@ -33,6 +33,9 @@ class PrefKeys {
   /// Skipped the tour before its moves: the camera says "New here?" once.
   static const tourSkipped = 'user.tourSkipped';
 
+  /// The last few launches' timings (LaunchTimer, Debug > Launch Timing).
+  static const launchTimes = 'debug.launchTimes';
+
   /// The digital body's finish (the live 3D model's skins).
   static const bodyFinish = 'ui.body.finish';
 
@@ -110,6 +113,7 @@ class PrefKeys {
     onboarded,
     userName,
     tourSkipped,
+    launchTimes,
     bodyFinish,
     filmFinish,
     skinsUnlocked,

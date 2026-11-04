@@ -15,6 +15,7 @@ import 'core/db/app_database.dart';
 import 'core/device/app_shortcuts.dart';
 import 'core/device/upright.dart';
 import 'core/diagnostics/crash_log.dart';
+import 'core/diagnostics/launch_timer.dart';
 import 'core/monetization/pro.dart';
 import 'core/notifications/notification_service.dart';
 import 'core/paths/app_paths.dart';
@@ -28,6 +29,7 @@ import 'features/camera/presentation/whole_body.dart';
 String _stage = 'starting';
 
 Future<void> main() async {
+  LaunchTimer.begin();
   WidgetsFlutterBinding.ensureInitialized();
   // A hang or a throw before the first frame used to leave the launch screen
   // up for good: show what got stuck instead (if the start finishes late,
@@ -62,6 +64,8 @@ Future<void> _start() async {
     ),
   ).wait;
 
+  LaunchTimer.prefs = prefs;
+  LaunchTimer.mark('storage open');
   // Crash reports stay on the phone (Win98 Help > Crash Reports).
   _stage = 'crash log';
   await CrashLog.install(paths.supportDir);
@@ -70,6 +74,7 @@ Future<void> _start() async {
   _stage = 'settings';
   final (global, cameraSettings) = await (settingsRepo.loadGlobal(), settingsRepo.loadCameraSettings()).wait;
 
+  LaunchTimer.mark('settings read');
   final notifications = NotificationService(FlutterLocalNotificationsPlugin());
 
   final container = ProviderContainer(
@@ -91,9 +96,15 @@ Future<void> _start() async {
 
   _stage = 'notifications';
   await notifications.init(onTap: route);
-  _stage = 'background worker';
+  LaunchTimer.mark('notifications ready');
+  // WorkManager (the darkroom's wake-ups) after the first frame: anything
+  // scheduled before then waits for it.
   if (Platform.isAndroid) {
-    await Workmanager().initialize(backgroundDispatcher);
+    final worker = Completer<void>();
+    WorkmanagerDevelopScheduler.ready = worker.future;
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => worker.complete(Workmanager().initialize(backgroundDispatcher).catchError((Object _) {})),
+    );
   }
 
   // Startup maintenance, off the critical path:
@@ -107,30 +118,29 @@ Future<void> _start() async {
     await container.read(darkroomEngineProvider).reschedule();
   }());
 
-  _stage = 'launch payload';
-  final launchPayload = await notifications.launchPayload();
-  // The launch screen stays up until the 3D camera bodies have loaded, so
-  // the camera never comes up half drawn.
-  _stage = '3D cameras';
-  if (global.controls3d) await _warmBodies(container);
+  // The 3D camera bodies load alongside the camera opening (the launch
+  // curtain waits for both, app.dart). On the very first run they wait
+  // until the welcome tour is up (onboarding_screen.dart), so the app
+  // opens straight away.
+  if (global.controls3d && prefs.getBool(PrefKeys.onboarded) == true) {
+    unawaited(container.read(wholeArtProvider.future).then((_) {}, onError: (Object _) {}));
+  }
   // Store: listen for purchases and quietly restore an earlier Pro.
   unawaited(container.read(proStoreProvider).start());
   container.read(reviewPromptProvider).launched();
   _stage = 'first frame';
+  LaunchTimer.mark('app starts');
   runApp(UncontrolledProviderScope(container: container, child: const DarkroomApp()));
   AppShortcuts.start(container);
-  if (launchPayload != null) {
-    WidgetsBinding.instance.addPostFrameCallback((_) => route(launchPayload));
-  }
-}
-
-Future<void> _warmBodies(ProviderContainer container) async {
-  try {
-    // The 3D models and their studio: loaded once, kept for the session.
-    await container.read(wholeArtProvider.future).timeout(const Duration(seconds: 8));
-  } catch (_) {
-    // too slow: the camera comes up with the classic body until they land
-  }
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    LaunchTimer.mark('first frame');
+    // Opened from a notification: go where it points.
+    unawaited(
+      notifications.launchPayload().then((p) {
+        if (p != null) route(p);
+      }, onError: (Object _) {}),
+    );
+  });
 }
 
 /// Launch failed or hung: say where, with a report to copy.

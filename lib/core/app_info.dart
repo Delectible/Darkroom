@@ -11,7 +11,8 @@ class AppInfo {
   static const latest =
       'The lens dial now has FLIP engraved under it, so the selfie camera is easy to find (no more '
       'pulsing ring). In Darkroom 98 the Start menu now opens on the monitor\'s screen, curved with the '
-      'tube like everything else. The projector\'s keys stay put while the next reel threads.';
+      'tube like everything else. The projector\'s keys stay put while the next reel threads, and the '
+      'app opens faster, most of all on slower phones.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

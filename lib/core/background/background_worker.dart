@@ -32,9 +32,14 @@ class WorkmanagerDevelopScheduler implements DevelopWakeScheduler {
   /// inside a running worker).
   final String slot;
 
+  /// WorkManager's set-up, started after the app's first frame (main.dart)
+  /// to keep it off the launch; null in the worker's own isolate.
+  static Future<void>? ready;
+
   @override
   Future<void> wakeAt(DateTime? at) async {
     if (!Platform.isAndroid) return;
+    await ready;
     final name = '$_uniquePrefix$slot';
     if (at == null) {
       await Workmanager().cancelByUniqueName(name);

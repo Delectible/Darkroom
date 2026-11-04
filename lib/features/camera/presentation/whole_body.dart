@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../core/diagnostics/launch_timer.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -276,6 +277,7 @@ final _want3dProvider = NotifierProvider<_Want3d, bool>(_Want3d.new);
 final wholeArtProvider = FutureProvider<WholeArt?>((ref) async {
   if (!ref.watch(_want3dProvider)) return null;
   final art = await WholeArt.load(first: ref.read(appModeProvider));
+  LaunchTimer.once('3D camera in');
   if (art != null) {
     // After the first frames, so the opening stays smooth.
     unawaited(Future<void>.delayed(const Duration(milliseconds: 400), art.loadRest));

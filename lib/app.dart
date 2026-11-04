@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/diagnostics/debug_flags.dart';
 import 'core/diagnostics/fps_meter.dart';
+import 'core/diagnostics/launch_timer.dart';
 import 'core/diagnostics/lag_watch.dart';
 import 'core/device/upright.dart';
 import 'core/navigation.dart';
@@ -16,6 +17,8 @@ import 'core/theme/retro_theme.dart';
 import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/camera_screen.dart';
+import 'features/camera/presentation/whole_body.dart';
+import 'features/settings/application/settings_controllers.dart';
 import 'features/help/how_it_works_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
@@ -66,24 +69,39 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
   bool _ready() {
     if (ref.read(sharedPrefsProvider).getBool(PrefKeys.onboarded) != true) return true;
     if (appNavigatorKey.currentState?.canPop() ?? false) return true;
-    switch (ref.read(cameraSessionProvider).status) {
+    final status = ref.read(cameraSessionProvider).status;
+    switch (status) {
       case SessionStatus.permissionDenied || SessionStatus.noCamera || SessionStatus.error:
         return true;
       case SessionStatus.idle || SessionStatus.initializing:
         return false;
       case SessionStatus.ready:
-        break;
+        // The stream's first frames take a moment to arrive after it
+        // opens: counted from now, while the rest below still loads.
+        _liveSince ??= DateTime.now();
+        LaunchTimer.once('camera open');
     }
-    if (ref.read(shaderProgramsProvider).value == null) return false;
-    final spec = ref.read(activeSpecProvider);
-    if (spec.film != null &&
-        (ref.read(filmLutImageProvider(spec.id)).value == null ||
-            ref.read(grainImageProvider).value == null)) {
-      return false;
+    var ready = true;
+    if (ref.read(shaderProgramsProvider).value == null) {
+      ready = false;
+    } else {
+      final spec = ref.read(activeSpecProvider);
+      if (spec.film != null &&
+          (ref.read(filmLutImageProvider(spec.id)).value == null ||
+              ref.read(grainImageProvider).value == null)) {
+        ready = false;
+      } else {
+        LaunchTimer.once('film look loaded');
+      }
     }
-    // The stream's first frames take a moment to arrive after it opens.
-    final since = _liveSince ??= DateTime.now();
-    return DateTime.now().difference(since) > const Duration(milliseconds: 450);
+    // With Fancy graphics, the 3D camera in hand (loading since main.dart).
+    if (ref.read(globalSettingsProvider).controls3d) {
+      final art = ref.read(wholeArtProvider);
+      if (art.isLoading || !(art.value?.isReady(ref.read(appModeProvider)) ?? true)) ready = false;
+    }
+    if (!ready) return false;
+    LaunchTimer.once('all loaded');
+    return DateTime.now().difference(_liveSince!) > const Duration(milliseconds: 450);
   }
 
   @override
@@ -148,7 +166,17 @@ class _HomeState extends ConsumerState<_Home> {
   }
 
   /// Skipped the moves: once the camera is up, a quiet "New here?".
-  void _toured() {
+  Future<void> _toured() async {
+    // The 3D cameras have been loading since the tour opened: let them land
+    // first so the camera comes up whole (rarely a wait).
+    if (ref.read(globalSettingsProvider).controls3d) {
+      try {
+        await ref.read(wholeArtProvider.future).timeout(const Duration(seconds: 8));
+      } catch (_) {
+        // slow: the classic body shows until they land
+      }
+      if (!mounted) return;
+    }
     setState(() => _tour = false);
     final prefs = ref.read(sharedPrefsProvider);
     if (prefs.getBool(PrefKeys.tourSkipped) != true) return;

@@ -15,6 +15,7 @@ import '../../../../core/diagnostics/debug_flags.dart';
 import '../../../../core/diagnostics/develop_stats.dart';
 import '../../../../core/diagnostics/fps_meter.dart';
 import '../../../../core/diagnostics/lag_watch.dart';
+import '../../../../core/diagnostics/launch_timer.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
@@ -66,8 +67,9 @@ final _tools = <_Tool>[
     'Darkroom Development',
     'On: film takes ${CameraSpec.defaultDevelopTime.inMinutes} minutes to develop (instant prints under a minute). '
         'Off: film develops instantly, and anything in the darkroom is finished now.',
-    (_, ref) =>
-        ref.read(globalSettingsProvider.notifier).setDarkroomEnabled(!ref.read(globalSettingsProvider).darkroomEnabled),
+    (_, ref) => ref
+        .read(globalSettingsProvider.notifier)
+        .setDarkroomEnabled(!ref.read(globalSettingsProvider).darkroomEnabled),
     on: (ref) => ref.watch(globalSettingsProvider).darkroomEnabled,
   ),
   _Tool(
@@ -84,6 +86,13 @@ final _tools = <_Tool>[
     'Slow frames per activity, and whether the app (UI) or the graphics chip (GPU) was the hold-up. '
         'Copy it and send it to Claude.',
     (context, _) => _perfReport(context),
+  ),
+  _Tool(
+    PixelIcon.hourglass,
+    'Launch Timing',
+    'How long the last few launches took, step by step: storage, camera, film look, 3D cameras, '
+        'curtain up. Copy it and send it to Claude.',
+    (context, _) => _textReport(context, 'Launch Timing - Notepad', LaunchTimer.report),
   ),
   _Tool(
     PixelIcon.hourglass,
@@ -114,9 +123,11 @@ final _tools = <_Tool>[
     PixelIcon.rabbit,
     'Welcome Tour',
     'Plays the first-run tour now, exactly as a new user sees it.',
-    (context, _) => Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (context) => OnboardingScreen(onDone: () => Navigator.of(context).pop()))),
+    (context, _) => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => OnboardingScreen(onDone: () => Navigator.of(context).pop()),
+      ),
+    ),
   ),
   _Tool(
     PixelIcon.question,
@@ -176,13 +187,16 @@ final _tools = <_Tool>[
         'shows it in TestFlight.',
     (context, _) => ReviewPrompt.ask(context),
   ),
-  _Tool(PixelIcon.camera, 'Unlock All Skins', 'Every camera skin owned (or none again, game progress kept).', (
-    _,
-    ref,
-  ) async {
-    final n = ref.read(unlockedSkinsProvider.notifier);
-    ref.read(unlockedSkinsProvider).isEmpty ? await n.unlockAll() : await n.lockAll();
-  }, on: (ref) => ref.watch(unlockedSkinsProvider).isNotEmpty),
+  _Tool(
+    PixelIcon.camera,
+    'Unlock All Skins',
+    'Every camera skin owned (or none again, game progress kept).',
+    (_, ref) async {
+      final n = ref.read(unlockedSkinsProvider.notifier);
+      ref.read(unlockedSkinsProvider).isEmpty ? await n.unlockAll() : await n.lockAll();
+    },
+    on: (ref) => ref.watch(unlockedSkinsProvider).isNotEmpty,
+  ),
   _Tool(
     PixelIcon.computer,
     'System Info',
@@ -241,7 +255,11 @@ Future<void> _perfReport(BuildContext context) => showWin98Window<void>(
                   child: const Text('Copy'),
                 ),
                 const SizedBox(width: 6),
-                Win98Button(minWidth: 64, onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+                Win98Button(
+                  minWidth: 64,
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
               ],
             ),
           ],
@@ -249,6 +267,52 @@ Future<void> _perfReport(BuildContext context) => showWin98Window<void>(
       );
     },
   ),
+);
+
+/// A read-only text report with Copy (and OK).
+Future<void> _textReport(BuildContext context, String title, String Function() text) => showWin98Window<void>(
+  context,
+  title: title,
+  width: 340,
+  icon: const PixelIconView(PixelIcon.info),
+  builder: (context) {
+    final t = text();
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 320),
+            child: Win98Bevel(
+              style: BevelStyle.sunken,
+              color: W98.white,
+              padding: const EdgeInsets.all(6),
+              child: SingleChildScrollView(child: Text(t, style: W98.text.copyWith(fontSize: 10))),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Win98Button(
+                minWidth: 64,
+                onPressed: () => unawaited(Clipboard.setData(ClipboardData(text: t))),
+                child: const Text('Copy'),
+              ),
+              const SizedBox(width: 6),
+              Win98Button(
+                minWidth: 64,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  },
 );
 
 class _DevelopStatsView extends ConsumerStatefulWidget {
@@ -340,7 +404,11 @@ class _DevelopStatsViewState extends ConsumerState<_DevelopStatsView> {
                 child: const Text('Copy'),
               ),
               const SizedBox(width: 6),
-              Win98Button(minWidth: 64, onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+              Win98Button(
+                minWidth: 64,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
             ],
           ),
         ],
@@ -349,7 +417,8 @@ class _DevelopStatsViewState extends ConsumerState<_DevelopStatsView> {
   }
 }
 
-Future<void> _done(BuildContext context, String text) => showWin98MessageBox(context, title: 'Debug', message: text);
+Future<void> _done(BuildContext context, String text) =>
+    showWin98MessageBox(context, title: 'Debug', message: text);
 
 Future<void> _systemInfo(BuildContext context, WidgetRef ref) async {
   final battery = await Battery.level();
@@ -394,7 +463,12 @@ Future<void> showDebugMenu(BuildContext context) async {
     final typed = await _askPassword(context);
     if (typed == null || !context.mounted) return;
     if (!DebugGate.accepts(typed)) {
-      await showWin98MessageBox(context, title: 'Debug', message: 'Incorrect password.', icon: Win98MessageIcon.error);
+      await showWin98MessageBox(
+        context,
+        title: 'Debug',
+        message: 'Incorrect password.',
+        icon: Win98MessageIcon.error,
+      );
       return;
     }
     DebugGate.unlocked = true;
@@ -451,9 +525,17 @@ Future<String?> _askPassword(BuildContext context) {
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Win98Button(minWidth: 76, onPressed: () => Navigator.of(context).pop(ctrl.text), child: const Text('OK')),
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(ctrl.text),
+                child: const Text('OK'),
+              ),
               const SizedBox(width: 6),
-              Win98Button(minWidth: 76, onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
             ],
           ),
         ],
@@ -474,7 +556,18 @@ class _DebugMenu extends ConsumerStatefulWidget {
 const _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Film', ['Darkroom Pro', 'Refill Film & Battery']),
-  ('Performance', ['Performance Recorder', 'Performance Report', 'Frame Timing Graphs', 'FPS Counter', 'Lag Prompt', 'Slow Motion']),
+  (
+    'Performance',
+    [
+      'Launch Timing',
+      'Performance Recorder',
+      'Performance Report',
+      'Frame Timing Graphs',
+      'FPS Counter',
+      'Lag Prompt',
+      'Slow Motion',
+    ],
+  ),
   ('Cosmetics', ['Unlock All Skins']),
   ('Diagnostics', ['Camera Log', 'Crash Reports', 'System Info', 'Test Crash']),
   ('First Run & Store', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt']),
@@ -651,7 +744,9 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
             children: [
               Win98Button(
                 minWidth: 76,
-                onPressed: tool == null ? (_folder == null ? null : () => _toggle(_folder!)) : () => unawaited(_run()),
+                onPressed: tool == null
+                    ? (_folder == null ? null : () => _toggle(_folder!))
+                    : () => unawaited(_run()),
                 child: Text(
                   tool == null
                       ? (_folder != null && _open.contains(_folder) ? 'Collapse' : 'Expand')
@@ -661,7 +756,11 @@ class _DebugMenuState extends ConsumerState<_DebugMenu> {
                 ),
               ),
               const SizedBox(width: 6),
-              Win98Button(minWidth: 76, onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+              Win98Button(
+                minWidth: 76,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
             ],
           ),
         ],

@@ -1494,6 +1494,12 @@ for from 2026-10-28 (reminder set for 2026-10-29).
   on the old, paused player with its keys idle, then swaps).
 - [x] **57.89** → 2.0.6 · Epic 70's picker tag is now MOVIE · 24 FPS (frame rate like Super 8's; 70mm is in its name line).
 - [x] **57.90** → 2.0.6 · How it works back to six demos (two even rows): "Tap a print" dropped for "Turn the lens dial".
+- [x] **57.91** → 2.0.6 · Faster launch: the 3D cameras load alongside the camera
+  opening instead of before it; first run opens on the tour at once and loads
+  them behind it; WorkManager and the notification launch check after the
+  first frame; the stream's 450 ms settle overlaps the other loads; curtain
+  fade 650 → 400 ms (max 5 → 9 s, as 3D now waits inside it). Debug >
+  Launch Timing (`LaunchTimer`) to measure on the phones.
 - [x] **57.84** → 2.0.5 · Skip in the intro asks "Are you sure?" first.
 - [x] **57.85** → 2.0.5 · The "New here?" note has an X and goes after 8 s.
 

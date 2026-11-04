@@ -142,8 +142,17 @@ Read this first. It's the hand-off from the earlier development sessions
   `core/startup/launch_curtain.dart`): the launch screen's rabbit plus a
   line of chatter (`LaunchCurtain.lines`, never the same twice running,
   `PrefKeys.launchLine`), held until `_ready` (camera session open, look
-  shaders + LUT/grain loaded, 450 ms of stream; or the tour / a pushed
-  screen / no permission), min 1.1 s, max 5 s, then faded out. Android
+  shaders + LUT/grain loaded, the 3D camera in hand with Fancy graphics,
+  450 ms since the session opened (counted while the rest loads); or the
+  tour / a pushed screen / no permission), min 1.1 s, max 9 s, then faded
+  out (400 ms). Launch speed (2.0.6): nothing heavy runs before `runApp`;
+  the 3D bodies load alongside the camera opening (main.dart kicks
+  `wholeArtProvider`), on the first run only once the welcome tour is up
+  (`OnboardingScreen.initState`; `_toured` lets them land before the
+  camera shows); WorkManager starts after the first frame
+  (`WorkmanagerDevelopScheduler.ready`); the notification launch payload
+  is read after it. `LaunchTimer` (core/diagnostics) marks each step;
+  Debug > Launch Timing shows the last 5 launches (`PrefKeys.launchTimes`). Android
   12+'s splash fades into it (MainActivity `setOnExitAnimationListener`);
   the splash shows `drawable-*/splash_rabbit` (the same 96 dp rabbit on the
   288 dp splash canvas, `make_icons.py`), so nothing moves at the hand-over.
@@ -671,8 +680,8 @@ UI
   for the other camera (`_lastLook`) are of the face's widgets only
   (`WholeFace.overlayKey`). Only with Fancy graphics on (`_want3dProvider`:
   on at launch or switched on since; then kept): the camera in hand loads
-  (and warms its shaders) behind the launch screen (main.dart
-  `_warmBodies`, `WholeArt.load(first:)`), the other right after
+  (and warms its shaders) behind the launch curtain, alongside the camera
+  opening (main.dart, `WholeArt.load(first:)`), the other right after
   (`loadRest`). Until it's in (`WholeArt.isReady`), a toss doesn't move the
   body and a snackbar says "Putting in SD card…" / "Loading film…"
   (camera_screen `_otherReady`); shortcuts wait for it. Switching Fancy

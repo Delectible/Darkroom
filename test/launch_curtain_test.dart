@@ -68,7 +68,7 @@ void main() {
         home: LaunchCurtain(isReady: () => false, line: 0, child: const SizedBox()),
       ),
     );
-    await tester.pump(const Duration(seconds: 5));
+    await tester.pump(const Duration(seconds: 9));
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pump(const Duration(milliseconds: 700));
     await tester.pump();

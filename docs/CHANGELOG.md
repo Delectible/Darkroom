@@ -1492,6 +1492,7 @@ for from 2026-10-28 (reminder set for 2026-10-29).
 - [x] **57.88** → 2.0.6 · Projector: stepping to the next reel no longer hides
   the deck while it threads (`_threading`: the screen blanks, the deck stays
   on the old, paused player with its keys idle, then swaps).
+- [x] **57.89** → 2.0.6 · Epic 70's picker tag says its frame rate too: MOVIE · 70MM · 24 FPS.
 - [x] **57.84** → 2.0.5 · Skip in the intro asks "Are you sure?" first.
 - [x] **57.85** → 2.0.5 · The "New here?" note has an X and goes after 8 s.
 

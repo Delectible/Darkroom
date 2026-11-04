@@ -192,7 +192,7 @@ class CameraCatalog {
     videoPrefix: 'EPIC',
     videoMaxSeconds: 300,
     // Shoots the way it's held, like a video camera (portrait too).
-    pickerTag: 'MOVIE · 70MM',
+    pickerTag: 'MOVIE · 70MM · 24 FPS',
     boxColor: 0xFF101010,
     boxInk: 0xFFD8B25A,
     pro: true,

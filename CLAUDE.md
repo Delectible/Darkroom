@@ -1,829 +1,90 @@
-# Darkroom — notes for Claude
+# Darkroom: notes for Claude
 
-Read this first. It's the hand-off from the earlier development sessions
-(the app was called **RetroCam** until v1.2). Deeper technical docs:
-`docs/DEVELOPMENT.md`.
+A retro film + digital camera app (Flutter; was "RetroCam" until 1.2).
+This page is the rules. The details live in **`docs/NOTES.md`** (read the
+section for the area you're touching before changing it) and
+`docs/DEVELOPMENT.md` (setup, structure, shader contract).
 
-## The person and how we work
+## The owner and how we work
 
-- The owner tests on a **Pixel 9 Pro** (Android) and is starting to test on
-  an iPhone (sideloaded, no paid Apple developer account yet).
-- Usually works from a phone. Keep replies short and plain.
-- For big revisions, ask clarifying questions first, then implement.
-- He's often low on usage: keep changes focused, don't gold-plate.
-- **How we work (since 2026-10-15):** draft on the session's work branch
-  (it doesn't build). Commit there freely while brainstorming. Only when
-  the owner says "push" does it go to `main` (fast-forward the work branch
-  onto `main`), which builds and uploads to Play internal testing. Closed
-  testing (later: production) is promoted by hand when the owner calls a
-  build stable (`promote-closed.yml`).
-- After every push to `main`, wait for the run; once its `play` job has
-  uploaded, wait ~2 more minutes, then send the owner a push notification
-  (PushNotification) that the build is on Google Play: version, build
-  number, one-line what's new. If the build or the upload fails, notify
-  that instead.
-- Every user-visible change: bump `version` in `pubspec.yaml` (raise the
-  `+build` number too) and `AppInfo.version` to match (a test checks), set
-  `AppInfo.latest` in `lib/core/app_info.dart` to this build's change in
-  plain words (it's Play's "What's new"), and when a main idea lands add a
-  few-word bullet to the newest `AppInfo.revisions` entry (Help > About
-  shows them as bullets; keep them short).
-- **Commit messages:** plain messages only, no Claude session links and no
-  Co-Authored-By trailers (the owner's wish, 2026-10-16).
-- **"The checklist"** (when the owner says "add to the checklist") is the
-  artifact page **Darkroom Release Sweep**,
-  https://claude.ai/artifact/KrvhMZrV3RUNie7YHxYewQ (read it, edit, republish
-  to the same URL; ticks live in his browser, he pastes them back). Finished
-  items are taken off it, not ticked. Mirror new feature ideas in
-  `docs/CHANGELOG.md`. `docs/RELEASE.md` is the repo's own release log.
-- **Change log:** `docs/CHANGELOG.md` tracks every requested change by item
-  number. Mark items `[~]` when starting and `[x] → version · date · commit`
-  when they land; add new requests there. New stocks/cameras arrive on the
-  form in `docs/NEW_CAMERA_FORM.md`.
+- Tests on a **Pixel 9 Pro** and an **iPhone**, usually from his phone.
+  Keep replies short and plain. He's often low on usage: stay focused,
+  don't gold-plate, batch related tweaks, don't re-run the full test suite
+  more than needed.
+- Big revisions: ask clarifying questions first. Visual changes: if the
+  look is open, show 2–3 options as screenshots before building.
+- Draft on the session's work branch (doesn't build); commit there freely.
+  **Only when he says "push"**: fast-forward the work branch onto `main`
+  (`git fetch origin main && git merge-base --is-ancestor origin/main HEAD
+  && git push origin HEAD:main`). Never push half-done work to `main`.
+- After a push to `main`: wait for the run (send_later ~20 min); once its
+  `play` job has uploaded + ~2 min, PushNotification: version, build
+  number, one line of what's new. On failure, notify that instead.
+- Every user-visible change: bump `version` in `pubspec.yaml` (+build too)
+  and `AppInfo.version` to match (a test checks); set `AppInfo.latest`
+  (`lib/core/app_info.dart`, = Play's "What's new") to this build's change
+  in plain words; for a main idea add a few-word bullet to the newest
+  `AppInfo.revisions` entry. Changes before a push fold into the same
+  unpushed version.
+- **Commit messages:** plain, no session links, no Co-Authored-By.
+- **`docs/CHANGELOG.md`**: every request by item number (`[~]` started,
+  `[x] → version · …` landed); new feature ideas go there too.
+- **"The checklist"** = artifact **Darkroom Release Sweep**,
+  https://claude.ai/artifact/KrvhMZrV3RUNie7YHxYewQ (read, edit, republish
+  to the same URL; finished items are removed, not ticked; he pastes his
+  ticks back). New stocks/cameras arrive on `docs/NEW_CAMERA_FORM.md`.
+- Remind him every ~3 main builds if the iPhone App Store is behind.
 
-## Build & release pipeline
+## Stores (details: NOTES.md "Build & release pipeline")
 
-- Pushes to `main` (only when the owner asks) build; work branches don't.
-  Don't push half-done work to `main`.
-- Push to `main` → `.github/workflows/build-apk.yml` builds the APK/AAB (the
-  AAB goes to Play, never published) and an unsigned `Darkroom-N.ipa`, and
-  publishes under **Releases** (`build-N`) the .ipa plus, from version 2.0
-  on, the .apk (earlier versions have no limits, so no public APK). Workflow
-  artifacts live one day (public repo: anyone signed in can download them).
-  `prune-releases.yml` (by hand, input `up_to`) deletes old releases, their
-  files and all artifacts. The repo is public: never put anything in it
-  that unlocks Pro.
-- iOS build runs on a macOS runner. On a private repo it only runs if the
-  commit message contains `[ios]` or the workflow is started by hand (Mac
-  minutes cost 10x). The .ipa is unsigned; the owner signs and installs it with
-  Sideloadly + a free Apple ID (expires every 7 days).
-- iOS: deployment target 15.0 (patched into the generated Xcode project by
-  CI). Every plugin is a Swift Package, so there is **no Podfile**: adding
-  one makes Flutter run CocoaPods and the build dies with "sandbox is not in
-  sync with the Podfile.lock". CI ad-hoc signs the frameworks and app
-  before zipping the .ipa (Sideloadly's signer fails on never-signed
-  FFmpeg frameworks). On `main`, once the App Store Connect secrets exist
-  (APPSTORE_KEY_ID, APPSTORE_ISSUER_ID, APPSTORE_KEY = the .p8 text, Admin
-  role; APPLE_TEAM_ID), the same job archives unsigned (signing at archive
-  time wants a registered device) and the export signs for the App Store
-  (`-allowProvisioningUpdates` + the API key, cloud-managed cert; iPhone only) and uploads to
-  TestFlight; CFBundleVersion = run number. `ios/` holds only Info.plist,
-  AppDelegate.swift, the AppIcon set and the launch screen
-  (`Base.lproj/LaunchScreen.storyboard` + `LaunchImage`: the rabbit on
-  #0E0E12); CI generates the rest. Android's launch screen is ours too
-  (`res/values*/styles.xml`, `drawable*/launch_background.xml`, v31
-  splash attrs): dark, never white.
-  Developing never needs the app running: prints store an absolute
-  `ready_at`. Android re-arms notifications with WorkManager; iOS schedules
-  them ahead (`scheduleIosBatches`) and holds a ~30 s background task while
-  shots are still processing (`BackgroundTime`, channel `darkroom/background`
-  in AppDelegate.swift). No battery-optimisation prompts on either.
-- `android/` and `ios/` only contain the files we customised. CI runs
-  `flutter create --org com.dingo --project-name darkroom --platforms android .`
-  to fill in the rest (it never overwrites existing files, but it does
-  re-resolve dependencies past pubspec.lock, so CI restores the lock and
-  runs `flutter pub get --enforce-lockfile` after it, then fails the build if
-  the lock still differs: an unpinned
-  shared_preferences_android 2.5.0 once hung the app at launch). Don't delete
-  `AndroidManifest.xml` or `android/app/build.gradle.kts`.
-- `applicationId` / `namespace` = `com.dingo.darkroom` (the id registered on
-  Google Play; was `com.darkroom.darkroom` until 1.3.16); must match the
-  package of `MainActivity.kt` (ours, in the repo: gesture channel).
-- **Google Play** is the main way the owner installs now (internal testing
-  track). The `play` job in the workflow uploads every `main` build's .aab
-  (secret `PLAY_SERVICE_ACCOUNT_JSON`, repo variable `PLAY_RELEASE_STATUS`,
-  default `completed`). Play's "What's new" = version + **`AppInfo.latest`**
-  (`tool/play/whats_new.py`).
-  **External TestFlight** (approved 2026-10-24): the `testflight` job
-  (`tool/appstore/testflight_external.py`, App Store Connect API) waits for
-  Apple to process each main build, sets "What to Test" from
-  AppInfo.latest, adds it to every external group and submits beta review
-  when Apple wants it (up to an hour; the run finishes after it).
-  **App Store** (once the first version is approved): every main build is
-  on TestFlight; `appstore-release.yml` (run by hand or by Claude when the
-  owner says "release to iPhone"; input `build`, empty = newest) submits
-  it to App Review as a new version with "What's new" from AppInfo.latest
-  and auto-releases on approval (fastlane deliver, the App Store Connect
-  key secrets). It never cancels a submission already in review (input
-  `replace_pending`, off by default): on 2026-10-27 it did, pulling 1.8.3
-  out of the queue for 1.9.8. Check App Store Connect before running it.
-  Pushes to `main` only reach TestFlight (its own beta review), never the
-  App Store queue. **Remind the owner every ~3 main builds** that the iPhone
-  App Store is behind if it hasn't been released since.
-  **Closed testing** (for other testers) is the slow path: the
-  `promote-closed.yml` workflow (Actions tab, run by hand) promotes a build
-  already on internal testing to the closed track (`alpha`), which Play
-  reviews. Internal testing stays the instant path for the owner.
-  The store listing (title, descriptions, icon, feature graphic) lives in
-  `fastlane/metadata/android/en-AU/`, as a reference only: since 2026-10-30
-  the owner edits the listing himself in the Play Console (the same wording
-  on the App Store), so the Console is the real copy. `play-listing.yml`
-  (fastlane supply, same service account) runs only by hand and would
-  overwrite the Console: never run it unless he asks. Screenshots aren't in
-  the repo. Privacy policy for the listing: `docs/PRIVACY.md`.
-- Release builds are signed with the owner's **private upload key** (alias
-  `upload`), which CI decodes from the repo secrets `ANDROID_KEYSTORE_BASE64`
-  and `ANDROID_KEYSTORE_PASSWORD`. Never commit it. Without the secrets
-  (local builds) they fall back to the public test key
-  (`android/app/darkroom-test.jks`), which won't install over a
-  private-key build. versionCode = CI run number. CI also builds
-  `Darkroom-N.aab` for the Play Console internal testing track (Play App
-  Signing; once installed from Play, the phone only takes updates from Play).
-- Manifest has `android:allowBackup="false"` (a reinstall starts clean;
-  Auto Backup's 25 MB cap only restored part of the prints).
-- Manifest already has `tools:replace="android:maxSdkVersion"` on
-  `WRITE_EXTERNAL_STORAGE` (merger conflict with camera_android_camerax).
-- Checks: `flutter analyze` and `flutter test` (CI runs both and won't
-  publish a release unless they pass). If the session has no Flutter SDK,
-  just push and read the GitHub Actions result. `pubspec.lock` is committed.
-  Start-up runs under a 25 s watchdog (main.dart `_StartupFailed`): a hang
-  or throw shows the step and a copyable report instead of the splash.
-  The first frame is `LaunchCurtain` (app.dart builder,
-  `core/startup/launch_curtain.dart`): the launch screen's rabbit plus a
-  line of chatter (`LaunchCurtain.lines`, never the same twice running,
-  `PrefKeys.launchLine`), held until `_ready` (camera session open, look
-  shaders + LUT/grain loaded, the 3D camera in hand with Fancy graphics,
-  450 ms since the session opened (counted while the rest loads); or the
-  tour / a pushed screen / no permission), min 1.1 s, max 9 s, then faded
-  out (400 ms). Launch speed (2.0.6): nothing heavy runs before `runApp`;
-  the 3D bodies load alongside the camera opening (main.dart kicks
-  `wholeArtProvider`), on the first run only once the welcome tour is up
-  (`OnboardingScreen.initState`; `_toured` lets them land before the
-  camera shows); WorkManager starts after the first frame
-  (`WorkmanagerDevelopScheduler.ready`); the notification launch payload
-  is read after it. `LaunchTimer` (core/diagnostics) marks each step;
-  Debug > Launch Timing shows the last 5 launches (`PrefKeys.launchTimes`). Android
-  12+'s splash fades into it (MainActivity `setOnExitAnimationListener`);
-  the splash shows `drawable-*/splash_rabbit` (the same 96 dp rabbit on the
-  288 dp splash canvas, `make_icons.py`), so nothing moves at the hand-over.
-- UI checks without a phone: `test/*_screens_test.dart` pump screens at
-  Pixel 9 Pro size (fail on overflow); `SHOTS=dir FLUTTER_ROOT=<sdk>` also
-  saves PNGs with real fonts. `camcorder_osd_ffmpeg_test` runs the camcorder
-  filtergraph through a desktop ffmpeg when one is installed.
+- `main` → CI builds Android + iOS, uploads to **Play internal testing**
+  and **TestFlight** (external groups). Closed testing: `promote-closed.yml`
+  by hand when he calls a build stable.
+- **App Store**: `appstore-release.yml` only when he says "release to
+  iPhone", and only after checking App Store Connect: never cancel a
+  submission in review (`replace_pending` stays off).
+- **Never run `play-listing.yml`** unless he asks: he edits the listing in
+  the Play Console (the real copy; same wording on the App Store).
 
-## Stack
+## Never
 
-Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
-`ffmpeg_kit_flutter_new_min`, `sensors_plus`, `gal`, `workmanager`,
-`flutter_local_notifications`, sqflite (schema v2, migrates itself).
+- Put anything in the (public) repo that unlocks Pro; write the Debug
+  password (`DEBUG_PASSWORD` secret) anywhere; commit the upload key.
+- Show real brand names (Kodak, Ilford, Polaroid, Windows, Minesweeper…)
+  in the app or listings. Stocks are Vivid 100, Portrait 400, Classic 400,
+  Instant 600, Super 8, etc.; ids (`ektar100`…) are code-only.
+- Add a Podfile (every iOS plugin is a Swift Package), delete
+  `AndroidManifest.xml` / `android/app/build.gradle.kts`, or change
+  `applicationId` `com.dingo.darkroom`.
+- Use GPL FFmpeg filters (`boxblur`, `eq`, `drawtext`…: the "min" build is
+  LGPL), mismatch shader uniforms with the `.frag` files, or add a GLES
+  y-flip to shaders (`look_and_shader_contract_test` checks all three).
+- Switch on a camera id outside `camera_catalog.dart` (`catalog_contract_test`).
+- Put an opacity/compositing layer inside an `OnTop` on the 3D face.
+- Use `Colors.white/black` in Win98 UI (use `W98.*`), or `HapticFeedback`
+  (use `Haptics`).
 
-## Things that bite
+## Checks
 
-- **FFmpegKit "min" is the LGPL build.** GPL filters (`boxblur`, `eq`,
-  `hqdn3d`, `drawtext`, …) don't exist and make the whole filtergraph fail
-  with "Error initializing complex filters". `test/look_and_shader_contract_test.dart`
-  has a deny-list; keep it passing (`avgblur` instead of `boxblur`, etc.).
-- **Shader uniform layouts** in Dart must match the `.frag` files exactly
-  (float order/count, sampler count). The same test checks it.
-  `shaders/film.frag` takes 3 samplers: camera, LUT, grain.
-- **No GLES y-flip in the shaders.** Since Flutter 3.45 the engine already
-  hands `ImageFilter.shader` its input upright on GLES; the old
-  `#ifdef IMPELLER_TARGET_OPENGLES uv.y = 1 - uv.y` (still in the dart:ui
-  docs) flipped the viewfinder on GLES phones (Galaxy S10+; Pixels use
-  Vulkan). The contract test forbids it.
-- **Landscape screens (1.5.1)**: routes with `settings:
-  UprightApp.landscape` (corkboard, print viewer, projector with the deck
-  beside the screen, Darkroom 98 and its viewer) really rotate the app
-  once they've slid in and the phone is sideways (`UprightApp` in
-  `core/device/upright.dart` calls `setPreferredOrientations` with the
-  accelerometer's orientation, so it works with auto-rotate off); back to
-  portrait as they slide out, so they slide in/out in portrait, following
-  the swipe. The camera (home) is wrapped in `PortraitLock` so it keeps
-  its portrait layout underneath. On push, heroes make the route offstage
-  for a frame and its animation reads "completed": ignore that (test
-  `upright_app_test`). No pop: each landscape page is wrapped in
-  `UprightPage`, which lays it out turned (RotatedBox) while the app is
-  still portrait and the phone is sideways, so it slides in already
-  landscape; MainActivity sets ROTATION_ANIMATION_CROSSFADE so the real
-  rotation is invisible (JUMPCUT and SEAMLESS both showed the last portrait
-  frame turned for a frame or two: a flash as the page landed). Camera Shop
-  and How it works are landscape pages too. Turning the phone while such a page is up fades
-  it out (`UprightApp.veil`; it keeps its layout via `UprightApp.held`),
-  turns the app, and fades it back in once the size settles
-  (`didChangeMetrics`). Only with auto-rotate on (`AutoRotate`, channel
-  `darkroom/rotation`, Android setting + changes); iOS (null) asks for
-  portrait + landscape and lets the system turn within its lock. iOS
-  Info.plist allows landscape. Turned, the system bars hide
-  (immersiveSticky; on Android always, `UprightApp.systemUi`). Win98: the window
-  sits on a strip of desktop; the monitor bezel (`ExplorerMonitor.bezelOf`) takes the system
-  insets (status bar, gesture strip; landscape 24 dp sides for the cutout
-  and the rounded corners, 4 dp top/bottom; the image viewer opens inside the same monitor,
-  zooming in on its screen), `Win98Scale.factorFor` keeps 420 dp of height (short phones
-  scale down); the big Transfer bar is dropped. `explorer_screens_test`
-  runs portrait + four landscape phones.
-- The app is **portrait** everywhere else. Landscape is detected with the
-  accelerometer (`lib/core/device/physical_orientation.dart`); icons rotate in
-  place (`Upright` / `UprightBox`) and photos are saved upright. UI reads
-  `uprightOrientationProvider` (always portrait while Android's auto-rotate
-  is off, so nothing turns); only capture and the Super 8 framing read
-  `physicalOrientationProvider`. The print viewer puts its buttons in a
-  column on the right in landscape.
+- `flutter analyze lib test` and `flutter test` (CI won't publish unless
+  both pass). In the cloud the SDK may be at `/tmp/flutter/bin`; run tests
+  with `FLUTTER_ROOT` set. No SDK: push to the work branch and say so.
+- `dart format -l 110 <the files you changed>` only, never whole folders.
+- UI without a phone: `test/*_screens_test.dart` at Pixel 9 Pro size,
+  `SHOTS=dir` saves PNGs. Tests pump (How it works never settles).
+  3D bodies: `tool/live3d/preview.dart` (Linux, Xvfb; the digital model
+  may not draw there). Real-phone numbers: ask him for Debug > Launch
+  Timing / Performance Report / Crash Reports (Copy buttons).
 
-## Film engine (`lib/core/processing/film/`)
+## Where things are (read the NOTES.md section before touching it)
 
-Each stock is a film model baked into a 33³ 3D LUT (log shaper, per-channel
-curves, hue tweaks, split toning). The same LUT drives the live GPU preview
-(`shaders/film.frag`), the CPU renderer for stills, and FFmpeg `lut3d` (.cube)
-for video. Plus a tileable grain texture, halation and exposure drift.
-
-- Stock ids: `ektar100`, `portra400`, `hp5plus400`, `polaroid600`, `super8`
-  (ids name the emulsion each look is modelled on; code only). On screen
-  they're **Vivid 100, Portrait 400, Classic 400, Instant 600, Super 8**:
-  never show real brand names (Kodak, Ilford, Polaroid, Windows,
-  Minesweeper...) in the app or the store listing (1.4.3 trademark pass).
-- Film stills capture at the sensor's full resolution (`CaptureQuality.high`
-  = `ResolutionPreset.max`; CameraX keeps the preview preview-sized),
-  output capped at 8192 (35mm) / 3072 (instant); ~4x the processing of the
-  old 1080p stream (runs in the isolate while the print develops).
-- Grain (`grain_field.dart`) is a Boolean model: thousands of tiny
-  overlapping grains + sparse clumps, crisp (not blurred noise), dye layers
-  mostly shared. Drawn at >= 1 px; finer grain is drawn fainter
-  (`FilmSpatial.grainTexel`), so preview and small exports read like the
-  photo seen at that size.
-- Grain strength scales amount and size: weak 0.4x / 1.35x finer, normal,
-  strong 2.4x / 0.55x (coarser). Set **per film stock, only in the settings
-  menu** (each stock folds up to its name; the arrow opens it). When not
-  "normal", the carousel shows a small tag. Digital cameras
-  have no grain setting.
-- Ektar 100 (clean, punchy), Portra 400 (the obviously-film stock: soft,
-  green-teal shadows, cream highlights, visible grain) and HP5 (neutral,
-  deep blacks, heavy grain strongest in the highlights via
-  `FilmProfile.grainHighlights`, uniform `uGrainHi`) are tuned against
-  the owner's reference scans; `grain_calibration_test` pins their Normal grain
-  to the scans (Ektar ~0.0076, Portra ~0.034 in the scans but ~0.02 since
-  1.9.5 at the owner's call, HP5 ~0.025 mid / ~0.055 bright).
-- Developing process (stills only, `FilmProcess` in `film_process.dart`,
-  one per stock on `FilmProfile.process`): the camera meters the frame
-  itself (centre-weighted log average vs `meterKey`, weight `meter`), plus
-  the frame's drift and the roll's `Development` (stock + 5am day:
-  contrast, density, lab tint; `Development.rollSeedFor`). The scan fixes
-  `scanFix` of the error; the curve sees the rest, and the full error
-  drives fog / tint / grain (under) and pastel / warmth / finer grain
-  (over). Grain = crystal part (noise in the shaper's log exposure, before
-  the LUT) + dye part (after), coarser in the shadows, per-layer cloud
-  sizes; `grainGain` calibrates stills to the scans (the viewfinder keeps
-  `grainAmount`). Halation = core + wide skirt (`halationSpread`), `bloom`.
-  Portrait 400 (1.9.2) is *made of grains* (`GrainFormation`,
-  `grain_formation.dart`): crystals develop into soft round dye clouds and
-  the scan inverts the density, formed in strips at the film's resolution
-  (`frameHeight` = short side, Weak/Strong scale it and the crystal count)
-  and scaled up; detail stops at the grain. It replaces the texture grain
-  for that stock (calibration test still pins it); the app throttles it
-  (`throttle: 0.25`; half the cores develop at once, at most 4,
-  `CaptureProcessor.maxWorkers`; the shot due out soonest goes first;
-  Debug > Development Stats: `DevelopStats`, all time + since reset;
-  over 20% late after 10 shots = a one-time lab note, `slowPhoneNote`). Instant 600 too (1800 px, smooth); while an instant
-  print is still processing the darkroom shows it developing on the raw
-  photo (`_instantPicture`). Since 1.9.5 every film is: Ektar 4200 px /
-  165 crystals (fine, ~0.0078), Velvia 4600 / 330 (finest), Gold 2800 / 36 (scans ~0.020 bright),
-  Night 800T 2400 / 12 (scans ~0.025 bright), Single-Use 2200 / 10, HP5 mono 2600 / 11 with
-  `speed: 3` (grain heaviest in the highlights), Epic 70 video plates 3200 / 24.
-  Film speed (1.9.5): `sceneEvOf` reads the scene's EV from the phone's
-  EXIF; `FilmProcess.iso` + `darkLimit` (the camera's widest aperture at
-  its slowest shutter) give `underFor` stops under (no flash); formed grain
-  is exposed by the full error and the scan pulls it back (`negGain`).
-  Muddy darks (`FilmProfile.shadowMud`): shadows lose colour toward the
-  stock's green/teal `shadowTint`, light tones stay clean. Tungsten film
-  (`FilmProcess.daylight`, Night 800T): cool/cyan gains in bright scenes
-  (EV >= 12), none under lamps (EV <= 8).
-  Single-Use 27 has a plastic lens (`FilmProfile.lens`, `PlasticLens`:
-  barrel, colour fringes, soft corners, highlight roll-off; stills only).
-  Formation blurs coarse clouds with 3 boxes, fine ones (sigma < 1.6)
-  with the Gaussian (boxes print single grains as squares).
-  `FilmRenderer(nominal: true)` = none of it (tests); `EV=` in
-  film_preview forces an exposure.
-- Defects (`film_defects.dart`): developed stills only (never the
-  viewfinder), rolled per frame from the shot's seed: a few dust specks
-  (white on negative, dark on instant), sometimes a hair, a faint scratch
-  along the film's long side, rarely a warm light leak from a long edge.
-  `FilmProfile.defects` sets how often (Portra/HP5/Polaroid 1, Ektar 0.6,
-  Super 8 0). Instant film (`negative: false`) gets chemistry flaws instead:
-  pinprick sparkles, a little dark dust, milky streaks up from the rollers,
-  a ragged undeveloped band along an edge, a fogged corner.
-- Polaroid 600 is tuned against the owner's scans: cream highlights capped well
-  below white, navy-teal shadows, very muted colour. The frame is off-white
-  (`InstantFrame.paper`) with an embossed pebble texture (`PaperTexture`,
-  a seamless tile drawn by `InstantPrint` on screen and baked into exports). Look
-  iteration: `dart run tool/film_preview.dart out.jpg photos...` (env STOCKS,
-  GRAIN, RES, CROP=1 for 1:1 crops).
-
-## Adding a stock / camera
-
-Pro-only stocks / cameras (1.9) set `pro: true` on their `CameraSpec`: the
-picker tags them PRO, free users can pick them and see the look, and the
-shutter shows the Pro sheet (`Allowance.check` -> `Blocked.proOnly`). Film
-video without a gate (`FilmProfile.gate == 0`, Epic 70) gets a 24 fps cinema
-`VideoProfile` instead of Super 8's, and shoots the way it's held
-(portrait too; only Super 8 is `landscapeOnly`).
-Epic 70 is a clean cinema print: 2.20 (default) / 1.43 frames, one look for both, rare single-frame
-specks (`_renderPrintDirt`, not Super 8's dirt), no weave, and reel-change
-cue marks (`_cuePng`) 8 s and 1 s before the end of takes >= 12 s
-(`cinema_ffmpeg_test`, `SRC=photo SHOTS=dir` to look).
-
-Everything a body needs lives on its `CameraSpec` in `camera_catalog.dart`:
-look (`FilmProfile` in `film_profile.dart` for film, `LookSpec` for digital),
-artwork, aspects, `developTime`, `printStyle` (print / instant), `roll`
-(file prefix, frames, counter), `zoom` (digital only), `pickerTag`. No other
-file should switch on a camera id. `test/catalog_contract_test.dart` fails if
-an entry is incomplete. The owner sends requests on `docs/NEW_CAMERA_FORM.md`.
-
-## Free and Pro (1.7)
-
-- Free: one roll a day (`Allowance`, `core/monetization/allowance.dart`):
-  any stock, fixed once its first frame is shot (24 frames 35mm, the
-  instant pack, 60 s of Super 8), plus one battery charge shared by the
-  digital bodies (10 units: a photo = 1, video 3 s = 1). Refills at 5am
-  local (`Allowance.dayOf`). Kept in prefs (`PrefKeys.allowance`).
-  The first film shot of the day asks first (`Blocked.unloaded` ->
-  `showLoadRollSheet`: box art, shots/minutes, Pick another film / Load
-  it); the carousel tags the loaded stock LOADED: n SHOTS LEFT (green;
-  Super 8: SEC). An unfinished
-  roll stays in overnight (`Allowance.carried`): the first film shot of
-  the day asks Keep shooting / Rewind & swap (`showCarriedRollSheet`;
-  rewinding loses the rest); finishing it brings that day's fresh roll.
-  `pressShutter` checks it (`limitHitProvider` -> `showLimitSheet`), the
-  capture controller consumes it and caps clip length. Counters, memo card
-  and LCD show the free numbers.
-- Pro (`proProvider`, `PrefKeys.pro`): one-time non-consumable
-  `darkroom_pro` via `in_app_purchase` (`ProStore`: listens from launch,
-  quietly restores). Pro ignores the allowance. `showProSheet` from
-  Settings > Darkroom Pro and the limit sheet; kept understated.
-- Debug (Win98 Help > Debug...) asks for a password once per run. It is
-  the repo secret `DEBUG_PASSWORD`; CI passes only a salted SHA-256 of it
-  (`--dart-define=DEBUG_KEY`, `DebugGate.hashOf`); never write it in the
-  repo or the notes.
-  No secret = Debug stays shut. It has Darkroom Pro on/off, Refill Film & Battery, and Darkroom
-  Development (the 5-minute timer; no longer in Settings), Unlock All
-  Skins (the shop itself is only in Settings).
-- Fancy graphics fades the camera out and back in (`GraphicsVeil`).
-
-## Product rules agreed with the owner
-
-Film Mode
-- Shots develop in the **darkroom** (~5 min), then get pinned to the
-  **corkboard**. Notifications are quiet (channel `darkroom_quiet`, no vibration).
-- Photos are deliberately "physical": **nothing reaches the phone gallery until
-  the user taps Save on a print, or Save all.** Album: "Darkroom Film".
-  Copies deleted from the phone's photos are noticed (`GalleryCheck`,
-  channel `darkroom/gallery`: the album's file names; Android lists the
-  app's own MediaStore entries with no permission, iOS needs full/limited
-  library access, asked once with the reason, `PrefKeys.galleryAsked`).
-  The board marks such prints unsaved (`markUnsaved`) and offers "Save
-  again" (7 s snackbar with a close X, worded "deleted, or moved to the cloud by a backup app": the phone can't tell those apart; closed or swiped away, those prints
-  are never mentioned again: `PrefKeys.galleryDismissed`); Win98 offers to copy missing C: files back (File > Copy to
-  Photos; No is remembered the same way). Matching is by the saved name (`galleryNameFor`, numbered
-  duplicates allowed).
-- **Super 8** develops like the prints. Preview is a spool of film on a reel;
-  playback is a projector (`projector_screen.dart`) in a dark wood-panelled
-  room (`ProjectorRoom`, art by `tool/room/make_room.py`: tiled wall,
-  walnut hi-fi console with a lit lamp and a plant; the screen is always
-  the biggest the room and the reel's shape allow, and the console slides
-  down under it, partly or all off the bottom, when it would otherwise
-  shrink the picture (never higher than the floor), its light and a faint beam warm the wall and
-  flicker with the lamp; `projector_room_test`), and a
-  `ProjectorDeck` with the reel and a masking-tape label (tap: rename reel
-  and file, `renameReel`), an amber dial + needle to seek, a drum counter
-  for time left (no feet counter), and piano keys (start, prev, rew,
-  play/pause, ffwd, next; each clicks: `Sfx.keyDown` / `keyUp`). FF/REW run **while held** (stepped seeks that
-  spin up: smear, rolling frame line, sound off; resume playing on release
-  if it was playing) and stop at the ends; START is one press. Seeks are
-  coalesced (`_seek`). A reel that has ended re-threads a fresh player on
-  PLAY (`_ended`; Android's player sticks), plus a one-shot stall watchdog.
-  Prev/next blank only the screen while the next reel threads; the deck
-  stays (on the old, paused player, keys idle: `_threading`).
-  No swiping or tapping on the screen; only the keys. No REC badge in the Super 8 viewfinder. Always landscape
-  (`CameraSpec.landscapeOnly`: held upright it records a landscape slice,
-  `CropMath` `acrossShortSide`). Reels are scanned a touch wide (`CineStrip`,
-  `core/processing/cine_strip.dart`; 1.9.4, was the full gate): rounded
-  frame corners, just the edge of the sprocket hole (glowing rim) on the
-  viewer's left, thin frame lines. Grain is formed (1.9.4,
-  `film/grain_plates.dart`): 16 plates of grain from the stills' model
-  (`GrainFormation(frameHeight: 700)`), one per frame at a random offset,
-  mixed by tone with `lut2`; the picture softens to the grain's size. The viewfinder shader draws the same strip (uniforms
-  `uCanvas`, `uTurns`: it rotates with the phone so the hole stays on the
-  viewer's left; `_StripTurn` swings it round when the phone turns, in the shader via
-  `uSpin` so the hole turns with the strip); FFmpeg composites it from `gate.png`. Faded look tuned to
-  the owner's scans, strong flicker, dust (dark + light), hairs, long scratches
-  and the odd warm flare (`_renderDustFrames`).
-- Corkboard pins must sit **on** the photo, not in the cork above it.
-  Pins are renders of a traditional push pin, one per colour
-  (`assets/corkboard/pin_N.webp`, `tool/render/blender/pin.py`, `PinImage`).
-- The corkboard slides in from the left in a wooden frame
-  (`CorkboardScreen.slideIn`, `_WoodFrame`): slow, no overshoot, woody
-  swoosh, soft thud as it lands (`Sfx.corkThud`). No bounce or stretch when
-  scrolling past the ends; content scrolls to the frame, under the system
-  bars. Film mode: a clear swipe right on the camera opens it (triggered,
-  not dragged), a swipe left on the board closes it (held sideways, also
-  pulling down past the top: `_pullToClose`). Digital mode: a swipe
-  left opens the Win98 explorer, which slides in from the right on a beige
-  monitor (`ExplorerScreen.slideIn`, `ExplorerMonitor`) and slides back
-  out however it's closed; a clear swipe right closes it (`_SwipeToClose`; held sideways, the reverse
-  of the opening swipe, up/down, on parts that don't scroll). The body never moves the way with no camera.
-- The cork wall scrolls with the prints (shader tiles keyed to the scroll
-  offset): granulated cork after the owner's sample, with wear: pin holes,
-  coffee rings, water marks, faded patches. Easter eggs: tap a
-  pin -> "Would you like to discard this image?" -> pin pops, print falls
-  (same as Throw away); tap a print's folded corner to see the back (lab
-  stamp; instant prints show their black backing). Shake the phone on the
-  board (`core/device/shake.dart`, 3 jolts) to clear it: asks, then every
-  unsaved print unpins and falls, the board judders, the rest re-pin; a
-  paper note in the corner says "shake to clear". The prints on screen
-  drop once, together; the rest just go; all are deleted in one batch.
-  The board never jumps: the drawn prints (`_shown`) change only through
-  `_reflow`, which fades the grid out, swaps in the new order and fades it
-  back (the whole board, cork too, after a shake or when near the end; it
-  jumps to the top if the old spot is now past the end). While the phone
-  is shaken the orientation holds (`PhysicalOrientationNotifier` ignores
-  readings until |g| has been calm for 0.7 s).
-- Super 8 reels on the board: a photoreal spool (`assets/corkboard/reel.webp`,
-  rendered by `tool/render/blender/reel.py`) resting on two pins under its
-  rim, with an instant photo of the first frame (file name in Caveat)
-  taped on its front (`PinnedReel`, `_ReelCard`).
-- Darkroom strip: prints go DEV -> STOP -> FIX -> WASH trays under the
-  safelight (image comes up in DEV); reels turn in a developing tank; instant
-  prints develop in the open. Tap one for a close-up of it developing
-  (`showDarkroomCloseUp`). The print viewer is see-through: the board stays
-  behind it, dimmed. A tapped print zooms up from its spot on the board
-  and back (`originOf`, `_FlyFrom`; the pager stops clipping meanwhile).
-- Video audio: Super 8 = sound-stripe chain, camcorder = tape chain
-  (`VideoProfile.super8Audio` / `camcorderAudio`).
-- **Polaroid 600** (`printStyle: instant`): square only, 8-shot packs,
-  develops in 40 s (watch it fade in on the corkboard's darkroom strip).
-  Notes are typed in the print viewer (Write / tap the border), drawn in the
-  bundled Caveat font, and baked into saved/shared files with the border
-  (`core/processing/instant_frame.dart`). Note is stored in `note` (DB v3).
-
-Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
-- Shots go to a virtual **SD card** in a Windows 98-style explorer.
-- Files on the SD card are **locked** until moved to C: (prompt with
-  Move / Move All). Moving removes them from the SD card and copies them to
-  the gallery (album "Darkroom"); they stay viewable under C:.
-- Zoom: W|T rocker on every digital body (none in film), 100x40; slide
-  across to switch W/T (`_ClaimingPan` wins the touch on contact, so it
-  never tosses the body). Held = fixed-rate
-  motor zoom up to the body's `ZoomSpec.max` (floppy/CCD 3x, flip phone 4x,
-  camcorder 10x, capped by the phone). No pinch. A quiet motor whir (`Sfx.zoomMotor`,
-  looped) runs while the zoom moves. Camcorder shows a sliding
-  W-T bar on its OSD, stills cameras a "2.4X" readout.
-- Camcorder (`storage: DigitalStorage.floppy`) clips appear on **3½ Floppy
-  (A:)**, not the SD card; copying them to C: is a multi-disk copy ("insert
-  disk 2 of N", N = size / 1.44MB; after 3 swaps it offers to do the rest).
-  With the OSD on, the tape OSD is burned into the video: blinking REC, SP +
-  battery, the clock, and the zoom bar exactly as it moved
-  (`CamcorderOsd` in `video_plan.dart`; the take's zoom track rides on the
-  VideoJob).
-  Look tuned to the owner's tapes (1.6.11): washed, soft, bright, edge halos
-  (wide luma unsharp / the shader's 4-px halo). Tape dropouts and the odd
-  torn line come at random: video overlays a few streak PNGs on random
-  frames (`TapeDropouts`, enable windows from an exponential schedule,
-  seeded per clip); the shader and stills roll per field / per shot.
-  `LookSpec.tracking` = how often.
-- Win98 colours come from the current `Win98Scheme` (`W98.scheme`; `W98.*`
-  are getters, so they can't go in `const` expressions). Tools > Options >
-  Themes picks one (`win98ThemeProvider`, `PrefKeys.win98Theme`; the
-  explorer applies the saved one in initState); `W98.apply` restyles the
-  whole tree at once. Use `W98.window` / `W98.windowInk` for list and field
-  backgrounds/text, `W98.navy` / `W98.selectInk` for selection, never
-  `Colors.white` / `Colors.black`. `win98_themes_test` renders every scheme.
-  Tools > Options > Monitor picks the monitor's plastic (`MonitorFinish` in
-  win98_widgets.dart: Beige, Platinum, Graphite, Ocean, Tangerine;
-  `win98MonitorProvider`, `PrefKeys.win98Monitor`); `ExplorerMonitor` wraps
-  every Darkroom 98 screen (explorer, viewer, shut down, blue screen), so
-  the bezel never changes between them (`win98_monitor_test`).
-  The monitor's settings (`Win98Display`, `win98_display.dart`, pref
-  `ui.win98.display`, live in the static `Win98Display.current` so dialogs
-  and `Win98Scale` read it): Tube (CRT) / Flat panel, resolution (640 /
-  800 / 1024 = `Win98Scale` factor), colour (warm, cool, green, amber),
-  brightness/contrast (knobs on the bezel, `win98_monitor.dart`, eager
-  gestures so they never swipe the explorer away; OSD bar), Large fonts
-  (TextScaler 1.15 in `Win98Scale`). `Win98Glass` applies the colour
-  matrix + scan lines to the screen and to every menu/window/message box
-  (wrap new dialog panels in it). CRT degauss button (`Sfx.w98Degauss`).
-  The CRT's picture really bulges (`CrtWarp`, `shaders/crt_bulge.frag`
-  through ImageFilter.shader, `CrtWarp.amount` 0.05: the centre magnified, the
-  edges fixed, so the picture keeps its outline; hits mapped through
-  `CrtWarp.sourceOf`; the picture sits in the tube with an even black rim,
-  `ExplorerMonitor.tubeRim`, under the glass (`CrtGlassPainter`, radius 26 =
-  the opening's); the portrait chin is `ExplorerMonitor.chin` / gesture strip
-  + 16, its parts `chinInset` in); Impeller only. A shader filter under a moving
-  transition draws in the wrong place, so while the route slides `CrtWarp` paints
-  a still of the flat screen through the same shader (`_StillBulge`, a paint
-  shader follows its canvas) and the live filter takes over on landing.
-  The Start menu is drawn in the explorer's own Stack (`StartMenuPanel`,
-  `_startPick`), so it bulges with the screen; other menus and message
-  boxes are still routes over the monitor.
-  Screen savers (`win98_savers.dart`: 3D Pipes, Starfield, 3D Text, drawn
-  live): `Win98SaverWatch` round the explorer pushes one after the wait
-  (`Win98Idle`: a global pointer route; the media player pokes it while
-  playing); tested in `win98_savers_test`, settings in
-  `explorer_screens_test` (640 + large fonts + CRT, 1024). Opening a
-  file zooms its window out from where it was touched (`_lastTap`,
-  `Win98ZoomTransition.origin`).
-  The window sits on a strip of desktop (6 dp portrait, 4-5 landscape).
-- Win98 screens and dialogs render through `Win98Scale` (1.3x, uniform), in
-  the pixel font family `W98` (DotGothic16; it lacks □ ▲ ▶ ✓, so use
-  `Win98Glyph` for those). The
-  viewer has no swipe: ◀ ▶, a zoom trackbar + Reset Zoom (pinch still
-  works); clips play in `Win98MediaPlayer` (|◀ ◀◀ ▶/❚❚ ■ ▶▶ ▶|, hold ◀◀/▶▶ to
-  scan with VHS noise bars). The status bar shows the camera from EXIF
-  (photos get Make/Model on export).
-- Win98 sounds (`Sfx.w98*`, made by `tool/sfx/make_sfx.py`, all original,
-  never Microsoft's): click on Win98Button / menu / Start items, error bong
-  / warning ding from `showWin98MessageBox`, exit chime when the explorer
-  closes, login chime when it opens. All sounds are kept quiet: levels are
-  baked into the .wav files (`LEVELS` in make_sfx.py). Settings: Sound
-  effects slider (`Sfx.level`, player volume = level², half by default)
-  and Haptics (`Haptics`, use it instead of HapticFeedback). Start > Shut Down (no prompt) runs `showShutDownSequence` (sky +
-  pixel rabbit + tune, then the CRT collapse). Start > Run knows RABBIT,
-  DEVELOP, PING, README (`win98_programs.dart`), the games SOL / BRICKS /
-  PINBALL (Space Rabbit: missions, ranks) / MINES (Minefield, `win98/games/`, rules
-  and physics tested in `win98_games_test`), each with its own sounds,
-  plus DEFRAG, WINVER, drive letters; Tip of the Day hints at them.
-  Tools menu: Defragment Local Disk (C:), Format SD Card, Format 3½ Floppy (A:).
-- Win98 touch targets: menu titles open on touch-down and touching another
-  title while a menu is open switches to it (`showWin98Menu` siblings);
-  caption buttons and toolbar buttons have padded hit areas.
-- Tabs carry a dot (`Win98Tab.dot`): red on SD Card / A: while files wait to
-  transfer, blue on C: for files moved there since C: was last
-  opened (`cSeenProvider.seeAll`, `PrefKeys.cSeen`; older files count as seen). C: is
-  `C:\My Pictures\Darkroom` (Start > My Pictures).
-- Rename (File > Rename, viewer Rename; `renameMedia` in media_actions):
-  the row, the file on disk and, on Android 10+, the photo-library copy
-  (`GalleryCheck.rename`, MediaStore DISPLAY_NAME; iOS Photos keeps names).
-  Library copies are tracked by the phone's id (`GalleryCheck.entries`,
-  `GalleryLinks` in prefs, linked on the first name match), so one renamed
-  in the phone's files app isn't "missing": C: adopts the new name.
-- Toolbar button says **Transfer** (not Eject). Drive is named **SD Card**.
-  Viewer has ◀ ▶ arrows. File/Edit/View/Help menus have settings, app info
-  and easter eggs.
-
-UI
-- Film <-> Digital: two physical cameras on a desk (`body_swap.dart`,
-  driven by `_swap` in camera_screen.dart). Drag the body sideways: it
-  follows the thumb and tips away in perspective; a flick or a long drag
-  tosses it and the other body comes in on the same motion (spring settle),
-  else it springs back (and can be grabbed again mid-spring). While it
-  moves, its viewfinder is a still (`CameraViewport.freeze`): shader
-  filters under the 3D transform only move their input. Each body continues past the screen: rounded end,
-  side wall with strap lug, neck strap (film) / wrist cord (digital): a
-  verlet rope (`_HangingStrap`): heavy drag and a pull back to its resting
-  hang at rest (a gentle sway from the smoothed tilt), light drag and extra
-  lag while the body is flung (`_excite`), so a toss swings it; links are
-  speed-limited (`_maxSpeed`) and never swing in over the viewfinder more
-  than `_maxInward` past the lug. Until
-  the toss commits the arriving body is a picture of it from last time
-  (`_lastLook`, or `BodyStandIn`); on commit the leaving body becomes a
-  picture and the live UI switches mode. Flutter flattens nested 3D
-  transforms, so the side wall gets its own full matrix. The other camera
-  also peeks in at the edge (digital on the right in film mode, film on the
-  left); tap it to toss. Sound `assets/sfx/camera_swap.wav` (cloth swish,
-  played via video_player at volume 0.15) and haptics.
-- Shutter (`widgets/shutters.dart`, `_SpriteShutter.turntable` switches the
-  3D frames on once they're in assets/shutters): digital = compact shutter key
-  (camcorder: red dot), film = chrome release in an advance-lever hub (lever
-  swings each frame), Super 8 = red RUN button that latches while filming.
-  Drawn from path-traced turntable frames (`assets/shutters/`, made by
-  `tool/render/items/shutter.js`: each whole button from -48..48 degrees
-  in 12 degree steps, plus pressed; film also has base / lever / cap layers
-  for the lever stroke). The frame follows the body's yaw while it tips
-  (`BodyYaw` in body_swap.dart), cross-faded, stretched by 1/cos(yaw).
-  Quiet sounds `Sfx.shutter*`. Fire via `pressShutter(ref)` so the button
-  animates for volume keys too.
-- The other camera's FILM/DIGITAL tag floats over the desk (outside the
-  body's RepaintBoundary), tucks away during a swap and springs back.
-- Gallery button: film = the latest print as a little photo on another
-  print (`_PrintThumb`), digital = a review LCD (`_LcdThumb`).
-- Under the viewfinder: film bodies show the box end in a memo holder
-  (`CameraSpec.boxColor/boxInk`), digital bodies a segment-LCD panel (one
-  fixed size for every body) with the phone's real battery
-  (`core/device/battery.dart`, channel `darkroom/battery`) and card/tape
-  remaining. The camcorder OSD burns in the same battery gauge.
-- Volume buttons (Android; taken in MainActivity via `darkroom/volume` /
-  `VolumeKeys` while the camera screen holds the edges; Flutter's own key
-  events for them never arrived) are the shutter
-  while the camera itself is on screen; setting "Volume buttons zoom" makes
-  them the zoom on digital bodies. Elsewhere they change the volume.
-  iOS 17.2+: the same channel from AppDelegate's `AVCaptureEventInteraction`
-  (volume down + Camera Control press = primary, volume up = secondary; it
-  only takes them while the camera session runs). Camera Control's slider /
-  zoom (`AVCaptureSession.controls`) needs the camera plugin's session: not
-  done.
-- Send feedback / Privacy policy (2.0, `core/support/support.dart`): Settings
-  > HELP and Darkroom 98 Help open a mailto to `Support.email` (the owner's,
-  his choice) with the version, OS and the last week's crash report, and the
-  privacy policy (`docs/PRIVACY.md` on GitHub). Nothing is sent by the app.
-- Crash reports stay on the phone (`core/diagnostics/crash_log.dart`):
-  Dart errors + Android ApplicationExitInfo; Win98 Help > Debug... >
-  Crash Reports. The Debug window (`win98/debug_menu.dart`, list `_tools`;
-  add new tools there and name them in a `_groups` folder: Darkroom, Pro &
-  Film, Performance, Cosmetics, Diagnostics, First Run & Store; a Win98
-  tree with [+]/[-] folders) also has Camera Log, the tour, develop-now, frame
-  graphs (`perfOverlayProvider`, top), an FPS counter with a 15 s chart
-  (`fpsMeterProvider`, `fps_meter.dart`, bottom left: both can be on), slow motion,
-  the lag prompt (`LagWatch`, `lag_watch.dart`: with Fancy graphics on,
-  frames drawn averaging over 50 ms in 3 of the last six 10 s windows ->
-  "Things feeling slow?" once ever, `PrefKeys.lagAsked`), system info, a test crash,
-  and the Performance Recorder (`core/diagnostics/perf_recorder.dart`:
-  `PerfRecorder.mark('label')` tags the next frames; the report splits UI
-  vs GPU time per label). Mark new heavy moments with it.
-- Slower phones: the camera reopens only after a panel's exit animation
-  (`_settled`), the live viewfinder isn't built under a held still, and
-  the cork wall's shader tiles are cached (`CorkTiles`, warmed at start).
-  Impeller redraws everything every frame (no raster cache): avoid live
-  blurs on big areas or under 3D transforms; use `SoftShadow` (baked) /
-  `softStroke` (core/theme/soft_shadow.dart) or gradients. Setting
-  **Performance mode** (`GlobalSettings.performance`, `FilmUniforms.lite`):
-  viewfinder halation off, the body swaps as one picture (`_dragFace`).
-- Setting **Fancy graphics** (was "3D cameras"; `GlobalSettings.controls3d`, on by default; the
-  tour no longer asks): on = the photoreal bodies (below), controls turn
-  with the body, the viewfinder stays live mid-swap (`_startMoving`: the
-  live picture runs under a still of itself retaken flat each frame, as
-  the look shader can't run under the 3D turn). Off = **performance mode**
-  (`GlobalSettings.performance` is just `!controls3d` since 1.5.1): the
-  classic drawn bodies, one frozen viewfinder still, the body swapped as
-  one picture, no halation, and 60 Hz on Android (else the screen's
-  fastest rate: `darkroom/display`, MainActivity `refreshRate`).
-- **Live 3D bodies (1.6.2, Flutter Scene)**: each camera is a real 3D model
-  drawn live (`flutter_scene` on Flutter GPU; enabled in the Android
-  manifest meta-data `EnableFlutterGPU` and iOS Info.plist
-  `FLTEnableFlutterGPU`). Made in Blender by
-  `tool/render/blender/export_glb.py` from the same build as the renders
-  (`whole_body.py` LAYOUT, `parts.py`, `kit.py`): the procedural Cycles
-  materials baked into two atlases (static body / moving pieces: base
-  colour x AO, metal-rough, normal), every moving piece its own node
-  (`parts.py` `moving()`: `mv.<part>.<press|turn|slide|rock|lever>`), each
-  placed part `part.<name>` (Super 8 RUN / camcorder REC = `part.shutteralt`),
-  the static body cut into `body.top` / `body.mid` / `body.bot` (the middle
-  piece, inside the viewfinder, squeezes or stretches to the phone's
-  height). `--env` writes the studio (`studio.hdr`, the renders' soft boxes,
-  plus a separate diffuse SH like the renders' dark world).
-  `bundle_live.py OUT assets/body3d` copies them in with `manifest.json`.
-  Roughness/metal and normal maps go into the .glb as lossless PNG
-  (`glb_maps.py`, after the glTF export): JPEG blocks showed as square
-  patches in the shine.
-  `hook/build.dart` turns the .glb files into Flutter Scene packages at
-  build time (`flutter_scene_generated/`, not committed; textures GPU-
-  compressed; ~25 MB in the app for both bodies, adds ~4 min to a
-  build). App: `whole_body.dart` (`WholeArt.load`: manifest, studio,
-  models (`scenes: false` = layout only, for tests); `LiveBody`: one scene
-  per body, `fit` (middle piece), `pose` (a screen-space Matrix4, the same
-  one the face's widgets are drawn under with `DesignFit.camera`),
-  `setPart`; `LiveBodyView`: an unticked SceneView, repaints only on change).
-  The build-time importer turns glTF's z round: the face looks down -z,
-  the camera sits at -dist. `whole_face.dart` lays the usual control widgets
-  on the face (design dp); their parts are `LivePart`s (photo_body.dart
-  `BodySprite`), which draw nothing and report their transform (slides,
-  turns, presses read off the control's own animation) to the model.
-  `SwapBody` (body_swap.dart) always draws the model under the face (same
-  tree at rest and mid-swap, so nothing remounts); mid-swap the face is
-  drawn under `camera x pose`, the strap from the projected lug. Snapshots
-  for the other camera (`_lastLook`) are of the face's widgets only
-  (`WholeFace.overlayKey`). Only with Fancy graphics on (`_want3dProvider`:
-  on at launch or switched on since; then kept): the camera in hand loads
-  (and warms its shaders) behind the launch curtain, alongside the camera
-  opening (main.dart, `WholeArt.load(first:)`), the other right after
-  (`loadRest`). Until it's in (`WholeArt.isReady`), a toss doesn't move the
-  body and a snackbar says "Putting in SD card…" / "Loading film…"
-  (camera_screen `_otherReady`); shortcuts wait for it. Switching Fancy
-  graphics on shows "Loading cameras…" behind the veil if it lasts. No Flutter GPU (old phones, tests): the
-  classic drawn bodies. Desktop check without a phone:
-  `tool/live3d/preview.dart` (see its header; Linux + software Vulkan/GL
-  under Xvfb). Tests: `whole_face_test` (layout on phone sizes),
-  `photo_body_test` (bundled, 3D off = classic, taps).
-  Each moving node moves only its own way (`setPart`: slide / turn / lever
-  / press (in + 0.93 scale) / rock). Labels on a key's top ride up with
-  `OnTop(BodyArt.topOf(part))` (a z-lift under the pose) so they stay on
-  the cap at an angle. Never put an opacity (or any compositing) layer
-  inside an `OnTop` (Flutter flattens the lift) or round one below 1.0
-  (its bounds are flat and crop the lifted label): fade a label's ink
-  colour instead (`_AspectDial` / `inked`). The face overlay isn't
-  clipped (a flat clip cut off lifted labels near the top edge). The video/photo shutter swap sinks one and raises
-  the other (`showShutter`, 420 ms). Digital finishes (silver, grip,
-  gunmetal, champagne, two-tone) are baked as `finish.<key>.*` nodes
-  (`export_glb.py` FINISHES['digital']); the film body has its own
-  (FINISHES['film']: classic, black, brassed, red, tan, green, mint,
-  cream: leatherette, shell, plates and plate ink). Skins
-  (`core/skins/camera_skins.dart`: catalogue, `cameraSkinProvider` per
-  body in `PrefKeys.bodyFinish` / `filmFinish`, `unlockedSkinsProvider`)
-  are picked in the Camera Exchange (Settings > Camera Shop,
-  `features/skins/presentation/camera_shop_screen.dart`); one choice drives
-  the 3D model and the drawn body (`RetroPalette.skinned` via `BodySkins`).
-  Locked skins are won in the Win98 games: each has a `SkinUnlock` (game,
-  goal, `SkinStats` stat, target); the games call `awardSkins(context,
-  stat)` (`win98/games/skin_awards.dart`: counts in `skinProgressProvider`,
-  `PrefKeys.skinProgress`, unlocks and shows a "you won" box). Shop icons
-  are `SkinCameraPainter`; its labels pick dark/light ink by the colour
-  under them. Debug > Unlock All Skins. The film format dial's label turns
-  with its top: the old one away, the new one in (`_AspectDial`). Key
-  labels stay well inside the cap (turned, its near edge shows). The
-  memo card's text keeps its size in the holder (shrinks evenly only if
-  it can't fit). Changing stock slides the cards through the holder's
-  window as one strip (`_MemoHolder`: old card out, new in, from the side
-  the new stock is on in the catalog; a fixed `_PlasticGlare` on top;
-  `memo_slide_test`).
-  Ruined shots show a darkroom excuse + Copy error report (`errorReport`).
-- `AppInfo.version` must match pubspec (test/app_info_test.dart).
-- Tablets / wide screens: with the 3D bodies the held body is fitted to the
-  screen height (`SwapStage.bodyWidth`, design aspect 412 / (968 x 0.9))
-  and centred, its rounded ends on the desk at the sides; phones keep the
-  full width. Drag travel uses the same width.
-- Accessibility: system text size is honoured up to 1.3x (`app.dart`,
-  `MediaQuery.withClampedTextScaling`); Darkroom 98 ignores it (fixed pixel
-  font, `Win98Scale`). The camera's controls carry `Semantics` labels; keep
-  that for new buttons. `onboarding_screens_test` runs at 1.0x and 1.3x.
-- Camera session: "inactive" does NOT close the camera (Android sends it on
-  any focus blip; closing made the Pixel's viewfinder flap). Only hidden /
-  paused do. `CameraLog` keeps recent session events: Win98 Help > Debug.
-  While the camera is closed the viewport keeps the last stream's aspect
-  (`_lastPreviewAspect`), so the frozen still never squashes.
-- App icon shortcuts (`core/device/app_shortcuts.dart`, quick_actions):
-  Corkboard, Darkroom 98, the last film and last digital camera (titled
-  after them, refreshed when the selection changes). Taps and notification
-  taps are `pendingRouteProvider` routes; camera_screen `_follow` closes
-  what's open, sets the mode and pushes the screen (also read once after
-  the first frame, for a cold launch).
-- Store rating prompt (`core/review/review_prompt.dart`, in_app_review):
-  our own sheet first ("Give us a shoutout!", `features/review/rating_sheet.dart`,
-  No thanks / Yea!; Yea! opens the store's prompt; shown via `appNavigatorKey`),
-  asked once, after the 5th launch and the 10th developed print, 3 s after
-  a print comes out (`PrefKeys.launches` / `developed` / `reviewAsked`);
-  Debug > Rating Prompt. A print coming out in the app also plays a soft
-  tick (`Sfx.keyUp`) and a light haptic with the banner.
-- Swipe up on the camera opens the film/camera carousel; swipe down closes it.
-- Phone gestures win at the edges (`core/device/system_gestures.dart`): our
-  drags (the camera toss too) ignore touches that start in the home strip (bottom ~56dp), the
-  notification strip (top) and the back strips (sides), except level with
-  the peeking camera, where `MainActivity.kt` (kept in the repo; channel
-  `darkroom/gestures`) asks Android 10+ to keep its back gesture off both
-  edges. The camera screen releases those strips while another screen is
-  on top.
-  Carousel works in landscape. In the carousel, sideways swipes work anywhere
-  on screen; closing needs a clearly downward swipe (deadzone).
-- On the camera screen, swiping sideways on the stock name or the film box
-  steps to the next/previous stock without opening the carousel.
-- Zoomed-in photos pan; swiping to the next photo only works at normal zoom.
-  The film print viewer uses `PhotoPager` (`viewer/presentation/zoomable.dart`,
-  raw pointer handling, PageView physics off): a swipe needs 24 dp clearly
-  sideways, a second finger always turns it into a pinch, double tap zooms
-  2.5x / back out, double tap + slide zooms gradually (down = in), a swipe
-  up or down puts the print away, a single tap (after 300 ms) off the print
-  closes it. Tested in `photo_pager_test`.
-
-## First run
-
-- Permissions still off after the tour (`missingPermissionsProvider`,
-  `core/device/permissions.dart`, channel `darkroom/permissions`: granted /
-  request / openSettings): camera = the viewfinder's "Allow camera" (asks,
-  or the app's settings page once the phone won't); mic / photos = a small
-  note at the foot of the frame (`_PermissionNote`), one tap. Notifications
-  are optional, never nagged. Rechecked on resume; a mic allowed later
-  reopens the camera with sound.
-- Camera presets: every stills body opens with `max`, every video body
-  with `veryHigh` (`presetFor`), so changing stock / camera only reopens the
-  camera between stills and video.
-
-- How it works (`features/help/`): looping drawn gesture demos
-  (`GestureDemo`, CustomPaint, `GestureGrid`) + three facts; Settings top,
-  Darkroom 98 Help, the tour's gestures page, and a one-time "New here?"
-  snackbar (8 s, X) after a tour skipped before that page (`PrefKeys.tourSkipped`;
-  Skip asks "Are you sure?"). "FLIP" is engraved under the lens dial
-  (`LensFlipCaption`: the skin's ink on the 3D bodies, from the palette on
-  the drawn ones; the classic top bar has 12 dp under it for it).
-  Pages with them never settle: tests pump, not pumpAndSettle.
-- `OnboardingScreen` (features, gestures, name, permissions with reasons,
-  one Allow all) shows once (`PrefKeys.onboarded`); Win98 Help > Welcome
-  Tour replays it. Camera + mic are asked by opening a CameraController
-  once (the camera plugin has no request call). The name
-  (`userNameProvider`) goes on the print backs' lab stamp and in Tip of the
-  Day; change it in Win98 Start > User Profile.
-
-## Art
-
-- App icon: an RGB-split rabbit with X'd-out eyes on near-black. Generated by
-  `tool/icon/make_icons.py` (Pillow + numpy): Android adaptive + monochrome
-  (themed icons), legacy round, notification glyph, iOS 1024
-  default/dark/tinted, and the GitHub social preview `docs/social_preview.png`
-  (the owner sets it by hand: repo Settings > General > Social preview).
-- The rabbit in the app, used sparingly: `DarkroomMark`
-  (`core/theme/darkroom_mark.dart`) pressed into the camera
-  bodies' lens-flip cap and on the lab stamp on the back of prints; the
-  shutdown screen's `PixelRabbit`; the 16x16
-  `PixelIcon.rabbit` on the Win98 Start button, Start menu banner and About box.
-- Film boxes / camera pictures (`assets/artwork/*.webp`, 1024 px) are 3D
-  renders made with `tool/render/` (three.js r185 + three-gpu-pathtracer in
-  headless Chromium; see its README). They say **DARKROOM**, with the rabbit
-  (`lib/logo.js`) on the film boxes, Super 8 cartridge and instant camera.
-
-## Backlog
-
-1. Tidier camcorder viewfinder in its artwork.
-2. (The viewfinder must match the saved photo: CCD bodies that save small
-   set `LookSpec.pixels`, jpegPixel `lowRes` = the long edge; checked by
-   `viewfinder_match_test`, `SRC=photo SHOTS=dir`.) Digital camera looks: tune against reference photos when the owner sends them
-   (1999 Floppy Cam done in 1.6.8, 2003 CCD Compact in 1.6.10, Y2K Flip Phone in
-   1.6.14: 480 px square, soft lens via negative `sharpen`, 16 levels; Toy Pixel Cam (1.9.7) after the
-   Game Boy Camera: 160 px, edge enhancement, 4x4 Bayer `dither`; `CAMERA=id dart run tool/look_preview.dart
-   outdir photos...` renders photos through a digital body's still pipeline).
-3. First iOS run: the CI .ipa builds (build 19); still to try it on the owner's iPhone.
-4. (Done 2026-10-07, build 35: CI uploads to Play internal testing.) If
-   the owner drops the Cloud project, delete the secret; builds then go up by hand.
+- **Launch**: `main.dart` (nothing heavy before `runApp`), `LaunchCurtain`
+  waits for camera + look + 3D, `LaunchTimer` marks steps.
+- **Film engine / grain / defects / instant**: `lib/core/processing/film/`.
+- **Free vs Pro**: `Allowance`, `proProvider` (NOTES "Free and Pro").
+- **Camera UI, 3D bodies, skins, swap**: NOTES "UI" + "Live 3D bodies".
+- **Corkboard, darkroom, projector (Super 8)**: NOTES "Film Mode".
+- **Darkroom 98 (Win98 explorer, CRT, games)**: NOTES "Digital Mode".
+- **Landscape screens**: NOTES "Things that bite".
+- **First run, How it works, permissions**: NOTES "First run".
+- **Art and renders**: NOTES "Art"; backlog at the end of NOTES.

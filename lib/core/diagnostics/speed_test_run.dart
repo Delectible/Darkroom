@@ -131,6 +131,36 @@ class SpeedTestRun {
     }
   }
 
+  /// A swipe with the stronger request to Android for the full refresh rate.
+  static final _strongVote = _Phase('swipe', 13, (nav) async {
+    await _channel('strongVote', true);
+    await _wait(1);
+    await _swipes.act(nav);
+    await _channel('strongVote', false);
+  });
+
+  static Future<Object?> _channel(String method, [Object? args]) async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await const MethodChannel('darkroom/display').invokeMethod<Object?>(method, args);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Battery saver, heat, Smooth display, free memory: one line.
+  static Future<String?> _state() async {
+    final m = await _channel('deviceState');
+    if (m is! Map) return null;
+    String hz(Object? v) => v is num && v > 0 ? '${v.round()}' : '?';
+    const heat = ['none', 'light', 'moderate', 'severe', 'critical', 'emergency', 'shutdown'];
+    final t = m['thermal'];
+    return 'battery saver ${m['powerSave'] == true ? 'ON' : 'off'}, '
+        'heat ${t is int && t >= 0 && t < heat.length ? heat[t] : '?'}, '
+        'smooth display ${hz(m['minHz'])}-${hz(m['peakHz'])} Hz, '
+        'free RAM ${m['freeMb']} MB${m['lowMemory'] == true ? ' (low)' : ''}';
+  }
+
   /// A swipe with the camera's stream stopped (the viewfinder still).
   static final _cameraOff = _Phase('swipe', 14, (nav) async {
     pauseCamera?.call(true);
@@ -184,6 +214,7 @@ class SpeedTestRun {
     ),
     _Step('drawn bodies', [_swipes], classic: true, variant: true),
     _Step('camera off', [_cameraOff], variant: true),
+    _Step('strong 120 ask', [_strongVote], variant: true),
   ];
 
   /// Settling time before each step, and Fancy graphics changing.
@@ -210,6 +241,8 @@ class SpeedTestRun {
     final plan = _plan;
     final total = _plannedSeconds;
     final clock = Stopwatch()..start();
+    final before = await _state();
+    final head = header?.call();
     SpeedTests.allOff();
     final wasFancy = fancy?.call() ?? true;
     final screens = <String>[], variants = <String>[];
@@ -284,7 +317,16 @@ class SpeedTestRun {
       if ((fancy?.call() ?? wasFancy) != wasFancy) await setFancy?.call(wasFancy);
       navigator.popUntil((r) => r.isFirst);
       status.value = null;
-      final text = await _results(screens, variants, stopped: _stop, seconds: clock.elapsed.inSeconds);
+      await _channel('strongVote', false);
+      final after = await _state();
+      final text = await _results(
+        screens,
+        variants,
+        stopped: _stop,
+        seconds: clock.elapsed.inSeconds,
+        states: [if (before != null) 'start: $before', if (after != null) 'end: $after'],
+        head: head,
+      );
       lastResults = text;
       done(text);
     }
@@ -363,6 +405,8 @@ class SpeedTestRun {
     List<String> variants, {
     required bool stopped,
     required int seconds,
+    List<String> states = const [],
+    String? head,
   }) async {
     final view = ui.PlatformDispatcher.instance.implicitView;
     var device = Platform.isIOS ? 'iPhone' : '?';
@@ -372,7 +416,7 @@ class SpeedTestRun {
       } catch (_) {}
     }
     final px = view?.physicalSize;
-    final extra = header?.call();
+    final extra = head;
     final columns =
         '${'fps'.padLeft(4)}${'drop'.padLeft(5)}${'ui ms'.padLeft(10)}${'gpu ms'.padLeft(10)}${'3D/s'.padLeft(5)}${'disp Hz'.padLeft(8)}';
     return [
@@ -381,6 +425,7 @@ class SpeedTestRun {
       'screen ${px?.width.round()}x${px?.height.round()} @${view?.devicePixelRatio.toStringAsFixed(2)}x, '
           '${_hz.round()} Hz, ${Platform.numberOfProcessors} cores',
       ?extra,
+      ...states,
       'launch: ${LaunchTimer.lastSummary() ?? '?'}',
       '',
       '${'AROUND THE APP'.padRight(_nameWidth)}$columns',

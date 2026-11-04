@@ -886,6 +886,10 @@ String _testHeader(_Read read) {
     '${AppInfo.name} ${AppInfo.version}, RAM ${DeviceMemory.gb?.toStringAsFixed(1) ?? '?'} GB'
         '${DeviceMemory.low ? ' (low)' : ''}, fancy graphics ${read(globalSettingsProvider).controls3d ? 'on' : 'off'}',
     '3D textures: ${tex.isEmpty ? 'not loaded' : tex.join('; ')}',
+    'camera stream: ${switch (read(cameraSessionProvider).controller?.value.previewSize) {
+      final s? => '${s.width.round()}x${s.height.round()}',
+      null => 'closed',
+    }}',
     _compressionSupport().replaceFirst('GPU texture compression: ', 'GPU compression: '),
   ].join('\n');
 }

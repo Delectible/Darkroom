@@ -394,3 +394,7 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **61.19** → 2.0.12 · Speed test: "disp Hz" (the display's rate read
   from Android during each step, `darkroom/display` displayHz), a "camera
   off" swipe (stream stopped), PROBLEMS lines (a screen that won't open).
+- [x] **61.20** → 2.0.12 · Speed test header: battery saver, thermal status,
+  Smooth display min-peak, free RAM at start and end (`deviceState`), the
+  camera stream size. Variant "strong 120 ask": the SurfaceView's vote as
+  FRAME_RATE_COMPATIBILITY_FIXED_SOURCE during the swipe (`strongVote`).

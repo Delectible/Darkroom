@@ -130,14 +130,39 @@ class MainActivity : FlutterActivity() {
         if (v is ViewGroup) for (i in 0 until v.childCount) vote(v.getChildAt(i))
     }
 
+    /// Speed test: the stronger frame-rate request (see surfaceRate).
+    private var strongVote = false
+
+    /// Speed test: what the phone is doing that can hold an app back.
+    private fun deviceState(): Map<String, Any?> {
+        val power = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
+        val mem = android.app.ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }
+        fun setting(name: String): Double? = try {
+            Settings.System.getFloat(contentResolver, name).toDouble()
+        } catch (e: Exception) {
+            null
+        }
+        return mapOf(
+            "powerSave" to power.isPowerSaveMode,
+            "thermal" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) power.currentThermalStatus else -1),
+            "peakHz" to setting("peak_refresh_rate"),
+            "minHz" to setting("min_refresh_rate"),
+            "freeMb" to (mem.availMem / (1024 * 1024)).toInt(),
+            "lowMemory" to mem.lowMemory,
+        )
+    }
+
     private fun surfaceRate(surface: Surface) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || !surface.isValid) return
         val hz = if (fastRate && fastHz > 0f) fastHz else 60f
+        // (speed test: "fixed source" says the content really is at this rate)
+        val kind = if (strongVote) Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE else Surface.FRAME_RATE_COMPATIBILITY_DEFAULT
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                surface.setFrameRate(hz, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT, Surface.CHANGE_FRAME_RATE_ALWAYS)
+                surface.setFrameRate(hz, kind, Surface.CHANGE_FRAME_RATE_ALWAYS)
             } else {
-                surface.setFrameRate(hz, Surface.FRAME_RATE_COMPATIBILITY_DEFAULT)
+                surface.setFrameRate(hz, kind)
             }
         } catch (e: Exception) {
             // (a surface released in between)
@@ -221,6 +246,13 @@ class MainActivity : FlutterActivity() {
                         @Suppress("DEPRECATION")
                         val d = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
                         result.success(d?.refreshRate?.toDouble())
+                    }
+                    "deviceState" -> result.success(deviceState())
+                    // a stronger 120 Hz request (true) or the usual one (false)
+                    "strongVote" -> {
+                        strongVote = call.arguments == true
+                        voteFrameRate()
+                        result.success(null)
                     }
                     // the phone's maker and model (speed test results)
                     "device" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")

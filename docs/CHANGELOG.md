@@ -385,3 +385,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   by vsync time): fps while moving and "drop" = refreshes with no new frame.
   The first run's swipe "55 fps" mixed in the still frames between swipes.
   3D/s: 3D camera renders a second (`PerfRecorder.scene3d`).
+- Owner's speed test 2 (2.0.11, Pixel 9 Pro): everything with the camera
+  closed moves at 104-116 fps (picker, corkboard, Darkroom 98); the camera
+  swipe at 55 fps / 54% dropped with UI 5.9 and GPU 5.1 ms (both under the
+  8.3 ms budget), drawn bodies the same: a 60 Hz cap while the camera runs,
+  not drawing cost. Darkroom 98 slide-in 77 fps (the camera closing during
+  it). Settings: the sheet recorded no motion (didn't open?).
+- [x] **61.19** → 2.0.12 · Speed test: "disp Hz" (the display's rate read
+  from Android during each step, `darkroom/display` displayHz), a "camera
+  off" swipe (stream stopped), PROBLEMS lines (a screen that won't open).

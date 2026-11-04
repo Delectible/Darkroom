@@ -65,6 +65,9 @@ class SpeedTestRun {
   /// 'picker' / 'settings' (completes once it's on its way).
   static Future<void> Function(String screen)? open;
 
+  /// Set by the camera screen: stops (true) or restarts the camera's stream.
+  static void Function(bool paused)? pauseCamera;
+
   /// Set by the camera screen: Fancy graphics on or off, and whether it's on.
   static Future<void> Function(bool on)? setFancy;
   static bool Function()? fancy;
@@ -98,7 +101,7 @@ class SpeedTestRun {
   /// Opens [screen] and closes it again, twice (sheets that slide up).
   static _Phase _openClose(String screen) => _Phase('open/close', 6.5, (nav) async {
     for (var k = 0; k < 2 && !_stop; k++) {
-      await open?.call(screen);
+      await _open(screen);
       await _wait(1.6);
       await nav.maybePop();
       await _wait(1.6);
@@ -106,13 +109,34 @@ class SpeedTestRun {
   });
 
   static _Phase _slideIn(String screen) => _Phase('slide in', 3, (_) async {
-    await open?.call(screen);
+    await _open(screen);
     await _wait(1.2);
   });
 
   static _Phase _slideOut() => _Phase('slide out', 2.5, (nav) async {
     nav.popUntil((r) => r.isFirst);
     await _wait(2.5);
+  });
+
+  /// Problems met on the way (a screen that wouldn't open), for the results.
+  static final _notes = <String>[];
+
+  static Future<void> _open(String screen) async {
+    final o = open;
+    if (o == null) return _notes.add('$screen: no camera screen to open it from');
+    try {
+      await o(screen);
+    } catch (e) {
+      _notes.add('$screen: $e');
+    }
+  }
+
+  /// A swipe with the camera's stream stopped (the viewfinder still).
+  static final _cameraOff = _Phase('swipe', 14, (nav) async {
+    pauseCamera?.call(true);
+    await _wait(2);
+    await _swipes.act(nav);
+    pauseCamera?.call(false);
   });
 
   static List<_Step> get _plan => [
@@ -159,6 +183,7 @@ class SpeedTestRun {
       variant: true,
     ),
     _Step('drawn bodies', [_swipes], classic: true, variant: true),
+    _Step('camera off', [_cameraOff], variant: true),
   ];
 
   /// Settling time before each step, and Fancy graphics changing.
@@ -181,6 +206,7 @@ class SpeedTestRun {
   static Future<void> run(NavigatorState navigator, {required void Function(String results) done}) async {
     if (running) return;
     _stop = false;
+    _notes.clear();
     final plan = _plan;
     final total = _plannedSeconds;
     final clock = Stopwatch()..start();
@@ -223,14 +249,20 @@ class SpeedTestRun {
           final renders = PerfRecorder.scene3d;
           final time = Stopwatch()..start();
           PerfRecorder.test = key;
+          final hz = <double>[];
+          final sampler = Timer.periodic(const Duration(milliseconds: 700), (_) async {
+            final v = await _displayHz();
+            if (v != null) hz.add(v);
+          });
           await p.act(navigator);
+          sampler.cancel();
           PerfRecorder.test = null;
           final perSecond = (PerfRecorder.scene3d - renders) / math.max(0.1, time.elapsedMilliseconds / 1000);
           final name = s.variant || s.phases.length == 1 && p.name == 'open/close'
               ? s.name
               : '${s.name} ${p.name}';
           (s.variant ? variants : screens).add(
-            _row(name, PerfRecorder.framesOf(key), motion: p.motion, renders3d: perSecond),
+            _row(name, PerfRecorder.framesOf(key), motion: p.motion, renders3d: perSecond, displayHz: hz),
           );
         }
         for (final f in s.flags) {
@@ -248,6 +280,7 @@ class SpeedTestRun {
       pulse.value = false;
       tick.cancel();
       SpeedTests.allOff();
+      pauseCamera?.call(false);
       if ((fancy?.call() ?? wasFancy) != wasFancy) await setFancy?.call(wasFancy);
       navigator.popUntil((r) => r.isFirst);
       status.value = null;
@@ -280,6 +313,7 @@ class SpeedTestRun {
     List<({double ui, double gpu, int vsync, bool moving})> all, {
     required bool motion,
     required double renders3d,
+    List<double> displayHz = const [],
   }) {
     final fs = motion ? all.where((f) => f.moving).toList() : all;
     final head = name.padRight(_nameWidth);
@@ -305,7 +339,23 @@ class SpeedTestRun {
 
     final drop = motion && slots > 0 ? '${(100 * dropped / slots).round()}%' : '-';
     return '$head${fps.toString().padLeft(4)}${drop.padLeft(5)}${ap(fs.map((f) => f.ui)).padLeft(10)}'
-        '${ap(fs.map((f) => f.gpu)).padLeft(10)}${renders3d.round().toString().padLeft(5)}';
+        '${ap(fs.map((f) => f.gpu)).padLeft(10)}${renders3d.round().toString().padLeft(5)}'
+        '${(displayHz.isEmpty ? '?' : _hzRange(displayHz)).padLeft(8)}';
+  }
+
+  /// The display's rates seen during a phase: "120", or "60-120".
+  static String _hzRange(List<double> v) {
+    final lo = v.reduce(math.min).round(), hi = v.reduce(math.max).round();
+    return lo == hi ? '$lo' : '$lo-$hi';
+  }
+
+  static Future<double?> _displayHz() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      return await const MethodChannel('darkroom/display').invokeMethod<double>('displayHz');
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<String> _results(
@@ -324,7 +374,7 @@ class SpeedTestRun {
     final px = view?.physicalSize;
     final extra = header?.call();
     final columns =
-        '${'fps'.padLeft(4)}${'drop'.padLeft(5)}${'ui ms'.padLeft(10)}${'gpu ms'.padLeft(10)}${'3D/s'.padLeft(5)}';
+        '${'fps'.padLeft(4)}${'drop'.padLeft(5)}${'ui ms'.padLeft(10)}${'gpu ms'.padLeft(10)}${'3D/s'.padLeft(5)}${'disp Hz'.padLeft(8)}';
     return [
       'DARKROOM SPEED TEST${stopped ? ' (stopped early)' : ''}, ${seconds}s',
       '$device, ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
@@ -336,10 +386,11 @@ class SpeedTestRun {
       '${'AROUND THE APP'.padRight(_nameWidth)}$columns',
       ...screens,
       if (variants.isNotEmpty) ...['', 'CAMERA SWIPE WITH (or at rest, for grain)', ...variants],
+      if (_notes.isNotEmpty) ...['', 'PROBLEMS', ..._notes],
       '',
       'fps: frames a second while moving (at rest: all frames, the camera\'s rate). '
           'drop: refreshes with no new frame while moving (the screen is ${_hz.round()} Hz). '
-          'ms: average/90%. 3D/s: 3D camera renders a second.',
+          'ms: average/90%. 3D/s: 3D camera renders a second. disp Hz: the display\'s own rate then.',
     ].join('\n');
   }
 

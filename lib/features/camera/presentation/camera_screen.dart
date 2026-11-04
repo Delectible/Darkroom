@@ -194,13 +194,16 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
         case 'picker':
           unawaited(_openSelector());
         case 'settings':
-          unawaited(showSettingsSheet(context));
+          // (errors show in the speed test's results)
+          final sheet = showSettingsSheet(context);
+          await Future.any([sheet, Future<void>.delayed(const Duration(milliseconds: 300))]);
         default:
           unawaited(_push(screen == 'win98' ? const ExplorerScreen() : const CorkboardScreen()));
           await Future<void>.delayed(ExplorerScreen.slideDuration);
       }
     };
     SpeedTestRun.fancy = () => ref.read(globalSettingsProvider).controls3d;
+    SpeedTestRun.pauseCamera = (paused) => ref.read(cameraSessionProvider.notifier).setScreenVisible(!paused);
     SpeedTestRun.setFancy = (on) => ref.read(globalSettingsProvider.notifier).setControls3d(on);
     GraphicsVeil.cameras++;
     unawaited(Sfx.cameraSwap.preload());
@@ -227,6 +230,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     SpeedTestRun.tossDirection = null;
     SpeedTestRun.open = null;
     SpeedTestRun.fancy = null;
+    SpeedTestRun.pauseCamera = null;
     SpeedTestRun.setFancy = null;
     GraphicsVeil.cameras--;
     VolumeKeys.listen(null);

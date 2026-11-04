@@ -215,6 +215,13 @@ class MainActivity : FlutterActivity() {
                     }
                     // ms since Android started the app's process (Launch Timing:
                     // the time before Dart's main)
+                    // the display's refresh rate right now (speed test: does
+                    // something hold it at 60 while the camera runs?)
+                    "displayHz" -> {
+                        @Suppress("DEPRECATION")
+                        val d = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
+                        result.success(d?.refreshRate?.toDouble())
+                    }
                     // the phone's maker and model (speed test results)
                     "device" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")
                     "sinceStart" -> result.success(

@@ -94,6 +94,6 @@ void main() {
       expect(cells[1], '20%'); // 10 missed of 49 refreshes
     }
     expect(cells[2], '5.0/5.0');
-    expect(row.length, lessThan(60));
+    expect(row.length, lessThan(68));
   });
 }

@@ -61,6 +61,8 @@ class MainActivity : FlutterActivity() {
         /// so the engine's own start-up runs alongside it.
         @Volatile var videoLibMs = -1L
         private var videoLibStarted = false
+
+        private const val PERMISSION_REQUEST = 7301
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -591,10 +593,6 @@ class MainActivity : FlutterActivity() {
         }
         if (run.length >= 6) out.append(run)
         return out.toString().take(8000)
-    }
-
-    companion object {
-        private const val PERMISSION_REQUEST = 7301
     }
 }
 

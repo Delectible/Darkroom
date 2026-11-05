@@ -130,12 +130,24 @@ class UprightApp extends ConsumerStatefulWidget {
   /// The way the app was last turned to landscape.
   static DeviceOrientation lastLandscape = DeviceOrientation.landscapeLeft;
 
-  /// Android hides its status and navigation bars everywhere (immersive);
-  /// iOS only when turned.
-  static SystemUiMode systemUi({required bool turned}) =>
-      turned || defaultTargetPlatform == TargetPlatform.android
-      ? SystemUiMode.immersiveSticky
-      : SystemUiMode.edgeToEdge;
+  /// Turned, both platforms hide their bars (immersive). Upright, iOS shows
+  /// its own; Android hides only the status bar and keeps its navigation
+  /// (gesture) bar, transparent over the app: hidden as well, a swipe up
+  /// first only brought it back, and going home took two or three (2.1.4).
+  static Future<void> applySystemUi({required bool turned}) {
+    if (turned) return SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      return SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        systemNavigationBarColor: Color(0x00000000),
+        systemNavigationBarDividerColor: Color(0x00000000),
+        systemNavigationBarContrastEnforced: false,
+      ),
+    );
+    return SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [SystemUiOverlay.bottom]);
+  }
 
   /// While a landscape page fades out before the app turns: the
   /// orientation it keeps its layout for ([UprightPage]); null otherwise.
@@ -309,11 +321,10 @@ class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObse
     _asked = want;
     if (want.length == 1 && want.first != DeviceOrientation.portraitUp) UprightApp.lastLandscape = want.first;
     unawaited(SystemChrome.setPreferredOrientations(want));
-    // Turned (and on Android always), the screens get the whole display:
-    // the status and nav bars hide (a swipe from the edge brings them back
-    // for a moment).
+    // Turned, the screens get the whole display: the status and nav bars
+    // hide (a swipe from the edge brings them back for a moment).
     final turned = want.length > 1 || want.first != DeviceOrientation.portraitUp;
-    unawaited(SystemChrome.setEnabledSystemUIMode(UprightApp.systemUi(turned: turned)));
+    unawaited(UprightApp.applySystemUi(turned: turned));
   }
 
   @override

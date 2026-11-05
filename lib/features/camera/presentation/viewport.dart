@@ -395,12 +395,31 @@ class _FocusablePreview extends StatefulWidget {
 
 class _FocusablePreviewState extends State<_FocusablePreview> with SingleTickerProviderStateMixin {
   Offset? _point;
-  late final _mark = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
+
+  // The mark's clock: it holds (hunting) until the camera says focus is done,
+  // then locks and fades.
+  late final _tick = AnimationController(vsync: this, duration: const Duration(seconds: 1));
+  final _since = Stopwatch();
+  double? _lockedAt;
+  bool _ok = false;
+  int _serial = 0;
+
+  /// The camera never answering: the mark gives up after this.
+  static const _giveUp = Duration(milliseconds: 1500);
 
   @override
   void dispose() {
-    _mark.dispose();
+    _tick.dispose();
     super.dispose();
+  }
+
+  double get _now => _since.elapsedMicroseconds / 1e6;
+
+  void _lock(int serial, {required bool ok}) {
+    if (!mounted || serial != _serial || _lockedAt != null) return;
+    // (the snap-in plays out first)
+    _lockedAt = math.max(_now, 0.22);
+    _ok = ok;
   }
 
   Future<void> _onTap(TapUpDetails d, BoxConstraints box) async {
@@ -410,13 +429,20 @@ class _FocusablePreviewState extends State<_FocusablePreview> with SingleTickerP
       (d.localPosition.dx / box.maxWidth).clamp(0.0, 1.0),
       (d.localPosition.dy / box.maxHeight).clamp(0.0, 1.0),
     );
+    final me = ++_serial;
     setState(() => _point = d.localPosition);
-    unawaited(_mark.forward(from: 0));
+    _lockedAt = null;
+    _since
+      ..reset()
+      ..start();
+    _tick.repeat();
+    unawaited(Future<void>.delayed(_giveUp, () => _lock(me, ok: false)));
     try {
       if (c.value.focusPointSupported) await c.setFocusPoint(n);
       if (c.value.exposurePointSupported) await c.setExposurePoint(n);
+      _lock(me, ok: c.value.focusPointSupported);
     } on CameraException {
-      // Not supported on this lens.
+      _lock(me, ok: false); // not supported on this lens
     }
   }
 
@@ -434,7 +460,18 @@ class _FocusablePreviewState extends State<_FocusablePreview> with SingleTickerP
             if (_point != null)
               IgnorePointer(
                 child: CustomPaint(
-                  painter: _FocusMark(t: _mark, at: _point!, film: widget.film, ink: ink),
+                  painter: _FocusMark(
+                    repaint: _tick,
+                    at: _point!,
+                    film: widget.film,
+                    ink: ink,
+                    now: () => _now,
+                    lockedAt: () => _lockedAt,
+                    ok: () => _ok,
+                    done: () {
+                      if (_tick.isAnimating) _tick.stop();
+                    },
+                  ),
                 ),
               ),
           ],
@@ -445,12 +482,24 @@ class _FocusablePreviewState extends State<_FocusablePreview> with SingleTickerP
 }
 
 class _FocusMark extends CustomPainter {
-  _FocusMark({required this.t, required this.at, required this.film, required this.ink}) : super(repaint: t);
+  _FocusMark({
+    required Listenable repaint,
+    required this.at,
+    required this.film,
+    required this.ink,
+    required this.now,
+    required this.lockedAt,
+    required this.ok,
+    required this.done,
+  }) : super(repaint: repaint);
 
-  final Animation<double> t;
   final Offset at;
   final bool film;
   final Color ink;
+  final double Function() now;
+  final double? Function() lockedAt;
+  final bool Function() ok;
+  final void Function() done;
 
   static const _amber = Color(0xFFE0A43C);
   static const _lock = Color(0xFF78DC6E);
@@ -458,12 +507,20 @@ class _FocusMark extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final s = t.value * 1.6; // seconds
-    if (s <= 0 || s >= 1.6) return;
+    final s = now();
+    final l = lockedAt();
+    final since = l == null ? null : s - l; // seconds since it locked
+    if (since != null && since > 1.15) {
+      // (after this frame: nothing more to draw)
+      WidgetsBinding.instance.addPostFrameCallback((_) => done());
+      return;
+    }
+    final fade = since == null ? 1.0 : (since > 0.75 ? (1 - (since - 0.75) / 0.4).clamp(0.0, 1.0) : 1.0);
     if (film) {
-      // a shimmering ring that tightens to a dot, then fades
-      final p = _ease(s / 0.55), a = s > 1.1 ? (1 - (s - 1.1) / 0.5).clamp(0.0, 1.0) : 1.0;
+      // shimmering while it hunts, tightening to a dot once sharp
+      final p = since == null ? 0.0 : _ease(since / 0.4);
       final r = 26 - 15 * p;
+      final intro = _ease(s / 0.2);
       const n = 28;
       for (var i = 0; i < n; i++) {
         final ang = s * 2.5 + i * math.pi * 2 / n;
@@ -473,21 +530,20 @@ class _FocusMark extends CustomPainter {
           at + d * (r - 3),
           at + d * r,
           Paint()
-            ..color = ink.withValues(alpha: a * (0.35 + 0.5 * shimmer))
+            ..color = ink.withValues(alpha: intro * fade * (0.35 + 0.5 * shimmer))
             ..strokeWidth = 1.2
             ..strokeCap = StrokeCap.round,
         );
       }
-      canvas.drawCircle(at, 2.4, Paint()..color = _amber.withValues(alpha: a * p));
+      if (ok()) canvas.drawCircle(at, 2.4, Paint()..color = _amber.withValues(alpha: fade * p));
       return;
     }
-    // brackets: snap in, blink once, green on lock, fade
-    final on = s < 0.45 || (s > 0.5 && s < 0.62) || s > 0.72;
-    if (!on) return;
-    final fade = s > 1.2 ? (1 - (s - 1.2) / 0.4).clamp(0.0, 1.0) : 1.0;
+    // brackets: snap in, hold while it hunts; on lock blink once and go
+    // green (white if it couldn't focus), then fade
+    if (since != null && since > 0.05 && since < 0.17) return;
     final half = 30 * (1 + 0.5 * (1 - _ease(s / 0.18)));
     const arm = 10.0;
-    final color = (s > 0.45 ? _lock : ink).withValues(alpha: fade);
+    final color = (since != null && ok() ? _lock : ink).withValues(alpha: fade);
     final shade = Paint()
       ..color = const Color(0xFF000000).withValues(alpha: 0.45 * fade)
       ..strokeWidth = 3.2

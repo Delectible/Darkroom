@@ -65,7 +65,7 @@ Future<void> _start() async {
   // landscape (EXIF orientation follows the physical device).
   // (sent, not waited on: they land long before the first frame)
   unawaited(SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]));
-  unawaited(SystemChrome.setEnabledSystemUIMode(UprightApp.systemUi(turned: false)));
+  unawaited(UprightApp.applySystemUi(turned: false));
 
   _stage = 'storage';
   final (paths, db, prefs) = await (

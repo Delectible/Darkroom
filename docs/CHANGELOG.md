@@ -587,4 +587,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **64.9** → 2.1.4 · Focus mark (`_FocusMark` in viewport.dart): film, a
   microprism ring tightening to an amber dot; digital, AF brackets that snap
   in, blink and go green. Replaces the square.
+- [x] **64.10** → 2.1.4 · Focus marks wait for the camera: they hunt until
+  setFocusPoint/ExposurePoint complete, then lock (green / amber dot); no
+  answer in 1.5 s or unsupported: they fade without locking.
+- [x] **64.11** → 2.1.4 · Android, upright: the status bar stays hidden but
+  the gesture navigation bar stays active (transparent), so one swipe goes
+  home (immersive sticky needed two or three). Turned: immersive as before
+  (`UprightApp.applySystemUi`).
 

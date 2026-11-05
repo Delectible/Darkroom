@@ -3,13 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.0.15';
+  static const version = '2.0.16';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'A big smoothness update. The camera opens sooner, then fades in gently. Swiping between cameras '
+      'A quick swipe just after opening no longer shows a camera without its body. Still new: a big '
+      'smoothness update. The camera opens sooner, then fades in gently. Swiping between cameras '
       'runs at your screen\'s full speed, and graphics now tune themselves to your phone, keeping as much '
       'detail as it can draw smoothly. Settings pauses the camera behind it, and the corkboard slides in '
       'more smoothly on slower phones.';

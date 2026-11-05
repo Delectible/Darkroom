@@ -680,7 +680,10 @@ UI
   compact result to copy. Add steps to `SpeedTestRun._plan` (part one:
   round the app; part two: the camera swipe with each switch). Moving
   phases count only frames drawn while something moved (`PerfRecorder`
-  tags frames: ticker running or finger down); "drop" = refreshes missed. Launch curtain since
+  tags frames: ticker running or finger down); "drop" = refreshes missed.
+  Numbers from Android can be odd (a Pixel's peak_refresh_rate is
+  Infinity): check `isFinite` before rounding. If a run misbehaves on a
+  phone, ask for Debug > Diagnostics > Crash Reports first. Launch curtain since
   2.0.9: 0.3 s minimum, 150 ms after the camera opens, 300 ms fade.
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and

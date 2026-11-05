@@ -3,7 +3,7 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.0.13';
+  static const version = '2.0.14';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"

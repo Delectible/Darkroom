@@ -150,17 +150,32 @@ class SpeedTestRun {
     }
   }
 
-  /// Battery saver, heat, Smooth display, free memory: one line.
+  /// Battery saver, heat, Smooth display, free memory: one line (never
+  /// throws: a phone's odd value reads as "?").
   static Future<String?> _state() async {
-    final m = await _channel('deviceState');
-    if (m is! Map) return null;
-    String hz(Object? v) => v is num && v > 0 ? '${v.round()}' : '?';
+    try {
+      final m = await _channel('deviceState');
+      return m is Map ? stateLine(m) : null;
+    } catch (e) {
+      return 'phone state unreadable ($e)';
+    }
+  }
+
+  /// [m] from Android as one line. Smooth display's top rate can be
+  /// Infinity ("as fast as the screen goes", Pixels): "max".
+  @visibleForTesting
+  static String stateLine(Map<Object?, Object?> m) {
+    String hz(Object? v) {
+      if (v is! num || v.isNaN || v <= 0) return '?';
+      return v.isInfinite ? 'max' : '${v.round()}';
+    }
+
     const heat = ['none', 'light', 'moderate', 'severe', 'critical', 'emergency', 'shutdown'];
     final t = m['thermal'];
     return 'battery saver ${m['powerSave'] == true ? 'ON' : 'off'}, '
         'heat ${t is int && t >= 0 && t < heat.length ? heat[t] : '?'}, '
         'smooth display ${hz(m['minHz'])}-${hz(m['peakHz'])} Hz, '
-        'free RAM ${m['freeMb']} MB${m['lowMemory'] == true ? ' (low)' : ''}';
+        'free RAM ${m['freeMb'] ?? '?'} MB${m['lowMemory'] == true ? ' (low)' : ''}';
   }
 
   /// A swipe with the camera's stream stopped (the viewfinder still).
@@ -338,14 +353,21 @@ class SpeedTestRun {
       try {
         head ??= header?.call();
       } catch (_) {}
-      final text = await _results(
-        screens,
-        variants,
-        stopped: _stop,
-        seconds: clock.elapsed.inSeconds,
-        states: [if (before != null) 'start: $before', if (after != null) 'end: $after'],
-        head: head,
-      );
+      String text;
+      try {
+        text = await _results(
+          screens,
+          variants,
+          stopped: _stop,
+          seconds: clock.elapsed.inSeconds,
+          states: [if (before != null) 'start: $before', if (after != null) 'end: $after'],
+          head: head,
+        );
+      } catch (e, st) {
+        // (whatever happens, the run ends with something to send)
+        text =
+            'DARKROOM SPEED TEST: the results failed ($e)\n$st\n\n${[...screens, ...variants, ..._notes].join('\n')}';
+      }
       lastResults = text;
       done(text);
     }
@@ -360,7 +382,11 @@ class SpeedTestRun {
 
   static double _toss() => (tossDirection?.call() ?? 1).toDouble();
 
-  static double get _hz => ui.PlatformDispatcher.instance.implicitView?.display.refreshRate ?? 60;
+  /// The screen's refresh rate (60 if the phone reports something odd).
+  static double get _hz {
+    final r = ui.PlatformDispatcher.instance.implicitView?.display.refreshRate ?? 60;
+    return r.isFinite && r >= 20 && r <= 1000 ? r : 60;
+  }
 
   static const _nameWidth = 17;
 
@@ -425,9 +451,8 @@ class SpeedTestRun {
 
   static Future<double?> _displayHz() async {
     final v = await _channel('displayHz');
-    return v is num ? v.toDouble() : null;
+    return v is num && v.isFinite && v > 0 ? v.toDouble() : null;
   }
-
 
   static Future<String> _results(
     List<String> screens,

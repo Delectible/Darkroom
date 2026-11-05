@@ -412,6 +412,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   every Android request have a 3 s limit; any error ends the run with
   results and a PROBLEMS line instead of silently. Test: a run shows its
   panel at once and a stopped run still gives results.
+- [x] **61.23** → 2.0.14 · The real cause (Crash Reports): Pixels store
+  Smooth display's peak_refresh_rate as Infinity; `.round()` threw in the
+  phone-state line, the second time in the results step, so no results.
+  `stateLine` shows "max", every Android number is checked finite, the
+  screen rate falls back to 60 if odd, and building the results can't
+  throw (a failure still ends with text to send). Test with Infinity/NaN.
 
 ## 62. Ideas (2026-11-05)
 

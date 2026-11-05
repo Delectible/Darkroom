@@ -117,4 +117,17 @@ void main() {
     expect(SpeedTestRun.status.value, isNull);
     expect(results, contains('DARKROOM SPEED TEST (stopped early)'));
   });
+
+  test("the phone's state line copes with a Pixel's Infinity peak rate", () {
+    final line = SpeedTestRun.stateLine({
+      'powerSave': false,
+      'thermal': 1,
+      'minHz': 60.0,
+      'peakHz': double.infinity,
+      'freeMb': 6100,
+      'lowMemory': false,
+    });
+    expect(line, 'battery saver off, heat light, smooth display 60-max Hz, free RAM 6100 MB');
+    expect(SpeedTestRun.stateLine({'peakHz': double.nan, 'thermal': 99}), contains('heat ?'));
+  });
 }

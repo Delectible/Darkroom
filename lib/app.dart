@@ -11,10 +11,8 @@ import 'core/diagnostics/launch_timer.dart';
 import 'core/diagnostics/speed_test_run.dart';
 import 'core/navigation.dart';
 import 'core/providers.dart';
-import 'core/shaders/shader_library.dart';
 import 'core/startup/launch_curtain.dart';
 import 'core/theme/retro_theme.dart';
-import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/camera_screen.dart';
 import 'features/camera/presentation/launch_picture.dart';
@@ -62,39 +60,16 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
     return line;
   }();
 
-  DateTime? _liveSince;
-
   /// Lift the curtain once the camera is open with its look loaded (or
   /// won't open: no permission, no camera), or something else is on top
   /// (the tour, a shortcut's screen).
   bool _ready() {
     if (ref.read(sharedPrefsProvider).getBool(PrefKeys.onboarded) != true) return true;
     if (appNavigatorKey.currentState?.canPop() ?? false) return true;
-    final status = ref.read(cameraSessionProvider).status;
-    switch (status) {
-      case SessionStatus.permissionDenied || SessionStatus.noCamera || SessionStatus.error:
-        return true;
-      case SessionStatus.idle || SessionStatus.initializing:
-        return false;
-      case SessionStatus.ready:
-        // The stream's first frames take a moment to arrive after it
-        // opens: counted from now, while the rest below still loads.
-        _liveSince ??= DateTime.now();
-        LaunchTimer.once('camera open');
-    }
+    // (2.1: the camera itself isn't waited for: the curtain lifts onto its
+    // viewfinder shut, which opens once the picture and its look are in,
+    // like a camera powering up; camera_screen.dart, _checkLive)
     var ready = true;
-    if (ref.read(shaderProgramsProvider).value == null) {
-      ready = false;
-    } else {
-      final spec = ref.read(activeSpecProvider);
-      if (spec.film != null &&
-          (ref.read(filmLutImageProvider(spec.id)).value == null ||
-              ref.read(grainImageProvider).value == null)) {
-        ready = false;
-      } else {
-        LaunchTimer.once('film look loaded');
-      }
-    }
     // With Fancy graphics, the 3D camera in hand (loading since main.dart),
     // or the launch picture of it standing in (the camera's own picture and
     // controls are live over it; the model takes over when it lands).
@@ -107,8 +82,7 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
     }
     if (!ready) return false;
     LaunchTimer.once('all loaded');
-    // (the stream's first frames in)
-    return DateTime.now().difference(_liveSince!) > const Duration(milliseconds: 100);
+    return true;
   }
 
   @override

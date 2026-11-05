@@ -72,6 +72,15 @@ class LaunchTimer {
     mark(label);
   }
 
+  /// [label] happened now, once per launch, also after the curtain lifted
+  /// (the camera's picture coming in under it; within 30 s).
+  static void after(String label) {
+    if (!_done) return once(label);
+    if (_marks.any((m) => m.$1 == label) || _clock.elapsed > const Duration(seconds: 30)) return;
+    _marks.add((label, _clock.elapsedMilliseconds));
+    _save(replace: true);
+  }
+
   /// The curtain is up and the app is in hand: the launch is over.
   static void finish(String label) {
     if (_done) return;

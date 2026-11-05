@@ -115,7 +115,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   );
 
   void _syncShutter() {
-    final shut = CameraViewport.freeze.value != null && !CameraViewport.liveUnder.value;
+    final shut = !_live || (CameraViewport.freeze.value != null && !CameraViewport.liveUnder.value);
+    ViewfinderShutter.cameraOff = !_live;
     if (shut) {
       if (_shutter.status != AnimationStatus.forward && _shutter.status != AnimationStatus.completed) {
         _shutter.forward();
@@ -123,6 +124,89 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     } else if (_shutter.value > 0 && _shutter.status != AnimationStatus.reverse) {
       _shutter.reverse();
     }
+  }
+
+  /// The camera's picture is live with its look loaded, so the viewfinder
+  /// may open. False at launch (the curtain lifts onto the viewfinder shut,
+  /// and it opens like a camera powering up), whenever the camera restarts
+  /// (back from the background, a new stock), and until a stock's look is
+  /// in (no plain picture flashing first).
+  bool _live = false;
+  Timer? _liveWatch;
+  DateTime? _readySince;
+  int _offPolls = 0;
+
+  /// Polls (100 ms) the camera can be off, in plain view and untouched,
+  /// before a note says it's starting (a slow camera; left alone, a shut
+  /// viewfinder for a second or two just reads as the camera powering up).
+  static const _slowCamera = 30;
+
+  void _watchLive() {
+    _liveWatch ??= Timer.periodic(const Duration(milliseconds: 100), (_) => _checkLive());
+  }
+
+  void _checkLive() {
+    if (!mounted) return;
+    final session = ref.read(cameraSessionProvider);
+    final problem = switch (session.status) {
+      SessionStatus.permissionDenied || SessionStatus.noCamera || SessionStatus.error => true,
+      _ => false,
+    };
+    var open = problem; // (its message is in the viewfinder)
+    if (session.isReady) {
+      LaunchTimer.after('camera open');
+      if (_lookReady()) {
+        LaunchTimer.after('look loaded');
+        // the stream's first frames take a moment to come
+        _readySince ??= DateTime.now();
+        open = DateTime.now().difference(_readySince!) >= const Duration(milliseconds: 350);
+      }
+    } else {
+      _readySince = null;
+    }
+    if (open) {
+      _liveWatch?.cancel();
+      _liveWatch = null;
+      _offPolls = 0;
+      _live = true;
+      LaunchTimer.after('viewfinder opens');
+      _syncShutter();
+      return;
+    }
+    // A camera that should be on (not stopped for a swipe or a panel) and
+    // still isn't after a few seconds in plain view: say so, once.
+    final inView =
+        LaunchCurtain.isGone &&
+        CameraViewport.freeze.value == null &&
+        ModalRoute.of(context)?.isCurrent == true;
+    if (inView && ++_offPolls == _slowCamera) _noteCamera();
+  }
+
+  /// The camera in hand's look is loaded (its shaders; film: its stock's
+  /// colour table and grain).
+  /// (Done loading, or failed: the picture shows either way.)
+  bool _lookReady() {
+    if (ref.read(shaderProgramsProvider).isLoading) return false;
+    final spec = ref.read(activeSpecProvider);
+    if (spec.film == null) return true;
+    return !ref.read(filmLutImageProvider(spec.id)).isLoading && !ref.read(grainImageProvider).isLoading;
+  }
+
+  /// The camera is still starting and you tried to use it (or it's slow):
+  /// the note over the viewfinder says so.
+  void _noteCamera() {
+    if (!mounted) return;
+    final film = ref.read(appModeProvider) == AppMode.film;
+    CameraNote.show(film ? 'Winding on…' : 'Warming up…');
+  }
+
+  void _cameraStopped() {
+    if (!_live) return;
+    _live = false;
+    _readySince = null;
+    _offPolls = 0;
+    _syncShutter();
+    _watchLive();
   }
 
   void _dropMoving() {
@@ -239,6 +323,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   void initState() {
     super.initState();
     ViewfinderShutter.shut = _shutter;
+    ViewfinderShutter.noteOff = _noteCamera;
+    // Launch: shut until the camera is live (see _live).
+    _shutter.value = 1;
+    _watchLive();
     CameraViewport.freeze.addListener(_syncShutter);
     CameraViewport.liveUnder.addListener(_syncShutter);
     // The launch picture is kept up to date (see _keepPicture).
@@ -285,7 +373,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     _cover?.dispose();
     CameraViewport.freeze.removeListener(_syncShutter);
     CameraViewport.liveUnder.removeListener(_syncShutter);
-    if (ViewfinderShutter.shut == _shutter) ViewfinderShutter.shut = kAlwaysDismissedAnimation;
+    if (ViewfinderShutter.shut == _shutter) {
+      ViewfinderShutter.shut = kAlwaysDismissedAnimation;
+      ViewfinderShutter.noteOff = null;
+      ViewfinderShutter.cameraOff = false;
+    }
+    _liveWatch?.cancel();
     _shutter.dispose();
     SpeedTestRun.tossDirection = null;
     SpeedTestRun.open = null;
@@ -836,6 +929,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
       ref.listen(cameraSkinProvider, (_, _) => _uncoverScreen());
       ref.listen(selectedCameraProvider, (_, _) => _uncoverScreen());
     }
+    ref.listen(cameraSessionProvider.select((s) => s.isReady), (_, ready) {
+      if (!ready) _cameraStopped();
+    });
     final mode = ref.watch(appModeProvider);
     final wholeArt = ref.watch(wholeArtProvider).value;
     final whole = ref.watch(wholeBodyProvider(mode));

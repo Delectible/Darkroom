@@ -28,6 +28,11 @@ class ViewfinderShutter {
   /// without the live picture under it) and opens when it's live again.
   static Animation<double> shut = kAlwaysDismissedAnimation;
 
+  /// The camera's picture isn't live yet (starting up, restarting): the
+  /// shutter button says so ([noteOff]) instead of firing.
+  static bool cameraOff = false;
+  static VoidCallback? noteOff;
+
   /// How long closing and opening take.
   static const close = Duration(milliseconds: 320);
   static const open = Duration(milliseconds: 280);

@@ -479,15 +479,9 @@ class _Standby extends ConsumerWidget {
       SessionStatus.noCamera => ('No camera on this device', null),
       _ => ('', null),
     };
-    if (action == null && label.isEmpty) {
-      return Center(
-        child: SizedBox(
-          width: 22,
-          height: 22,
-          child: CircularProgressIndicator(strokeWidth: 2, color: palette.screenInk.withValues(alpha: 0.6)),
-        ),
-      );
-    }
+    // Starting: nothing (the viewfinder is shut over it until the picture
+    // is live; a spinner would only keep redrawing under it).
+    if (action == null && label.isEmpty) return const SizedBox.expand();
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),

@@ -12,6 +12,7 @@ import '../../application/camera_ui_state.dart';
 import '../../application/capture_controller.dart';
 import '../body_swap.dart' show BodyYaw;
 import '../photo_body.dart';
+import '../viewfinder_shut.dart';
 import '../../../../core/device/haptics.dart';
 import '../../../settings/application/settings_controllers.dart';
 
@@ -28,6 +29,12 @@ final shutterPulseProvider = NotifierProvider<ShutterPulse, int>(ShutterPulse.ne
 
 /// Fires the shutter: the button's stroke and sound, then the capture.
 void pressShutter(WidgetRef ref) {
+  // The camera is still starting (its viewfinder shut): a note, no shot.
+  if (ViewfinderShutter.cameraOff && !ref.read(captureControllerProvider).isRecording) {
+    unawaited(Haptics.lightImpact());
+    ViewfinderShutter.noteOff?.call();
+    return;
+  }
   // Free version out of film / battery: nothing fires, the screen explains.
   if (!ref.read(captureControllerProvider).isRecording) {
     final why = ref.read(allowanceProvider.notifier).check(ref.read(activeSpecProvider));

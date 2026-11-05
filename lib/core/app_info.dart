@@ -9,9 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Smoother on slower phones and tablets: the camera pauses while Settings is open, phones that '
-      'struggle show a still viewfinder while you swipe between cameras, and devices with 4 GB of '
-      'memory or less get lighter graphics.';
+      'Smoother everywhere: swiping between cameras now runs at your screen\'s full speed (the viewfinder '
+      'holds still while the camera turns), the camera pauses while Settings is open, and devices with '
+      '4 GB of memory or less get lighter graphics.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

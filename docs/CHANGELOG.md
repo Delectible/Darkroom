@@ -425,13 +425,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   2.2 s before Dart's main (Pixel 0.1-0.25).
 - [x] **61.24** → 2.0.15 · Settings stops the camera's stream while it's open
   (as the picker; a still in its place). `_openSettings`.
-- [x] **61.25** → 2.0.15 · `SwipeTuning`: each real swipe's frame rate from
-  the frames produced; after a warm-up swipe, two of the last three under
-  42 fps = this phone swipes with a still viewfinder and the stream stopped
-  until the camera lands (saved, `PrefKeys.freezeSwipes`; Debug >
-  Performance > Swipe Freeze forgets it). Pixel (~55 fps) never trips.
-  Speed test step "freeze vf" (switch "Freeze Camera in Swipes"); its own
-  swipes don't count, and the header shows the state.
+- [x] **61.25** → 2.0.15 · Swipes on every phone: a still viewfinder, the
+  camera's stream stopped until the camera lands (owner's choice after the
+  Pixel run: with the camera running Android held the screen at 60 Hz,
+  107 fps with it stopped; tablet 30 vs 84). Debug switch "Live Viewfinder
+  in Swipes" and speed test step "live vf" for the old way. Dropped:
+  "Still Viewfinder in Swipes", the "camera off" step (both superseded).
 - [x] **61.26** → 2.0.15 · Low RAM cutoff 3.2 → 4.2 GB (`DeviceMemory.lowGb`).
 - [x] **61.27** → 2.0.15 · Start-up investigation: FFmpegKit's plugin loads
   FFmpeg's native libraries in `registerGlobalCallbacks` (FFmpegKitConfig's

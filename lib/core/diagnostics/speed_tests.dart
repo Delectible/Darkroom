@@ -27,13 +27,11 @@ class SpeedTests {
   /// redraw of the viewfinder, on top of the camera's 30).
   static final slowGrain = ValueNotifier<bool>(false);
 
-  /// Swipes show one still of the viewfinder instead of retaking it every
-  /// frame to keep it live under the turn.
-  static final stillSwipe = ValueNotifier<bool>(false);
-
-  /// Swipes stop the camera's stream and show a still until the camera
-  /// lands (what slow phones get on their own: SwipeTuning).
-  static final freezeSwipe = ValueNotifier<bool>(false);
+  /// Swipes keep the viewfinder live (the camera's stream running under
+  /// the moving body) instead of the usual still. On a Pixel the running
+  /// camera holds the screen at 60 Hz (107 fps swiping with it stopped);
+  /// on a slow tablet it cost most frames (30 fps against 84).
+  static final liveSwipe = ValueNotifier<bool>(false);
 
   /// Swipes without the hanging strap (its rope is simulated every frame).
   static final noStrap = ValueNotifier<bool>(false);
@@ -44,8 +42,7 @@ class SpeedTests {
     '3D 70%': small3d,
     'no look': noLook,
     'slow grain': slowGrain,
-    'still swipe': stillSwipe,
-    'freeze vf': freezeSwipe,
+    'live vf': liveSwipe,
     'no strap': noStrap,
   };
 

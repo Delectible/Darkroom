@@ -32,7 +32,6 @@ import '../../../camera/application/camera_session_controller.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 import '../../../cameras/domain/camera_spec.dart';
 import '../../../camera/presentation/body_quality.dart';
-import '../../../camera/presentation/swipe_tuning.dart';
 import '../../../camera/presentation/whole_body.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../onboarding/onboarding_screen.dart';
@@ -65,9 +64,10 @@ final _speedTests = <(String, ValueNotifier<bool>, String)>[
   ),
   ('Grain at 12 fps', SpeedTests.slowGrain, 'Film grain moves 12 times a second instead of 24.'),
   (
-    'Still Viewfinder in Swipes',
-    SpeedTests.stillSwipe,
-    'While you swipe, the viewfinder is one still picture instead of being retaken every frame.',
+    'Live Viewfinder in Swipes',
+    SpeedTests.liveSwipe,
+    'Swipes keep the camera running under the moving body (the old way) instead of a still viewfinder. '
+        'Slower: on a Pixel the running camera holds the screen at 60 Hz.',
   ),
   (
     'No Strap in Swipes',
@@ -80,12 +80,6 @@ final _speedTests = <(String, ValueNotifier<bool>, String)>[
     "The 3D camera's edges smoothed by a cheap filter (FXAA) instead of multisampling.",
   ),
   ('3D at 70%', SpeedTests.small3d, 'The 3D camera drawn at 70% of its size and scaled up.'),
-  (
-    'Freeze Camera in Swipes',
-    SpeedTests.freezeSwipe,
-    'Swipes stop the camera and show a still until the camera lands, as slow phones get by themselves '
-        '(see Swipe Freeze in Performance).',
-  ),
 ];
 
 final _tools = <_Tool>[
@@ -124,19 +118,6 @@ final _tools = <_Tool>[
           },
         ),
       );
-    },
-  ),
-  _Tool(
-    PixelIcon.camera,
-    'Swipe Freeze',
-    'Phones too slow to swipe with a live viewfinder get a still one (judged from real swipes, then '
-        'remembered). Shows whether this phone was judged slow, and forgets it so the next swipes judge again.',
-    (context, _) async {
-      final was = SwipeTuning.state;
-      SwipeTuning.reset();
-      if (context.mounted) {
-        await _done(context, 'Swipe freeze was $was. Forgotten: the next few swipes judge this phone again.');
-      }
     },
   ),
   _Tool(
@@ -622,7 +603,7 @@ class _DebugMenu extends ConsumerStatefulWidget {
 /// The Debug window's folders, in order, and the tools in each (by name).
 /// A tool left out lands in Other.
 final _groups = <(String, List<String>)>[
-  ('Performance', ['Run Speed Test', 'Performance Report', 'Swipe Freeze', 'FPS Counter', 'Slow Motion']),
+  ('Performance', ['Run Speed Test', 'Performance Report', 'FPS Counter', 'Slow Motion']),
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
   ('Speed Test Switches', [for (final (name, _, _) in _speedTests) name]),
@@ -907,7 +888,7 @@ String _testHeader(_Read read) {
     '${AppInfo.name} ${AppInfo.version}, RAM ${DeviceMemory.gb?.toStringAsFixed(1) ?? '?'} GB'
         '${DeviceMemory.low ? ' (low)' : ''}, fancy graphics ${read(globalSettingsProvider).controls3d ? 'on' : 'off'}',
     '3D textures: ${tex.isEmpty ? 'not loaded' : tex.join('; ')}',
-    'swipe freeze: ${SwipeTuning.state}',
+    'swipe viewfinder: ${SpeedTests.liveSwipe.value ? 'live (switch)' : 'still'}',
     'camera stream: ${switch (read(cameraSessionProvider).controller?.value.previewSize) {
       final s? => '${s.width.round()}x${s.height.round()}',
       null => 'closed',

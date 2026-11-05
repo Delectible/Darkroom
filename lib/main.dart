@@ -28,7 +28,6 @@ import 'core/shaders/shader_library.dart';
 import 'core/startup/launch_curtain.dart';
 import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
-import 'features/camera/presentation/swipe_tuning.dart';
 import 'features/camera/presentation/whole_body.dart';
 import 'features/settings/application/settings_controllers.dart';
 
@@ -75,7 +74,6 @@ Future<void> _start() async {
   ).wait;
 
   LaunchTimer.prefs = prefs;
-  SwipeTuning.load(prefs);
   // The phone's RAM sizes the work the app takes on (prints developing at
   // once, the picture cache): read alongside the rest of the start-up.
   unawaited(DeviceMemory.apply().then((_) => GlobalSettingsNotifier.reapply()));

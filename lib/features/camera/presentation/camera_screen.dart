@@ -43,7 +43,6 @@ import '../../../core/device/haptics.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
 import '../../../core/diagnostics/speed_test_run.dart';
 import '../../../core/diagnostics/speed_tests.dart';
-import 'swipe_tuning.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
@@ -100,7 +99,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   void _dropMoving() {
     BodyQuality.moving(false);
-    SwipeTuning.end();
     _stopMirror();
     if (_pausedForSwipe) {
       // The stream was stopped for the swipe: start it again (the new body's
@@ -113,7 +111,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     CameraViewport.freeze.value = null;
   }
 
-  /// The camera's stream is stopped for this swipe (SwipeTuning.freeze).
+  /// The camera's stream is stopped for this swipe.
   bool _pausedForSwipe = false;
 
   /// 3D on: the viewfinder stays live while the body turns. The live
@@ -124,12 +122,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   void _startMoving() {
     BodyQuality.moving(true);
-    SwipeTuning.start();
-    // (Debug > Speed Tests > Still Viewfinder in Swipes: as in performance mode)
-    if (ref.read(globalSettingsProvider).performance || SpeedTests.stillSwipe.value) return _snapMoving();
-    // A phone too slow for the live picture and the moving body together:
-    // a still, and the stream stopped until the camera lands.
-    if (SwipeTuning.freeze && !ref.read(captureControllerProvider).isRecording) {
+    // Swipes show a still viewfinder and stop the camera's stream until the
+    // camera lands (2.0.15): a running camera held the Pixel's screen at
+    // 60 Hz (107 fps swiping with it stopped) and cost a slow tablet most of
+    // its frames (30 fps against 84). After a toss the stream restarts for
+    // the new body anyway. Debug > Live Viewfinder in Swipes: the old way.
+    if (!SpeedTests.liveSwipe.value && !ref.read(captureControllerProvider).isRecording) {
       _snapMoving();
       if (!_pausedForSwipe) {
         _pausedForSwipe = true;
@@ -137,6 +135,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       }
       return;
     }
+    if (ref.read(globalSettingsProvider).performance) return _snapMoving();
     if (_mirroring) return;
     _mirroring = true;
     CameraViewport.liveUnder.value = true;
@@ -227,7 +226,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       }
     };
     SpeedTestRun.fancy = () => ref.read(globalSettingsProvider).controls3d;
-    SpeedTestRun.pauseCamera = (paused) => ref.read(cameraSessionProvider.notifier).setScreenVisible(!paused);
     SpeedTestRun.setFancy = (on) => ref.read(globalSettingsProvider.notifier).setControls3d(on);
     GraphicsVeil.cameras++;
     unawaited(Sfx.cameraSwap.preload());
@@ -254,7 +252,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     SpeedTestRun.tossDirection = null;
     SpeedTestRun.open = null;
     SpeedTestRun.fancy = null;
-    SpeedTestRun.pauseCamera = null;
     SpeedTestRun.setFancy = null;
     GraphicsVeil.cameras--;
     VolumeKeys.listen(null);

@@ -65,9 +65,6 @@ class SpeedTestRun {
   /// 'picker' / 'settings' (completes once it's on its way).
   static Future<void> Function(String screen)? open;
 
-  /// Set by the camera screen: stops (true) or restarts the camera's stream.
-  static void Function(bool paused)? pauseCamera;
-
   /// Set by the camera screen: Fancy graphics on or off, and whether it's on.
   static Future<void> Function(bool on)? setFancy;
   static bool Function()? fancy;
@@ -178,14 +175,6 @@ class SpeedTestRun {
         'free RAM ${m['freeMb'] ?? '?'} MB${m['lowMemory'] == true ? ' (low)' : ''}';
   }
 
-  /// A swipe with the camera's stream stopped (the viewfinder still).
-  static final _cameraOff = _Phase('swipe', 14, (nav) async {
-    pauseCamera?.call(true);
-    await _wait(2);
-    await _swipes.act(nav);
-    pauseCamera?.call(false);
-  });
-
   static List<_Step> get _plan => [
     _Step('camera', [_rest, _swipes]),
     _Step('picker', [_openClose('picker')]),
@@ -212,8 +201,7 @@ class SpeedTestRun {
     ]),
     _Step('no look', [_swipes], flags: [SpeedTests.noLook], variant: true),
     _Step('grain 12', [_rest], flags: [SpeedTests.slowGrain], variant: true),
-    _Step('still vf', [_swipes], flags: [SpeedTests.stillSwipe], variant: true),
-    _Step('freeze vf', [_swipes], flags: [SpeedTests.freezeSwipe], variant: true),
+    _Step('live vf', [_swipes], flags: [SpeedTests.liveSwipe], variant: true),
     _Step('no strap', [_swipes], flags: [SpeedTests.noStrap], variant: true),
     _Step('fxaa', [_swipes], flags: [SpeedTests.cheapEdges], variant: true),
     _Step('3D 70%', [_swipes], flags: [SpeedTests.small3d], variant: true),
@@ -223,7 +211,6 @@ class SpeedTestRun {
       flags: [
         SpeedTests.noLook,
         SpeedTests.slowGrain,
-        SpeedTests.stillSwipe,
         SpeedTests.noStrap,
         SpeedTests.cheapEdges,
         SpeedTests.small3d,
@@ -231,7 +218,6 @@ class SpeedTestRun {
       variant: true,
     ),
     _Step('drawn bodies', [_swipes], classic: true, variant: true),
-    _Step('camera off', [_cameraOff], variant: true),
     _Step('strong 120 ask', [_strongVote], variant: true),
   ];
 
@@ -345,7 +331,6 @@ class SpeedTestRun {
       pulse.value = false;
       tick.cancel();
       SpeedTests.allOff();
-      pauseCamera?.call(false);
       if ((fancy?.call() ?? wasFancy) != wasFancy) await setFancy?.call(wasFancy);
       navigator.popUntil((r) => r.isFirst);
       status.value = null;

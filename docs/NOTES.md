@@ -684,11 +684,8 @@ UI
   Numbers from Android can be odd (a Pixel's peak_refresh_rate is
   Infinity): check `isFinite` before rounding. If a run misbehaves on a
   phone, ask for Debug > Diagnostics > Crash Reports first.
-- Slow phones (2.0.15): Settings stops the camera's stream while open (as
-  the picker). `SwipeTuning` (camera/presentation/swipe_tuning.dart) judges
-  real swipes; slow ones (2 of 3 under 42 fps) switch swipes to a still
-  viewfinder with the stream stopped, saved per install. Low RAM is <= 4.2
-  GB now. MainActivity preloads FFmpegKitConfig (its native libraries) on
+- 2.0.15: Settings stops the camera's stream while open (as the picker);
+  swipes do too (above). Low RAM is <= 4.2 GB now. MainActivity preloads FFmpegKitConfig (its native libraries) on
   a thread at onCreate; Launch Timing breaks down the time before main. Launch curtain since
   2.0.9: 0.3 s minimum, 150 ms after the camera opens, 300 ms fade.
 - Slower phones: the camera reopens only after a panel's exit animation
@@ -701,9 +698,12 @@ UI
   viewfinder halation off, the body swaps as one picture (`_dragFace`).
 - Setting **Fancy graphics** (was "3D cameras"; `GlobalSettings.controls3d`, on by default; the
   tour no longer asks): on = the photoreal bodies (below), controls turn
-  with the body, the viewfinder stays live mid-swap (`_startMoving`: the
-  live picture runs under a still of itself retaken flat each frame, as
-  the look shader can't run under the 3D turn). Off = **performance mode**
+  with the body. Mid-swap the viewfinder is a still and the camera's
+  stream stops until the camera lands (2.0.15, `_startMoving` /
+  `_pausedForSwipe`: a running camera holds a Pixel's screen at 60 Hz and
+  costs slow GPUs most frames). Debug > Live Viewfinder in Swipes brings
+  back the live way (the picture runs under a still of itself retaken flat
+  each frame, as the look shader can't run under the 3D turn). Off = **performance mode**
   (`GlobalSettings.performance` is just `!controls3d` since 1.5.1): the
   classic drawn bodies, one frozen viewfinder still, the body swapped as
   one picture, no halation, and 60 Hz on Android (else the screen's

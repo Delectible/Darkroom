@@ -287,7 +287,11 @@ class SpeedTestRun {
             final v = await _displayHz();
             if (v != null) hz.add(v);
           });
-          await p.act(navigator);
+          try {
+            await p.act(navigator);
+          } catch (e) {
+            _notes.add('${s.name} ${p.name}: $e');
+          }
           sampler.cancel();
           PerfRecorder.test = null;
           final perSecond = (PerfRecorder.scene3d - renders) / math.max(0.1, time.elapsedMilliseconds / 1000);
@@ -362,11 +366,13 @@ class SpeedTestRun {
     if (fs.length < 3) return '$head(too few frames: ${all.length}, moving ${fs.length})';
     final period = 1e6 / _hz;
     var gapSum = 0, gaps = 0, slots = 0, dropped = 0;
+    final gapList = <int>[];
     for (var i = 1; i < fs.length; i++) {
       final g = fs[i].vsync - fs[i - 1].vsync;
       if (g <= 0 || g > (motion ? 250000 : 1000000)) continue; // (a new burst of motion)
       gapSum += g;
       gaps++;
+      gapList.add(g);
       final n = math.max(1, (g / period).round());
       slots += n;
       dropped += n - 1;
@@ -379,10 +385,21 @@ class SpeedTestRun {
       return '${avg.toStringAsFixed(1)}/${p90.toStringAsFixed(1)}';
     }
 
-    final drop = motion && slots > 0 ? '${(100 * dropped / slots).round()}%' : '-';
+    // Moving: refreshes dropped. At rest: "a" and the share of frames drawn
+    // with an animation running (should be 0: a loop left running costs
+    // battery and frames).
+    final drop = motion
+        ? (slots > 0 ? '${(100 * dropped / slots).round()}%' : '-')
+        : 'a${(100 * all.where((f) => f.moving).length / all.length).round()}%';
+    // The fastest frames came: the rate frames can arrive at (60 here on a
+    // 120 Hz screen = something holds the app to 60; 120 with drops = the
+    // app misses frames).
+    gapList.sort();
+    final quick = gapList.isEmpty ? null : gapList[(gapList.length * 0.1).floor()];
+    final vsync = !motion || quick == null ? '-' : '${(1e6 / quick).round()}';
     return '$head${fps.toString().padLeft(4)}${drop.padLeft(5)}${ap(fs.map((f) => f.ui)).padLeft(10)}'
         '${ap(fs.map((f) => f.gpu)).padLeft(10)}${renders3d.round().toString().padLeft(5)}'
-        '${(displayHz.isEmpty ? '?' : _hzRange(displayHz)).padLeft(8)}';
+        '${vsync.padLeft(5)}${(displayHz.isEmpty ? '?' : _hzRange(displayHz)).padLeft(7)}';
   }
 
   /// The display's rates seen during a phase: "120", or "60-120".
@@ -418,7 +435,7 @@ class SpeedTestRun {
     final px = view?.physicalSize;
     final extra = head;
     final columns =
-        '${'fps'.padLeft(4)}${'drop'.padLeft(5)}${'ui ms'.padLeft(10)}${'gpu ms'.padLeft(10)}${'3D/s'.padLeft(5)}${'disp Hz'.padLeft(8)}';
+        '${'fps'.padLeft(4)}${'drop'.padLeft(5)}${'ui ms'.padLeft(10)}${'gpu ms'.padLeft(10)}${'3D/s'.padLeft(5)}${'max'.padLeft(5)}${'disp'.padLeft(7)}';
     return [
       'DARKROOM SPEED TEST${stopped ? ' (stopped early)' : ''}, ${seconds}s',
       '$device, ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
@@ -435,7 +452,10 @@ class SpeedTestRun {
       '',
       'fps: frames a second while moving (at rest: all frames, the camera\'s rate). '
           'drop: refreshes with no new frame while moving (the screen is ${_hz.round()} Hz). '
-          'ms: average/90%. 3D/s: 3D camera renders a second. disp Hz: the display\'s own rate then.',
+          'a% (at rest): frames drawn with an animation running (should be 0). '
+          'ms: average/90%. 3D/s: 3D camera renders a second. '
+          'max: the fastest rate frames came while moving (below the screen = held back). '
+          'disp: the rate Android let apps draw at then (Android only).',
     ].join('\n');
   }
 
@@ -451,23 +471,34 @@ class SpeedTestRun {
     );
     final binding = GestureBinding.instance;
     final pointer = 900 + _pointers++;
-    final clock = Stopwatch()..start();
+    // The same gesture on every phone: a move a frame at the screen's rate
+    // (at least 8), each stamped as if exactly on time, so the swipe's speed
+    // (and whether it tosses) doesn't depend on how the phone's frames run;
+    // only how long it takes in real time does.
+    final steps = math.max(8, (ms / 1000 * _hz).round());
+    final stepTime = Duration(microseconds: ms * 1000 ~/ steps);
+    var stamp = const Duration(seconds: 1000);
     var at = start;
-    Duration stamp() => Duration(microseconds: 1000000000 + clock.elapsedMicroseconds);
-    binding.handlePointerEvent(PointerDownEvent(pointer: pointer, position: at, timeStamp: stamp()));
-    while (clock.elapsedMilliseconds < ms && !_stop) {
+    binding.handlePointerEvent(PointerDownEvent(pointer: pointer, position: at, timeStamp: stamp));
+    for (var k = 1; k <= steps && !_stop; k++) {
       await SchedulerBinding.instance.endOfFrame;
-      final t = (clock.elapsedMicroseconds / (ms * 1000)).clamp(0.0, 1.0);
+      final t = k / steps;
       // eased out when slow: the finger stops before it lifts
       final eased = slow ? 1 - (1 - t) * (1 - t) : t;
       final next = start + distance * eased;
+      stamp += stepTime;
       binding.handlePointerEvent(
-        PointerMoveEvent(pointer: pointer, position: next, delta: next - at, timeStamp: stamp()),
+        PointerMoveEvent(pointer: pointer, position: next, delta: next - at, timeStamp: stamp),
       );
       at = next;
     }
-    if (slow) await _wait(0.15);
-    binding.handlePointerEvent(PointerUpEvent(pointer: pointer, position: at, timeStamp: stamp()));
+    // A flick lifts right after its last move; a slow swipe stops first.
+    var lift = stamp + const Duration(milliseconds: 1);
+    if (slow) {
+      await _wait(0.15);
+      lift = stamp + const Duration(milliseconds: 150);
+    }
+    binding.handlePointerEvent(PointerUpEvent(pointer: pointer, position: at, timeStamp: lift));
   }
 
   static int _pointers = 0;

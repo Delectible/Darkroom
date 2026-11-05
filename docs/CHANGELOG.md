@@ -398,3 +398,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   Smooth display min-peak, free RAM at start and end (`deviceState`), the
   camera stream size. Variant "strong 120 ask": the SurfaceView's vote as
   FRAME_RATE_COMPATIBILITY_FIXED_SOURCE during the swipe (`strongVote`).
+- [x] **61.21** → 2.0.12 · Speed test hardened for any phone: "max" (the
+  fastest rate frames arrived while moving, from the gaps: 60 on a 120 Hz
+  screen = held to 60, any phone incl. iPhone), "disp" now Android's render
+  rate where it says (reflection `getRenderFrameRate`) else the mode's,
+  "a%" at rest (frames with an animation running: should be 0). Swipes are
+  a fixed number of evenly stamped moves (the same gesture whatever the
+  frame rate; a stall no longer reads as no toss). A failing step is noted
+  under PROBLEMS and the run goes on. Start dialog: portrait, battery saver off.

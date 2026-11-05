@@ -36,7 +36,7 @@ void main() {
     SpeedTestRun.tossDirection = null;
     expect(moved, lessThan(-300)); // 75% of an 800 px wide test screen, leftwards
     expect(velocity, isNotNull);
-    expect(velocity!, lessThan(-1000));
+    expect(velocity!, lessThan(-500));
   });
 
   testWidgets('the live panel: step, countdown, frame rate', (tester) async {
@@ -94,6 +94,11 @@ void main() {
       expect(cells[1], '20%'); // 10 missed of 49 refreshes
     }
     expect(cells[2], '5.0/5.0');
-    expect(row.length, lessThan(68));
+    expect(row.length, lessThan(72));
+    // at rest: the share of frames with an animation running
+    final rest = SpeedTestRun.rowForTest('camera rest', frames, motion: false);
+    expect(rest.substring(17).trim().split(RegExp(r' +'))[1], 'a91%'); // 40 of 44
+    // ignore: avoid_print
+    print('$row\n$rest');
   });
 }

@@ -242,10 +242,17 @@ class MainActivity : FlutterActivity() {
                     // the time before Dart's main)
                     // the display's refresh rate right now (speed test: does
                     // something hold it at 60 while the camera runs?)
+                    // (the rate apps may draw at, where Android says: on adaptive
+                    // screens it can be below the display mode's)
                     "displayHz" -> {
                         @Suppress("DEPRECATION")
                         val d = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) display else windowManager.defaultDisplay
-                        result.success(d?.refreshRate?.toDouble())
+                        val render = try {
+                            (d?.javaClass?.getMethod("getRenderFrameRate")?.invoke(d) as? Float)?.toDouble()
+                        } catch (e: Exception) {
+                            null
+                        }
+                        result.success(render ?: d?.refreshRate?.toDouble())
                     }
                     "deviceState" -> result.success(deviceState())
                     // a stronger 120 Hz request (true) or the usual one (false)

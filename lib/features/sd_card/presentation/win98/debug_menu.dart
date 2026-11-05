@@ -95,8 +95,9 @@ final _tools = <_Tool>[
         context,
         title: 'Speed Test',
         message:
-            'Takes about ${SpeedTestRun.minutes} minutes. Put the phone down and don\'t touch it: '
-            'the app swipes and switches screens by itself. The panel at the top shows how long is left '
+            'Takes about ${SpeedTestRun.minutes} minutes. Put the phone down upright (portrait, '
+            'not sideways) and don\'t touch it: the app swipes and switches screens by itself. '
+            'Turn battery saver off first. The panel at the top shows how long is left '
             '(tap it to stop).',
         icon: Win98MessageIcon.question,
         buttons: ['Start', if (last != null) 'Last Result', 'Cancel'],

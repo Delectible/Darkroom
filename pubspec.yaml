@@ -73,6 +73,8 @@ flutter:
     - assets/fonts/OFL.txt
     - assets/sfx/
     - assets/shutters/
+    # three sample prints on a new corkboard (sample_prints.dart)
+    - assets/samples/
     # the 3D bodies' layout and studio (the .glb models become Flutter
     # Scene packages via hook/build.dart, under flutter_scene_generated/)
     - assets/body3d/manifest.json

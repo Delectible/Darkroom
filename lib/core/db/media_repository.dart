@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:sqflite/sqflite.dart';
 
@@ -214,6 +215,37 @@ class MediaRepository {
       where: 'id IN (${List.filled(ids.length, '?').join(',')})',
       whereArgs: ids,
     );
+    notifyChanged();
+  }
+
+  /// Adds a finished, saved item straight away (the sample prints).
+  Future<void> insertReady({
+    required String id,
+    required String cameraId,
+    required String fileName,
+    required String outputPath,
+    required String thumbPath,
+    required int width,
+    required int height,
+    required DateTime capturedAt,
+    String? note,
+  }) async {
+    await _sql.insert(table, {
+      'id': id,
+      'camera_id': cameraId,
+      'kind': MediaKind.photo.name,
+      'status': MediaStatus.ready.name,
+      'file_name': fileName,
+      'output_path': _paths.toStored(outputPath),
+      'thumb_path': _paths.toStored(thumbPath),
+      'width': width,
+      'height': height,
+      'bytes': File(outputPath).lengthSync(),
+      'captured_at': capturedAt.millisecondsSinceEpoch,
+      'ready_at': capturedAt.millisecondsSinceEpoch,
+      'saved_at': capturedAt.millisecondsSinceEpoch,
+      'note': note,
+    });
     notifyChanged();
   }
 

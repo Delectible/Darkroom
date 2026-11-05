@@ -22,6 +22,7 @@ import '../../viewer/presentation/media_actions.dart';
 import 'instant_print.dart';
 import '../../../core/processing/instant_frame.dart';
 import 'print_frames.dart';
+import '../application/sample_prints.dart';
 import 'print_viewer.dart';
 import 'projector_screen.dart';
 import 'reel_painter.dart';
@@ -1080,10 +1081,12 @@ class PinnedPrint extends StatelessWidget {
     return Builder(
       builder: (anchor) => GestureDetector(
         onTap: onOpen,
-        onLongPress: () {
-          unawaited(Haptics.mediumImpact());
-          unawaited(shareMedia(anchor, item));
-        },
+        onLongPress: SamplePrints.isSample(item)
+            ? null
+            : () {
+                unawaited(Haptics.mediumImpact());
+                unawaited(shareMedia(anchor, item));
+              },
         child: Transform.translate(
           offset: Offset(dx, 0),
           child: Center(
@@ -1152,7 +1155,7 @@ class PinnedPrint extends StatelessWidget {
                         ),
                       ),
                       // Pencilled tick on the border once it's in the library.
-                      if (item.isSaved)
+                      if (item.isSaved && !SamplePrints.isSample(item))
                         const Positioned(
                           right: 3,
                           bottom: -1,
@@ -1220,10 +1223,12 @@ class PinnedInstant extends StatelessWidget {
     return Builder(
       builder: (anchor) => GestureDetector(
         onTap: onOpen,
-        onLongPress: () {
-          unawaited(Haptics.mediumImpact());
-          unawaited(shareMedia(anchor, item));
-        },
+        onLongPress: SamplePrints.isSample(item)
+            ? null
+            : () {
+                unawaited(Haptics.mediumImpact());
+                unawaited(shareMedia(anchor, item));
+              },
         child: Transform.translate(
           offset: Offset(dx, 0),
           child: Center(
@@ -1296,10 +1301,12 @@ class PinnedReel extends StatelessWidget {
     return Builder(
       builder: (anchor) => GestureDetector(
         onTap: onOpen,
-        onLongPress: () {
-          unawaited(Haptics.mediumImpact());
-          unawaited(shareMedia(anchor, item));
-        },
+        onLongPress: SamplePrints.isSample(item)
+            ? null
+            : () {
+                unawaited(Haptics.mediumImpact());
+                unawaited(shareMedia(anchor, item));
+              },
         child: Center(
           child: AspectRatio(
             aspectRatio: 1,

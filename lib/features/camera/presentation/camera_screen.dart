@@ -37,6 +37,8 @@ import '../application/zoom_controller.dart';
 import 'body_swap.dart';
 import 'photo_body.dart';
 import 'viewfinder_shut.dart';
+import '../../corkboard/application/sample_prints.dart';
+import '../../corkboard/presentation/print_frames.dart';
 import 'viewport.dart';
 import 'body_quality.dart';
 import 'launch_picture.dart';
@@ -374,6 +376,18 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   void initState() {
     super.initState();
     ViewfinderShutter.shut = _shutter;
+    // A new corkboard gets its sample prints (once, after the launch).
+    unawaited(
+      LaunchCurtain.gone.then((_) async {
+        if (!mounted) return;
+        await SamplePrints.seed(
+          ref.read(filmRepositoryProvider),
+          ref.read(appPathsProvider),
+          ref.read(sharedPrefsProvider),
+        );
+        if (mounted) ref.invalidate(printFramesProvider);
+      }),
+    );
     ViewfinderShutter.noteOff = _noteCamera;
     // Launch: shut until the camera is live (see _live).
     _shutter.value = 1;

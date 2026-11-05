@@ -18,6 +18,7 @@ import '../../viewer/presentation/zoomable.dart';
 import '../../../core/processing/instant_frame.dart';
 import 'instant_print.dart';
 import 'print_frames.dart';
+import '../application/sample_prints.dart';
 import '../../camera/application/camera_ui_state.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/device/upright.dart';
@@ -209,7 +210,9 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Throw this print away?'),
         content: Text(
-          item.isSaved
+          SamplePrints.isSample(item)
+              ? "It's a sample print: it will be removed from the corkboard."
+              : item.isSaved
               ? "It will be removed from the corkboard. The copy in your photo library stays."
               : 'It has not been saved to your photo library. This cannot be undone.',
         ),
@@ -288,6 +291,7 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
       onWrite: spec.isInstant ? () => _writeNote(item) : null,
       saved: item.isSaved,
       gone: _gone(item),
+      sample: SamplePrints.isSample(item),
       saving: _saving,
       onSave: () => _save(item),
       onDelete: () => _delete(item),
@@ -530,7 +534,11 @@ class _ActionBar extends StatelessWidget {
     this.framing = false,
     this.onFrame,
     this.gone = false,
+    this.sample = false,
   });
+
+  /// A sample print: never leaves the app (no Share, no Save).
+  final bool sample;
 
   /// Saved, but the copy isn't on the phone now: Save again.
   final bool gone;
@@ -556,29 +564,39 @@ class _ActionBar extends StatelessWidget {
         direction: vertical ? Axis.vertical : Axis.horizontal,
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          Builder(
-            builder: (anchor) =>
-                _RoundAction(icon: Icons.ios_share, label: 'Share', onTap: () => unawaited(onShare(anchor))),
-          ),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: saved && !gone
-                ? const _RoundAction(key: ValueKey('s'), icon: Icons.check, label: 'Saved', highlighted: true)
-                : saved
-                ? _RoundAction(
-                    key: const ValueKey('g'),
-                    icon: Icons.download,
-                    label: saving ? 'Saving…' : 'Save again',
-                    onTap: saving ? null : onSave,
-                  )
-                : _RoundAction(
-                    key: const ValueKey('u'),
-                    icon: Icons.download,
-                    label: saving ? 'Saving…' : 'Save',
-                    onTap: saving ? null : onSave,
-                    primary: true,
-                  ),
-          ),
+          if (!sample) ...[
+            Builder(
+              builder: (anchor) => _RoundAction(
+                icon: Icons.ios_share,
+                label: 'Share',
+                onTap: () => unawaited(onShare(anchor)),
+              ),
+            ),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: saved && !gone
+                  ? const _RoundAction(
+                      key: ValueKey('s'),
+                      icon: Icons.check,
+                      label: 'Saved',
+                      highlighted: true,
+                    )
+                  : saved
+                  ? _RoundAction(
+                      key: const ValueKey('g'),
+                      icon: Icons.download,
+                      label: saving ? 'Saving…' : 'Save again',
+                      onTap: saving ? null : onSave,
+                    )
+                  : _RoundAction(
+                      key: const ValueKey('u'),
+                      icon: Icons.download,
+                      label: saving ? 'Saving…' : 'Save',
+                      onTap: saving ? null : onSave,
+                      primary: true,
+                    ),
+            ),
+          ],
           if (onWrite != null) _RoundAction(icon: Icons.edit_outlined, label: 'Write', onTap: onWrite),
           if (onFrame != null)
             _RoundAction(

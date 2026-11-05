@@ -33,6 +33,9 @@ class PrefKeys {
   /// Skipped the tour before its moves: the camera says "New here?" once.
   static const tourSkipped = 'user.tourSkipped';
 
+  /// The sample prints have been put up on the corkboard (once).
+  static const samplesSeeded = 'corkboard.samples';
+
   /// The last few launches' timings (LaunchTimer, Debug > Performance Report).
   static const launchTimes = 'debug.launchTimes';
 
@@ -124,6 +127,7 @@ class PrefKeys {
     onboarded,
     userName,
     tourSkipped,
+    samplesSeeded,
     launchTimes,
     'quality.gpu', // (Quality.keys)
     'quality.ui',

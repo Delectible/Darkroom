@@ -10,6 +10,7 @@ import '../../../core/db/media_repository.dart';
 import '../../../core/device/gallery_check.dart';
 import '../../../core/processing/instant_frame.dart';
 import '../../cameras/domain/camera_catalog.dart';
+import '../../corkboard/application/sample_prints.dart';
 import '../../corkboard/presentation/print_frames.dart';
 
 /// The file that leaves the app for [item]: instant prints get their
@@ -144,7 +145,10 @@ Future<List<MediaItem>?> missingFromGallery(
   Future<void> Function(MediaItem item, String name)? onRenamed,
 }) async {
   final cutoff = DateTime.now().subtract(const Duration(minutes: 1));
-  final saved = items.where((m) => m.isSaved && m.savedAt!.isBefore(cutoff)).toList();
+  // (the sample prints were never in the photo library)
+  final saved = items
+      .where((m) => m.isSaved && m.savedAt!.isBefore(cutoff) && !SamplePrints.isSample(m))
+      .toList();
   if (saved.isEmpty) return const [];
   final entries = await GalleryCheck.entries(album);
   if (entries == null) return null;

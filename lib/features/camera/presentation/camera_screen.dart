@@ -123,10 +123,37 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
       if (_shutter.status != AnimationStatus.forward && _shutter.status != AnimationStatus.completed) {
         _shutter.forward();
       }
-    } else if (_shutter.value > 0 && _shutter.status != AnimationStatus.reverse) {
-      _shutter.reverse();
+    } else if (_shutter.value > 0 && _shutter.status != AnimationStatus.reverse && !_waking) {
+      if (ref.read(appModeProvider) == AppMode.film) {
+        _shutter.reverse();
+        return;
+      }
+      // Digital: a frame for the live picture to be drawn (under the shut
+      // LCD), a still of it to pixelate as the screen wakes, then open.
+      _waking = true;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        _waking = false;
+        if (!mounted) return;
+        final shut = !_live || (CameraViewport.freeze.value != null && !CameraViewport.liveUnder.value);
+        if (shut || _shutter.value == 0 || _shutter.status == AnimationStatus.reverse) return;
+        ui.Image? still;
+        try {
+          final b = CameraViewport.snapKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+          if (b != null && b.hasSize) still = b.toImageSync(pixelRatio: _stillRatio(context) * 0.5);
+        } catch (_) {}
+        ViewfinderShutter.waking.value?.dispose();
+        ViewfinderShutter.waking.value = still;
+        _shutter.reverse().whenComplete(() {
+          if (ViewfinderShutter.waking.value == still) ViewfinderShutter.waking.value = null;
+          // (after the frame that stopped drawing it)
+          SchedulerBinding.instance.addPostFrameCallback((_) => still?.dispose());
+        });
+      });
+      SchedulerBinding.instance.scheduleFrame();
     }
   }
+
+  bool _waking = false;
 
   /// The camera's picture is live with its look loaded, so the viewfinder
   /// may open. False at launch (the curtain lifts onto the viewfinder shut,
@@ -214,6 +241,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   void _dropMoving() {
     BodyQuality.moving(false);
     _stopMirror();
+    _earlyCamera?.cancel();
+    _earlyCamera = null;
+    if (_cameraEarly) {
+      // (started as the toss was committed: let go once it's live)
+      _cameraEarly = false;
+      _dropWhenLive();
+      return;
+    }
     if (_pausedForSwipe) {
       // The stream was stopped for the swipe: start it again (the new body's
       // camera, after a toss) and let go of the still once it's live.
@@ -227,6 +262,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
 
   /// The camera's stream is stopped for this swipe.
   bool _pausedForSwipe = false;
+
+  /// A committed toss starts the new body's camera while the body is still
+  /// flying in (a moment after the commit: a quick swipe back cancels it,
+  /// so spamming swipes doesn't queue camera restarts).
+  Timer? _earlyCamera;
+  bool _cameraEarly = false;
+  static const _earlyCameraAfter = Duration(milliseconds: 150);
 
   /// 3D on: the viewfinder stays live while the body turns. The live
   /// picture keeps running under a still of itself, retaken flat every
@@ -243,6 +285,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     // the new body anyway. Debug > Live Viewfinder in Swipes: the old way.
     if (!SpeedTests.liveSwipe.value && !ref.read(captureControllerProvider).isRecording) {
       _snapMoving();
+      _earlyCamera?.cancel();
+      _earlyCamera = null;
+      if (_cameraEarly) {
+        // (it had started early for the last toss: stopped again)
+        _cameraEarly = false;
+        _pausedForSwipe = false;
+      }
       if (!_pausedForSwipe) {
         _pausedForSwipe = true;
         ref.read(cameraSessionProvider.notifier).setScreenVisible(false);
@@ -373,6 +422,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   @override
   void dispose() {
     _cover?.dispose();
+    _earlyCamera?.cancel();
     CameraViewport.freeze.removeListener(_syncShutter);
     CameraViewport.liveUnder.removeListener(_syncShutter);
     if (ViewfinderShutter.shut == _shutter) {
@@ -520,7 +570,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   AppMode? _awaiting;
 
   void _onDragStart(DragStartDetails d) {
-    if (!_canSwap()) return;
+    // Flicking straight back: the body nearly in lands at once and the new
+    // swipe carries on from it (once the swipe is a real one, below).
+    final grab = _canGrabLanding;
+    if (!grab && !_canSwap()) return;
     PerfRecorder.mark('camera swap', hold: const Duration(milliseconds: 1600));
     // Back gesture from the sides, notification shade from the top.
     final media = MediaQuery.of(context);
@@ -529,6 +582,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     // Nor from the home-gesture strip at the bottom (sliding along it
     // switches apps).
     if (d.globalPosition.dy > media.size.height - SystemGestureZones.bottom(media)) return;
+    if (grab) {
+      _swap.stop();
+      unawaited(Haptics.lightImpact());
+      _land(_landingFrom!, grabbed: true);
+    }
     // Catch it mid-spring: carry on from where it is.
     _swap.stop();
     final at = _swap.value;
@@ -580,7 +638,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
       // digital) brings in the corkboard / the explorer. It doesn't follow
       // the thumb: the swipe triggers it.
       final away = !_tossing && (v < -1.1 || (_raw < -0.25 && v < 0.3));
-      if (_swap.value != 0) unawaited(_settleBack(v));
+      if (_swap.value != 0) {
+        unawaited(_settleBack(v));
+      } else if (_pausedForSwipe || _cameraEarly) {
+        // (grabbed on landing but never moved: back to live)
+        setState(_dropMoving);
+      }
       if (away) {
         unawaited(
           _push(ref.read(appModeProvider) == AppMode.film ? const CorkboardScreen() : const ExplorerScreen()),
@@ -645,9 +708,31 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
       // frame already builds the new body in the arriving slot.
       unawaited(ref.read(appModeProvider.notifier).toggle());
     });
+    _landingFrom = from;
+    // The new body's camera starts now, not once it has landed.
+    _earlyCamera?.cancel();
+    _earlyCamera = Timer(_earlyCameraAfter, () {
+      _earlyCamera = null;
+      if (!mounted || !_committing || !_pausedForSwipe) return;
+      _pausedForSwipe = false;
+      _cameraEarly = true;
+      ref.read(cameraSessionProvider.notifier).setScreenVisible(true);
+    });
     await _swap.animateWith(SpringSimulation(_spring, _swap.value, 1, velocity));
+    // (grabbed again just before it landed: already landed, see _onDragStart)
+    if (!mounted || !_committing || _landingFrom != from) return;
     unawaited(Haptics.lightImpact()); // it lands in your hands
-    if (!mounted) return;
+    _land(from);
+  }
+
+  /// The mode the body flying in was tossed from (null once it's landed).
+  AppMode? _landingFrom;
+
+  /// The tossed body has landed: the arriving one is the camera in hand.
+  /// [grabbed]: caught again by a new swipe just before landing (its
+  /// camera stays stopped for that swipe).
+  void _land(AppMode from, {bool grabbed = false}) {
+    _landingFrom = null;
     setState(() {
       final shot = _outgoing;
       _outgoing = null;
@@ -658,10 +743,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
       _committed = false;
       _committing = false;
       _swap.value = 0;
-      _dropMoving();
+      if (grabbed) {
+        BodyQuality.moving(false);
+        _stopMirror();
+      } else {
+        _dropMoving();
+      }
       _dropBody();
     });
   }
+
+  /// A new swipe may catch the body flying in once it's this far in (the
+  /// last bit of its spring is skipped; earlier, the swipe waits).
+  static const _grabFrom = 0.85;
+
+  bool get _canGrabLanding =>
+      _committing &&
+      _committed &&
+      _landingFrom != null &&
+      _swap.value >= _grabFrom &&
+      !_selectorOpen &&
+      !ref.read(captureControllerProvider).isRecording;
 
   /// Pushes a full-screen route with the camera released for its duration
   /// (saves battery and lets the gallery's video player own the media

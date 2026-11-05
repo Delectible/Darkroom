@@ -66,6 +66,10 @@ class PrefKeys {
   /// mentioned again.
   static const galleryDismissed = 'gallery.dismissed';
 
+  /// Saved prints whose copy isn't on the phone now (deleted, or moved to
+  /// the cloud by a backup app): still saved, Save again offered.
+  static const galleryGone = 'gallery.gone';
+
   /// Each print's frame, if not the classic white border (print_frames.dart).
   static const printFrames = 'print.frames';
 
@@ -133,6 +137,7 @@ class PrefKeys {
     win98Display,
     galleryAsked,
     galleryDismissed,
+    galleryGone,
     printFrames,
     pro,
     proBought,

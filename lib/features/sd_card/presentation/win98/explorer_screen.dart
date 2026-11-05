@@ -132,7 +132,15 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
     if (!mounted) return;
     final repo = ref.read(sdCardRepositoryProvider);
     final onC = (await repo.readyItems()).where((m) => !m.onSdCard).toList();
-    if (!mounted || !onC.any((m) => m.isSaved)) return;
+    // (the ones an older version unmarked when their copy left the phone,
+    // and the user waved off: saved again)
+    final waved = ref.read(sharedPrefsProvider).getStringList(PrefKeys.galleryDismissed) ?? const [];
+    final unmarked = [
+      for (final m in onC)
+        if (!m.isSaved && waved.contains(m.id)) m.id,
+    ];
+    if (unmarked.isNotEmpty) await repo.markSaved(unmarked);
+    if (!mounted || !onC.any((m) => m.isSaved || unmarked.contains(m.id))) return;
     final prefs = ref.read(sharedPrefsProvider);
     final allowed = await galleryCheckAllowed(
       alreadyAsked: prefs.getBool(PrefKeys.galleryAsked) ?? false,
@@ -158,14 +166,11 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       onRenamed: (m, name) => renameMedia(repo, m, name),
     );
     if (missing == null || missing.isEmpty || !mounted) return;
-    // Files the user already said No to stay quiet (File > Copy to Photos
-    // still works on them).
+    // Once saved, always saved (2.1.1): a copy that left the phone (deleted,
+    // or a backup app freed up space) doesn't make the file unsaved, so
+    // nothing gets copied twice. Files the user already said No to stay
+    // quiet (File > Copy to Photos still works on them).
     final dismissed = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
-    final quiet = [
-      for (final m in missing)
-        if (dismissed.contains(m.id)) m.id,
-    ];
-    if (quiet.isNotEmpty) await repo.markUnsaved(quiet);
     final ask = [
       for (final m in missing)
         if (!dismissed.contains(m.id)) m,
@@ -185,7 +190,6 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       return;
     }
     // No (or closed): don't ask about these again.
-    await repo.markUnsaved([for (final m in ask) m.id]);
     final now = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
     await prefs.setStringList(PrefKeys.galleryDismissed, {...now, for (final m in ask) m.id}.toList());
   }
@@ -707,9 +711,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                                       Win98MenuItem(
                                         'Copy to Photos',
                                         onSelected: () {
-                                          final todo = _selectedItems()
-                                              .where((m) => !m.onSdCard && !m.isSaved)
-                                              .toList();
+                                          // (saved ones too: a copy that left the phone
+                                          // can be put back by hand)
+                                          final todo = _selectedItems().where((m) => !m.onSdCard).toList();
                                           return todo.isEmpty ? null : () => unawaited(_copyToPhotos(todo));
                                         }(),
                                       ),

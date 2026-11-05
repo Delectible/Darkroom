@@ -18,6 +18,7 @@ import '../../viewer/presentation/zoomable.dart';
 import '../../../core/processing/instant_frame.dart';
 import 'instant_print.dart';
 import 'print_frames.dart';
+import '../../camera/application/camera_ui_state.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/device/upright.dart';
 
@@ -96,10 +97,27 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     super.dispose();
   }
 
+  /// Saved, but its copy isn't on the phone now (PrefKeys.galleryGone).
+  bool _gone(MediaItem item) => item.isSaved && (_goneIds?.contains(item.id) ?? false);
+
+  List<String>? get _goneIds {
+    try {
+      return ref.read(sharedPrefsProvider).getStringList(PrefKeys.galleryGone);
+    } catch (_) {
+      return null; // (tests: no prefs)
+    }
+  }
+
   Future<void> _save(MediaItem item) async {
-    if (_saving || item.isSaved) return;
+    if (_saving || (item.isSaved && !_gone(item))) return;
     setState(() => _saving = true);
+    final again = _gone(item);
     final err = await keepMedia(ref.read(filmRepositoryProvider), item, album: filmAlbum);
+    if (err == null && again) {
+      await ref.read(sharedPrefsProvider).setStringList(PrefKeys.galleryGone, [
+        ...?_goneIds?.where((id) => id != item.id),
+      ]);
+    }
     if (!mounted) return;
     setState(() => _saving = false);
     unawaited(Haptics.lightImpact());
@@ -269,6 +287,7 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
       vertical: landscape,
       onWrite: spec.isInstant ? () => _writeNote(item) : null,
       saved: item.isSaved,
+      gone: _gone(item),
       saving: _saving,
       onSave: () => _save(item),
       onDelete: () => _delete(item),
@@ -510,7 +529,11 @@ class _ActionBar extends StatelessWidget {
     required this.onShare,
     this.framing = false,
     this.onFrame,
+    this.gone = false,
   });
+
+  /// Saved, but the copy isn't on the phone now: Save again.
+  final bool gone;
 
   /// A column down the right edge (landscape) instead of a row.
   final bool vertical;
@@ -539,8 +562,15 @@ class _ActionBar extends StatelessWidget {
           ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 200),
-            child: saved
+            child: saved && !gone
                 ? const _RoundAction(key: ValueKey('s'), icon: Icons.check, label: 'Saved', highlighted: true)
+                : saved
+                ? _RoundAction(
+                    key: const ValueKey('g'),
+                    icon: Icons.download,
+                    label: saving ? 'Saving…' : 'Save again',
+                    onTap: saving ? null : onSave,
+                  )
                 : _RoundAction(
                     key: const ValueKey('u'),
                     icon: Icons.download,

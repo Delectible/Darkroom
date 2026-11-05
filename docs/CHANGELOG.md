@@ -527,8 +527,19 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   both (`PrintFrames`, prefs `print.frames`).
 - [x] **63.6** → 2.1.1 · Every message in the new box (`Notes`); a tap on it
   closes it (the missing-prints note then stays away, as its X did).
-- [ ] **63.7** "Save all" re-saves prints a backup app moved to the cloud
-  (Google Photos' Free up space): proposal to the owner.
+- [x] **63.7** → 2.1.1 · Once saved, always saved: a print whose copy left
+  the phone (deleted, or Google Photos' Free up space) stays saved, so Save
+  all never saves it twice; the viewer offers Save again (PrefKeys.
+  galleryGone), the note says it may be in the cloud backup. Prints an
+  older version unmarked and the user waved off are marked saved again.
+  Same on C: (Copy to Photos works on any file there).
+- [x] **63.8** → 2.1.1 · Swaps: the new body's camera starts 150 ms after
+  the toss is committed, not once it lands; a body nearly in (85%) can be
+  caught by the next swipe (it lands at once); a swipe back before the
+  camera starts cancels it, so spamming swipes queues nothing.
+- [x] **63.9** → 2.1.1 · Digital viewfinder waking: big pixels shrinking
+  as the LCD comes on (over a still of the first live picture), not a
+  plain fade.
 - [ ] **63.4** Sample prints on a new corkboard: from the owner's photos,
   through the app's own looks, ~150 KB each.
 

@@ -205,9 +205,12 @@ class CameraViewport extends ConsumerWidget {
                 ClipRRect(
                   key: shutKey,
                   borderRadius: radius,
-                  child: ValueListenableBuilder<ui.Image?>(
-                    valueListenable: freeze,
-                    builder: (context, still, _) => ViewfinderShut(mode: spec.mode, still: still),
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([freeze, ViewfinderShutter.waking]),
+                    builder: (context, _) => ViewfinderShut(
+                      mode: spec.mode,
+                      still: freeze.value ?? ViewfinderShutter.waking.value,
+                    ),
                   ),
                 ),
                 // "Loading film…": over the frame (outside the snapshot), only

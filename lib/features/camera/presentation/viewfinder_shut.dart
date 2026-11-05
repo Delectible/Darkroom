@@ -33,6 +33,10 @@ class ViewfinderShutter {
   static bool cameraOff = false;
   static VoidCallback? noteOff;
 
+  /// Digital, waking: a still of the first live picture, pixelated as the
+  /// LCD comes on (the live picture itself can't be, cheaply).
+  static final waking = ValueNotifier<ui.Image?>(null);
+
   /// How long closing and opening take.
   static const close = Duration(milliseconds: 320);
   static const open = Duration(milliseconds: 280);
@@ -194,12 +198,23 @@ class _ShutPainter extends CustomPainter {
       if (marks) _marks(canvas, rect);
       return;
     }
-    // The LCD sleeping: bigger pixels as the backlight goes (closing over
-    // the still; opening over the live picture, the backlight only).
+    // The LCD sleeping: bigger pixels as the backlight goes, over the still
+    // it stopped on; waking, the same backwards over a still of the first
+    // live picture ([ViewfinderShutter.waking]), which fades into the live
+    // one at the end.
     if (still != null) {
       final n = _PixelSteps.columns.length;
-      final i = opening ? -1 : ((p - 0.08) / 0.7 * n).floor();
-      if (i < 0) {
+      final i = ((p - 0.08) / 0.7 * n).floor();
+      if (i < 0 && opening) {
+        paintImage(
+          canvas: canvas,
+          rect: rect,
+          image: still,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.low,
+          opacity: _c(p / 0.08),
+        );
+      } else if (i < 0) {
         _picture(canvas, rect, still, FilterQuality.low);
       } else {
         _picture(canvas, rect, pixels.step(still, i.clamp(0, n - 1)), FilterQuality.none);

@@ -9,7 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The camera is ready sooner: it opens straight onto its viewfinder, which comes on as the picture '
+      'The camera is ready sooner, at launch and after swapping cameras, and you can swap straight back. '
+      'It opens straight onto its viewfinder, which comes on as the picture '
       'arrives. Prints can wear new frames, and instant prints new papers: tap Frame when looking at one, and '
       'it goes out with the print when you share or save it. Messages have a cleaner look.';
 

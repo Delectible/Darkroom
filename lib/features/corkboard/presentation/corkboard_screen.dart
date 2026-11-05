@@ -172,8 +172,9 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     });
   }
 
-  /// Prints whose saved copy was deleted from the phone's photos go back to
-  /// unsaved (Save works again), with an offer to save them all now.
+  /// Prints whose saved copy has left the phone's photos (deleted, or a
+  /// backup app freed up space) stay saved, with one offer to save them
+  /// again (see PrefKeys.galleryGone).
   Timer? _galleryTimer;
 
   Future<void> _checkGallery() async {
@@ -204,10 +205,24 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
               true,
     );
     if (!allowed || !mounted) return;
+    // (2.1.1: once saved, always saved. Before, a print whose copy left the
+    // phone went back to unsaved, and Save all saved it twice for anyone
+    // whose backup app frees up space; the ones waved off then are saved
+    // again here.)
+    final waved = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
+    final unmarked = [
+      for (final m in items)
+        if (!m.isSaved && waved.contains(m.id)) m.id,
+    ];
+    if (unmarked.isNotEmpty) await repo.markSaved(unmarked);
     final missing = await missingFromGallery(items, filmAlbum, links: GalleryLinks(prefs));
-    if (missing == null || missing.isEmpty || !mounted) return;
-    await repo.markUnsaved([for (final m in missing) m.id]);
-    // Ones the user already waved off stay quiet (Save still works on them).
+    if (missing == null || !mounted) return;
+    // A saved print whose copy isn't on the phone stays saved (it may well
+    // be in the user's cloud backup): Save all leaves it alone, the viewer
+    // offers Save again.
+    await prefs.setStringList(PrefKeys.galleryGone, [for (final m in missing) m.id]);
+    if (missing.isEmpty) return;
+    // Ones the user already waved off stay quiet (Save again still works).
     final dismissed = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
     final tell = [
       for (final m in missing)
@@ -220,8 +235,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     // (the phone can't tell a deleted copy from one a backup app moved to
     // the cloud to free up space)
     Notes.show(
-      "$what you saved ${n == 1 ? 'is' : 'are'} no longer on your phone: deleted, or moved to "
-      'the cloud by a backup app.',
+      "$what you saved ${n == 1 ? 'is' : 'are'} no longer on your phone, maybe in your cloud backup. "
+      "${n == 1 ? 'It still counts' : 'They still count'} as saved.",
       action: 'Save again',
       duration: const Duration(seconds: 7),
       onAction: () async {

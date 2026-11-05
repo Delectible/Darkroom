@@ -644,12 +644,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       _snapMoving();
       session.setScreenVisible(false);
     }
+    final run = ++_settingsRun;
     await showSettingsSheet(context);
     _claimEdges();
     if (!pause) return;
     // Let the sheet finish closing before the camera starts up.
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
+    // (reopened meanwhile: that one carries on, cover and all)
+    if (!mounted || run != _settingsRun) return;
     _uncoverScreen();
     session.setScreenVisible(true);
     _dropWhenLive();
@@ -661,6 +663,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// layers (desk, 3D body, face, mask), most of a slow tablet's frame.
   /// A setting that changes the camera drops it at once, so the change shows.
   final _screenKey = GlobalKey();
+  int _settingsRun = 0;
   ui.Image? _cover;
 
   void _coverScreen() {

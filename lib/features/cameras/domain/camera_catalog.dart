@@ -26,6 +26,8 @@ class CameraCatalog {
   static const ektar100 = CameraSpec(
     id: 'ektar100',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 2.5, wideMm: 28),
+    exposure: ExposureSpec(),
     name: 'Vivid 100',
     subtitle: 'ISO 100: ultra-fine, punchy colour. Needs sun',
     badge: 'ISO 100',
@@ -41,6 +43,8 @@ class CameraCatalog {
   static const portra400 = CameraSpec(
     id: 'portra400',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 2.5, wideMm: 28),
+    exposure: ExposureSpec(),
     name: 'Portrait 400',
     subtitle: 'ISO 400 portrait film: soft skin, any light',
     badge: 'ISO 400',
@@ -56,6 +60,8 @@ class CameraCatalog {
   static const hp5 = CameraSpec(
     id: 'hp5plus400',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 2.5, wideMm: 28),
+    exposure: ExposureSpec(),
     name: 'Classic 400',
     subtitle: 'ISO 400 press B&W: gritty, copes with dusk',
     badge: 'ISO 400',
@@ -71,6 +77,8 @@ class CameraCatalog {
   static const super8 = CameraSpec(
     id: 'super8',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 4, wideMm: 9),
+    exposure: ExposureSpec(step: 1 / 2),
     name: 'Super 8',
     subtitle: 'Home movies on slow daylight film: go outside',
     badge: '18 FPS',
@@ -92,6 +100,8 @@ class CameraCatalog {
   static const polaroid600 = CameraSpec(
     id: 'polaroid600',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 1.5, wideMm: 116),
+    exposure: ExposureSpec(min: -1, max: 1, step: 1, labels: ['D', '\u2022', 'L']),
     name: 'Instant 600',
     subtitle: 'ISO 640 instant prints. Best with the flash',
     badge: 'ISO 640',
@@ -113,6 +123,8 @@ class CameraCatalog {
   static const gold200 = CameraSpec(
     id: 'gold200',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 2.5, wideMm: 28),
+    exposure: ExposureSpec(),
     name: 'Golden 200',
     subtitle: 'ISO 200 drugstore classic: warm, golden days',
     badge: 'ISO 200',
@@ -129,6 +141,8 @@ class CameraCatalog {
   static const night800 = CameraSpec(
     id: 'cinestill800t',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 2.5, wideMm: 28),
+    exposure: ExposureSpec(),
     name: 'Night 800T',
     subtitle: 'ISO 800 tungsten cine film: made for night',
     badge: 'ISO 800',
@@ -145,6 +159,8 @@ class CameraCatalog {
   static const chrome50 = CameraSpec(
     id: 'velvia50',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 2.5, wideMm: 28),
+    exposure: ExposureSpec(),
     name: 'Chrome 50',
     subtitle: 'ISO 50 slide film: vivid, needs strong light',
     badge: 'ISO 50',
@@ -161,6 +177,8 @@ class CameraCatalog {
   static const singleUse = CameraSpec(
     id: 'superia400',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 1.5, wideMm: 32),
+    exposure: ExposureSpec(min: -1, max: 1, step: 1),
     name: 'Single-Use 27',
     subtitle: 'Disposable: fixed f/8, use the flash indoors',
     badge: '27 EXP',
@@ -179,6 +197,8 @@ class CameraCatalog {
   static const epic70 = CameraSpec(
     id: 'vision70',
     mode: AppMode.film,
+    zoom: ZoomSpec(max: 2, wideMm: 50),
+    exposure: ExposureSpec(),
     name: 'Epic 70',
     subtitle: '70mm cinema film: wide, rich, ultra-fine',
     badge: '24 FPS',
@@ -518,12 +538,7 @@ class CameraCatalog {
       dither: 1.0,
     ),
     quality: CaptureQuality.low,
-    output: OutputProfile(
-      maxLongEdge: 1024,
-      jpegQuality: 92,
-      lowResLongEdge: 160,
-      upscale: 6,
-    ),
+    output: OutputProfile(maxLongEdge: 1024, jpegQuality: 92, lowResLongEdge: 160, upscale: 6),
     aspects: [AspectRatioOption.r1x1],
     defaultAspect: AspectRatioOption.r1x1,
     artwork: 'assets/artwork/toycam.webp',

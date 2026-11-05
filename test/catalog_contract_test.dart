@@ -44,7 +44,15 @@ void main() {
           expect(FilmProfile.forStock(c.id), isNotNull, reason: 'add it to film_profile.dart');
           expect(c.look, isNull);
         });
-        test('film: never zooms', () => expect(c.zoom, isNull));
+        // (2.1.2: every film camera zooms on its ring, in mm, and has an
+        // exposure scale)
+        test('film: a zoom ring and an exposure scale', () {
+          expect(c.zoom?.wideMm, isNotNull, reason: 'its lens in mm (the ring is marked in it)');
+          expect(c.zoom!.max, inInclusiveRange(1.2, 5));
+          expect(c.exposure, isNotNull);
+          expect(c.exposure!.steps, greaterThan(0));
+          if (c.exposure!.labels case final l?) expect(l.length, c.exposure!.steps + 1);
+        });
         test('film: no explorer drive', () => expect(c.storage, DigitalStorage.sdCard));
         test('film: sensible darkroom time and roll', () {
           expect(c.developTime, greaterThan(Duration.zero));

@@ -29,11 +29,17 @@ class LabNote {
   }
 
   /// Reads the phone's exposure from the capture at [path].
-  static Future<String?> forFile(CameraSpec spec, String path, {required bool flash}) async {
+  static Future<String?> forFile(
+    CameraSpec spec,
+    String path, {
+    required bool flash,
+    double exposureComp = 0,
+  }) async {
     if (spec.film == null || flash) return null;
     try {
       final exif = img.decodeJpgExif(await File(path).readAsBytes());
-      return exif == null ? null : forShot(spec, sceneEvOf(exif), flash: flash);
+      final ev = exif == null ? null : sceneEvOf(exif);
+      return forShot(spec, ev == null ? null : ev + exposureComp, flash: flash);
     } on Object {
       return null;
     }

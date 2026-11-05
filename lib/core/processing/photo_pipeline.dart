@@ -37,7 +37,13 @@ class PhotoJob {
     this.rotationTurns = 0,
     this.originalCopyPath,
     this.grain = GrainStrength.normal,
+    this.exposureComp = 0,
   });
+
+  /// Exposure compensation at the shutter (stops): the phone exposed the
+  /// shot this much brighter, so the scene was this much darker than the
+  /// capture's own exposure says.
+  final double exposureComp;
 
   final String id;
   final String cameraId;
@@ -81,6 +87,7 @@ class PhotoJob {
     'rotationTurns': rotationTurns,
     'originalCopyPath': originalCopyPath,
     'grain': grain.name,
+    'exposureComp': exposureComp,
   };
 
   factory PhotoJob.fromJson(Map<String, Object?> j) => PhotoJob(
@@ -97,6 +104,7 @@ class PhotoJob {
     rotationTurns: j['rotationTurns'] as int? ?? 0,
     originalCopyPath: j['originalCopyPath'] as String?,
     grain: GrainStrength.fromName(j['grain'] as String?),
+    exposureComp: (j['exposureComp'] as num?)?.toDouble() ?? 0,
   );
 }
 
@@ -141,7 +149,12 @@ class PhotoPipeline {
       throw const FormatException('Capture could not be decoded');
     }
     final orientation = decoded.exif.imageIfd.orientation ?? 1;
-    final sceneEv = sceneEvOf(decoded.exif);
+    // (the scene's own brightness: the phone's exposure, less the
+    // compensation it was told to add)
+    final sceneEv = switch (sceneEvOf(decoded.exif)) {
+      final ev? => ev + job.exposureComp,
+      null => null,
+    };
     final swap = orientation >= 5 && orientation <= 8;
     final ow = swap ? decoded.height : decoded.width;
     final oh = swap ? decoded.width : decoded.height;

@@ -552,3 +552,20 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   fallback (DARKROOM.md). iPhones and the tablet (ASTC) untouched. Check
   pub.dev for updates now and then (CLAUDE.md).
 
+## 64. Camera controls, film first (2026-11-05)
+
+- [x] **64.1** → 2.1.2 · Zoom ring on the film viewfinder (`film_dials.dart`):
+  the top of a lens barrel along the bottom edge, marked in mm, dragged
+  sideways; faint at rest, lit while in use, clicks (haptics) at each mark,
+  coasts and bounces off the lens's ends. Every stock zooms, its own range
+  (`ZoomSpec.wideMm`, `max`: 35 mm 28-70, single-use 32-48, instant
+  116-175, Super 8 9-36, Epic 70 50-100), drives the phone zoom.
+- [x] **64.2** → 2.1.2 · Exposure scale up the right edge (`ExposureSpec`:
+  thirds; Super 8 halves; single-use whole stops; instant D • L). Moves the
+  phone's exposure (`exposureCompProvider`, per camera, 0 each launch); the
+  shot carries it (`PhotoJob.exposureComp`) so the film reads the scene's
+  real brightness (lab notes too).
+- [ ] **64.3** The one changing button by the shutter (ME, FADE, blank).
+- [ ] **64.4** Lens caps (wide, fish-eye, plastic, soft) from the corner ring.
+- [ ] **64.5** The same for the digital cameras.
+

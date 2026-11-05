@@ -14,6 +14,7 @@ import '../../../core/providers.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
 import 'camera_session_controller.dart';
+import 'exposure_controller.dart';
 import 'camera_ui_state.dart';
 import 'lab_note.dart';
 import 'zoom_controller.dart';
@@ -101,6 +102,7 @@ class CaptureController extends Notifier<CaptureState> {
       timestamp: spec.supportsTimestamp && local.timestamp,
       global: ref.read(globalSettingsProvider),
       grain: local.grain,
+      exposureComp: spec.exposure == null ? 0 : ref.read(exposureCompProvider),
       // Gravity, not c.value.deviceOrientation: with the activity locked to
       // portrait the plugin keeps reporting portraitUp.
       rotationTurns: rotationTurnsFor(
@@ -150,7 +152,12 @@ class CaptureController extends Notifier<CaptureState> {
     try {
       final file = await c.takePicture();
       // Read before the hand-off moves the file.
-      final note = await LabNote.forFile(ctx.spec, file.path, flash: ctx.flash != FlashSetting.off);
+      final note = await LabNote.forFile(
+        ctx.spec,
+        file.path,
+        flash: ctx.flash != FlashSetting.off,
+        exposureComp: ctx.exposureComp,
+      );
       // Hand-off: moves the file into our cache + writes the queue row.
       // Processing then continues in the background isolate.
       final id = await ref.read(captureProcessorProvider).enqueuePhoto(file.path, ctx);

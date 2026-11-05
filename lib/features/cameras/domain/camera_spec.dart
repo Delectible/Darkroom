@@ -83,7 +83,11 @@ enum DigitalStorage {
 
 /// Motorised zoom on digital bodies: held W/T buttons drive it at a fixed rate.
 class ZoomSpec {
-  const ZoomSpec({required this.max, this.endToEnd = const Duration(milliseconds: 2400)});
+  const ZoomSpec({required this.max, this.endToEnd = const Duration(milliseconds: 2400), this.wideMm});
+
+  /// Film: the lens's focal length at its wide end (the zoom ring is marked
+  /// in mm from here to [max] times it).
+  final double? wideMm;
 
   /// Longest focal length as a multiple of the widest (clamped to what the
   /// phone's camera supports).
@@ -91,6 +95,21 @@ class ZoomSpec {
 
   /// Time for a full W-to-T sweep.
   final Duration endToEnd;
+}
+
+/// Exposure compensation the camera offers (film: the scale on the
+/// viewfinder's right edge), in stops: [min] to [max] in [step]s. [labels]
+/// name each step instead of numbers (the instant's darken / lighten wheel).
+class ExposureSpec {
+  const ExposureSpec({this.min = -2, this.max = 2, this.step = 1 / 3, this.labels});
+
+  final double min, max, step;
+  final List<String>? labels;
+
+  int get steps => ((max - min) / step).round();
+
+  /// [v] on a step, within range.
+  double snap(double v) => (((v.clamp(min, max) - min) / step).round() * step + min).clamp(min, max);
 }
 
 class CameraSpec {
@@ -116,6 +135,7 @@ class CameraSpec {
     this.printStyle = PrintStyle.print,
     this.roll = const FilmRoll(),
     this.zoom,
+    this.exposure,
     this.pickerTag,
     this.storage = DigitalStorage.sdCard,
     this.boxColor = 0xFFE3D8C3,
@@ -169,6 +189,9 @@ class CameraSpec {
 
   /// Digital: motorised zoom range. Film bodies never zoom (null).
   final ZoomSpec? zoom;
+
+  /// Exposure compensation (film); null: none offered.
+  final ExposureSpec? exposure;
 
   /// Optional tag under the name in the picker (e.g. "MOVIE · 18 FPS").
   final String? pickerTag;

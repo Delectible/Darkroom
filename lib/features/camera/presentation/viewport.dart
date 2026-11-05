@@ -28,6 +28,7 @@ import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
 import '../application/zoom_controller.dart';
+import 'film_dials.dart';
 import 'viewfinder_shut.dart';
 
 /// The viewfinder: shader-filtered live preview, aspect-ratio mask, burned-in
@@ -213,6 +214,13 @@ class CameraViewport extends ConsumerWidget {
                     ),
                   ),
                 ),
+                // Film: the zoom ring and exposure scale, in the viewfinder
+                // (outside the snapshot, over the shutter).
+                if (spec.mode == AppMode.film && (spec.zoom != null || spec.exposure != null))
+                  Positioned.fromRect(
+                    rect: maskRect,
+                    child: FilmDials(key: ValueKey(spec.id), spec: spec),
+                  ),
                 // "Loading film…": over the frame (outside the snapshot), only
                 // when you try to use a camera that's still loading.
                 Positioned.fromRect(

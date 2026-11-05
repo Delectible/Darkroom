@@ -82,6 +82,21 @@ class ZoomController extends Notifier<ZoomState> {
     }
   }
 
+  /// The film zoom ring: straight to [level] (clamped), as the finger turns it.
+  void setLevel(double level) {
+    if (!state.canZoom) return;
+    final next = level.clamp(state.min, state.max);
+    if (next == state.level) return;
+    state = state.copyWith(level: next, changedAt: DateTime.now());
+    _send(next);
+  }
+
+  /// The ring let go: land the sensor exactly where it rests.
+  void settle() {
+    _lastSent = null;
+    _send(state.level);
+  }
+
   /// W (-1) or T (+1) pressed.
   void start(int direction) {
     if (!state.canZoom) return;

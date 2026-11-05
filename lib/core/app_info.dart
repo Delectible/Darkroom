@@ -3,16 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.1.1';
+  static const version = '2.1.2';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The camera is ready sooner, at launch and after swapping cameras, and you can swap straight back. '
-      'It opens straight onto its viewfinder, which comes on as the picture '
-      'arrives. Prints can wear new frames, and instant prints new papers: tap Frame when looking at one, and '
-      'it goes out with the print when you share or save it. Messages have a cleaner look.';
+      'Film cameras get a zoom ring and an exposure scale, right in the viewfinder: slide along the bottom '
+      'to zoom, up or down the right edge to brighten or darken. Each film has its own lens and steps.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

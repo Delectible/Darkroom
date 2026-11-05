@@ -31,7 +31,11 @@ class CaptureContext {
     required this.global,
     this.rotationTurns = 0,
     this.grain = GrainStrength.normal,
+    this.exposureComp = 0,
   });
+
+  /// Exposure compensation at the shutter (stops).
+  final double exposureComp;
 
   final CameraSpec spec;
   final AspectRatioOption aspect;
@@ -175,6 +179,7 @@ class CaptureProcessor {
       capturedAtMs: now.millisecondsSinceEpoch,
       rotationTurns: ctx.rotationTurns,
       grain: ctx.grain,
+      exposureComp: ctx.exposureComp,
       originalCopyPath: ctx.global.saveOriginalCopy
           ? p.join(paths.captureCacheDir.path, '${id}_original.jpg')
           : null,

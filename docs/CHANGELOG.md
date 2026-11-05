@@ -565,6 +565,8 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   phone's exposure (`exposureCompProvider`, per camera, 0 each launch); the
   shot carries it (`PhotoJob.exposureComp`) so the film reads the scene's
   real brightness (lab notes too).
+- [x] **64.6** → 2.1.3 · Switching stock keeps the focal length when the new
+  lens reaches it, else the nearest end (`ZoomController._filmMm`).
 - [ ] **64.3** The one changing button by the shutter (ME, FADE, blank).
 - [ ] **64.4** Lens caps (wide, fish-eye, plastic, soft) from the corner ring.
 - [ ] **64.5** The same for the digital cameras.

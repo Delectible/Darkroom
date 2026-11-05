@@ -579,4 +579,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   (`PickerCaret`).
 - [ ] **64.4** Lens caps (wide, fish-eye, plastic, soft) from the corner ring.
 - [ ] **64.5** The same for the digital cameras.
+- [x] **64.8** → 2.1.4 · Zoom carries across stocks as the zoom level itself
+  (not the mm), clamped to the new lens. Picker notch / SD tab removed (the
+  tour explains the picker). Message box: 64 dp in from each side, at most
+  340 wide. ME: the second exposure goes to the darkroom at once; the first
+  is blended into it in the queue before it develops (`enqueuePhoto(prepare:)`).
+- [ ] **64.9** Focus mark: options to the owner (AF brackets, AF-point blink,
+  microprism ring).
 

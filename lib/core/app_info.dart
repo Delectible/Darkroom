@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.1.3';
+  static const version = '2.1.4';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Double exposures on the 35 mm films: tap ME in the viewfinder corner, take two shots, get one frame. '
-      'Your zoom carries over when you change film, and a neater way into the film picker.';
+      'Double exposures land in the darkroom straight away. Your zoom stays put when you change film, '
+      'and messages sit neatly inside the viewfinder.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

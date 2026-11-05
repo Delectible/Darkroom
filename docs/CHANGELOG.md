@@ -540,6 +540,13 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **63.9** → 2.1.1 · Digital viewfinder waking: big pixels shrinking
   as the LCD comes on (over a still of the first live picture), not a
   plain fade.
-- [ ] **63.4** Sample prints on a new corkboard: from the owner's photos,
-  through the app's own looks, ~150 KB each.
+- [x] **63.4** → 2.1.1 · Sample prints on a new corkboard (`sample_prints.dart`,
+  assets/samples, 0.7 MB): the owner's photos developed through the app's
+  own pipeline: an instant print "Sydney Trip '26", Portrait 400, Golden 200
+  in the darkroom frame. Put up once per install (existing ones too), after
+  the launch. Count as saved, never offered Save or Share, skipped by the
+  photo library check; thrown away like any print. Ids `sample-*`.
+- [ ] **63.10** Half-size 3D textures where they can't be compressed (Pixel:
+  192 -> 48 MB a camera): needs a change inside flutter_scene (its rgba8
+  fallback, `_prepare` in texture/compressed_texture.dart); asked.
 

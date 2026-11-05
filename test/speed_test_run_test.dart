@@ -101,4 +101,20 @@ void main() {
     // ignore: avoid_print
     print('$row\n$rest');
   });
+
+  testWidgets('a run shows its panel at once, and stopping still gives results', (tester) async {
+    final nav = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(MaterialApp(navigatorKey: nav, home: const SizedBox()));
+    String? results;
+    await tester.runAsync(() async {
+      final run = SpeedTestRun.run(nav.currentState!, done: (r) => results = r);
+      // the panel is up before anything else happens
+      expect(SpeedTestRun.status.value, isNotNull);
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      SpeedTestRun.stop();
+      await run.timeout(const Duration(seconds: 10));
+    });
+    expect(SpeedTestRun.status.value, isNull);
+    expect(results, contains('DARKROOM SPEED TEST (stopped early)'));
+  });
 }

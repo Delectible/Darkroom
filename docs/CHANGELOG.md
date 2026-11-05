@@ -406,6 +406,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   a fixed number of evenly stamped moves (the same gesture whatever the
   frame rate; a stall no longer reads as no toss). A failing step is noted
   under PROBLEMS and the run goes on. Start dialog: portrait, battery saver off.
+- [x] **61.22** → 2.0.13 · Speed test didn't start on the owner's Pixel (2.0.12:
+  Start, then nothing). The run now shows its panel before anything else;
+  the phone-state and header steps (new in 2.0.12, before the panel) and
+  every Android request have a 3 s limit; any error ends the run with
+  results and a PROBLEMS line instead of silently. Test: a run shows its
+  panel at once and a stopped run still gives results.
 
 ## 62. Ideas (2026-11-05)
 

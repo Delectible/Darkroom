@@ -142,7 +142,9 @@ class SpeedTestRun {
   static Future<Object?> _channel(String method, [Object? args]) async {
     if (!Platform.isAndroid) return null;
     try {
-      return await const MethodChannel('darkroom/display').invokeMethod<Object?>(method, args);
+      return await const MethodChannel(
+        'darkroom/display',
+      ).invokeMethod<Object?>(method, args).timeout(const Duration(seconds: 3));
     } catch (_) {
       return null;
     }
@@ -241,10 +243,6 @@ class SpeedTestRun {
     final plan = _plan;
     final total = _plannedSeconds;
     final clock = Stopwatch()..start();
-    final before = await _state();
-    final head = header?.call();
-    SpeedTests.allOff();
-    final wasFancy = fancy?.call() ?? true;
     final screens = <String>[], variants = <String>[];
     var stepNo = 0;
     var stage = 'Getting ready';
@@ -255,12 +253,23 @@ class SpeedTestRun {
       left: math.max(0, total - clock.elapsedMilliseconds / 1000),
       live: PerfRecorder.lastSecond(),
     );
+    // The panel first: nothing below may keep the run from showing it.
     show();
     final tick = Timer.periodic(const Duration(seconds: 1), (_) => show());
-    navigator.popUntil((r) => r.isFirst);
-    await _wait(1.5);
-    PerfRecorder.clear();
+    String? before, head;
+    var wasFancy = true;
     try {
+      before = await _state();
+      try {
+        head = header?.call();
+      } catch (e) {
+        _notes.add('header: $e');
+      }
+      SpeedTests.allOff();
+      wasFancy = fancy?.call() ?? true;
+      navigator.popUntil((r) => r.isFirst);
+      await _wait(1.5);
+      PerfRecorder.clear();
       for (final s in plan) {
         if (_stop) break;
         stepNo++;
@@ -312,6 +321,9 @@ class SpeedTestRun {
           await _wait(3);
         }
       }
+    } catch (e) {
+      // (a run that breaks still ends with results, saying where)
+      _notes.add('run stopped: $e');
     } finally {
       PerfRecorder.test = null;
       pulse.value = false;
@@ -323,6 +335,9 @@ class SpeedTestRun {
       status.value = null;
       await _channel('strongVote', false);
       final after = await _state();
+      try {
+        head ??= header?.call();
+      } catch (_) {}
       final text = await _results(
         screens,
         variants,
@@ -409,13 +424,10 @@ class SpeedTestRun {
   }
 
   static Future<double?> _displayHz() async {
-    if (!Platform.isAndroid) return null;
-    try {
-      return await const MethodChannel('darkroom/display').invokeMethod<double>('displayHz');
-    } catch (_) {
-      return null;
-    }
+    final v = await _channel('displayHz');
+    return v is num ? v.toDouble() : null;
   }
+
 
   static Future<String> _results(
     List<String> screens,
@@ -429,7 +441,7 @@ class SpeedTestRun {
     var device = Platform.isIOS ? 'iPhone' : '?';
     if (Platform.isAndroid) {
       try {
-        device = await const MethodChannel('darkroom/display').invokeMethod<String>('device') ?? '?';
+        device = (await _channel('device'))?.toString() ?? '?';
       } catch (_) {}
     }
     final px = view?.physicalSize;

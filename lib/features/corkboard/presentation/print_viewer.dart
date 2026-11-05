@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/note_box.dart';
 import '../../../core/device/device_memory.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
@@ -16,6 +17,7 @@ import '../../viewer/presentation/media_actions.dart';
 import '../../viewer/presentation/zoomable.dart';
 import '../../../core/processing/instant_frame.dart';
 import 'instant_print.dart';
+import 'print_frames.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/device/upright.dart';
 
@@ -69,6 +71,9 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
   bool _saving = false;
   Animation<double>? _route;
 
+  /// The frames tray is open (print_frames.dart).
+  bool _framing = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -94,12 +99,11 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
   Future<void> _save(MediaItem item) async {
     if (_saving || item.isSaved) return;
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
     final err = await keepMedia(ref.read(filmRepositoryProvider), item, album: filmAlbum);
     if (!mounted) return;
     setState(() => _saving = false);
     unawaited(Haptics.lightImpact());
-    messenger.showSnackBar(SnackBar(content: Text(err ?? 'Saved to your photo library ($filmAlbum).')));
+    Notes.show(err ?? 'Saved to your photo library ($filmAlbum).');
   }
 
   /// Instant prints: write (or change) the note on the bottom border.
@@ -175,11 +179,10 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     if (again != true || !mounted) return;
     final fresh = await repo.byId(item.id);
     if (fresh == null || !mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     final err = await saveToGallery(fresh, album: filmAlbum);
     if (!mounted) return;
     unawaited(Haptics.lightImpact());
-    messenger.showSnackBar(SnackBar(content: Text(err ?? 'Saved a copy with the note ($filmAlbum).')));
+    Notes.show(err ?? 'Saved a copy with the note ($filmAlbum).');
   }
 
   Future<void> _delete(MediaItem item) async {
@@ -239,7 +242,10 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
       onSave: () => _save(item),
       onDelete: () => _delete(item),
       onShare: (anchor) => shareMedia(anchor, item),
+      framing: _framing,
+      onFrame: spec.isInstant ? null : () => setState(() => _framing = !_framing),
     );
+    final frames = ref.watch(printFramesProvider);
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -320,11 +326,39 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                           itemBuilder: (context, i) => _Print(
                             printKey: _printKeys.putIfAbsent(items[i].id, GlobalKey.new),
                             item: items[i],
+                            frame: frames[items[i].id] ?? PrintFrame.classic,
                             onWrite: () => _writeNote(items[i]),
                             fly: i == _index ? fly : null,
                             current: i == _index,
                             origin: () => widget.originOf?.call(items[i].id),
                           ),
+                        ),
+                      ),
+                      // The frames for the print in view: a tap puts one on.
+                      faded(
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 240),
+                          curve: Curves.easeOutCubic,
+                          child: _framing && !spec.isInstant
+                              ? Padding(
+                                  padding: const EdgeInsets.only(top: 8, bottom: 6),
+                                  child: FramePicker(
+                                    current: frames[item.id] ?? PrintFrame.classic,
+                                    aspect: (item.width ?? 3) / (item.height ?? 2),
+                                    preview: item.thumbPath == null
+                                        ? const ColoredBox(color: Colors.black26)
+                                        : Image.file(
+                                            File(item.thumbPath!),
+                                            fit: BoxFit.cover,
+                                            cacheWidth: 160,
+                                          ),
+                                    onPick: (f) {
+                                      unawaited(Haptics.selectionClick());
+                                      ref.read(printFramesProvider.notifier).set(item.id, f);
+                                    },
+                                  ),
+                                )
+                              : const SizedBox(width: double.infinity),
                         ),
                       ),
                       if (!landscape) faded(actions),
@@ -345,6 +379,7 @@ class _Print extends StatelessWidget {
   const _Print({
     required this.printKey,
     required this.item,
+    required this.frame,
     required this.onWrite,
     required this.current,
     this.fly,
@@ -357,6 +392,7 @@ class _Print extends StatelessWidget {
   /// On the print itself (taps off it put it down: see [PhotoPager.onTap]).
   final GlobalKey printKey;
   final MediaItem item;
+  final PrintFrame frame;
   final VoidCallback onWrite;
 
   /// The route's progress, while this print is lifted off the board (and
@@ -428,13 +464,15 @@ class _Print extends StatelessWidget {
     return _held(
       AspectRatio(
         aspectRatio: aspect,
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: const BoxDecoration(
-            color: Color(0xFFFBF8F1),
-            boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, 12))],
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 220),
+          child: FramedPrint(
+            key: ValueKey(frame),
+            frame: frame,
+            number: RegExp(r'_(\d+)\.').firstMatch(item.fileName)?.group(1),
+            seed: item.id.hashCode,
+            photo: path == null ? const ColoredBox(color: Colors.black12) : _photo(context, path),
           ),
-          child: path == null ? const ColoredBox(color: Colors.black12) : _photo(context, path),
         ),
       ),
     );
@@ -450,10 +488,16 @@ class _ActionBar extends StatelessWidget {
     required this.onSave,
     required this.onDelete,
     required this.onShare,
+    this.framing = false,
+    this.onFrame,
   });
 
   /// A column down the right edge (landscape) instead of a row.
   final bool vertical;
+
+  /// Frames (not instant prints: their frame is the film's own).
+  final bool framing;
+  final VoidCallback? onFrame;
   final VoidCallback? onWrite;
   final bool saved;
   final bool saving;
@@ -486,6 +530,13 @@ class _ActionBar extends StatelessWidget {
                   ),
           ),
           if (onWrite != null) _RoundAction(icon: Icons.edit_outlined, label: 'Write', onTap: onWrite),
+          if (onFrame != null)
+            _RoundAction(
+              icon: Icons.filter_frames_outlined,
+              label: 'Frame',
+              onTap: onFrame,
+              highlighted: framing,
+            ),
           _RoundAction(icon: Icons.delete_outline, label: 'Throw away', onTap: onDelete),
         ],
       ),

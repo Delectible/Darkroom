@@ -499,3 +499,26 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [ ] **62.2** iPhone Camera Control: slide to zoom, press to shoot (needs our
   own copy of the camera plugin's iPhone session; was the "slide to zoom"
   checklist item).
+
+## 63. 2.1: UI and design (2026-11-05)
+
+- [x] **63.1** → 2.1.1 · Launch onto a shut viewfinder: the curtain no
+  longer waits for the camera or its look (it lifts once the face and the
+  3D body or launch picture are in); the viewfinder opens like a camera
+  powering up once the picture is live with its look loaded. Same after
+  any restart (back from the background, a new stock: no plain picture
+  first). The shutter while starting shows "Winding on…" / "Warming up…";
+  so does a camera still not up 3 s after the curtain. No spinner under it.
+  Launch Timing records camera open / look loaded / viewfinder opens after
+  the curtain (`LaunchTimer.after`).
+- [x] **63.2** → 2.1.1 · One look for messages (`core/theme/note_box.dart`:
+  `NoteBox`, `Notes.show(text, action:)`), the camera's dark box. Trial on
+  the print viewer's Saved notes and the corkboard's shake note; the other
+  snackbars wait for a yes.
+- [x] **63.3** → 2.1.1 · Frames (trial): Classic, Borderless, Deckle,
+  Darkroom (filed carrier, frame number in the edge). Frame button in the
+  print viewer opens a row of the print in each; per print, in prefs
+  (`print.frames`). Viewer only for now (not the board, not saved files).
+- [ ] **63.4** Sample prints on a new corkboard: from the owner's photos,
+  through the app's own looks, ~150 KB each.
+

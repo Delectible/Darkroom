@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/note_box.dart';
 import '../../../core/monetization/allowance.dart';
 import '../../../core/monetization/pro.dart';
 
@@ -264,28 +265,7 @@ class _CameraNoteViewState extends State<_CameraNoteView> {
         opacity: note == null ? 0 : 1,
         duration: Duration(milliseconds: note == null ? 420 : 180),
         curve: Curves.easeOut,
-        child: Center(
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(18, 11, 18, 12),
-            decoration: BoxDecoration(
-              color: const Color(0xE6121214),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x38FFFFFF)),
-              boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 12, offset: Offset(0, 3))],
-            ),
-            child: Text(
-              _last,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Color(0xFFF1ECE2),
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.4,
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
-        ),
+        child: Center(child: NoteBox(text: _last)),
       );
     },
   );

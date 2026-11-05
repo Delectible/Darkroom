@@ -66,6 +66,9 @@ class PrefKeys {
   /// mentioned again.
   static const galleryDismissed = 'gallery.dismissed';
 
+  /// Each print's frame, if not the classic white border (print_frames.dart).
+  static const printFrames = 'print.frames';
+
   /// Darkroom Pro unlocked (bought, restored, or switched on in Debug).
   static const pro = 'pro.unlocked';
 
@@ -130,6 +133,7 @@ class PrefKeys {
     win98Display,
     galleryAsked,
     galleryDismissed,
+    printFrames,
     pro,
     proBought,
     allowance,

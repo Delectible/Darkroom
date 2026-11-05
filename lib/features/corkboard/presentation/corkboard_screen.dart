@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/note_box.dart';
 import '../../../core/device/gallery_check.dart';
 import '../../../core/device/system_gestures.dart';
 import '../../../core/theme/darkroom_mark.dart';
@@ -260,9 +261,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     unawaited(Haptics.mediumImpact());
     if (off.isEmpty) {
       unawaited(_shake.forward(from: 0));
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Nothing shook loose: everything on the board is saved.')));
+      Notes.show('Nothing shook loose: everything on the board is saved.');
       return;
     }
     _asking = true;

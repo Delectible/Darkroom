@@ -477,6 +477,10 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   full-height blur. Viewfinder / body stills at the screen's resolution
   (were 60%; 80% on the slowest phones).
 
+- [x] **61.33** → 2.0.16 · A quick flick toward the other camera while its
+  3D model is still loading no longer tosses to a camera with no body (the
+  note shows, the camera stays). 3D quality report: stale low-RAM wording.
+
 ## 62. Ideas (2026-11-05)
 
 - [ ] **62.1** Zoom on the film cameras (as the digital rocker).

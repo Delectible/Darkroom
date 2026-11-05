@@ -30,7 +30,7 @@ class BodyQuality {
   /// The screen's width in pixels.
   static double screenPx = 0;
 
-  /// Whether [detail] is steered (low RAM).
+  /// Whether [detail] follows the quality manager (once the 3D is in).
   static bool get steering => _on;
 
   static bool _on = false;
@@ -148,7 +148,7 @@ class BodyQuality {
 
   /// One line for the Performance Report.
   static String summary() =>
-      '3D quality: ${_on ? 'steered (low RAM)' : 'fixed'}, now ${_p(base * detail.value)} '
+      '3D quality: set by the quality manager, now ${_p(base * detail.value)} '
       '(${_w(base * detail.value)}), floor ${_p(base * floor)}, $_downs down / $_ups up, $_swaps swaps';
 
   /// Debug > Performance Report (3D quality).
@@ -156,15 +156,7 @@ class BodyQuality {
     if (!_started) return 'The 3D cameras haven\'t loaded this run (Fancy graphics off, or no 3D here).';
     final now = _clock.elapsedMicroseconds;
     final b = StringBuffer()
-      ..writeln('3D CAMERA QUALITY')
-      ..writeln()
       ..writeln('Screen: ${screenPx.round()} px wide')
-      ..writeln(
-        _on
-            ? 'Mode: steered (this phone is short of RAM: the 3D body gets softer when swaps stutter, '
-                  'and sharpens again when they don\'t)'
-            : 'Mode: fixed (enough RAM: never steered)',
-      )
       ..writeln('Normal: ${_p(base)} of the screen (${_w(base)})');
     if (_on) {
       b

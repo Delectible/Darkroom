@@ -451,7 +451,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     _dragging = false;
     final dir = _dirFor(ref.read(appModeProvider));
     final v = (d.primaryVelocity ?? 0) * dir / _travel();
-    if (v > 1.1 || (_swap.value > 0.38 && v > -0.6)) {
+    // (a flick toward a camera still loading doesn't toss: the body never
+    // moved, the note says why)
+    if ((v > 1.1 || (_swap.value > 0.38 && v > -0.6)) && (_swap.value > 0 || _otherReady())) {
       unawaited(_commitSwap(v));
     } else {
       // A clear swipe the way with no camera (right in film, left in

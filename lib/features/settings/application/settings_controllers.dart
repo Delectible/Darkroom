@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
-import '../../../core/device/device_memory.dart';
 import '../../../core/audio/sfx.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/processing/crop_math.dart';
@@ -16,6 +15,7 @@ import '../../camera/presentation/photo_body.dart' show BodyArt;
 import '../../camera/presentation/whole_body.dart' show wholeArtProvider;
 import '../../../core/settings/settings_repository.dart';
 import '../../cameras/domain/camera_catalog.dart';
+import '../../../core/performance/quality.dart';
 
 /// Hides the camera while Fancy graphics switches, so the change fades
 /// instead of snapping (the settings on top stay put).
@@ -45,12 +45,19 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     // Phones with little RAM (and so a modest GPU) are chosen for, without
     // asking: no viewfinder halation (a full-screen blur pass every frame)
     // and 60 Hz (90/120 Hz doubles the drawing), Fancy graphics or not.
-    FilmUniforms.lite = s.performance || DeviceMemory.low;
+    // (the quality manager drops halation and holds 60 Hz when the phone
+    // needs it: core/performance/quality.dart)
+    if (!_listening) {
+      _listening = true;
+      Quality.changed.addListener(reapply);
+    }
+    FilmUniforms.lite = s.performance || Quality.noHalation.value;
     BodyArt.faceOnly = s.performance;
-    _refreshRate(fast: !s.performance && !DeviceMemory.low);
+    _refreshRate(fast: !s.performance && !Quality.cap60.value);
   }
 
   static GlobalSettings? _last;
+  static bool _listening = false;
 
   /// Again, now that the phone's RAM is known (main.dart).
   static void reapply() {

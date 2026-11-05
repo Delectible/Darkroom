@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '../performance/quality.dart';
 import 'launch_timer.dart';
 import 'perf_recorder.dart';
 import 'speed_tests.dart';
@@ -258,6 +259,9 @@ class SpeedTestRun {
     // The panel first: nothing below may keep the run from showing it.
     show();
     final tick = Timer.periodic(const Duration(seconds: 1), (_) => show());
+    // (the quality manager holds still: the run steps through its own
+    // switches, and its own swipes aren't the person's)
+    Quality.paused = true;
     String? before, head;
     var wasFancy = true;
     try {
@@ -330,6 +334,7 @@ class SpeedTestRun {
       PerfRecorder.test = null;
       pulse.value = false;
       tick.cancel();
+      Quality.paused = false;
       SpeedTests.allOff();
       if ((fancy?.call() ?? wasFancy) != wasFancy) await setFancy?.call(wasFancy);
       navigator.popUntil((r) => r.isFirst);

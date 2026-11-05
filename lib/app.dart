@@ -17,6 +17,7 @@ import 'core/theme/retro_theme.dart';
 import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/camera_screen.dart';
+import 'features/camera/presentation/launch_picture.dart';
 import 'features/camera/presentation/whole_body.dart';
 import 'features/help/how_it_works_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -94,15 +95,20 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
         LaunchTimer.once('film look loaded');
       }
     }
-    // With Fancy graphics, the 3D camera in hand (loading since main.dart).
+    // With Fancy graphics, the 3D camera in hand (loading since main.dart),
+    // or the launch picture of it standing in (the camera's own picture and
+    // controls are live over it; the model takes over when it lands).
     if (ref.read(globalSettingsProvider).controls3d) {
       final art = ref.read(wholeArtProvider);
-      if (art.isLoading || !(art.value?.isReady(ref.read(appModeProvider)) ?? true)) ready = false;
+      final mode = ref.read(appModeProvider);
+      final waiting = art.isLoading || !(art.value?.isReady(mode) ?? true);
+      final poses = ref.read(wholeBodyProvider(mode))?.poses ?? '';
+      if (waiting && !(art.value != null && LaunchPicture.liftOn(poses))) ready = false;
     }
     if (!ready) return false;
     LaunchTimer.once('all loaded');
     // (the stream's first frames in)
-    return DateTime.now().difference(_liveSince!) > const Duration(milliseconds: 150);
+    return DateTime.now().difference(_liveSince!) > const Duration(milliseconds: 100);
   }
 
   @override
@@ -127,7 +133,8 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
           // (2.0.9: no time to read the line, a short fade: launches 0.6 s
           // quicker, nothing lost)
           minimum: const Duration(milliseconds: 300),
-          fade: const Duration(milliseconds: 300),
+          // (2.0.15: gentler again, now the wait before it is short)
+          fade: const Duration(milliseconds: 550),
           child: MediaQuery.withClampedTextScaling(maxScaleFactor: 1.3, child: UprightApp(child: child!)),
         );
         return Stack(

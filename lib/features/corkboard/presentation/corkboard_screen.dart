@@ -48,11 +48,31 @@ class CorkboardScreen extends ConsumerStatefulWidget {
         begin: const Offset(-1, 0),
         end: Offset.zero,
       ).animate(CurvedAnimation(parent: a, curve: _arrive, reverseCurve: Curves.easeInCubic)),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          boxShadow: [BoxShadow(color: Colors.black87, blurRadius: 30, offset: Offset(10, 0))],
-        ),
-        child: child,
+      // The shadow it casts on the camera: a gradient strip along its right
+      // edge, not a blur (a full-height blur dropped a fifth of the slide's
+      // frames on a slow tablet; Darkroom 98 does the same on its left).
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.expand,
+        children: [
+          const Positioned(
+            right: -48,
+            width: 48,
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xD9000000), Color(0x6B000000), Color(0x00000000)],
+                    stops: [0, 0.4, 1],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          child,
+        ],
       ),
     ),
   );

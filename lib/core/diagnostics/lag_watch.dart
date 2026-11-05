@@ -12,6 +12,7 @@ import '../device/upright.dart';
 import '../navigation.dart';
 import '../providers.dart';
 import '../theme/retro_theme.dart';
+import '../performance/quality.dart';
 
 /// Keeps an eye out for a phone that can't keep up with Fancy graphics, and
 /// offers once to turn it off, in case the user doesn't know the setting
@@ -77,6 +78,12 @@ class LagWatch {
       return;
     }
     if (frames < _busy) return; // not much moving: nothing to judge
+    // The last resort: only once the quality manager has taken every step
+    // on the side that limits this phone and it still struggles.
+    if (!Quality.exhausted) {
+      _recent.clear();
+      return;
+    }
     _recent.add(cost / frames / 1000 > _slowMs);
     if (_recent.length > 6) _recent.removeAt(0);
     if (_recent.where((s) => s).length < 3) return;

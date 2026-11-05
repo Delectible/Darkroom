@@ -54,8 +54,9 @@ void main() {
     expect(taps, 0);
     expect(find.text(LaunchCurtain.lines[1]), findsOneWidget);
     ready = true;
-    await tester.pump(const Duration(milliseconds: 150));
-    await tester.pump(const Duration(milliseconds: 700));
+    // (a moment to settle, then the fade)
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 900));
     await tester.pump();
     expect(find.text(LaunchCurtain.lines[1]), findsNothing);
     await tester.tap(find.text('Camera'));

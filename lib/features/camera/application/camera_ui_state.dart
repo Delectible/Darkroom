@@ -118,6 +118,8 @@ class PrefKeys {
     userName,
     tourSkipped,
     launchTimes,
+    'quality.gpu', // (Quality.keys)
+    'quality.ui',
     lowGraphicsNote,
     bodyFinish,
     filmFinish,

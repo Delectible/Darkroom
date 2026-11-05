@@ -20,6 +20,7 @@ import 'core/diagnostics/launch_timer.dart';
 import 'core/diagnostics/perf_recorder.dart';
 import 'core/monetization/pro.dart';
 import 'core/notifications/notification_service.dart';
+import 'core/performance/quality.dart';
 import 'core/paths/app_paths.dart';
 import 'core/providers.dart';
 import 'core/review/review_prompt.dart';
@@ -28,6 +29,7 @@ import 'core/shaders/shader_library.dart';
 import 'core/startup/launch_curtain.dart';
 import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
+import 'features/camera/presentation/launch_picture.dart';
 import 'features/camera/presentation/whole_body.dart';
 import 'features/settings/application/settings_controllers.dart';
 
@@ -76,7 +78,13 @@ Future<void> _start() async {
   LaunchTimer.prefs = prefs;
   // The phone's RAM sizes the work the app takes on (prints developing at
   // once, the picture cache): read alongside the rest of the start-up.
+  // The quality manager: the steps saved last time (core/performance).
+  Quality.start(prefs);
   unawaited(DeviceMemory.apply().then((_) => GlobalSettingsNotifier.reapply()));
+  // The picture of the camera from last time (opens on it if it matches).
+  LaunchPicture.init(paths.supportDir);
+  // (it judges only once the launch curtain has gone)
+  unawaited(LaunchCurtain.gone.then((_) => Quality.listening = true));
   LaunchTimer.mark('storage open');
   // Crash reports stay on the phone (Win98 Help > Crash Reports).
   _stage = 'crash log';

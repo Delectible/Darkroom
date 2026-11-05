@@ -15,6 +15,7 @@ import 'body_swap.dart' show BodyYaw;
 import 'photo_body.dart';
 import 'viewport.dart';
 import '../../../core/skins/camera_skins.dart';
+import 'launch_picture.dart';
 import 'whole_body.dart';
 import 'widgets/camera_controls.dart';
 
@@ -178,22 +179,22 @@ class WholeFace extends ConsumerWidget {
             ),
           ),
         );
-        if (live != null) {
-          overlay = LiveFace(
-            body: live,
-            rest: (name) {
-              final p = lay.parts[BodyArt.anchorOf(name)] ?? Offset.zero;
-              return Offset(p.dx, fit.y(p.dy));
-            },
-            child: overlay,
-          );
-        }
+        // (always: the same tree before and after the model loads, so the
+        // viewfinder carries on when it arrives under the launch picture)
+        overlay = LiveFace(
+          body: body,
+          rest: (name) {
+            final p = lay.parts[BodyArt.anchorOf(name)] ?? Offset.zero;
+            return Offset(p.dx, fit.y(p.dy));
+          },
+          child: overlay,
+        );
         return Stack(
           fit: StackFit.expand,
           children: [
             // The model is drawn behind this by the swap stage (SwapBody),
             // posed; without it (no Flutter GPU, tests), a dark body.
-            if (live == null) const ColoredBox(color: Color(0xFF16171A)),
+            if (live == null && !LaunchPicture.covers(mode)) const ColoredBox(color: Color(0xFF16171A)),
             RepaintBoundary(key: overlayKey, child: overlay),
           ],
         );

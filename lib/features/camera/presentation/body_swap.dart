@@ -10,8 +10,10 @@ import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../../core/theme/soft_shadow.dart';
+import 'launch_picture.dart';
 import 'whole_body.dart';
 import '../../../core/diagnostics/speed_tests.dart';
+import '../../../core/performance/quality.dart';
 
 /// Film <-> Digital as two physical cameras on a desk.
 ///
@@ -597,7 +599,12 @@ class _StrapPainter extends CustomPainter {
             ..moveTo(start.dx, start.dy)
             ..quadraticBezierTo(mid.dx, mid.dy, bottom.dx, bottom.dy));
     final metric = path.computeMetrics().first;
-    softStroke(canvas, path.shift(Offset(-side * 4.0, 10)), 24, 9, Colors.black.withValues(alpha: 0.4));
+    // (Quality.lightStrap: no shadow, highlights or stitching, the cheap
+    // strap for a phone whose processor is the limit)
+    final full = !Quality.lightStrap.value;
+    if (full) {
+      softStroke(canvas, path.shift(Offset(-side * 4.0, 10)), 24, 9, Colors.black.withValues(alpha: 0.4));
+    }
     final dark = Color.lerp(color, Colors.black, 0.35)!;
     final light = Color.lerp(color, const Color(0xFFE0B48A), 0.28)!;
     // The end tab: narrower, doubled back from the ring to the keeper.
@@ -633,7 +640,7 @@ class _StrapPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );
-    for (final off in [-7.0, 7.0]) {
+    for (final off in full ? [-7.0, 7.0] : const <double>[]) {
       _dashed(
         canvas,
         _parallel(metric, off, 44, metric.length),
@@ -730,7 +737,10 @@ class _StrapPainter extends CustomPainter {
         ..cubicTo(bead.dx - 30, bead.dy + 60, loopEnd.dx - 28, loopEnd.dy, loopEnd.dx, loopEnd.dy)
         ..cubicTo(loopEnd.dx + 28, loopEnd.dy, bead.dx + 30, bead.dy + 60, bead.dx, bead.dy);
     }
-    softStroke(canvas, cord.shift(Offset(-side * 3.0, 6)), 6, 4, Colors.black.withValues(alpha: 0.4));
+    final full = !Quality.lightStrap.value;
+    if (full) {
+      softStroke(canvas, cord.shift(Offset(-side * 3.0, 6)), 6, 4, Colors.black.withValues(alpha: 0.4));
+    }
     canvas.drawPath(
       cord,
       Paint()
@@ -746,7 +756,7 @@ class _StrapPainter extends CustomPainter {
     // (one path of ticks, not a line each: ~110 draws a frame cost the
     // swipe more than a millisecond)
     final ticks = Path();
-    for (final m in cord.computeMetrics()) {
+    for (final m in full ? cord.computeMetrics() : const <PathMetric>[]) {
       for (var d = 0.0; d < m.length; d += 3.2) {
         final tan = m.getTangentForOffset(d)!;
         final n = Offset(-tan.vector.dy, tan.vector.dx);
@@ -914,7 +924,14 @@ extension on SwapBody {
   /// so the camera and its state carry on.
   Widget _renderedBody(BuildContext context, RenderedBody r, Size size, bool moving) {
     final live = r.body.live;
-    if (live == null) return face;
+    // Not loaded yet: the launch picture of it stands in, at rest, if there
+    // is one exactly this size (launch_picture.dart); else just the face.
+    final stage = _StageWidth.of(context, size.width);
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final picture = live == null && !moving
+        ? LaunchPicture.forBox(mode, Size(stage * dpr, size.height * dpr))
+        : null;
+    if (live == null && picture == null) return face;
     final fit = DesignFit(r.art, size);
     final pivot = fit.pivot;
     // The pose in screen space (dp, y down, z into the screen).
@@ -930,12 +947,12 @@ extension on SwapBody {
       ..rotateZ(pose.roll)
       ..scaleByDouble(pose.scale, pose.scale, 1, 1)
       ..translateByDouble(-pivot.dx, -pivot.dy, 0, 1);
-    live.showShutter(r.shutter != 'shutter');
+    live?.showShutter(r.shutter != 'shutter');
     final camera = fit.camera;
     final film = mode == AppMode.film;
     final p = RetroPalette.ofBody(context, mode);
     final geo = SwapGeometry(size.width);
-    final lug = live.lugAt(m, camera, fit.s);
+    final lug = moving && live != null ? live.lugAt(m, camera, fit.s) : Offset.zero;
     return Stack(
       clipBehavior: Clip.none,
       fit: StackFit.expand,
@@ -967,9 +984,23 @@ extension on SwapBody {
         // drawn across all of it (same height, same centre), so its rounded
         // ends show on the desk instead of being cut off at the body's width.
         OverflowBox(
-          minWidth: _StageWidth.of(context, size.width),
-          maxWidth: _StageWidth.of(context, size.width),
-          child: LiveBodyView(key: const ValueKey('model'), body: live, fit: fit, pose: m),
+          minWidth: stage,
+          maxWidth: stage,
+          child: live == null
+              ? RawImage(image: picture, fit: BoxFit.fill, filterQuality: FilterQuality.none)
+              // (the body in hand, at rest, is what the next launch picture
+              // shows; the picture just shown fades away over the model)
+              : LaunchPictureSource(
+                  active: !moving,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      LiveBodyView(key: const ValueKey('model'), body: live, fit: fit, pose: m),
+                      if (LaunchPicture.fading case final shown? when !moving)
+                        LaunchPictureFade(image: shown),
+                    ],
+                  ),
+                ),
         ),
         Transform(
           key: const ValueKey('face'),
@@ -978,7 +1009,7 @@ extension on SwapBody {
           transform: camera.clone()..multiply(m),
           child: BodyYaw(yaw: capSide * pose.tilt, child: face),
         ),
-        if (moving && !SpeedTests.noStrap.value)
+        if (moving && live != null && !SpeedTests.noStrap.value)
           Positioned.fill(
             child: IgnorePointer(
               child: _HangingStrap(

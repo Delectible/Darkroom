@@ -40,6 +40,9 @@ class LaunchCurtain extends StatefulWidget {
   /// Completes once the curtain has faded away: heavy work that can wait
   /// (the other 3D camera) waits for it, so the fade never stutters.
   static Future<void> get gone => _gone.future;
+
+  /// Whether it has faded away.
+  static bool get isGone => _gone.isCompleted;
   static final _gone = Completer<void>();
 
   static const lines = [
@@ -86,12 +89,23 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
 
   static const _tick = Duration(milliseconds: 50);
 
+  /// Polls in a row it has been ready.
+  var _readyPolls = 0;
+
+  /// Ready for this many polls in a row before it fades (200 ms): what's
+  /// under it has drawn its first frames by then, the slowest ones (the 3D
+  /// camera's first draw, the camera's first pictures). A fade started on
+  /// those dropped most of its frames on a slow tablet and read as a cut.
+  static const _settlePolls = 4;
+
   void _check() {
     final waited = _tick * ++_polls;
+    final ready = widget.isReady();
+    _readyPolls = ready ? _readyPolls + 1 : 0;
     if (waited < widget.minimum) return;
-    if (waited < widget.maximum && !widget.isReady()) return;
+    if (waited < widget.maximum && (!ready || _readyPolls < _settlePolls)) return;
     _poll?.cancel();
-    LaunchTimer.finish(widget.isReady() ? 'curtain lifts' : 'curtain lifts (gave up waiting)');
+    LaunchTimer.finish(ready ? 'curtain lifts' : 'curtain lifts (gave up waiting)');
     _fade.forward().whenComplete(() {
       if (mounted) setState(() => _up = false);
       if (!LaunchCurtain._gone.isCompleted) LaunchCurtain._gone.complete();

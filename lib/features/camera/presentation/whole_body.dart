@@ -17,11 +17,14 @@ import '../../../core/device/device_memory.dart';
 import '../../../core/diagnostics/launch_timer.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
 import '../../../core/diagnostics/speed_tests.dart';
+import '../../../core/performance/quality.dart';
 import '../../../core/skins/camera_skins.dart';
 import 'body_quality.dart';
 import '../../../core/startup/launch_curtain.dart';
 import '../../cameras/domain/camera_spec.dart';
-import '../application/camera_ui_state.dart' show appModeProvider;
+import '../../cameras/domain/camera_catalog.dart';
+import '../application/camera_ui_state.dart' show appModeProvider, selectedCameraProvider;
+import 'launch_picture.dart';
 import '../../settings/application/settings_controllers.dart';
 
 /// The 3D cameras (1.6): each body is a real 3D model (made in Blender by
@@ -71,10 +74,15 @@ class WholeArt {
   /// model of [first] (the camera in hand). The other model loads after,
   /// with [loadRest], so the app opens sooner.
   /// [skin]: the skin each body is wearing, put on before it's first seen.
+  /// [early]: return as soon as the layout is in, loading the first model
+  /// after (the launch picture stands in for it meanwhile); [onFirstFailed]
+  /// if that model then doesn't load.
   static Future<WholeArt?> load({
     bool scenes = true,
     AppMode first = AppMode.film,
     String? Function(AppMode mode)? skin,
+    bool early = false,
+    void Function()? onFirstFailed,
   }) async {
     try {
       final j = jsonDecode(await rootBundle.loadString('$root/manifest.json')) as Map<String, dynamic>;
@@ -133,6 +141,14 @@ class WholeArt {
         art._ready[mode] = Completer<void>();
       }
       final hand = bodies.containsKey(first) ? first : bodies.keys.first;
+      if (early) {
+        unawaited(
+          art._loadModel(hand).then((_) {
+            if (bodies[hand]?.live == null) onFirstFailed?.call();
+          }),
+        );
+        return art;
+      }
       await art._loadModel(hand);
       // Without its model the camera in hand can't be drawn in 3D at all.
       if (bodies[hand]?.live == null) return null;
@@ -217,8 +233,25 @@ class WholeBody {
   /// face's centre at the origin).
   final vm.Vector3 lug;
 
-  /// The model, drawn live (null without Flutter GPU, e.g. in tests).
+  /// The model, drawn live (null without Flutter GPU, e.g. in tests, and
+  /// until it has loaded: the face is laid out before it, see LaunchPicture).
   LiveBody? live;
+
+  /// The face's parts standing in for the model's moving pieces ([LivePart]):
+  /// kept here, not on the model, so a model that arrives after the face
+  /// is laid out (the launch picture) finds them without the face being
+  /// rebuilt. Read again just before the model draws (LiveBody.syncParts).
+  final Set<_RenderLivePart> _parts = {};
+
+  /// Where those parts are now, in a line (each as last drawn): the launch
+  /// picture is only shown for a body whose parts are where they were in it.
+  String get poses {
+    final all = [
+      for (final p in _parts)
+        if (p.pose != null) '${p._name}:${p.pose}',
+    ]..sort();
+    return all.join(' ');
+  }
 }
 
 /// Where things are on the face, design dp.
@@ -303,18 +336,47 @@ final _want3dProvider = NotifierProvider<_Want3d, bool>(_Want3d.new);
 /// other right after; it can't be swapped to until it's in
 /// ([WholeArt.isReady]).
 final wholeArtProvider = FutureProvider<WholeArt?>((ref) async {
-  if (!ref.watch(_want3dProvider)) return null;
+  if (!ref.watch(_want3dProvider)) {
+    // (no 3D this launch: the saved picture isn't needed, let it go)
+    unawaited(LaunchPicture.loaded.then((_) => LaunchPicture.done()));
+    return null;
+  }
   await DeviceMemory.ready;
-  final art = await WholeArt.load(
-    first: ref.read(appModeProvider),
-    skin: (mode) => ref.read(cameraSkinProvider)[mode],
+  // A picture of this camera from last time that still matches: the layout
+  // goes out at once and the model loads behind the picture (the launch can
+  // lift on the live viewfinder over it). If the model then fails: no more
+  // picture, and the classic bodies as before.
+  await LaunchPicture.loaded;
+  final first = ref.read(appModeProvider);
+  final camera = ref.read(selectedCameraProvider)[first];
+  final early = LaunchPicture.candidate(
+    LaunchPicture.wantOf(
+      mode: first,
+      skin: ref.read(cameraSkinProvider)[first],
+      camera: camera,
+      video: camera != null && CameraCatalog.byId(camera).recordsVideo,
+    ),
   );
-  LaunchTimer.once('3D camera in');
+  if (!early) LaunchPicture.done(); // (not this time: let it go)
+  final art = await WholeArt.load(
+    first: first,
+    skin: (mode) => ref.read(cameraSkinProvider)[mode],
+    early: early,
+    onFirstFailed: () {
+      LaunchPicture.off();
+      ref.invalidateSelf();
+    },
+  );
   if (art != null) {
+    unawaited(art.ready(first).then((_) => LaunchTimer.once('3D camera in')));
     // The other camera once the launch curtain has gone (it stuttered the
-    // fade), and after the first frames when 3D is switched on later.
+    // fade) and the first is in, and after the first frames when 3D is
+    // switched on later.
     unawaited(
-      LaunchCurtain.gone.then((_) => Future<void>.delayed(const Duration(milliseconds: 400), art.loadRest)),
+      Future.wait([
+        LaunchCurtain.gone,
+        art.ready(first),
+      ]).then((_) => Future<void>.delayed(const Duration(milliseconds: 400), art.loadRest)),
     );
   }
   return art;
@@ -375,14 +437,14 @@ class LiveBody extends ChangeNotifier {
       // (Debug > Speed Tests: 3D at 70%, cheaper edge smoothing)
       scene
         ..renderScale = BodyQuality.base * BodyQuality.detail.value * (SpeedTests.small3d.value ? 0.7 : 1)
-        ..antiAliasingMode = SpeedTests.cheapEdges.value
+        ..antiAliasingMode = SpeedTests.cheapEdges.value || Quality.fxaa.value
             ? fs.AntiAliasingMode.fxaa
             : fs.AntiAliasingMode.auto;
     }
 
     steer();
     BodyQuality.detail.addListener(steer);
-    SpeedTests.changed.addListener(() {
+    Listenable.merge([SpeedTests.changed, Quality.fxaa]).addListener(() {
       steer();
       _changed();
     });
@@ -694,12 +756,11 @@ class LiveBody extends ChangeNotifier {
   /// widgets on it show the same frame. (A part used to report only when it
   /// painted, after the model had drawn: the model ran a frame behind, and a
   /// dropped frame mid-swap showed the keys slipping on the body.)
-  final Set<_RenderLivePart> _parts = {};
 
   /// Brings every moving piece to where its part is this frame (layout is
   /// done by now; called from the model's paint).
   void syncParts() {
-    for (final p in _parts) {
+    for (final p in body._parts) {
       p.report(quiet: true);
     }
   }
@@ -842,7 +903,8 @@ class _LiveBodyViewState extends State<LiveBodyView> {
 class LiveFace extends InheritedWidget {
   const LiveFace({super.key, required this.body, required this.rest, required super.child});
 
-  final LiveBody body;
+  /// The body the face is on (its model may not have loaded yet).
+  final WholeBody body;
 
   /// Where a part sits at rest, in the face's coordinates.
   final Offset Function(String part) rest;
@@ -916,6 +978,9 @@ class _RenderLivePart extends RenderBox {
   String? _state;
   LiveFace? face;
 
+  /// Where it was last drawn (WholeBody.poses).
+  String? pose;
+
   void setFace(LiveFace? f) {
     if (f?.body != face?.body && attached) {
       face?.body._parts.remove(this);
@@ -967,14 +1032,9 @@ class _RenderLivePart extends RenderBox {
     final at = MatrixUtils.transformPoint(m, size.center(Offset.zero));
     final rest = f.rest(_name);
     final angle = math.atan2(m.entry(1, 0), m.entry(0, 0));
-    f.body.setPart(
-      _name,
-      dx: at.dx - rest.dx,
-      dy: at.dy - rest.dy,
-      angle: angle,
-      state: _state,
-      quiet: quiet,
-    );
+    final dx = at.dx - rest.dx, dy = at.dy - rest.dy;
+    pose = '${(dx * 2).round()},${(dy * 2).round()},${(angle * 200).round()},${_state ?? ''}';
+    f.body.live?.setPart(_name, dx: dx, dy: dy, angle: angle, state: _state, quiet: quiet);
   }
 }
 

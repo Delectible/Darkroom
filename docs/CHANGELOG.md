@@ -438,6 +438,44 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   starts that class loading on its own thread first (`videoLibMs`), and
   Launch Timing breaks the time before Dart's main down: Android to the
   activity, onCreate, plugin registration, video library (alongside).
+- [x] **61.28** → 2.0.15 · Quality manager (`core/performance/quality.dart`):
+  two ladders, judged on moving frames (PerfRecorder feeds every frame) in
+  48-frame windows: GPU (cheap 3D edges, no halation, 3D 90%, 80%, 60 Hz,
+  70%) and UI (simple strap, grain 12 fps, 60 Hz). Two bad windows (over a
+  fifth of refreshes dropped with our own work a real part of a frame) =
+  one step down the bottleneck's ladder; six clean = the last step back up;
+  a step up that goes wrong = settled for the run. Frames that are cheap but
+  come slow (Android holding 60 Hz) are judged at the rate they can come.
+  Saved per install; a first start on low RAM begins at GPU step 2 (the
+  slowest at 5). Replaces low-RAM's fixed 60 Hz / halation / FXAA and
+  BodyQuality's own low-RAM steering (BodyQuality follows `scale3d` on every
+  phone, labels soften to match). The slow prompt only once every step is
+  taken (`Quality.exhausted`). Debug > Performance > Quality Manager (steps,
+  verdicts, by hand, auto off, reset); in the Performance Report and the
+  speed test header (paused during a run).
+- [x] **61.29** → 2.0.15 · Launch picture (`launch_picture.dart`): a PNG of
+  exactly what the 3D model in hand draws (its box), saved when it has been
+  redrawn and stood still 2 s, with what it shows (body, skin, camera,
+  video shutter, GPU step, app version). At launch, if it matches, the 3D
+  loader returns the layout at once (`WholeArt.load(early:)`) and loads the
+  model behind it: the curtain lifts on the live face and viewfinder over
+  the picture (only if it is exactly the box's size), and the model fades in
+  over it (320 ms, from the frame after the model has drawn) when it lands.
+  The curtain lifts on it only with the moving parts (flash tab, dials,
+  nothing pressed) where they were in it. Touches and the volume keys wait
+  meanwhile (trying anything shows the note); given up after 10 s. Failure:
+  picture off, the provider reloads as before.
+  LivePart registration moved from LiveBody to WholeBody and the face is
+  always wrapped in LiveFace, so nothing rebuilds when the model arrives.
+- [x] **61.30** → 2.0.15 · "Loading film…" / "Putting in SD card…": a dark
+  box over the viewfinder (`CameraNote`) that fades in and out, only when you
+  try to use a camera that's still loading (was a snackbar).
+- [x] **61.31** → 2.0.15 · Launch curtain: lifts 200 ms after everything is
+  ready (the first slow frames under it drawn: on the tablet the fade ran on
+  them and read as a cut), fade 550 ms ease-in-out (was 300).
+- [x] **61.32** → 2.0.15 · Corkboard slide-in shadow: a gradient strip, not a
+  full-height blur. Viewfinder / body stills at the screen's resolution
+  (were 60%; 80% on the slowest phones).
 
 ## 62. Ideas (2026-11-05)
 

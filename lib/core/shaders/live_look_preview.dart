@@ -11,6 +11,7 @@ import '../processing/film/film_profile.dart';
 import '../processing/look_spec.dart';
 import 'shader_library.dart';
 import '../diagnostics/speed_tests.dart';
+import '../performance/quality.dart';
 
 /// Applies a camera's look shader to [child] (the live camera texture).
 ///
@@ -74,7 +75,9 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
   int get _targetFps {
     final film = widget.spec.film;
     // (Debug > Speed Tests > Grain at 12 fps)
-    if (film != null) return film.isCine ? 18 : (SpeedTests.slowGrain.value ? 12 : 24);
+    if (film != null) {
+      return film.isCine ? 18 : (SpeedTests.slowGrain.value || Quality.slowGrain.value ? 12 : 24);
+    }
     return switch (widget.spec.look!.kind) {
       ShaderKind.jpegPixel => 15,
       _ => 30,
@@ -97,6 +100,7 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
     super.initState();
     _syncTimer();
     SpeedTests.slowGrain.addListener(_syncTimer);
+    Quality.slowGrain.addListener(_syncTimer);
   }
 
   @override
@@ -108,6 +112,7 @@ class _LiveLookPreviewState extends ConsumerState<LiveLookPreview> {
   @override
   void dispose() {
     SpeedTests.slowGrain.removeListener(_syncTimer);
+    Quality.slowGrain.removeListener(_syncTimer);
     _timer?.cancel();
     _time.dispose();
     for (final s in _shaders.values) {

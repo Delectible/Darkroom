@@ -204,6 +204,12 @@ class CameraViewport extends ConsumerWidget {
                           child: RawImage(image: still, fit: BoxFit.cover),
                         ),
                 ),
+                // "Loading film…": over the frame (outside the snapshot), only
+                // when you try to use a camera that's still loading.
+                Positioned.fromRect(
+                  rect: maskRect,
+                  child: const IgnorePointer(child: _CameraNoteView()),
+                ),
               ],
             ),
           ),
@@ -211,6 +217,73 @@ class CameraViewport extends ConsumerWidget {
       },
     );
   }
+}
+
+/// A short note over the viewfinder ("Putting in SD card…"): a dark box in
+/// the camera's style that fades in, stays a moment and fades out. Shown
+/// only when you try to use a camera that's still loading, so a camera left
+/// alone never shows it.
+class CameraNote {
+  CameraNote._();
+
+  static final text = ValueNotifier<String?>(null);
+  static int _serial = 0;
+
+  /// Shows [note] (again: it stays a moment longer).
+  static void show(String note) {
+    text.value = note;
+    final me = ++_serial;
+    Future<void>.delayed(const Duration(milliseconds: 1700), () {
+      if (me == _serial) text.value = null;
+    });
+  }
+}
+
+class _CameraNoteView extends StatefulWidget {
+  const _CameraNoteView();
+
+  @override
+  State<_CameraNoteView> createState() => _CameraNoteViewState();
+}
+
+class _CameraNoteViewState extends State<_CameraNoteView> {
+  /// Kept while it fades out.
+  String _last = '';
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<String?>(
+    valueListenable: CameraNote.text,
+    builder: (context, note, _) {
+      if (note != null) _last = note;
+      return AnimatedOpacity(
+        opacity: note == null ? 0 : 1,
+        duration: Duration(milliseconds: note == null ? 420 : 180),
+        curve: Curves.easeOut,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 11, 18, 12),
+            decoration: BoxDecoration(
+              color: const Color(0xE6121214),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0x38FFFFFF)),
+              boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 12, offset: Offset(0, 3))],
+            ),
+            child: Text(
+              _last,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Color(0xFFF1ECE2),
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+                decoration: TextDecoration.none,
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 /// Swings the Super 8 viewfinder round when the phone is turned: the new
@@ -482,7 +555,11 @@ class _PermissionNote extends ConsumerWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(mic ? Icons.mic_off_rounded : Icons.photo_library_outlined, size: 13, color: const Color(0xFFFFC857)),
+              Icon(
+                mic ? Icons.mic_off_rounded : Icons.photo_library_outlined,
+                size: 13,
+                color: const Color(0xFFFFC857),
+              ),
               const SizedBox(width: 6),
               Text(what, style: const TextStyle(color: Color(0xFFEDEDED), fontSize: 11.5)),
               const SizedBox(width: 8),

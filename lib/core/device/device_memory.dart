@@ -5,6 +5,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 
 import '../processing/capture_processor.dart';
+import '../performance/quality.dart';
 
 /// The phone's RAM (native: MainActivity / AppDelegate, channel
 /// `darkroom/device`), read once at launch to size the app's appetite:
@@ -48,6 +49,9 @@ class DeviceMemory {
       final lowRam = m?['lowRam'] == true;
       low = lowRam || gb! <= lowGb;
       lowest = gb! <= 2.2 || (gb! <= 3.2 && Platform.numberOfProcessors <= 4);
+      // A first start begins a step or two down the quality manager's
+      // ladder (before the 3D loads: it reads the steps).
+      Quality.lowMemory(low: low, lowest: lowest);
       CaptureProcessor.maxWorkers = workersFor(gb!, lowRam: lowRam);
       PaintingBinding.instance.imageCache.maximumSizeBytes = cacheBytesFor(gb!, lowRam: lowRam);
     } catch (_) {

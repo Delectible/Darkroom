@@ -685,9 +685,32 @@ UI
   Infinity): check `isFinite` before rounding. If a run misbehaves on a
   phone, ask for Debug > Diagnostics > Crash Reports first.
 - 2.0.15: Settings stops the camera's stream while open (as the picker);
-  swipes do too (above). Low RAM is <= 4.2 GB now. MainActivity preloads FFmpegKitConfig (its native libraries) on
-  a thread at onCreate; Launch Timing breaks down the time before main. Launch curtain since
-  2.0.9: 0.3 s minimum, 150 ms after the camera opens, 300 ms fade.
+  swipes do too (above). Low RAM is <= 4.2 GB now.
+- **Quality manager** (`core/performance/quality.dart`, 2.0.15): dials
+  (`fxaa`, `noHalation`, `scale3d`, `cap60`, `lightStrap`, `slowGrain`) read
+  by whole_body (edges), settings_controllers (halation, refresh rate),
+  BodyQuality (3D scale; labels soften to match), body_swap (strap),
+  live_look_preview (grain). Steered from moving frames (PerfRecorder calls
+  `Quality.frame`), saved in prefs (`quality.gpu/ui`). Add new costly
+  effects as steps on the ladder of the side they load. Debug > Performance
+  > Quality Manager.
+- **Launch picture** (`launch_picture.dart`, 2.0.15): the 3D model in hand
+  saved as a PNG of its box (every 2 s check: at rest, drawn anew, then
+  still). At launch, if it matches (body, skin, camera, video, GPU step,
+  version, exact size) it stands in for the model; the curtain lifts on it
+  only if the moving parts (`WholeBody.poses`: flash tab, dials, nothing
+  pressed) are where they were in it, else it waits for the model as
+  before. Touches and the volume keys wait (a note says why); the picture
+  fades out the frame after the model has drawn under it; given up after
+  10 s (Launch Timing: "launch picture given up"). Keep the camera
+  screen's tree the same with and without the model (always a Stack at the
+  root, LiveFace always present, parts registered on WholeBody), or the
+  viewfinder restarts at the hand-over. Anything that changes how the
+  model draws at rest must be in `LaunchPicture.wantOf` or the poses.
+  MainActivity preloads FFmpegKitConfig (its native libraries) on a thread
+  at onCreate; Launch Timing breaks down the time before main. Launch
+  curtain: 0.3 s minimum, 100 ms after the camera opens, then ready for
+  200 ms in a row, 550 ms fade.
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and
   the cork wall's shader tiles are cached (`CorkTiles`, warmed at start).

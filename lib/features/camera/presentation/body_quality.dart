@@ -4,17 +4,15 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../core/diagnostics/perf_recorder.dart';
+import '../../../core/performance/quality.dart';
 
-/// How sharply the 3D body is drawn, and on phones with little RAM, steered
-/// by how long frames really take while it moves (a swap). Flutter Scene's
-/// own adaptive quality judged by the time between frames, so at 60 Hz
-/// (which those phones run at) it could step down but never back up: this
-/// reads each frame's own build and raster time instead.
+/// How sharply the 3D body is drawn.
 ///
 /// The body's draw scale is [base] (low RAM: its width capped at 1080 px;
 /// screens >= 1100 px: 90%) times [detail] (1 down to [floor], never under
-/// 648 px wide; only ever below 1 on low RAM). The labels on it that are
-/// widgets (FLIP, the format dial) soften to match ([textBlur]).
+/// 648 px wide), which follows the quality manager's 3D steps
+/// (Quality.scale3d). The labels on it that are widgets (FLIP, the format
+/// dial) soften to match ([textBlur]).
 ///
 /// It keeps stats for Debug > Performance Report.
 class BodyQuality {
@@ -38,11 +36,6 @@ class BodyQuality {
   static bool _on = false;
   static bool _started = false;
   static bool _moving = false;
-  static final _frames = <int>[];
-  static int _cooldown = 0;
-
-  /// Frames per verdict (about half a second of a swap).
-  static const window = 30;
 
   /// A frame over this (build or raster, µs) missed 60 Hz.
   static const late = 16700;
@@ -59,13 +52,21 @@ class BodyQuality {
     _clock.start();
     _levelFrom = 0;
     if (low) {
-      _on = true;
       base = px > 1080 ? 1080 / px : 1;
-      floor = math.min(1, math.max(0.6, minWidth / (px * base)));
     } else {
       base = px >= 1100 ? 0.9 : 1;
-      floor = 1;
     }
+    floor = math.min(1, math.max(0.6, minWidth / (px * base)));
+    // The quality manager steers it now, on every phone (2.0.15): from how
+    // all moving frames run, not only swaps on low-RAM phones.
+    _on = true;
+    void follow() {
+      final to = math.max(floor, Quality.scale3d.value);
+      if (to != detail.value) _set(to);
+    }
+
+    Quality.scale3d.addListener(follow);
+    follow();
     SchedulerBinding.instance.addTimingsCallback(_timings);
     PerfRecorder.extras.add(summary);
   }
@@ -74,7 +75,6 @@ class BodyQuality {
   static void moving(bool on) {
     if (on && !_moving) _swaps++;
     _moving = on;
-    if (!on) _frames.clear();
     final now = _clock.elapsedMicroseconds;
     if (on) {
       _swapFrom = now;
@@ -90,7 +90,6 @@ class BodyQuality {
   static int _levelFrom = 0;
   static int? _swapFrom;
   static int _swaps = 0;
-  static int _windows = 0;
   static int _downs = 0;
   static int _ups = 0;
   static final _levels = <int, _Level>{};
@@ -99,7 +98,7 @@ class BodyQuality {
   static int get _pct => (detail.value * 100).round();
   static _Level _level(int pct) => _levels.putIfAbsent(pct, _Level.new);
 
-  static void _set(double to, int lateFrames, double meanUs) {
+  static void _set(double to) {
     final now = _clock.elapsedMicroseconds;
     final from = _pct;
     _level(from).time += now - _levelFrom;
@@ -109,7 +108,7 @@ class BodyQuality {
     }
     _levelFrom = now;
     detail.value = to;
-    _events.add(_Event(now, from, _pct, lateFrames, meanUs));
+    _events.add(_Event(now, from, _pct));
     if (_events.length > 40) _events.removeAt(0);
     to < from / 100 ? _downs++ : _ups++;
     PerfRecorder.mark('3D quality $from% -> $_pct%', hold: const Duration(seconds: 2));
@@ -120,33 +119,11 @@ class BodyQuality {
     final level = _level(_pct);
     for (final t in timings) {
       final us = math.max(t.buildDuration.inMicroseconds, t.rasterDuration.inMicroseconds);
-      _frames.add(us);
       level
         ..frames += 1
         ..frameUs += us
         ..late += us > late ? 1 : 0;
     }
-    if (_frames.length < window) return;
-    final lateFrames = _frames.where((f) => f > late).length;
-    final mean = _frames.reduce((a, b) => a + b) / _frames.length;
-    _frames.clear();
-    _windows++;
-    if (!_on) return;
-    final d = detail.value;
-    if (lateFrames >= 6) {
-      // a fifth of the frames missed: a step down (15%), then a pause
-      // before it may climb again
-      _cooldown = 2;
-      final to = math.max(floor, d * 0.85);
-      if (to < d) _set(to, lateFrames, mean);
-      return;
-    }
-    if (_cooldown > 0) {
-      _cooldown--;
-      return;
-    }
-    // every frame on time with room to spare: a step back up
-    if (lateFrames == 0 && mean < 10000 && d < 1) _set(math.min(1, d / 0.85), lateFrames, mean);
   }
 
   /// The blur (logical px) that makes a crisp label read like the body
@@ -202,7 +179,7 @@ class BodyQuality {
     b
       ..writeln()
       ..writeln('THIS SESSION (${_dur(now)})')
-      ..writeln('Swaps: $_swaps, judged in $_windows checks of $window frames')
+      ..writeln('Swaps: $_swaps')
       ..writeln('Steps: $_downs down, $_ups up');
     final levels = _levels.keys.toList()..sort((a, c) => c.compareTo(a));
     if (!levels.contains(_pct)) levels.add(_pct);
@@ -225,20 +202,17 @@ class BodyQuality {
         ..writeln()
         ..writeln('CHANGES (latest last)');
       for (final e in _events) {
-        b.writeln(
-          '  ${_dur(e.at)} in: ${e.from}% -> ${e.to}% '
-          '(${e.late} of $window frames late, average ${(e.meanUs / 1000).toStringAsFixed(1)} ms)',
-        );
+        b.writeln('  ${_dur(e.at)} in: ${e.from}% -> ${e.to}%');
       }
     }
     b
       ..writeln()
       ..writeln('HOW IT DECIDES')
       ..writeln(
-        'Only while you swap cameras (the only time the 3D body keeps redrawing). Every $window frames: '
-        '6 or more late = 15% softer, then 2 checks\' pause; none late and under 10 ms on average = '
-        '15% sharper. Only the 3D body (and FLIP / the format label on it) changes: the viewfinder, '
-        'text and buttons stay sharp. It starts at normal each time the app opens.',
+        'The quality manager (Debug > Quality Manager) sets it from how moving frames run: its 3D '
+        'steps draw the body at 90%, 80% or 70%. Only the 3D body (and FLIP / the format label on it) '
+        'changes: the viewfinder, text and buttons stay sharp. The frame times above are while you '
+        'swap cameras.',
       );
     return b.toString();
   }
@@ -249,10 +223,9 @@ class _Level {
 }
 
 class _Event {
-  _Event(this.at, this.from, this.to, this.late, this.meanUs);
+  _Event(this.at, this.from, this.to);
 
-  final int at, from, to, late;
-  final double meanUs;
+  final int at, from, to;
 }
 
 /// Builds [builder] with [BodyQuality.textBlur] for this screen, again

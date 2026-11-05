@@ -6,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../shaders/shader_library.dart' show FilmUniforms;
+import '../performance/quality.dart';
 import 'speed_tests.dart';
 
 /// Records every frame's timings on the phone (Win98 Help > Debug >
@@ -126,14 +127,18 @@ class PerfRecorder {
     final t = test;
     final label = t != null ? '$t · $activity' : '$activity${SpeedTests.tag}';
     for (final t in timings) {
+      final vsync = t.timestampInMicroseconds(ui.FramePhase.vsyncStart);
+      final moving = _wasMoving(vsync);
+      final build = t.buildDuration.inMicroseconds / 1000, raster = t.rasterDuration.inMicroseconds / 1000;
+      Quality.frame(build, raster, vsync, moving);
       _frames.add(
         _Frame(
           label,
           t.buildDuration.inMicroseconds / 1000,
           t.rasterDuration.inMicroseconds / 1000,
           t.totalSpan.inMicroseconds / 1000,
-          t.timestampInMicroseconds(ui.FramePhase.vsyncStart),
-          _wasMoving(t.timestampInMicroseconds(ui.FramePhase.vsyncStart)),
+          vsync,
+          moving,
         ),
       );
     }

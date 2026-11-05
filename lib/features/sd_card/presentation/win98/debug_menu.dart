@@ -22,6 +22,7 @@ import '../../../../core/diagnostics/launch_timer.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
 import '../../../../core/diagnostics/speed_test_run.dart';
 import '../../../../core/diagnostics/speed_tests.dart';
+import '../../../../core/performance/quality.dart';
 import '../../../../core/monetization/allowance.dart';
 import '../../../../core/monetization/pro.dart';
 import '../../../../core/processing/capture_processor.dart';
@@ -119,6 +120,14 @@ final _tools = <_Tool>[
         ),
       );
     },
+  ),
+  _Tool(
+    PixelIcon.views,
+    'Quality Manager',
+    'How much drawing this phone gets, steered by how its moving frames run: the steps taken on '
+        'the graphics and processor sides, recent verdicts and every step. Step it by hand, turn it '
+        'off, or reset it to full quality.',
+    (context, _) => _qualityWindow(context),
   ),
   _Tool(
     PixelIcon.rabbit,
@@ -278,6 +287,7 @@ Future<void> _perfReport(BuildContext context, _Read read) async {
     _phoneReport(read, battery),
     PerfRecorder.report(),
     LaunchTimer.report(),
+    'QUALITY MANAGER\n${Quality.report()}',
     '3D QUALITY\n${BodyQuality.report()}',
     'MEMORY\n${_memoryReport(read)}',
   ].join('\n\n');
@@ -603,7 +613,7 @@ class _DebugMenu extends ConsumerStatefulWidget {
 /// The Debug window's folders, in order, and the tools in each (by name).
 /// A tool left out lands in Other.
 final _groups = <(String, List<String>)>[
-  ('Performance', ['Run Speed Test', 'Performance Report', 'FPS Counter', 'Slow Motion']),
+  ('Performance', ['Run Speed Test', 'Performance Report', 'Quality Manager', 'FPS Counter', 'Slow Motion']),
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
   ('Speed Test Switches', [for (final (name, _, _) in _speedTests) name]),
@@ -877,6 +887,63 @@ String _compressionSupport() {
 
 /// The speed test's own header lines: the app, Fancy graphics, the 3D
 /// textures (format and size) and what compression the GPU offers.
+/// Debug > Performance > Quality Manager.
+Future<void> _qualityWindow(BuildContext context) => showWin98Window<void>(
+  context,
+  title: 'Quality Manager',
+  width: 360,
+  icon: const PixelIconView(PixelIcon.views),
+  builder: (context) => StatefulBuilder(
+    builder: (context, setState) {
+      Widget button(String label, VoidCallback onPressed) =>
+          Win98Button(minWidth: 64, onPressed: () => setState(onPressed), child: Text(label));
+      return Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: Win98Bevel(
+                style: BevelStyle.sunken,
+                color: W98.white,
+                padding: const EdgeInsets.all(6),
+                child: SingleChildScrollView(
+                  child: Text(Quality.report(), style: W98.text.copyWith(fontSize: 10)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              alignment: WrapAlignment.end,
+              children: [
+                button('GPU step', () => Quality.stepDown(gpuSide: true)),
+                button('UI step', () => Quality.stepDown(gpuSide: false)),
+                button('Step up', Quality.stepUp),
+                button(Quality.auto ? 'Auto: on' : 'Auto: off', () => Quality.auto = !Quality.auto),
+                button('Reset', Quality.reset),
+                Win98Button(
+                  minWidth: 64,
+                  onPressed: () => unawaited(Clipboard.setData(ClipboardData(text: Quality.report()))),
+                  child: const Text('Copy'),
+                ),
+                Win98Button(
+                  minWidth: 64,
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  ),
+);
+
 String _testHeader(_Read read) {
   final art = read(wholeArtProvider).value;
   final tex = [
@@ -889,6 +956,7 @@ String _testHeader(_Read read) {
         '${DeviceMemory.low ? ' (low)' : ''}, fancy graphics ${read(globalSettingsProvider).controls3d ? 'on' : 'off'}',
     '3D textures: ${tex.isEmpty ? 'not loaded' : tex.join('; ')}',
     'swipe viewfinder: ${SpeedTests.liveSwipe.value ? 'live (switch)' : 'still'}',
+    Quality.line,
     'camera stream: ${switch (read(cameraSessionProvider).controller?.value.previewSize) {
       final s? => '${s.width.round()}x${s.height.round()}',
       null => 'closed',

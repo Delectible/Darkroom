@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,8 @@ import '../../../core/device/permissions.dart';
 import '../../../core/providers.dart';
 import 'camera_log.dart';
 import 'camera_ui_state.dart';
+import 'lens_controller.dart';
+import '../../cameras/domain/camera_spec.dart';
 
 enum SessionStatus { idle, initializing, ready, permissionDenied, noCamera, error }
 
@@ -51,16 +54,21 @@ class CameraSessionState {
 
 @immutable
 class _Config {
-  const _Config(this.lens, this.preset);
+  const _Config(this.lens, this.preset, {this.ultraWide = false});
 
   final CameraLensDirection lens;
   final ResolutionPreset preset;
 
-  @override
-  bool operator ==(Object other) => other is _Config && other.lens == lens && other.preset == preset;
+  /// iPhone: the ultra-wide camera (the film camera's wide or fish-eye lens:
+  /// Android reaches it by zooming below 1x, iOS's plugin offers it apart).
+  final bool ultraWide;
 
   @override
-  int get hashCode => Object.hash(lens, preset);
+  bool operator ==(Object other) =>
+      other is _Config && other.lens == lens && other.preset == preset && other.ultraWide == ultraWide;
+
+  @override
+  int get hashCode => Object.hash(lens, preset, ultraWide);
 }
 
 /// Owns the one-and-only [CameraController].
@@ -113,6 +121,8 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     // Re-open with a different sensor mode / lens when the selection changes.
     ref.listen(activeSpecProvider, (_, _) => _kick());
     ref.listen(lensProvider, (_, _) => _kick());
+    // (iPhone: the wide lenses open its ultra-wide camera)
+    ref.listen(filmLensProvider, (_, _) => _kick());
     ref.listen(activeFlashProvider, (_, next) => _applyFlash(_controller, next));
     // The microphone allowed again (the viewfinder's note, or Settings):
     // reopen with sound, so videos aren't silent until the next launch.
@@ -181,7 +191,14 @@ class CameraSessionController extends Notifier<CameraSessionState> {
 
   _Config get _wantConfig {
     final spec = ref.read(activeSpecProvider);
-    return _Config(ref.read(lensProvider), presetFor(spec));
+    final direction = ref.read(lensProvider);
+    final lens = ref.read(filmLensProvider);
+    final ultraWide =
+        defaultTargetPlatform == TargetPlatform.iOS &&
+        direction == CameraLensDirection.back &&
+        (lens == LensKind.wide || lens == LensKind.fisheye) &&
+        (_cameras?.any((c) => c.lensType == CameraLensType.ultraWide) ?? true);
+    return _Config(direction, presetFor(spec), ultraWide: ultraWide);
   }
 
   // ---- reconcile loop --------------------------------------------------------
@@ -239,7 +256,18 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       state = state.copyWith(status: SessionStatus.noCamera, message: 'No camera found');
       return;
     }
-    final desc = cams.firstWhere((c) => c.lensDirection == cfg.lens, orElse: () => cams.first);
+    // The main camera that way (iOS lists its ultra-wide and tele apart:
+    // never one of those by accident), or the ultra-wide when asked.
+    final facing = cams.where((c) => c.lensDirection == cfg.lens).toList();
+    final desc = cfg.ultraWide && facing.any((c) => c.lensType == CameraLensType.ultraWide)
+        ? facing.firstWhere((c) => c.lensType == CameraLensType.ultraWide)
+        : facing.firstWhere(
+            (c) => c.lensType == CameraLensType.wide,
+            orElse: () => facing.firstWhere(
+              (c) => c.lensType == CameraLensType.unknown,
+              orElse: () => facing.isNotEmpty ? facing.first : cams.first,
+            ),
+          );
     CameraLog.add('open ${cfg.lens.name} ${cfg.preset.name}');
     final hasFront = cams.any((c) => c.lensDirection == CameraLensDirection.front);
 

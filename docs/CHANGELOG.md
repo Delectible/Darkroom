@@ -606,4 +606,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   ultra-wide itself, e.g. a Pixel's 0.5x); another lens returns to the zoom
   before. Phones whose camera starts at 1x (the iPhone with today's camera
   plugin) keep the main camera.
+- [x] **64.13** → 2.1.5 · iPhone: wide and fish-eye open the ultra-wide
+  camera (the plugin lists it apart; `_Config.ultraWide`), the viewfinder
+  shutter covering the switch; the main camera is picked by lens type, never
+  an ultra-wide/tele by accident. Camera Control press: already the shutter
+  since 2.0 (AVCaptureEventInteraction, AppDelegate.captureButtons); it comes
+  in as volume-down, so with "volume zoom" on a digital body it zooms.
+- [ ] **64.14** Camera Control slide-to-zoom (needs our copy of
+  camera_avfoundation for AVCaptureSlider).
 

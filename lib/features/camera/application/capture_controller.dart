@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
@@ -9,12 +10,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/device/physical_orientation.dart';
 import '../../../core/monetization/allowance.dart';
 import '../../../core/processing/capture_processor.dart';
+import '../../../core/processing/multi_exposure.dart';
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
 import 'camera_session_controller.dart';
 import 'exposure_controller.dart';
+import 'multi_exposure_controller.dart';
 import 'camera_ui_state.dart';
 import 'lab_note.dart';
 import 'zoom_controller.dart';
@@ -151,16 +154,35 @@ class CaptureController extends Notifier<CaptureState> {
     );
     try {
       final file = await c.takePicture();
+      // Multiple exposure: the first is held (no frame used), the second
+      // lands on it and the two go on as one capture.
+      var path = file.path;
+      final me = ref.read(multiExposureProvider);
+      if (me.armed && ctx.spec.special == CameraSpecial.multipleExposure) {
+        final first = me.first;
+        if (first == null) {
+          await ref.read(multiExposureProvider.notifier).hold(path);
+          state = state.copyWith(busy: false);
+          return;
+        }
+        final blended = '$path.me.jpg';
+        await MultiExposure.blend(first, path, blended);
+        try {
+          await File(path).delete();
+        } catch (_) {}
+        path = blended;
+        ref.read(multiExposureProvider.notifier).cancel();
+      }
       // Read before the hand-off moves the file.
       final note = await LabNote.forFile(
         ctx.spec,
-        file.path,
+        path,
         flash: ctx.flash != FlashSetting.off,
         exposureComp: ctx.exposureComp,
       );
       // Hand-off: moves the file into our cache + writes the queue row.
       // Processing then continues in the background isolate.
-      final id = await ref.read(captureProcessorProvider).enqueuePhoto(file.path, ctx);
+      final id = await ref.read(captureProcessorProvider).enqueuePhoto(path, ctx);
       // The lab says so once the print is developed (DarkroomController).
       if (note != null) await LabNote.keep(ref.read(sharedPrefsProvider), id, note);
       ref.read(allowanceProvider.notifier).usePhoto(ctx.spec);

@@ -26,6 +26,7 @@ class CameraCatalog {
   static const ektar100 = CameraSpec(
     id: 'ektar100',
     mode: AppMode.film,
+    special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
     name: 'Vivid 100',
@@ -43,6 +44,7 @@ class CameraCatalog {
   static const portra400 = CameraSpec(
     id: 'portra400',
     mode: AppMode.film,
+    special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
     name: 'Portrait 400',
@@ -60,6 +62,7 @@ class CameraCatalog {
   static const hp5 = CameraSpec(
     id: 'hp5plus400',
     mode: AppMode.film,
+    special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
     name: 'Classic 400',
@@ -123,6 +126,7 @@ class CameraCatalog {
   static const gold200 = CameraSpec(
     id: 'gold200',
     mode: AppMode.film,
+    special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
     name: 'Golden 200',
@@ -141,6 +145,7 @@ class CameraCatalog {
   static const night800 = CameraSpec(
     id: 'cinestill800t',
     mode: AppMode.film,
+    special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
     name: 'Night 800T',
@@ -159,6 +164,7 @@ class CameraCatalog {
   static const chrome50 = CameraSpec(
     id: 'velvia50',
     mode: AppMode.film,
+    special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
     name: 'Chrome 50',

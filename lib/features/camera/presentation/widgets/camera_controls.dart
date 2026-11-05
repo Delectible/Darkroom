@@ -892,28 +892,105 @@ class _LcdBattery extends CustomPainter {
   bool shouldRepaint(_LcdBattery old) => old.bars != bars;
 }
 
-/// Small centred caret above the controls: tap (or swipe up anywhere) to
-/// open the film / camera picker.
-class PickerCaret extends StatelessWidget {
+/// Above the box end / LCD, where the picker is (tap, or swipe up
+/// anywhere): on film the thumb notch a memo holder has for sliding its card
+/// out; on digital a small card-door tab marked SD. Pressed into the body,
+/// not printed on it.
+class PickerCaret extends ConsumerWidget {
   const PickerCaret({super.key, required this.onOpen});
 
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final film = ref.watch(appModeProvider) == AppMode.film;
+    final p = RetroPalette.of(context);
     return Semantics(
       button: true,
-      label: 'Open picker',
+      label: film ? 'Change film' : 'Change camera',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onOpen,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Icon(Icons.keyboard_arrow_up, color: RetroPalette.of(context).textMuted, size: 22),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 2),
+          child: CustomPaint(
+            size: film ? const Size(34, 11) : const Size(34, 13),
+            painter: _PickerMark(film: film, body: p.body, ink: p.textMuted),
+          ),
         ),
       ),
     );
   }
+}
+
+class _PickerMark extends CustomPainter {
+  _PickerMark({required this.film, required this.body, required this.ink});
+
+  final bool film;
+  final Color body, ink;
+
+  Color _shade(double k) => Color.lerp(body, const Color(0xFF000000), k)!;
+  Color _light(double k) => Color.lerp(body, const Color(0xFFFFFFFF), k)!;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    if (film) {
+      // a half-round dip cut into the body above the card
+      final dip = Path()
+        ..moveTo(0, 0)
+        ..arcToPoint(Offset(w, 0), radius: Radius.elliptical(w / 2, h), clockwise: false)
+        ..close();
+      canvas.drawPath(
+        dip,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [_shade(0.45), _shade(0.18)],
+          ).createShader(Offset.zero & size),
+      );
+      // its lit lower rim
+      canvas.drawArc(
+        Rect.fromLTWH(0, -h, w, h * 2),
+        0.25,
+        math.pi - 0.5,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.9
+          ..color = _light(0.28),
+      );
+      return;
+    }
+    // a little door tab: recessed, with SD stamped in it
+    final r = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(3));
+    canvas
+      ..drawRRect(r, Paint()..color = _shade(0.32))
+      ..drawRRect(
+        r.deflate(0.5),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.8
+          ..color = _light(0.18),
+      );
+    final tp = TextPainter(
+      text: TextSpan(
+        text: 'SD',
+        style: TextStyle(
+          color: ink.withValues(alpha: 0.85),
+          fontSize: 8,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, Offset((w - tp.width) / 2, (h - tp.height) / 2));
+  }
+
+  @override
+  bool shouldRepaint(_PickerMark old) => old.film != film || old.body != body || old.ink != ink;
 }
 
 /// Tap opens the picker; a sideways swipe steps to the next / previous

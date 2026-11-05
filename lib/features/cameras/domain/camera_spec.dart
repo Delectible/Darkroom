@@ -112,6 +112,18 @@ class ExposureSpec {
   double snap(double v) => (((v.clamp(min, max) - min) / step).round() * step + min).clamp(min, max);
 }
 
+/// A camera's one special, on the button that changes per camera (film:
+/// the chip in the viewfinder's top-right corner). None: a blank chip.
+enum CameraSpecial {
+  /// The next shot lands on the same frame as this one (35 mm stills).
+  multipleExposure('ME');
+
+  const CameraSpecial(this.mark);
+
+  /// What the chip shows.
+  final String mark;
+}
+
 class CameraSpec {
   const CameraSpec({
     required this.id,
@@ -136,6 +148,7 @@ class CameraSpec {
     this.roll = const FilmRoll(),
     this.zoom,
     this.exposure,
+    this.special,
     this.pickerTag,
     this.storage = DigitalStorage.sdCard,
     this.boxColor = 0xFFE3D8C3,
@@ -192,6 +205,9 @@ class CameraSpec {
 
   /// Exposure compensation (film); null: none offered.
   final ExposureSpec? exposure;
+
+  /// Its special on the changing button; null: a blank one.
+  final CameraSpecial? special;
 
   /// Optional tag under the name in the picker (e.g. "MOVIE · 18 FPS").
   final String? pickerTag;

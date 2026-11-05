@@ -9,8 +9,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/device/haptics.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../application/exposure_controller.dart';
+import '../application/multi_exposure_controller.dart';
 import '../application/zoom_controller.dart';
 import 'viewfinder_shut.dart';
+import 'viewport.dart' show CameraNote;
 
 /// The film viewfinder's controls, drawn into the viewfinder itself:
 ///
@@ -229,12 +231,35 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
 
   void _evEnd(DragEndDetails _) => _evOn(false);
 
+  // ---- the special ----------------------------------------------------------
+
+  void _special() {
+    switch (widget.spec.special) {
+      case CameraSpecial.multipleExposure:
+        final n = ref.read(multiExposureProvider.notifier);
+        final was = ref.read(multiExposureProvider);
+        n.toggle();
+        unawaited(Haptics.lightImpact());
+        CameraNote.show(
+          was.armed
+              ? (was.holding ? 'Double exposure cancelled' : 'Multiple exposure off')
+              : 'Multiple exposure: the next two shots share a frame',
+        );
+      case null:
+        break;
+    }
+  }
+
   // ---- build ----------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     final z = ref.watch(zoomProvider);
     final ev = ref.watch(exposureCompProvider);
+    final me = ref.watch(multiExposureProvider);
+    ref.listen(multiExposureProvider, (was, now) {
+      if (now.holding && !(was?.holding ?? false)) CameraNote.show('First exposure in. Now the second');
+    });
     // the ring follows the lens when it moves by itself (a new stock starts
     // wide)
     if (!_dragging && _sim == null) _ring = z.canZoom ? math.log(_wide * z.level) : null;
@@ -242,7 +267,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
       builder: (context, box) {
         final w = box.maxWidth, h = box.maxHeight;
         final band = math.max(64.0, h * 0.3);
-        final scaleTop = h * 0.14, scaleBottom = h - band - h * 0.06;
+        final scaleTop = h * 0.24, scaleBottom = h - band - h * 0.06;
         return Stack(
           fit: StackFit.expand,
           children: [
@@ -253,6 +278,8 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                     repaint: Listenable.merge([_paint, _zoomLit, _evLit, ViewfinderShutter.shut]),
                     ring: () => _ring,
                     zoom: z,
+                    special: widget.spec.special,
+                    me: me,
                     wide: _wide,
                     marks: _marks,
                     exposure: widget.spec.exposure,
@@ -279,6 +306,17 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                   onHorizontalDragCancel: () => _zoomEnd(DragEndDetails(), w),
                 ),
               ),
+            // the button that changes per camera: its special, or blank
+            Positioned(
+              right: 4,
+              top: 4,
+              width: 52,
+              height: 52,
+              child: GestureDetector(
+                behavior: widget.spec.special == null ? HitTestBehavior.translucent : HitTestBehavior.opaque,
+                onTap: widget.spec.special == null ? null : _special,
+              ),
+            ),
             if (widget.spec.exposure != null)
               Positioned(
                 right: 0,
@@ -313,6 +351,8 @@ class _DialsPainter extends CustomPainter {
     required this.evLit,
     required this.scaleTop,
     required this.scaleBottom,
+    required this.special,
+    required this.me,
   }) : super(repaint: repaint);
 
   final double? Function() ring;
@@ -323,6 +363,8 @@ class _DialsPainter extends CustomPainter {
   final double ev;
   final Animation<double> zoomLit, evLit;
   final double scaleTop, scaleBottom;
+  final CameraSpecial? special;
+  final MultiExposureState me;
 
   static const _ink = Color(0xFFF5EEE2);
   static const _amber = Color(0xFFE6A83F);
@@ -473,6 +515,36 @@ class _DialsPainter extends CustomPainter {
       _label(canvas, '$mm mm', on(0, 44 * unit), 13 * unit, zl * shown, bold: true);
     }
 
+    // ---- the changing button (top right) ----
+    {
+      final unit = (w / 360).clamp(0.85, 1.4);
+      final c = Offset(w - 30, 30);
+      final rad = 14.5 * unit;
+      final on = special != null && me.armed;
+      final a = (special == null ? 0.22 : (on ? 0.95 : 0.42)) * shown;
+      canvas.drawCircle(
+        c,
+        rad + 0.8,
+        Paint()
+          ..color = _shade.withValues(alpha: a * 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.6,
+      );
+      canvas.drawCircle(
+        c,
+        rad,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = on ? 1.8 : 1.3
+          ..color = (on ? _amber : _ink).withValues(alpha: a),
+      );
+      if (on && me.holding) {
+        // the first exposure is in: the ring fills a little
+        canvas.drawCircle(c, rad - 3, Paint()..color = _amber.withValues(alpha: 0.28 * shown));
+      }
+      if (special != null) _label(canvas, special!.mark, c, 10.5 * unit, a, bold: true);
+    }
+
     // ---- the exposure scale ----
     final e = exposure;
     if (e != null) {
@@ -538,5 +610,10 @@ class _DialsPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DialsPainter old) =>
-      old.zoom != zoom || old.ev != ev || old.exposure != exposure || old.wide != wide;
+      old.zoom != zoom ||
+      old.me != me ||
+      old.special != special ||
+      old.ev != ev ||
+      old.exposure != exposure ||
+      old.wide != wide;
 }

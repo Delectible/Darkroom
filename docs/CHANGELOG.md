@@ -567,7 +567,16 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   real brightness (lab notes too).
 - [x] **64.6** → 2.1.3 · Switching stock keeps the focal length when the new
   lens reaches it, else the nearest end (`ZoomController._filmMm`).
-- [ ] **64.3** The one changing button by the shutter (ME, FADE, blank).
+- [x] **64.3** → 2.1.3 · The changing button: a chip in the film viewfinder's
+  top-right corner (owner's pick over a 3D button). `CameraSpec.special`;
+  blank ring where a camera has none. ME (35 mm stills): armed, the next shot
+  is held (no frame used, `multi_exposure_controller.dart`), the second is
+  blended onto it (`MultiExposure.blend`: light added, each ~2/3 stop under,
+  soft shoulder) before queueing, so processing sees one frame. Super 8 FADE
+  still to do.
+- [x] **64.7** → 2.1.3 · The picker's ^ arrow is gone: film has the memo
+  holder's thumb notch above the box end, digital an SD card-door tab
+  (`PickerCaret`).
 - [ ] **64.4** Lens caps (wide, fish-eye, plastic, soft) from the corner ring.
 - [ ] **64.5** The same for the digital cameras.
 

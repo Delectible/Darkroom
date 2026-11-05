@@ -614,4 +614,8 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   in as volume-down, so with "volume zoom" on a digital body it zooms.
 - [ ] **64.14** Camera Control slide-to-zoom (needs our copy of
   camera_avfoundation for AVCaptureSlider).
+- [x] **64.15** → 2.1.5 · iPhones with the Camera Control: detected at launch
+  (`AVCaptureSession().supportsControls`, iOS 18+; `CameraControl.present`);
+  there the volume buttons are only ever the shutter (the Camera Control's
+  press arrives as volume-down) and "Volume buttons zoom" is hidden.
 

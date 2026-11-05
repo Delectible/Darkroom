@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/note_box.dart';
 
+import '../../../core/device/camera_control.dart';
 import '../../../core/device/device_memory.dart';
 import '../../../core/app_info.dart';
 import '../../../core/audio/sfx.dart';
@@ -131,13 +132,15 @@ class _SettingsSheet extends ConsumerWidget {
           value: global.controls3d,
           onChanged: (v) => unawaited(g.setControls3d(v)),
         ),
-        _Toggle(
-          title: 'Volume buttons zoom',
-          subtitle:
-              'The volume buttons take the picture. Turn this on to zoom with them on digital cameras instead.',
-          value: global.volumeZoom,
-          onChanged: (v) => unawaited(g.setVolumeZoom(v)),
-        ),
+        // (not on iPhones with the Camera Control: the volume buttons stay the shutter there)
+        if (!CameraControl.present)
+          _Toggle(
+            title: 'Volume buttons zoom',
+            subtitle:
+                'The volume buttons take the picture. Turn this on to zoom with them on digital cameras instead.',
+            value: global.volumeZoom,
+            onChanged: (v) => unawaited(g.setVolumeZoom(v)),
+          ),
         const SizedBox(height: 18),
         _Heading('HELP', p),
         ListTile(

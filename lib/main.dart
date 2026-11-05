@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'app.dart';
+import 'core/device/camera_control.dart';
 import 'core/background/background_worker.dart';
 import 'core/db/app_database.dart';
 import 'core/device/app_shortcuts.dart';
@@ -82,6 +83,7 @@ Future<void> _start() async {
   // The quality manager: the steps saved last time (core/performance).
   Quality.start(prefs);
   PrintFrames.prefs = prefs;
+  unawaited(CameraControl.read());
   unawaited(DeviceMemory.apply().then((_) => GlobalSettingsNotifier.reapply()));
   // The picture of the camera from last time (opens on it if it matches).
   LaunchPicture.init(paths.supportDir);

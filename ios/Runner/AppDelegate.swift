@@ -45,11 +45,20 @@ import UserNotifications
     // The phone's total RAM, so the app can size its work to it.
     let device = FlutterMethodChannel(name: "darkroom/device", binaryMessenger: registrar.messenger())
     device.setMethodCallHandler { call, result in
-      guard call.method == "memory" else {
+      switch call.method {
+      case "memory":
+        result(["total": Int64(ProcessInfo.processInfo.physicalMemory), "lowRam": false])
+      case "cameraControl":
+        // An iPhone with the Camera Control button (iOS 18+: only those let a
+        // capture session take on-device controls).
+        if #available(iOS 18.0, *) {
+          result(AVCaptureSession().supportsControls)
+        } else {
+          result(false)
+        }
+      default:
         result(FlutterMethodNotImplemented)
-        return
       }
-      result(["total": Int64(ProcessInfo.processInfo.physicalMemory), "lowRam": false])
     }
     // Camera / microphone: granted?, ask (only while iOS still will), and
     // the app's page in Settings for when it won't.

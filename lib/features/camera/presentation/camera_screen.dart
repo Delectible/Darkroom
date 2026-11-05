@@ -46,6 +46,7 @@ import 'whole_body.dart';
 import 'whole_face.dart';
 import 'widgets/camera_controls.dart';
 import '../../../core/device/device_memory.dart';
+import '../../../core/device/camera_control.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/startup/launch_curtain.dart';
 import '../../../core/diagnostics/launch_timer.dart';
@@ -510,7 +511,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     if (!mounted || _selectorOpen || _swapBusy || ModalRoute.of(context)?.isCurrent != true) return;
     if (_picturePhase) return _noteLoading(ref.read(appModeProvider));
     final digital = ref.read(appModeProvider) == AppMode.digital;
-    if (digital && ref.read(globalSettingsProvider).volumeZoom) {
+    // (never on an iPhone with the Camera Control: its press arrives as
+    // volume-down and must stay the shutter)
+    if (digital && ref.read(globalSettingsProvider).volumeZoom && !CameraControl.present) {
       if (ref.read(zoomProvider).canZoom) {
         _volumeZoomDir = up ? 1 : -1;
         ref.read(zoomProvider.notifier).start(_volumeZoomDir);

@@ -406,3 +406,10 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   a fixed number of evenly stamped moves (the same gesture whatever the
   frame rate; a stall no longer reads as no toss). A failing step is noted
   under PROBLEMS and the run goes on. Start dialog: portrait, battery saver off.
+
+## 62. Ideas (2026-11-05)
+
+- [ ] **62.1** Zoom on the film cameras (as the digital rocker).
+- [ ] **62.2** iPhone Camera Control: slide to zoom, press to shoot (needs our
+  own copy of the camera plugin's iPhone session; was the "slide to zoom"
+  checklist item).

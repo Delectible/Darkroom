@@ -480,6 +480,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **61.33** → 2.0.16 · A quick flick toward the other camera while its
   3D model is still loading no longer tosses to a camera with no body (the
   note shows, the camera stays). 3D quality report: stale low-RAM wording.
+- [x] **61.34** → 2.0.16 · Settings on slow tablets (44 fps, half the
+  refreshes dropped): the camera screen under the sheet was drawn again
+  every frame, all its layers. Now it's one picture of itself while the
+  sheet is up (`_coverScreen`, taken as it opens: the same pixels), dropped
+  at once if a setting changes the camera so the change shows.
 
 ## 62. Ideas (2026-11-05)
 

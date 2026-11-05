@@ -262,6 +262,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   @override
   void dispose() {
+    _cover?.dispose();
     SpeedTestRun.tossDirection = null;
     SpeedTestRun.open = null;
     SpeedTestRun.fancy = null;
@@ -639,6 +640,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     final session = ref.read(cameraSessionProvider.notifier);
     final pause = !ref.read(captureControllerProvider).isRecording;
     if (pause) {
+      _coverScreen();
       _snapMoving();
       session.setScreenVisible(false);
     }
@@ -648,8 +650,34 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     // Let the sheet finish closing before the camera starts up.
     await Future<void>.delayed(const Duration(milliseconds: 300));
     if (!mounted) return;
+    _uncoverScreen();
     session.setScreenVisible(true);
     _dropWhenLive();
+  }
+
+  /// Under the Settings sheet the camera screen is one picture of itself
+  /// (taken as it opens, pixel for pixel what was there): the screen under a
+  /// sheet is otherwise drawn again every frame the sheet moves, all its
+  /// layers (desk, 3D body, face, mask), most of a slow tablet's frame.
+  /// A setting that changes the camera drops it at once, so the change shows.
+  final _screenKey = GlobalKey();
+  ui.Image? _cover;
+
+  void _coverScreen() {
+    if (_cover != null) return;
+    try {
+      final boundary = _screenKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null || !boundary.hasSize) return;
+      final image = boundary.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context));
+      setState(() => _cover = image);
+    } catch (_) {}
+  }
+
+  void _uncoverScreen() {
+    final image = _cover;
+    if (image == null || !mounted) return;
+    setState(() => _cover = null);
+    WidgetsBinding.instance.addPostFrameCallback((_) => image.dispose());
   }
 
   bool _selectorOpen = false;
@@ -766,6 +794,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       _claimEdges();
     });
 
+    if (_cover != null) {
+      ref.listen(globalSettingsProvider, (_, _) => _uncoverScreen());
+      ref.listen(cameraSettingsProvider, (_, _) => _uncoverScreen());
+      ref.listen(cameraSkinProvider, (_, _) => _uncoverScreen());
+      ref.listen(selectedCameraProvider, (_, _) => _uncoverScreen());
+    }
     final mode = ref.watch(appModeProvider);
     final wholeArt = ref.watch(wholeArtProvider).value;
     final whole = ref.watch(wholeBodyProvider(mode));
@@ -842,279 +876,300 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
             return Stack(
               fit: StackFit.expand,
               children: [
-                GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onVerticalDragStart: (d) {
-                    final media = MediaQuery.of(context);
-                    final y = d.globalPosition.dy;
-                    // Home gesture at the bottom, notification shade at the top.
-                    _swipeFromEdge =
-                        y > media.size.height - SystemGestureZones.bottom(media) ||
-                        y < SystemGestureZones.top(media);
-                    _swipeStartY = d.globalPosition.dy;
-                  },
-                  onVerticalDragEnd: (d) {
-                    final travelled = _swipeStartY - (d.globalPosition.dy);
-                    if (_swipeFromEdge || travelled < 60) return;
-                    if ((d.primaryVelocity ?? 0) < -350) unawaited(_openSelector());
-                  },
-                  // Sideways: toss this camera aside for the other one.
-                  onHorizontalDragStart: _onDragStart,
-                  onHorizontalDragUpdate: _onDragUpdate,
-                  onHorizontalDragEnd: _onDragEnd,
-                  onHorizontalDragCancel: () {
-                    if (_dragging) _onDragEnd(DragEndDetails(primaryVelocity: 0));
-                  },
-                  child: Scaffold(
-                    backgroundColor: const Color(0xFF0C0B0A),
-                    // Fades out and back in while Fancy graphics switches.
-                    body: ValueListenableBuilder<bool>(
-                      valueListenable: GraphicsVeil.shown,
-                      builder: (context, shown, child) => Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          AnimatedOpacity(opacity: shown ? 1 : 0, duration: GraphicsVeil.fade, child: child),
-                          // Loading the 3D cameras can take a moment: say so if
-                          // the fade lasts (a quick switch never shows it).
-                          IgnorePointer(
-                            child: AnimatedOpacity(
-                              opacity: shown ? 0 : 1,
-                              duration: shown ? GraphicsVeil.fade : const Duration(milliseconds: 900),
-                              curve: shown ? Curves.linear : const Interval(0.6, 1),
-                              child: const Center(
-                                child: Text(
-                                  'Loading cameras…',
-                                  style: TextStyle(
-                                    color: Color(0x99E8E2D6),
-                                    fontSize: 13,
-                                    letterSpacing: 0.6,
+                // (under Settings: the picture of it instead, see _coverScreen)
+                TickerMode(
+                  enabled: _cover == null,
+                  child: Offstage(
+                    offstage: _cover != null,
+                    child: RepaintBoundary(
+                      key: _screenKey,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.translucent,
+                        onVerticalDragStart: (d) {
+                          final media = MediaQuery.of(context);
+                          final y = d.globalPosition.dy;
+                          // Home gesture at the bottom, notification shade at the top.
+                          _swipeFromEdge =
+                              y > media.size.height - SystemGestureZones.bottom(media) ||
+                              y < SystemGestureZones.top(media);
+                          _swipeStartY = d.globalPosition.dy;
+                        },
+                        onVerticalDragEnd: (d) {
+                          final travelled = _swipeStartY - (d.globalPosition.dy);
+                          if (_swipeFromEdge || travelled < 60) return;
+                          if ((d.primaryVelocity ?? 0) < -350) unawaited(_openSelector());
+                        },
+                        // Sideways: toss this camera aside for the other one.
+                        onHorizontalDragStart: _onDragStart,
+                        onHorizontalDragUpdate: _onDragUpdate,
+                        onHorizontalDragEnd: _onDragEnd,
+                        onHorizontalDragCancel: () {
+                          if (_dragging) _onDragEnd(DragEndDetails(primaryVelocity: 0));
+                        },
+                        child: Scaffold(
+                          backgroundColor: const Color(0xFF0C0B0A),
+                          // Fades out and back in while Fancy graphics switches.
+                          body: ValueListenableBuilder<bool>(
+                            valueListenable: GraphicsVeil.shown,
+                            builder: (context, shown, child) => Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                AnimatedOpacity(
+                                  opacity: shown ? 1 : 0,
+                                  duration: GraphicsVeil.fade,
+                                  child: child,
+                                ),
+                                // Loading the 3D cameras can take a moment: say so if
+                                // the fade lasts (a quick switch never shows it).
+                                IgnorePointer(
+                                  child: AnimatedOpacity(
+                                    opacity: shown ? 0 : 1,
+                                    duration: shown ? GraphicsVeil.fade : const Duration(milliseconds: 900),
+                                    curve: shown ? Curves.linear : const Interval(0.6, 1),
+                                    child: const Center(
+                                      child: Text(
+                                        'Loading cameras…',
+                                        style: TextStyle(
+                                          color: Color(0x99E8E2D6),
+                                          fontSize: 13,
+                                          letterSpacing: 0.6,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ),
-                        ],
-                      ),
-                      child: Stack(
-                        children: [
-                          // The desk the cameras rest on (seen between them mid-swap).
-                          const Positioned.fill(child: ColoredBox(color: Color(0xFF0C0B0A))),
-                          AnimatedBuilder(
-                            animation: _swap,
-                            builder: (context, child) {
-                              final moving = _committing || _swap.isAnimating || _swap.value != 0;
-                              final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
-                              Widget picture(ui.Image? image, AppMode m) => image == null
-                                  // 3D: the model is the body; only its labels are missing.
-                                  ? (whole != null ? const SizedBox.shrink() : BodyStandIn(mode: m))
-                                  : RawImage(image: image, fit: BoxFit.fill);
-                              // 3D: the bodies are drawn from the whole-body renders as they
-                              // move; each viewfinder a still (live: retaken every frame).
-                              final rendered = wholeArt == null || whole == null
-                                  ? null
-                                  : RenderedSwap(
-                                      art: wholeArt,
-                                      shutter: (m) {
-                                        final spec = CameraCatalog.byId(ref.read(selectedCameraProvider)[m]!);
-                                        if (!spec.recordsVideo) return 'shutter';
-                                        return m == AppMode.film ? 'run' : 'rec';
-                                      },
-                                      viewfinder: (m, live) => live
-                                          ? ValueListenableBuilder<ui.Image?>(
-                                              valueListenable: CameraViewport.freeze,
-                                              builder: (context, still, _) => _still(still ?? _lastFrame[m]),
-                                            )
-                                          : _still(_lastFrame[m]),
-                                    );
+                            child: Stack(
+                              children: [
+                                // The desk the cameras rest on (seen between them mid-swap).
+                                const Positioned.fill(child: ColoredBox(color: Color(0xFF0C0B0A))),
+                                AnimatedBuilder(
+                                  animation: _swap,
+                                  builder: (context, child) {
+                                    final moving = _committing || _swap.isAnimating || _swap.value != 0;
+                                    final other = mode == AppMode.film ? AppMode.digital : AppMode.film;
+                                    Widget picture(ui.Image? image, AppMode m) => image == null
+                                        // 3D: the model is the body; only its labels are missing.
+                                        ? (whole != null ? const SizedBox.shrink() : BodyStandIn(mode: m))
+                                        : RawImage(image: image, fit: BoxFit.fill);
+                                    // 3D: the bodies are drawn from the whole-body renders as they
+                                    // move; each viewfinder a still (live: retaken every frame).
+                                    final rendered = wholeArt == null || whole == null
+                                        ? null
+                                        : RenderedSwap(
+                                            art: wholeArt,
+                                            shutter: (m) {
+                                              final spec = CameraCatalog.byId(
+                                                ref.read(selectedCameraProvider)[m]!,
+                                              );
+                                              if (!spec.recordsVideo) return 'shutter';
+                                              return m == AppMode.film ? 'run' : 'rec';
+                                            },
+                                            viewfinder: (m, live) => live
+                                                ? ValueListenableBuilder<ui.Image?>(
+                                                    valueListenable: CameraViewport.freeze,
+                                                    builder: (context, still, _) =>
+                                                        _still(still ?? _lastFrame[m]),
+                                                  )
+                                                : _still(_lastFrame[m]),
+                                          );
 
-                              if (!moving) {
-                                return SwapStage(
-                                  progress: 0,
-                                  dir: _dirFor(mode),
-                                  leaving: child!,
-                                  leavingMode: mode,
-                                  arriving: null,
-                                  arrivingMode: other,
-                                  liveArriving: false,
-                                  rendered: rendered,
-                                );
-                              }
-                              // After the commit, `mode` is already the arriving body.
-                              return _committed
-                                  ? SwapStage(
-                                      progress: _swap.value,
-                                      dir: _dirFor(other),
-                                      leaving: picture(_outgoing, other),
-                                      leavingMode: other,
-                                      arriving: child,
-                                      arrivingMode: mode,
-                                      liveArriving: true,
-                                      rendered: rendered,
-                                    )
-                                  : SwapStage(
-                                      progress: _swap.value,
-                                      dir: _dirFor(mode),
-                                      leaving: _dragFace == null
-                                          ? child!
-                                          : Stack(
-                                              fit: StackFit.expand,
-                                              children: [
-                                                // Kept alive (camera, state), not drawn.
-                                                Visibility.maintain(visible: false, child: child!),
-                                                RawImage(image: _dragFace, fit: BoxFit.fill),
-                                              ],
+                                    if (!moving) {
+                                      return SwapStage(
+                                        progress: 0,
+                                        dir: _dirFor(mode),
+                                        leaving: child!,
+                                        leavingMode: mode,
+                                        arriving: null,
+                                        arrivingMode: other,
+                                        liveArriving: false,
+                                        rendered: rendered,
+                                      );
+                                    }
+                                    // After the commit, `mode` is already the arriving body.
+                                    return _committed
+                                        ? SwapStage(
+                                            progress: _swap.value,
+                                            dir: _dirFor(other),
+                                            leaving: picture(_outgoing, other),
+                                            leavingMode: other,
+                                            arriving: child,
+                                            arrivingMode: mode,
+                                            liveArriving: true,
+                                            rendered: rendered,
+                                          )
+                                        : SwapStage(
+                                            progress: _swap.value,
+                                            dir: _dirFor(mode),
+                                            leaving: _dragFace == null
+                                                ? child!
+                                                : Stack(
+                                                    fit: StackFit.expand,
+                                                    children: [
+                                                      // Kept alive (camera, state), not drawn.
+                                                      Visibility.maintain(visible: false, child: child!),
+                                                      RawImage(image: _dragFace, fit: BoxFit.fill),
+                                                    ],
+                                                  ),
+                                            leavingMode: mode,
+                                            arriving: picture(_lastLook[other], other),
+                                            arrivingMode: other,
+                                            liveArriving: false,
+                                            rendered: rendered,
+                                          );
+                                  },
+                                  child: RepaintBoundary(
+                                    // 3D: the snapshots are of the face's widgets only (the
+                                    // model is drawn under them, posed).
+                                    key: whole != null ? null : _bodyKey,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        if (whole != null)
+                                          // The whole-body render with the controls on it.
+                                          Positioned.fill(
+                                            child: WholeFace(
+                                              key: ValueKey(mode),
+                                              art: wholeArt!,
+                                              body: whole,
+                                              mode: mode,
+                                              onSettings: settings,
+                                              onOpenSelector: _openSelector,
+                                              onOpenGallery: _openGallery,
+                                              processing: const ProcessingSpinner(),
+                                              overlayKey: _bodyKey,
                                             ),
-                                      leavingMode: mode,
-                                      arriving: picture(_lastLook[other], other),
-                                      arrivingMode: other,
-                                      liveArriving: false,
-                                      rendered: rendered,
-                                    );
-                            },
-                            child: RepaintBoundary(
-                              // 3D: the snapshots are of the face's widgets only (the
-                              // model is drawn under them, posed).
-                              key: whole != null ? null : _bodyKey,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  if (whole != null)
-                                    // The whole-body render with the controls on it.
-                                    Positioned.fill(
-                                      child: WholeFace(
-                                        key: ValueKey(mode),
-                                        art: wholeArt!,
-                                        body: whole,
-                                        mode: mode,
-                                        onSettings: settings,
-                                        onOpenSelector: _openSelector,
-                                        onOpenGallery: _openGallery,
-                                        processing: const ProcessingSpinner(),
-                                        overlayKey: _bodyKey,
-                                      ),
-                                    )
-                                  else ...[
-                                    // Leatherette or brushed metal; the texture tile is rendered
-                                    // once per body. No cross-fade: the new body slides in whole.
-                                    Positioned.fill(
-                                      child: switch (ref.watch(photoBodyProvider(mode))) {
-                                        // The rendered surface: chrome plates reach just
-                                        // below the top controls and just under the bottom row.
-                                        final art? => BodyBackdrop(
-                                          key: ValueKey(mode),
-                                          art: art,
-                                          mode: mode,
-                                          top: MediaQuery.paddingOf(context).top + 58,
-                                          bottom: MediaQuery.paddingOf(context).bottom + 12,
-                                        ),
-                                        null => Stack(
-                                          key: ValueKey(mode),
-                                          fit: StackFit.expand,
-                                          children: [
-                                            SurfaceTexture(
-                                              leather: mode == AppMode.film,
-                                              base: mode == AppMode.film
-                                                  ? palette.body
-                                                  : palette.bodyHighlight,
-                                              light: palette.bodyHighlight,
-                                              dark: palette.bodyShadow,
-                                            ),
-                                            // Studio light: a soft key from the top left,
-                                            // the body falling off toward its bottom edge
-                                            // (gradients: free to draw).
-                                            const DecoratedBox(
-                                              decoration: BoxDecoration(
-                                                gradient: RadialGradient(
-                                                  center: Alignment(-0.7, -0.85),
-                                                  radius: 1.4,
-                                                  colors: [Color(0x1FFFFFFF), Color(0x00FFFFFF)],
-                                                ),
-                                              ),
-                                            ),
-                                            const DecoratedBox(
-                                              decoration: BoxDecoration(
-                                                gradient: LinearGradient(
-                                                  begin: Alignment.topCenter,
-                                                  end: Alignment.bottomCenter,
-                                                  stops: [0, 0.12, 0.8, 1],
-                                                  colors: [
-                                                    Color(0x14FFFFFF),
-                                                    Color(0x00000000),
-                                                    Color(0x00000000),
-                                                    Color(0x40000000),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      },
-                                    ),
-                                    SafeArea(
-                                      child: Column(
-                                        children: [
-                                          _TopBar(onSettings: settings),
-                                          Expanded(
-                                            child: Padding(
-                                              padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
-                                              child: _ViewportBezel(
+                                          )
+                                        else ...[
+                                          // Leatherette or brushed metal; the texture tile is rendered
+                                          // once per body. No cross-fade: the new body slides in whole.
+                                          Positioned.fill(
+                                            child: switch (ref.watch(photoBodyProvider(mode))) {
+                                              // The rendered surface: chrome plates reach just
+                                              // below the top controls and just under the bottom row.
+                                              final art? => BodyBackdrop(
+                                                key: ValueKey(mode),
+                                                art: art,
                                                 mode: mode,
-                                                child: const CameraViewport(),
+                                                top: MediaQuery.paddingOf(context).top + 58,
+                                                bottom: MediaQuery.paddingOf(context).bottom + 12,
                                               ),
-                                            ),
-                                          ),
-                                          PickerCaret(onOpen: _openSelector),
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-                                            child: Row(
-                                              children: [
-                                                Expanded(child: StockLabel(onOpen: _openSelector)),
-                                                // Every digital body has the same W|T rocker, so
-                                                // nothing pops in or out when switching bodies.
-                                                // Film bodies have no zoom at all.
-                                                if (mode == AppMode.digital) ...[
-                                                  const SizedBox(width: 12),
-                                                  const ZoomRocker(),
+                                              null => Stack(
+                                                key: ValueKey(mode),
+                                                fit: StackFit.expand,
+                                                children: [
+                                                  SurfaceTexture(
+                                                    leather: mode == AppMode.film,
+                                                    base: mode == AppMode.film
+                                                        ? palette.body
+                                                        : palette.bodyHighlight,
+                                                    light: palette.bodyHighlight,
+                                                    dark: palette.bodyShadow,
+                                                  ),
+                                                  // Studio light: a soft key from the top left,
+                                                  // the body falling off toward its bottom edge
+                                                  // (gradients: free to draw).
+                                                  const DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                      gradient: RadialGradient(
+                                                        center: Alignment(-0.7, -0.85),
+                                                        radius: 1.4,
+                                                        colors: [Color(0x1FFFFFFF), Color(0x00FFFFFF)],
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                      gradient: LinearGradient(
+                                                        begin: Alignment.topCenter,
+                                                        end: Alignment.bottomCenter,
+                                                        stops: [0, 0.12, 0.8, 1],
+                                                        colors: [
+                                                          Color(0x14FFFFFF),
+                                                          Color(0x00000000),
+                                                          Color(0x00000000),
+                                                          Color(0x40000000),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ),
                                                 ],
-                                              ],
-                                            ),
+                                              ),
+                                            },
                                           ),
-                                          Padding(
-                                            padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          SafeArea(
+                                            child: Column(
                                               children: [
-                                                GalleryButton(onOpen: _openGallery),
-                                                const ShutterButton(),
-                                                StockButton(onOpen: _openSelector),
+                                                _TopBar(onSettings: settings),
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+                                                    child: _ViewportBezel(
+                                                      mode: mode,
+                                                      child: const CameraViewport(),
+                                                    ),
+                                                  ),
+                                                ),
+                                                PickerCaret(onOpen: _openSelector),
+                                                Padding(
+                                                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                                                  child: Row(
+                                                    children: [
+                                                      Expanded(child: StockLabel(onOpen: _openSelector)),
+                                                      // Every digital body has the same W|T rocker, so
+                                                      // nothing pops in or out when switching bodies.
+                                                      // Film bodies have no zoom at all.
+                                                      if (mode == AppMode.digital) ...[
+                                                        const SizedBox(width: 12),
+                                                        const ZoomRocker(),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                ),
+                                                Padding(
+                                                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 18),
+                                                  child: Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    children: [
+                                                      GalleryButton(onOpen: _openGallery),
+                                                      const ShutterButton(),
+                                                      StockButton(onOpen: _openSelector),
+                                                    ],
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           ),
                                         ],
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ],
-                              ),
+                                  ),
+                                ),
+                                // The other camera's tag floats over the desk, not on the
+                                // body: it tucks away as a swap starts and springs back
+                                // out once the new body has settled.
+                                AnimatedBuilder(
+                                  animation: _swap,
+                                  builder: (context, _) => _ModePeek(
+                                    mode: mode,
+                                    onSwap: _tossByTap,
+                                    hidden: _committing || _swap.isAnimating || _swap.value != 0,
+                                  ),
+                                ),
+                                const _DarkroomBannerOverlay(),
+                              ],
                             ),
                           ),
-                          // The other camera's tag floats over the desk, not on the
-                          // body: it tucks away as a swap starts and springs back
-                          // out once the new body has settled.
-                          AnimatedBuilder(
-                            animation: _swap,
-                            builder: (context, _) => _ModePeek(
-                              mode: mode,
-                              onSwap: _tossByTap,
-                              hidden: _committing || _swap.isAnimating || _swap.value != 0,
-                            ),
-                          ),
-                          const _DarkroomBannerOverlay(),
-                        ],
+                        ),
                       ),
                     ),
                   ),
                 ),
+                if (_cover case final cover?)
+                  Positioned.fill(
+                    child: RawImage(image: cover, fit: BoxFit.fill, filterQuality: FilterQuality.none),
+                  ),
                 // The launch picture: the camera in your hands is a picture of
                 // itself until its 3D model is in (a second at most). Touches
                 // wait; trying anything says what's happening.

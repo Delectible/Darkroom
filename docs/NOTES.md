@@ -685,7 +685,10 @@ UI
   Infinity): check `isFinite` before rounding. If a run misbehaves on a
   phone, ask for Debug > Diagnostics > Crash Reports first.
 - 2.0.15: Settings stops the camera's stream while open (as the picker);
-  swipes do too (above). Low RAM is <= 4.2 GB now.
+  swipes do too (above). Low RAM is <= 4.2 GB now. 2.0.16: under Settings
+  the camera screen is a picture of itself (`_coverScreen`; Offstage +
+  TickerMode on the real one); a sheet over a live screen redraws it all
+  each frame. Same idea would suit any panel that half-covers the camera.
 - **Quality manager** (`core/performance/quality.dart`, 2.0.15): dials
   (`fxaa`, `noHalation`, `scale3d`, `cap60`, `lightStrap`, `slowGrain`) read
   by whole_body (edges), settings_controllers (halation, refresh rate),

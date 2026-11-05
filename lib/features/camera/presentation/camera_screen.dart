@@ -8,6 +8,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/note_box.dart';
+
 import '../../../core/audio/sfx.dart';
 import '../../../core/device/app_shortcuts.dart';
 import '../../../core/device/system_gestures.dart';
@@ -886,7 +888,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     ref.listen<CaptureState>(captureControllerProvider, (prev, next) {
       final msg = next.message;
       if (msg != null && msg != prev?.message) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+        Notes.show(msg);
         ref.read(captureControllerProvider.notifier).clearMessage();
       }
     });

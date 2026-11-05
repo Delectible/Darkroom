@@ -6,6 +6,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/theme/note_box.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../core/audio/sfx.dart';
@@ -450,20 +452,17 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     if (label == null || !mounted) return;
     final used = await renameReel(ref.read(filmRepositoryProvider), item, label);
     if (used == null && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Write a name on the label first.')));
+      Notes.show('Write a name on the label first.');
     }
   }
 
   Future<void> _save(MediaItem item) async {
     if (_saving || item.isSaved) return;
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
     final err = await keepMedia(ref.read(filmRepositoryProvider), item, album: filmAlbum);
     if (!mounted) return;
     setState(() => _saving = false);
-    messenger.showSnackBar(SnackBar(content: Text(err ?? 'Saved to your photo library ($filmAlbum).')));
+    Notes.show(err ?? 'Saved to your photo library ($filmAlbum).');
   }
 
   Future<void> _delete(MediaItem item) async {

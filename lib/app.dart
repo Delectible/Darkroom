@@ -4,6 +4,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/theme/note_box.dart';
+
 import 'core/device/upright.dart';
 import 'core/diagnostics/fps_meter.dart';
 import 'core/diagnostics/lag_watch.dart';
@@ -175,13 +177,9 @@ class _HomeState extends ConsumerState<_Home> {
       unawaited(prefs.remove(PrefKeys.lowGraphicsNote));
       Future<void>.delayed(const Duration(milliseconds: 1400), () {
         if (!mounted) return;
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 8),
-            showCloseIcon: true,
-            content: Text('Simpler graphics to keep things smooth on this phone. Settings > Fancy graphics.'),
-          ),
+        Notes.show(
+          'Simpler graphics to keep things smooth on this phone. Settings > Fancy graphics.',
+          duration: const Duration(seconds: 8),
         );
       });
     }
@@ -189,19 +187,11 @@ class _HomeState extends ConsumerState<_Home> {
     unawaited(prefs.remove(PrefKeys.tourSkipped));
     Future<void>.delayed(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 8),
-          // Goes by itself after 8 s (an action would keep it up), or the X.
-          persist: false,
-          showCloseIcon: true,
-          content: const Text("New here? Here's how it works."),
-          action: SnackBarAction(
-            label: 'Show me',
-            onPressed: () => appNavigatorKey.currentState?.push(HowItWorksScreen.route()),
-          ),
-        ),
+      Notes.show(
+        "New here? Here's how it works.",
+        action: 'Show me',
+        duration: const Duration(seconds: 8),
+        onAction: () => appNavigatorKey.currentState?.push(HowItWorksScreen.route()),
       );
     });
   }

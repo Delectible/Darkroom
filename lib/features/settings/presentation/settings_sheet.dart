@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../skins/presentation/camera_shop_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/theme/note_box.dart';
+
 import '../../../core/device/device_memory.dart';
 import '../../../core/app_info.dart';
 import '../../../core/audio/sfx.dart';
@@ -97,9 +99,7 @@ class _SettingsSheet extends ConsumerWidget {
           onChanged: (v) async {
             final ok = await g.setNotificationsEnabled(v);
             if (!ok && context.mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Notifications are blocked in system settings.')));
+              Notes.show('Notifications are blocked in system settings.');
             }
           },
         ),
@@ -153,9 +153,7 @@ class _SettingsSheet extends ConsumerWidget {
           trailing: Icon(Icons.mail_outline, color: p.textMuted),
           onTap: () async {
             if (!await Support.sendFeedback() && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('No mail app found. The address (${Support.email}) is copied.')),
-              );
+              Notes.show('No mail app found. The address (${Support.email}) is copied.');
             }
           },
         ),

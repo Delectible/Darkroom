@@ -16,7 +16,11 @@ class InstantPrint extends StatelessWidget {
     this.develop = 1,
     this.onNoteTap,
     this.shadow = true,
+    this.style = InstantStyle.classic,
   });
+
+  /// The frame's colour or design (and the note's ink to suit it).
+  final InstantStyle style;
 
   final Widget picture;
   final String? note;
@@ -51,7 +55,7 @@ class InstantPrint extends StatelessWidget {
           PaperTexture.ensureLoaded();
           return DecoratedBox(
             decoration: BoxDecoration(
-              color: InstantFrame.paper,
+              color: style.paper,
               boxShadow: shadow
                   ? const [BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(3, 5))]
                   : null,
@@ -61,7 +65,9 @@ class InstantPrint extends StatelessWidget {
                 // Embossed off-white surface, like the real frame.
                 Positioned.fill(
                   child: RepaintBoundary(
-                    child: CustomPaint(painter: _PaperPainter(dpr: MediaQuery.devicePixelRatioOf(context))),
+                    child: CustomPaint(
+                      painter: _PaperPainter(dpr: MediaQuery.devicePixelRatioOf(context), style: style),
+                    ),
                   ),
                 ),
                 Positioned.fromRect(
@@ -104,7 +110,7 @@ class InstantPrint extends StatelessWidget {
                                       'tap to write…',
                                       style: InstantFrame.noteStyle(
                                         s,
-                                      ).copyWith(color: InstantFrame.ink.withValues(alpha: 0.25)),
+                                      ).copyWith(color: style.ink.withValues(alpha: 0.3)),
                                     ))
                             : SizedBox(
                                 // Same line width as the exported file.
@@ -114,7 +120,7 @@ class InstantPrint extends StatelessWidget {
                                   textAlign: TextAlign.center,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: InstantFrame.noteStyle(s),
+                                  style: InstantFrame.noteStyle(s, color: style.ink),
                                 ),
                               ),
                       ),
@@ -131,17 +137,20 @@ class InstantPrint extends StatelessWidget {
 }
 
 class _PaperPainter extends CustomPainter {
-  _PaperPainter({required this.dpr}) : super(repaint: PaperTexture.loaded);
+  _PaperPainter({required this.dpr, required this.style}) : super(repaint: PaperTexture.loaded);
 
   final double dpr;
+  final InstantStyle style;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final tile = PaperTexture.loaded.value;
-    if (tile == null) return;
-    canvas.drawRect(Offset.zero & size, PaperTexture.paint(tile, size.width, minTexel: 1 / dpr));
-  }
+  void paint(Canvas canvas, Size size) => InstantFrame.paintPaper(
+    canvas,
+    Offset.zero & size,
+    PaperTexture.loaded.value,
+    style,
+    minTexel: 1 / dpr,
+  );
 
   @override
-  bool shouldRepaint(_PaperPainter old) => old.dpr != dpr;
+  bool shouldRepaint(_PaperPainter old) => old.dpr != dpr || old.style != style;
 }

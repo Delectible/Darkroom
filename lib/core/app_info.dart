@@ -10,7 +10,8 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'The camera is ready sooner: it opens straight onto its viewfinder, which comes on as the picture '
-      'arrives. Prints can wear new frames: tap Frame when looking at one. Messages have a cleaner look.';
+      'arrives. Prints can wear new frames, and instant prints new papers: tap Frame when looking at one, and '
+      'it goes out with the print when you share or save it. Messages have a cleaner look.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

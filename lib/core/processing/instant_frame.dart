@@ -12,6 +12,36 @@ import 'taken_date.dart';
 /// Proportions of an integral instant print (square picture, thin sides and
 /// top, deep writing strip at the bottom), as fractions of the picture side.
 /// One source for the corkboard, the viewer and exported files.
+/// An instant print's frame: its paper's colour (or a design) and the ink
+/// the note is written in, chosen so the note always reads on it.
+enum InstantStyle {
+  classic('Classic', InstantFrame.paper, InstantFrame.ink),
+  black('Black', Color(0xFF1C1C1F), Color(0xFFF3EDE0)),
+  vintage('Vintage', Color(0xFFE5D7B4), Color(0xFF4A3220)),
+  sky('Sky', Color(0xFFBDD3E7), Color(0xFF172B47)),
+  blush('Blush', Color(0xFFF0CBD1), Color(0xFF5A1F3A)),
+  mint('Mint', Color(0xFFC6E2CF), Color(0xFF173A28)),
+  stripes('Stripes', InstantFrame.paper, InstantFrame.ink, banded: true);
+
+  const InstantStyle(this.label, this.paper, this.ink, {this.banded = false});
+
+  final String label;
+  final Color paper, ink;
+
+  /// Rainbow bands across the top border (clear of the note).
+  final bool banded;
+
+  static const _bands = [
+    Color(0xFFD9473B),
+    Color(0xFFEE8B2F),
+    Color(0xFFF2C53D),
+    Color(0xFF4FA45A),
+    Color(0xFF3C78C2),
+  ];
+
+  static InstantStyle? named(String? name) => name == null ? null : values.asNameMap()[name];
+}
+
 class InstantFrame {
   const InstantFrame._();
 
@@ -35,13 +65,57 @@ class InstantFrame {
   static const maxNoteLength = 40;
 
   /// Handwriting for a picture [side] px wide (font bundled in pubspec).
-  static TextStyle noteStyle(double pictureSide) => TextStyle(
+  static TextStyle noteStyle(double pictureSide, {Color color = ink}) => TextStyle(
     fontFamily: 'Caveat',
     fontWeight: FontWeight.w600,
     fontSize: pictureSide * 0.09,
     height: 1.05,
-    color: ink,
+    color: color,
   );
+
+  /// The frame's paper over [rect] (a whole print): the textured off-white
+  /// [tile], tinted to [style]'s colour, its stripes if it has them.
+  static void paintPaper(
+    Canvas canvas,
+    Rect rect,
+    ui.Image? tile,
+    InstantStyle style, {
+    double minTexel = 1,
+  }) {
+    if (tile == null) {
+      canvas.drawRect(rect, Paint()..color = style.paper);
+    } else {
+      canvas.drawRect(rect, PaperTexture.paint(tile, rect.width, minTexel: minTexel));
+      if (style.paper != paper) {
+        // (the relief kept: the texture's off-white multiplied to the colour)
+        int ch(double c, double base) => (c / base * 255).round().clamp(0, 255);
+        final tint = Color.fromARGB(
+          255,
+          ch(style.paper.r, paper.r),
+          ch(style.paper.g, paper.g),
+          ch(style.paper.b, paper.b),
+        );
+        canvas.drawRect(
+          rect,
+          Paint()
+            ..color = tint
+            ..blendMode = BlendMode.multiply,
+        );
+      }
+    }
+    if (style.banded) {
+      // rainbow bands across the top border, clear of the picture and the note
+      final s = rect.width / (1 + 2 * side);
+      final band = top * s * 0.13;
+      final y0 = rect.top + top * s * 0.2;
+      for (var i = 0; i < InstantStyle._bands.length; i++) {
+        canvas.drawRect(
+          Rect.fromLTWH(rect.left, y0 + i * band, rect.width, band),
+          Paint()..color = InstantStyle._bands[i],
+        );
+      }
+    }
+  }
 
   /// The picture's rect inside a print of the given picture side.
   static Rect pictureRect(double s) => Rect.fromLTWH(side * s, top * s, s, s);
@@ -53,9 +127,12 @@ class InstantFrame {
   static const noteAngle = -0.025;
 
   /// Lays out [note] to fit the writing strip (two lines at most).
-  static TextPainter notePainter(String note, double s) {
+  static TextPainter notePainter(String note, double s, {Color color = ink}) {
     final tp = TextPainter(
-      text: TextSpan(text: note, style: noteStyle(s)),
+      text: TextSpan(
+        text: note,
+        style: noteStyle(s, color: color),
+      ),
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
       maxLines: 2,
@@ -74,6 +151,7 @@ class InstantFrame {
     required String? note,
     required String outPath,
     DateTime? takenAt,
+    InstantStyle style = InstantStyle.classic,
   }) async {
     // Decoded straight at the export size: a full-resolution decode of a
     // 12 MP shot was most of the wait.
@@ -98,10 +176,7 @@ class InstantFrame {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final texture = await PaperTexture.image();
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
-      PaperTexture.paint(texture, w.toDouble()),
-    );
+    paintPaper(canvas, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), texture, style);
     final dst = pictureRect(s);
     final src = Rect.fromCenter(
       center: Offset(picture.width / 2, picture.height / 2),
@@ -118,7 +193,7 @@ class InstantFrame {
         ..color = const Color(0x22000000),
     );
     if (note != null && note.trim().isNotEmpty) {
-      final tp = notePainter(note.trim(), s);
+      final tp = notePainter(note.trim(), s, color: style.ink);
       final area = noteRect(s);
       canvas.save();
       canvas.translate(area.center.dx, area.center.dy);
@@ -128,6 +203,13 @@ class InstantFrame {
     }
     final framed = await recorder.endRecording().toImage(w, h);
     picture.dispose();
+    return writeJpeg(framed, outPath, takenAt: takenAt);
+  }
+
+  /// Encodes [framed] (then disposed) to a JPEG at [outPath], on a
+  /// background isolate, with its taken date.
+  static Future<String> writeJpeg(ui.Image framed, String outPath, {DateTime? takenAt}) async {
+    final w = framed.width, h = framed.height;
     final rgba = await framed.toByteData(format: ui.ImageByteFormat.rawRgba);
     framed.dispose();
     final jpeg = await compute(_encode, (rgba!.buffer.asUint8List(), w, h, takenAt?.millisecondsSinceEpoch));
@@ -135,6 +217,22 @@ class InstantFrame {
     await out.parent.create(recursive: true);
     await out.writeAsBytes(jpeg, flush: true);
     return outPath;
+  }
+
+  /// [path] decoded with its short side at most [maxSide].
+  static Future<ui.Image> decode(String path, {double maxSide = maxPictureSide}) async {
+    final buffer = await ui.ImmutableBuffer.fromUint8List(await File(path).readAsBytes());
+    final descriptor = await ui.ImageDescriptor.encoded(buffer);
+    final k = math.min(1.0, maxSide / math.min(descriptor.width, descriptor.height));
+    final codec = await descriptor.instantiateCodec(
+      targetWidth: (descriptor.width * k).round(),
+      targetHeight: (descriptor.height * k).round(),
+    );
+    final image = (await codec.getNextFrame()).image;
+    codec.dispose();
+    descriptor.dispose();
+    buffer.dispose();
+    return image;
   }
 
   static Uint8List _encode((Uint8List, int, int, int?) a) {

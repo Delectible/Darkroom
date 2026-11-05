@@ -519,6 +519,16 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   Darkroom (filed carrier, frame number in the edge). Frame button in the
   print viewer opens a row of the print in each; per print, in prefs
   (`print.frames`). Viewer only for now (not the board, not saved files).
+- [x] **63.5** → 2.1.1 · Frames go out with the print: Share and Save draw
+  the chosen frame into the file (`exportFramedPrint`; a print never given
+  a frame leaves bare as before), and the board shows it. Instant prints
+  get papers: Classic, Black, Vintage, Sky, Blush, Mint, Stripes, each with
+  its own ink so the note always reads (`InstantStyle`). One store for
+  both (`PrintFrames`, prefs `print.frames`).
+- [x] **63.6** → 2.1.1 · Every message in the new box (`Notes`); a tap on it
+  closes it (the missing-prints note then stays away, as its X did).
+- [ ] **63.7** "Save all" re-saves prints a backup app moved to the cloud
+  (Google Photos' Free up space): proposal to the owner.
 - [ ] **63.4** Sample prints on a new corkboard: from the owner's photos,
   through the app's own looks, ~150 KB each.
 

@@ -7,11 +7,14 @@ import '../navigation.dart';
 /// The app's one look for a passing message: a dark box with light text
 /// (as the camera's "Loading film…"), and at most one action in it.
 class NoteBox extends StatelessWidget {
-  const NoteBox({super.key, required this.text, this.action, this.onAction});
+  const NoteBox({super.key, required this.text, this.action, this.onAction, this.onTap});
 
   final String text;
   final String? action;
   final VoidCallback? onAction;
+
+  /// A tap on the message itself (Notes: closes it).
+  final VoidCallback? onTap;
 
   static const fill = Color(0xE6121214);
   static const edge = Color(0x38FFFFFF);
@@ -34,7 +37,11 @@ class NoteBox extends StatelessWidget {
   }
 
   Widget _box() {
-    final label = Text(text, textAlign: action == null ? TextAlign.center : TextAlign.start, style: style);
+    final label = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Text(text, textAlign: action == null ? TextAlign.center : TextAlign.start, style: style),
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: fill,
@@ -85,8 +92,16 @@ class Notes {
   static OverlayEntry? _entry;
   static int _serial = 0;
 
-  /// Shows [text] (with [action], it stays longer and the action closes it).
-  static void show(String text, {String? action, VoidCallback? onAction, Duration? duration}) {
+  /// Shows [text] (with [action], it stays longer and the action closes
+  /// it). A tap on it closes it; [onClosed] hears how it went (true: the
+  /// user closed it; false: timed out, its action, or another came).
+  static void show(
+    String text, {
+    String? action,
+    VoidCallback? onAction,
+    Duration? duration,
+    void Function(bool byUser)? onClosed,
+  }) {
     final overlay = appNavigatorKey.currentState?.overlay;
     if (overlay == null) return;
     if (_entry == null || !_entry!.mounted) {
@@ -94,7 +109,8 @@ class Notes {
       overlay.insert(_entry!);
     }
     final me = ++_serial;
-    _now.value = _Note(text, action, onAction, me);
+    _now.value?.onClosed?.call(false);
+    _now.value = _Note(text, action, onAction, me, onClosed);
     final shown =
         duration ??
         (action != null
@@ -104,20 +120,22 @@ class Notes {
   }
 
   /// Hides the message showing (only if it's still [serial], when given).
-  static void hide([int? serial]) {
+  static void hide([int? serial, bool byUser = false]) {
     final n = _now.value;
     if (n == null || (serial != null && n.serial != serial)) return;
     _now.value = null;
+    n.onClosed?.call(byUser);
   }
 }
 
 class _Note {
-  const _Note(this.text, this.action, this.onAction, this.serial);
+  const _Note(this.text, this.action, this.onAction, this.serial, this.onClosed);
 
   final String text;
   final String? action;
   final VoidCallback? onAction;
   final int serial;
+  final void Function(bool byUser)? onClosed;
 }
 
 class _NotesView extends StatefulWidget {
@@ -168,6 +186,7 @@ class _NotesViewState extends State<_NotesView> {
                         Notes.hide(last.serial);
                         last.onAction?.call();
                       },
+                      onTap: () => Notes.hide(last.serial, true),
                     ),
                   ),
                 ),

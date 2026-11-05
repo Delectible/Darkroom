@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../theme/note_box.dart';
 import 'package:in_app_review/in_app_review.dart';
 
 import '../../features/camera/application/camera_ui_state.dart' show PrefKeys;
@@ -53,13 +55,7 @@ class ReviewPrompt {
     if (await show() || !ctx.mounted) return;
     // The store said no (not installed from the store, TestFlight, no
     // services): a quiet word so "Yea!" isn't a dud.
-    ScaffoldMessenger.maybeOf(ctx)?.showSnackBar(
-      const SnackBar(
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: 3),
-        content: Text("Thanks! The store couldn't open its rating box right now."),
-      ),
-    );
+    Notes.show("Thanks! The store couldn't open its rating box right now.");
   }
 
   /// Asks the store to show its prompt; false when it can't (it may still

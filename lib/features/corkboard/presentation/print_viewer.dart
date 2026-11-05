@@ -211,6 +211,37 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
     if (_ids.isEmpty) Navigator.of(context).pop();
   }
 
+  /// The frames tray for [item]: frames for a 35 mm print, papers for an
+  /// instant one, each a small preview of the print itself.
+  Widget _framesFor(MediaItem item, bool instant, Map<String, String> frames) {
+    final thumb = item.thumbPath;
+    final preview = thumb == null
+        ? const ColoredBox(color: Colors.black26)
+        : Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 160);
+    void pick(String name) {
+      unawaited(Haptics.selectionClick());
+      ref.read(printFramesProvider.notifier).set(item.id, name);
+    }
+
+    if (instant) {
+      return FramePicker(
+        options: [for (final f in InstantStyle.values) (f.name, f.label)],
+        current: PrintFrames.styleOf(frames, item.id).name,
+        onPick: pick,
+        swatch: (name) => InstantPrint(style: InstantStyle.named(name)!, shadow: false, picture: preview),
+      );
+    }
+    return FramePicker(
+      options: [for (final f in PrintFrame.values) (f.name, f.label)],
+      current: PrintFrames.frameOf(frames, item.id).name,
+      onPick: pick,
+      swatch: (name) => AspectRatio(
+        aspectRatio: (item.width ?? 3) / (item.height ?? 2),
+        child: FramedPrint(frame: PrintFrame.values.byName(name), photo: preview, shadow: false),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Live rows (saved state changes while we look).
@@ -243,7 +274,7 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
       onDelete: () => _delete(item),
       onShare: (anchor) => shareMedia(anchor, item),
       framing: _framing,
-      onFrame: spec.isInstant ? null : () => setState(() => _framing = !_framing),
+      onFrame: () => setState(() => _framing = !_framing),
     );
     final frames = ref.watch(printFramesProvider);
 
@@ -326,7 +357,7 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                           itemBuilder: (context, i) => _Print(
                             printKey: _printKeys.putIfAbsent(items[i].id, GlobalKey.new),
                             item: items[i],
-                            frame: frames[items[i].id] ?? PrintFrame.classic,
+                            frames: frames,
                             onWrite: () => _writeNote(items[i]),
                             fly: i == _index ? fly : null,
                             current: i == _index,
@@ -339,24 +370,10 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                         AnimatedSize(
                           duration: const Duration(milliseconds: 240),
                           curve: Curves.easeOutCubic,
-                          child: _framing && !spec.isInstant
+                          child: _framing
                               ? Padding(
                                   padding: const EdgeInsets.only(top: 8, bottom: 6),
-                                  child: FramePicker(
-                                    current: frames[item.id] ?? PrintFrame.classic,
-                                    aspect: (item.width ?? 3) / (item.height ?? 2),
-                                    preview: item.thumbPath == null
-                                        ? const ColoredBox(color: Colors.black26)
-                                        : Image.file(
-                                            File(item.thumbPath!),
-                                            fit: BoxFit.cover,
-                                            cacheWidth: 160,
-                                          ),
-                                    onPick: (f) {
-                                      unawaited(Haptics.selectionClick());
-                                      ref.read(printFramesProvider.notifier).set(item.id, f);
-                                    },
-                                  ),
+                                  child: _framesFor(item, spec.isInstant, frames),
                                 )
                               : const SizedBox(width: double.infinity),
                         ),
@@ -379,7 +396,7 @@ class _Print extends StatelessWidget {
   const _Print({
     required this.printKey,
     required this.item,
-    required this.frame,
+    required this.frames,
     required this.onWrite,
     required this.current,
     this.fly,
@@ -392,7 +409,9 @@ class _Print extends StatelessWidget {
   /// On the print itself (taps off it put it down: see [PhotoPager.onTap]).
   final GlobalKey printKey;
   final MediaItem item;
-  final PrintFrame frame;
+
+  /// Each print's chosen frame (printFramesProvider).
+  final Map<String, String> frames;
   final VoidCallback onWrite;
 
   /// The route's progress, while this print is lifted off the board (and
@@ -456,6 +475,7 @@ class _Print extends StatelessWidget {
         InstantPrint(
           note: item.note,
           onNoteTap: onWrite,
+          style: PrintFrames.styleOf(frames, item.id),
           picture: path == null ? const ColoredBox(color: Colors.black12) : _photo(context, path),
         ),
       );
@@ -467,8 +487,8 @@ class _Print extends StatelessWidget {
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 220),
           child: FramedPrint(
-            key: ValueKey(frame),
-            frame: frame,
+            key: ValueKey(PrintFrames.frameOf(frames, item.id)),
+            frame: PrintFrames.frameOf(frames, item.id),
             number: RegExp(r'_(\d+)\.').firstMatch(item.fileName)?.group(1),
             seed: item.id.hashCode,
             photo: path == null ? const ColoredBox(color: Colors.black12) : _photo(context, path),

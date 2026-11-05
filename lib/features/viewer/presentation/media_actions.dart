@@ -10,36 +10,58 @@ import '../../../core/db/media_repository.dart';
 import '../../../core/device/gallery_check.dart';
 import '../../../core/processing/instant_frame.dart';
 import '../../cameras/domain/camera_catalog.dart';
+import '../../corkboard/presentation/print_frames.dart';
 
-/// The file that leaves the app for [item]: instant prints get their border
-/// and handwritten note baked in; everything else is shared as stored.
+/// The file that leaves the app for [item]: instant prints get their
+/// paper (the style chosen for them) and handwritten note baked in; a
+/// 35 mm print with a frame chosen gets that frame; everything else is
+/// shared as stored.
 Future<String?> exportPathFor(MediaItem item) async {
   final path = item.outputPath;
   if (path == null || !File(path).existsSync()) return null;
-  if (item.isVideo || !CameraCatalog.byId(item.cameraId).isInstant) return path;
-  // Framing + JPEG-encoding an instant print takes a few seconds (the
-  // encoder is pure Dart), so each version (picture + note) is made once,
-  // ahead of time where possible (warmShareExport), and reused.
+  if (item.isVideo) return path;
+  final instant = CameraCatalog.byId(item.cameraId).isInstant;
+  final chosen = PrintFrames.chosen(item.id);
+  final frame = instant ? null : PrintFrame.values.asNameMap()[chosen];
+  if (!instant && frame == null) return path;
+  final style = InstantStyle.named(chosen) ?? InstantStyle.classic;
+  // Framing + JPEG-encoding takes a few seconds (the encoder is pure
+  // Dart), so each version (picture + note + frame) is made once, ahead of
+  // time where possible (warmShareExport), and reused. Same file name as it
+  // would have had bare (the photo library check goes by it).
   final stamp = File(path).lastModifiedSync().millisecondsSinceEpoch;
-  final key = '${item.id}_${stamp}_${(item.note ?? '').trim().hashCode.toUnsigned(32)}';
-  final out = File('${Directory.systemTemp.path}/instant_export/$key/${item.fileName}');
+  final look = instant ? style.name : frame!.name;
+  final key = '${item.id}_${stamp}_${(item.note ?? '').trim().hashCode.toUnsigned(32)}_$look';
+  final out = File('${Directory.systemTemp.path}/instant_export/$key/${galleryNameFor(item)}');
   if (out.existsSync() && out.lengthSync() > 0) return out.path;
   return _exporting[key] ??= () async {
     try {
       // Written next to the final name and moved into place, so a half-
       // written file (the app killed mid-encode) is never picked up.
       final part = '${out.path}.part';
-      await InstantFrame.exportJpeg(
-        picturePath: path,
-        note: item.note,
-        outPath: part,
-        takenAt: item.capturedAt,
-      );
+      if (instant) {
+        await InstantFrame.exportJpeg(
+          picturePath: path,
+          note: item.note,
+          outPath: part,
+          takenAt: item.capturedAt,
+          style: style,
+        );
+      } else {
+        await exportFramedPrint(
+          picturePath: path,
+          frame: frame!,
+          outPath: part,
+          number: RegExp(r'_(\d+)\.').firstMatch(item.fileName)?.group(1),
+          seed: item.id.hashCode,
+          takenAt: item.capturedAt,
+        );
+      }
       await File(part).rename(out.path);
       return out.path;
     } catch (e) {
       // Never lose the share/save over the frame: fall back to the bare picture.
-      debugPrint('Instant export failed: $e');
+      debugPrint('Framed export failed: $e');
       return path;
     } finally {
       unawaited(Future<void>(() => _exporting.remove(key)));
@@ -55,7 +77,8 @@ Future<void> _warmQueue = Future.value();
 /// Makes [item]'s share file in the background (one at a time), so holding
 /// a print on the corkboard brings the share sheet up straight away.
 void warmShareExport(MediaItem item) {
-  if (item.isVideo || item.outputPath == null || !CameraCatalog.byId(item.cameraId).isInstant) return;
+  if (item.isVideo || item.outputPath == null) return;
+  if (!CameraCatalog.byId(item.cameraId).isInstant && PrintFrames.chosen(item.id) == null) return;
   _warmQueue = _warmQueue.then((_) => exportPathFor(item)).then((_) {}, onError: (Object _) {});
 }
 

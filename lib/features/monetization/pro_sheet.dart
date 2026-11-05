@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/theme/note_box.dart';
+
 import '../../core/device/upright.dart';
 import '../../core/monetization/allowance.dart';
 import '../../core/monetization/pro.dart';
@@ -324,7 +326,7 @@ class _ProSheetState extends ConsumerState<_ProSheet> {
       StoreResult.unavailable => "The store isn't available right now. Try again later.",
       StoreResult.failed => 'Something went wrong with the store. Nothing was charged.',
     };
-    if (msg != null) ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(content: Text(msg)));
+    if (msg != null) Notes.show(msg);
     if (r == StoreResult.bought || r == StoreResult.restored) Navigator.of(context).pop();
   }
 

@@ -27,6 +27,7 @@ import 'core/review/review_prompt.dart';
 import 'core/settings/settings_repository.dart';
 import 'core/shaders/shader_library.dart';
 import 'core/startup/launch_curtain.dart';
+import 'features/corkboard/presentation/print_frames.dart';
 import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/launch_picture.dart';
@@ -80,6 +81,7 @@ Future<void> _start() async {
   // once, the picture cache): read alongside the rest of the start-up.
   // The quality manager: the steps saved last time (core/performance).
   Quality.start(prefs);
+  PrintFrames.prefs = prefs;
   unawaited(DeviceMemory.apply().then((_) => GlobalSettingsNotifier.reapply()));
   // The picture of the camera from last time (opens on it if it matches).
   LaunchPicture.init(paths.supportDir);

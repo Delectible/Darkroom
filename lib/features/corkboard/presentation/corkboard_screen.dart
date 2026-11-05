@@ -20,6 +20,8 @@ import '../../camera/application/camera_ui_state.dart' show PrefKeys, userNamePr
 import '../../cameras/domain/camera_catalog.dart';
 import '../../viewer/presentation/media_actions.dart';
 import 'instant_print.dart';
+import '../../../core/processing/instant_frame.dart';
+import 'print_frames.dart';
 import 'print_viewer.dart';
 import 'projector_screen.dart';
 import 'reel_painter.dart';
@@ -27,7 +29,6 @@ import '../../../core/device/haptics.dart';
 import '../../../core/device/shake.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
 import '../../../core/device/upright.dart';
-import '../../../core/processing/instant_frame.dart' show InstantFrame;
 
 /// Film gallery: developed prints and Super 8 reels pinned to a cork board,
 /// with the darkroom (still developing) in a red safelight strip on top.
@@ -215,33 +216,28 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     if (tell.isEmpty || !mounted) return;
     final n = tell.length;
     final what = n == 1 ? (tell.first.isVideo ? 'A reel' : 'A print') : '$n prints';
-    final bar = ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        duration: const Duration(seconds: 7),
-        persist: false,
-        showCloseIcon: true,
-        // (the phone can't tell a deleted copy from one a backup app moved
-        // to the cloud to free up space)
-        content: Text(
-          "$what you saved ${n == 1 ? 'is' : 'are'} no longer on your phone: deleted, or moved to "
-          'the cloud by a backup app.',
-        ),
-        action: SnackBarAction(
-          label: 'Save again',
-          onPressed: () async {
-            for (final m in tell) {
-              final latest = (await repo.readyItems()).where((x) => x.id == m.id);
-              if (latest.isEmpty) continue;
-              await keepMedia(repo, latest.first, album: filmAlbum);
-            }
-          },
-        ),
-      ),
+    final closed = Completer<bool>();
+    // (the phone can't tell a deleted copy from one a backup app moved to
+    // the cloud to free up space)
+    Notes.show(
+      "$what you saved ${n == 1 ? 'is' : 'are'} no longer on your phone: deleted, or moved to "
+      'the cloud by a backup app.',
+      action: 'Save again',
+      duration: const Duration(seconds: 7),
+      onAction: () async {
+        for (final m in tell) {
+          final latest = (await repo.readyItems()).where((x) => x.id == m.id);
+          if (latest.isEmpty) continue;
+          await keepMedia(repo, latest.first, album: filmAlbum);
+        }
+      },
+      onClosed: (byUser) {
+        if (!closed.isCompleted) closed.complete(byUser);
+      },
     );
-    // Closed with the X (or swiped away): don't bring these up again. A
-    // time-out doesn't count.
-    final why = await bar.closed;
-    if (why == SnackBarClosedReason.dismiss || why == SnackBarClosedReason.swipe) {
+    // Closed by a tap on it: don't bring these up again (a time-out or
+    // Save again doesn't count).
+    if (await closed.future) {
       final now = prefs.getStringList(PrefKeys.galleryDismissed) ?? const [];
       await prefs.setStringList(PrefKeys.galleryDismissed, {...now, for (final m in tell) m.id}.toList());
     }
@@ -369,7 +365,6 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     final todo = developed.where((m) => !m.isSaved).toList();
     if (todo.isEmpty || _saving) return;
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
     final repo = ref.read(filmRepositoryProvider);
     var ok = 0;
     String? error;
@@ -385,14 +380,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     if (!mounted) return;
     setState(() => _saving = false);
     unawaited(Haptics.lightImpact());
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          error == null
-              ? 'Saved $ok to your photo library ($filmAlbum).'
-              : 'Saved $ok of ${todo.length}. $error',
-        ),
-      ),
+    Notes.show(
+      error == null ? 'Saved $ok to your photo library ($filmAlbum).' : 'Saved $ok of ${todo.length}. $error',
     );
   }
 
@@ -1037,6 +1026,8 @@ const _pinColors = [
 /// A print with a white border, a slight random tilt and a push pin through
 /// the top border — positioned on the *print*, whatever its shape, never on
 /// the cork above it.
+const _boardShadow = [BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(3, 5))];
+
 class PinnedPrint extends StatelessWidget {
   const PinnedPrint({
     super.key,
@@ -1093,41 +1084,55 @@ class PinnedPrint extends StatelessWidget {
                       Positioned.fill(
                         child: _FlipCard(
                           back: _PrintBack(item: item),
-                          front: Container(
-                            padding: const EdgeInsets.all(7),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFBF8F1),
-                              boxShadow: [
-                                BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(3, 5)),
-                              ],
-                            ),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                if (thumb != null)
-                                  Image.file(
-                                    File(thumb),
-                                    fit: BoxFit.cover,
-                                    cacheWidth: 420,
-                                    gaplessPlayback: true,
-                                    // Developing-paper tone until decoded, not a hole.
-                                    frameBuilder: (context, child, frame, sync) => frame == null && !sync
-                                        ? const ColoredBox(color: Color(0xFFE9E2D3))
-                                        : child,
-                                    errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
-                                  ),
-                                // Glossy paper sheen.
-                                const DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [Color(0x22FFFFFF), Color(0x00FFFFFF), Color(0x14000000)],
+                          // (a frame chosen in the viewer, else the lab's white border)
+                          front: Consumer(
+                            builder: (context, ref, _) {
+                              final photo = Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  if (thumb != null)
+                                    Image.file(
+                                      File(thumb),
+                                      fit: BoxFit.cover,
+                                      cacheWidth: 420,
+                                      gaplessPlayback: true,
+                                      // Developing-paper tone until decoded, not a hole.
+                                      frameBuilder: (context, child, frame, sync) => frame == null && !sync
+                                          ? const ColoredBox(color: Color(0xFFE9E2D3))
+                                          : child,
+                                      errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
+                                    ),
+                                  // Glossy paper sheen.
+                                  const DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [Color(0x22FFFFFF), Color(0x00FFFFFF), Color(0x14000000)],
+                                      ),
                                     ),
                                   ),
+                                ],
+                              );
+                              final frame = ref.watch(printFramesProvider.select((m) => m[item.id]));
+                              final chosen = PrintFrame.values.asNameMap()[frame];
+                              if (chosen != null && chosen != PrintFrame.classic) {
+                                return FramedPrint(
+                                  frame: chosen,
+                                  photo: photo,
+                                  seed: item.id.hashCode,
+                                  shadows: _boardShadow,
+                                );
+                              }
+                              return Container(
+                                padding: const EdgeInsets.all(7),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFBF8F1),
+                                  boxShadow: _boardShadow,
                                 ),
-                              ],
-                            ),
+                                child: photo,
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -1216,9 +1221,15 @@ class PinnedInstant extends StatelessWidget {
                   children: [
                     _FlipCard(
                       back: _PrintBack(item: item, instant: true),
-                      front: InstantPrint(
-                        note: item.note,
-                        picture: thumb == null
+                      front: Consumer(
+                        builder: (context, ref, child) => InstantPrint(
+                          note: item.note,
+                          style:
+                              InstantStyle.named(ref.watch(printFramesProvider.select((m) => m[item.id]))) ??
+                              InstantStyle.classic,
+                          picture: child!,
+                        ),
+                        child: thumb == null
                             ? const ColoredBox(color: Colors.black12)
                             : Image.file(
                                 File(thumb),
@@ -1590,9 +1601,7 @@ class _Tray extends ConsumerWidget {
             label: const Text('Copy error report'),
             onPressed: () {
               unawaited(Clipboard.setData(ClipboardData(text: errorReport(item))));
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Error report copied. Paste it into a message.')));
+              Notes.show('Error report copied. Paste it into a message.');
             },
           ),
           Row(

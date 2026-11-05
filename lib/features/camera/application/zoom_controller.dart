@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'camera_session_controller.dart';
 import 'camera_ui_state.dart';
+import 'lens_controller.dart';
+import '../../cameras/domain/camera_spec.dart';
 
 @immutable
 class ZoomState {
@@ -55,6 +57,9 @@ class ZoomController extends Notifier<ZoomState> {
     // Switching between bodies that share a sensor mode keeps the controller:
     // still start the new body wide, with its own range.
     ref.listen(activeSpecProvider, (_, _) => unawaited(_attach(_controller)));
+    // Wide and fish-eye lenses take the phone's widest camera (below 1x, where
+    // the phone switches to its ultra-wide itself); others go back.
+    ref.listen(filmLensProvider, (_, lens) => _lensChanged(lens));
     ref.onDispose(() => _tick?.cancel());
     Future.microtask(() => _attach(ref.read(cameraSessionProvider).controller));
     return const ZoomState();
@@ -71,14 +76,16 @@ class ZoomController extends Notifier<ZoomState> {
       final hwMin = await c.getMinZoomLevel();
       final hwMax = await c.getMaxZoomLevel();
       if (!ref.mounted || !identical(_controller, c)) return;
-      final lo = math.max(1.0, hwMin);
+      _hwMin = hwMin;
+      final widest = zoom?.wideMm != null && _wantsWidest(ref.read(filmLensProvider)) && hwMin < 1;
+      final lo = widest ? hwMin : math.max(1.0, hwMin);
       // Film bodies (no ZoomSpec) are fixed at 1x, even if the session was
       // left zoomed by a digital body that shared it.
       final hi = zoom == null ? lo : math.max(lo, math.min(zoom.max, hwMax));
       // Film: the same zoom (magnification) as the stock before, if this lens
       // goes that far; else as far as it does (2.1.4).
       final kept = _filmLevel;
-      final level = zoom?.wideMm != null && kept != null ? kept.clamp(lo, hi) : lo;
+      final level = widest ? lo : (zoom?.wideMm != null && kept != null ? kept.clamp(lo, hi) : lo);
       state = ZoomState(level: level, min: lo, max: hi);
       await c.setZoomLevel(level);
     } catch (_) {
@@ -89,11 +96,40 @@ class ZoomController extends Notifier<ZoomState> {
   /// The zoom the film ring was last set to, kept across stocks.
   double? _filmLevel;
 
+  /// The phone's own widest zoom (below 1: its ultra-wide camera).
+  double? _hwMin;
+
+  static bool _wantsWidest(LensKind l) => l == LensKind.wide || l == LensKind.fisheye;
+
+  /// Where the ring was before a wide lens went on (back to it after).
+  double? _beforeWide;
+
+  void _lensChanged(LensKind lens) {
+    final min = _hwMin;
+    final c = _controller;
+    if (min == null || min >= 1 || c == null || !c.value.isInitialized) return;
+    if (ref.read(activeSpecProvider).zoom?.wideMm == null) return;
+    final wide = _wantsWidest(lens);
+    if (wide && state.min > min) {
+      _beforeWide = state.level;
+      state = state.copyWith(min: min, level: min, changedAt: DateTime.now());
+    } else if (!wide && state.min < 1) {
+      final back = (_beforeWide ?? 1.0).clamp(1.0, state.max);
+      _beforeWide = null;
+      state = state.copyWith(min: 1, level: back, changedAt: DateTime.now());
+    } else {
+      return;
+    }
+    _lastSent = null;
+    _send(state.level);
+  }
+
   /// The film zoom ring: straight to [level] (clamped), as the finger turns it.
   void setLevel(double level) {
     if (!state.canZoom) return;
     final next = level.clamp(state.min, state.max);
-    if (ref.read(activeSpecProvider).zoom?.wideMm != null) _filmLevel = next;
+    // (the widest the wide lenses reach isn't carried to the next stock)
+    if (ref.read(activeSpecProvider).zoom?.wideMm != null && next >= 1) _filmLevel = next;
     if (next == state.level) return;
     state = state.copyWith(level: next, changedAt: DateTime.now());
     _send(next);

@@ -601,4 +601,9 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   the gesture navigation bar stays active (transparent), so one swipe goes
   home (immersive sticky needed two or three). Turned: immersive as before
   (`UprightApp.applySystemUi`).
+- [x] **64.12** → 2.1.5 · Wide and fish-eye take the phone's widest camera:
+  the film zoom reaches below 1x (the phone's logical camera switches to its
+  ultra-wide itself, e.g. a Pixel's 0.5x); another lens returns to the zoom
+  before. Phones whose camera starts at 1x (the iPhone with today's camera
+  plugin) keep the main camera.
 

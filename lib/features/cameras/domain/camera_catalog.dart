@@ -19,6 +19,31 @@ class CameraCatalog {
     AspectRatioOption.r16x9,
   ];
 
+  /// The lenses on the stills cameras: soft focus only where the plastic
+  /// lens isn't (the two would compete). Cine cameras: later (video).
+  static const _lenses35 = [
+    LensKind.standard,
+    LensKind.wide,
+    LensKind.fisheye,
+    LensKind.plastic,
+    LensKind.swirl,
+    LensKind.tiltShift,
+    LensKind.star,
+    LensKind.anamorphic,
+    LensKind.pinhole,
+  ];
+  static const _lensesInstant = [
+    LensKind.standard,
+    LensKind.wide,
+    LensKind.fisheye,
+    LensKind.soft,
+    LensKind.swirl,
+    LensKind.tiltShift,
+    LensKind.star,
+    LensKind.anamorphic,
+    LensKind.pinhole,
+  ];
+
   // --------------------------------------------------------------------------
   // FILM
   // --------------------------------------------------------------------------
@@ -26,6 +51,7 @@ class CameraCatalog {
   static const ektar100 = CameraSpec(
     id: 'ektar100',
     mode: AppMode.film,
+    lenses: _lenses35,
     special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
@@ -44,6 +70,7 @@ class CameraCatalog {
   static const portra400 = CameraSpec(
     id: 'portra400',
     mode: AppMode.film,
+    lenses: _lenses35,
     special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
@@ -62,6 +89,7 @@ class CameraCatalog {
   static const hp5 = CameraSpec(
     id: 'hp5plus400',
     mode: AppMode.film,
+    lenses: _lenses35,
     special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
@@ -103,6 +131,7 @@ class CameraCatalog {
   static const polaroid600 = CameraSpec(
     id: 'polaroid600',
     mode: AppMode.film,
+    lenses: _lensesInstant,
     zoom: ZoomSpec(max: 1.5, wideMm: 116),
     exposure: ExposureSpec(min: -1, max: 1, step: 1, labels: ['D', '\u2022', 'L']),
     name: 'Instant 600',
@@ -126,6 +155,7 @@ class CameraCatalog {
   static const gold200 = CameraSpec(
     id: 'gold200',
     mode: AppMode.film,
+    lenses: _lenses35,
     special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
@@ -145,6 +175,7 @@ class CameraCatalog {
   static const night800 = CameraSpec(
     id: 'cinestill800t',
     mode: AppMode.film,
+    lenses: _lenses35,
     special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
@@ -164,6 +195,7 @@ class CameraCatalog {
   static const chrome50 = CameraSpec(
     id: 'velvia50',
     mode: AppMode.film,
+    lenses: _lenses35,
     special: CameraSpecial.multipleExposure,
     zoom: ZoomSpec(max: 2.5, wideMm: 28),
     exposure: ExposureSpec(),
@@ -183,6 +215,7 @@ class CameraCatalog {
   static const singleUse = CameraSpec(
     id: 'superia400',
     mode: AppMode.film,
+    lenses: _lenses35,
     zoom: ZoomSpec(max: 1.5, wideMm: 32),
     exposure: ExposureSpec(min: -1, max: 1, step: 1),
     name: 'Single-Use 27',

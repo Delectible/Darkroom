@@ -112,6 +112,26 @@ class ExposureSpec {
   double snap(double v) => (((v.clamp(min, max) - min) / step).round() * step + min).clamp(min, max);
 }
 
+/// A lens (or filter) on a film camera: chosen from the lens ring in the
+/// viewfinder's top-left corner, drawn in the viewfinder (shaders/lens.frag)
+/// and into the photo (lens_renderer.dart), before the film's own look.
+/// Its [index] is the shader's uLens.
+enum LensKind {
+  standard('Standard', 'STD'),
+  wide('Wide', 'WIDE'),
+  fisheye('Fish-eye', 'FISH'),
+  plastic('Plastic', 'TOY'),
+  soft('Soft focus', 'SOFT'),
+  swirl('Swirl', 'SWRL'),
+  tiltShift('Tilt-shift', 'TILT'),
+  star('Star filter', 'STAR'),
+  anamorphic('Anamorphic', 'ANAM'),
+  pinhole('Pinhole', 'PIN');
+
+  const LensKind(this.label, this.mark);
+  final String label, mark;
+}
+
 /// A camera's one special, on the button that changes per camera (film:
 /// the chip in the viewfinder's top-right corner). None: a blank chip.
 enum CameraSpecial {
@@ -149,6 +169,7 @@ class CameraSpec {
     this.zoom,
     this.exposure,
     this.special,
+    this.lenses = const [LensKind.standard],
     this.pickerTag,
     this.storage = DigitalStorage.sdCard,
     this.boxColor = 0xFFE3D8C3,
@@ -208,6 +229,9 @@ class CameraSpec {
 
   /// Its special on the changing button; null: a blank one.
   final CameraSpecial? special;
+
+  /// The lenses it takes (the first is its own); one: no lens ring.
+  final List<LensKind> lenses;
 
   /// Optional tag under the name in the picker (e.g. "MOVIE · 18 FPS").
   final String? pickerTag;

@@ -119,3 +119,4 @@ flutter:
     - shaders/vhs_scanline.frag
     - shaders/cork_board.frag
     - shaders/crt_bulge.frag
+    - shaders/lens.frag

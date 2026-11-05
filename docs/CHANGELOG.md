@@ -577,7 +577,14 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **64.7** → 2.1.3 · The picker's ^ arrow is gone: film has the memo
   holder's thumb notch above the box end, digital an SD card-door tab
   (`PickerCaret`).
-- [ ] **64.4** Lens caps (wide, fish-eye, plastic, soft) from the corner ring.
+- [x] **64.4** → 2.1.4 · Lenses on the film stills cameras (`LensKind`,
+  `CameraSpec.lenses`): wide, fish-eye, plastic, soft focus, swirl,
+  tilt-shift, star filter, anamorphic, pinhole. Soft focus only where the
+  plastic lens isn't (instant gets soft, 35 mm and single-use plastic). Lens
+  ring top-left in the viewfinder opens a tray of caps; the viewfinder shows
+  it (shaders/lens.frag via `LensPreview`), the photo gets it in Dart
+  (`LensRenderer`, before the film look; blurs/streaks on a <=1024 px copy).
+  Per camera while the app runs. Cine cameras (video): later.
 - [ ] **64.5** The same for the digital cameras.
 - [x] **64.8** → 2.1.4 · Zoom carries across stocks as the zoom level itself
   (not the mm), clamped to the new lens. Picker notch / SD tab removed (the

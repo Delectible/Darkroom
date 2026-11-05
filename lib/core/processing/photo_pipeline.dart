@@ -11,6 +11,7 @@ import 'crop_math.dart';
 import 'film/film_profile.dart';
 import 'film/film_process.dart';
 import 'film/film_renderer.dart';
+import 'lens_renderer.dart';
 import 'look_renderer.dart';
 import 'look_spec.dart';
 import 'taken_date.dart';
@@ -38,7 +39,11 @@ class PhotoJob {
     this.originalCopyPath,
     this.grain = GrainStrength.normal,
     this.exposureComp = 0,
+    this.lens = LensKind.standard,
   });
+
+  /// The lens on the camera (film): drawn in before the film's look.
+  final LensKind lens;
 
   /// Exposure compensation at the shutter (stops): the phone exposed the
   /// shot this much brighter, so the scene was this much darker than the
@@ -88,6 +93,7 @@ class PhotoJob {
     'originalCopyPath': originalCopyPath,
     'grain': grain.name,
     'exposureComp': exposureComp,
+    'lens': lens.name,
   };
 
   factory PhotoJob.fromJson(Map<String, Object?> j) => PhotoJob(
@@ -105,6 +111,7 @@ class PhotoJob {
     originalCopyPath: j['originalCopyPath'] as String?,
     grain: GrainStrength.fromName(j['grain'] as String?),
     exposureComp: (j['exposureComp'] as num?)?.toDouble() ?? 0,
+    lens: LensKind.values.asNameMap()[j['lens']] ?? LensKind.standard,
   );
 }
 
@@ -203,6 +210,8 @@ class PhotoPipeline {
 
     final w = image.width, h = image.height;
     var data = image.toUint8List();
+    // the lens first: it's in front of the film
+    LensRenderer(job.lens).render(data, w, h);
     final flashFired = switch (job.flash) {
       FlashSetting.on => true,
       FlashSetting.off => false,

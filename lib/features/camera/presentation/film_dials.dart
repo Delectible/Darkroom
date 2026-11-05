@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/device/haptics.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../application/exposure_controller.dart';
+import '../application/lens_controller.dart';
 import '../application/multi_exposure_controller.dart';
 import '../application/zoom_controller.dart';
 import 'viewfinder_shut.dart';
@@ -37,6 +38,9 @@ class FilmDials extends ConsumerStatefulWidget {
 }
 
 class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateMixin {
+  /// The lens tray is open.
+  bool _tray = false;
+
   // How lit each control is (0 at rest, 1 in use).
   late final _zoomLit = AnimationController(
     vsync: this,
@@ -257,6 +261,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
     final z = ref.watch(zoomProvider);
     final ev = ref.watch(exposureCompProvider);
     final me = ref.watch(multiExposureProvider);
+    final lens = ref.watch(filmLensProvider);
     ref.listen(multiExposureProvider, (was, now) {
       if (now.holding && !(was?.holding ?? false)) CameraNote.show('First exposure in. Now the second');
     });
@@ -279,6 +284,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                     ring: () => _ring,
                     zoom: z,
                     special: widget.spec.special,
+                    lens: widget.spec.lenses.length > 1 ? lens : null,
                     me: me,
                     wide: _wide,
                     marks: _marks,
@@ -306,6 +312,61 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                   onHorizontalDragCancel: () => _zoomEnd(DragEndDetails(), w),
                 ),
               ),
+            // the lens ring (top left) and its tray of caps
+            if (widget.spec.lenses.length > 1) ...[
+              Positioned(
+                left: 4,
+                top: 4,
+                width: 52,
+                height: 52,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    unawaited(Haptics.selectionClick());
+                    setState(() => _tray = !_tray);
+                  },
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                top: 52,
+                height: 74,
+                child: IgnorePointer(
+                  ignoring: !_tray,
+                  child: AnimatedSlide(
+                    offset: _tray ? Offset.zero : const Offset(0, -0.12),
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    child: AnimatedOpacity(
+                      opacity: _tray ? 1 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Row(
+                          children: [
+                            for (final l in widget.spec.lenses)
+                              _LensCap(
+                                lens: l,
+                                on: l == lens,
+                                onTap: () {
+                                  unawaited(Haptics.lightImpact());
+                                  ref.read(filmLensProvider.notifier).set(l);
+                                  CameraNote.show(l.label);
+                                  Future<void>.delayed(const Duration(milliseconds: 180), () {
+                                    if (mounted) setState(() => _tray = false);
+                                  });
+                                },
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
             // the button that changes per camera: its special, or blank
             Positioned(
               right: 4,
@@ -353,6 +414,7 @@ class _DialsPainter extends CustomPainter {
     required this.scaleBottom,
     required this.special,
     required this.me,
+    required this.lens,
   }) : super(repaint: repaint);
 
   final double? Function() ring;
@@ -365,6 +427,9 @@ class _DialsPainter extends CustomPainter {
   final double scaleTop, scaleBottom;
   final CameraSpecial? special;
   final MultiExposureState me;
+
+  /// The lens on (null: the camera takes no other).
+  final LensKind? lens;
 
   static const _ink = Color(0xFFF5EEE2);
   static const _amber = Color(0xFFE6A83F);
@@ -515,6 +580,32 @@ class _DialsPainter extends CustomPainter {
       _label(canvas, '$mm mm', on(0, 44 * unit), 13 * unit, zl * shown, bold: true);
     }
 
+    // ---- the lens ring (top left) ----
+    if (lens case final l?) {
+      final unit = (w / 360).clamp(0.85, 1.4);
+      const c = Offset(30, 30);
+      final rad = 14.5 * unit;
+      final on = l != LensKind.standard;
+      final a = (on ? 0.95 : 0.42) * shown;
+      canvas.drawCircle(
+        c,
+        rad + 0.8,
+        Paint()
+          ..color = _shade.withValues(alpha: a * 0.35)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.6,
+      );
+      // a lens ring: two rims
+      final rim = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = on ? 1.8 : 1.3
+        ..color = (on ? _amber : _ink).withValues(alpha: a);
+      canvas
+        ..drawCircle(c, rad, rim)
+        ..drawCircle(c, rad - 3.5 * unit, rim..strokeWidth = 0.8);
+      _label(canvas, l.mark, c, 7.5 * unit, a, bold: true);
+    }
+
     // ---- the changing button (top right) ----
     {
       final unit = (w / 360).clamp(0.85, 1.4);
@@ -612,8 +703,102 @@ class _DialsPainter extends CustomPainter {
   bool shouldRepaint(_DialsPainter old) =>
       old.zoom != zoom ||
       old.me != me ||
+      old.lens != lens ||
       old.special != special ||
       old.ev != ev ||
       old.exposure != exposure ||
       old.wide != wide;
+}
+
+/// A lens cap in the tray: dark glass in a rim, its name under it.
+class _LensCap extends StatelessWidget {
+  const _LensCap({required this.lens, required this.on, required this.onTap});
+
+  final LensKind lens;
+  final bool on;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: on,
+    label: '${lens.label} lens',
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 5),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CustomPaint(
+              size: const Size(42, 42),
+              painter: _CapPainter(lens: lens, on: on),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              lens.mark,
+              style: TextStyle(
+                color: on ? const Color(0xFFE6A83F) : const Color(0xE6F5EEE2),
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+                shadows: const [Shadow(color: Color(0xAA000000), blurRadius: 3)],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _CapPainter extends CustomPainter {
+  const _CapPainter({required this.lens, required this.on});
+
+  final LensKind lens;
+  final bool on;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = size.center(Offset.zero), r = size.shortestSide / 2;
+    // its barrel
+    canvas.drawCircle(c, r, Paint()..color = const Color(0xF0151518));
+    // the glass: tinted a little by what it is
+    final tint = switch (lens) {
+      LensKind.plastic => const Color(0xFF6B5A2A),
+      LensKind.soft => const Color(0xFF7A6E66),
+      LensKind.anamorphic => const Color(0xFF2E4A7A),
+      LensKind.star => const Color(0xFF5B5E6E),
+      LensKind.pinhole => const Color(0xFF111111),
+      _ => const Color(0xFF3A4656),
+    };
+    final glass = Rect.fromCircle(center: c, radius: r - 5);
+    canvas.drawCircle(
+      c,
+      r - 5,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.35, -0.4),
+          colors: [Color.lerp(tint, const Color(0xFFFFFFFF), 0.35)!, tint, const Color(0xFF0A0B0D)],
+          stops: const [0, 0.45, 1],
+        ).createShader(glass),
+    );
+    if (lens == LensKind.pinhole) canvas.drawCircle(c, 1.6, Paint()..color = const Color(0xFFE8E2D6));
+    if (lens == LensKind.fisheye) {
+      canvas.drawCircle(c.translate(-3, -3), 4, Paint()..color = const Color(0x66FFFFFF));
+    }
+    // the rim
+    canvas.drawCircle(
+      c,
+      r - 1,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = on ? 2.2 : 1.4
+        ..color = on ? const Color(0xFFE6A83F) : const Color(0x80F5EEE2),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CapPainter old) => old.lens != lens || old.on != on;
 }

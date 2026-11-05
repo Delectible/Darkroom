@@ -3,7 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:darkroom/core/processing/multi_exposure.dart';
 import 'package:darkroom/features/camera/application/exposure_controller.dart';
+import 'package:darkroom/features/camera/application/lens_controller.dart';
 import 'package:darkroom/features/camera/application/multi_exposure_controller.dart';
+import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:darkroom/features/camera/application/zoom_controller.dart';
 import 'package:darkroom/features/camera/presentation/film_dials.dart';
 import 'package:darkroom/features/cameras/domain/camera_catalog.dart';
@@ -32,6 +34,14 @@ class _Me extends MultiExposureController {
   void toggle() => state = MultiExposureState(armed: !state.armed);
 }
 
+class _Lens extends FilmLensController {
+  @override
+  LensKind build() => LensKind.standard;
+
+  @override
+  void set(LensKind lens) => state = lens;
+}
+
 class _Ev extends ExposureController {
   @override
   double build() => 0;
@@ -55,6 +65,7 @@ void main() {
         zoomProvider.overrideWith(_Zoom.new),
         exposureCompProvider.overrideWith(_Ev.new),
         multiExposureProvider.overrideWith(_Me.new),
+        filmLensProvider.overrideWith(_Lens.new),
       ],
     );
     addTearDown(container.dispose);
@@ -126,6 +137,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     expect(container.read(multiExposureProvider).armed, isTrue);
     await shoot('me');
+    await tester.pump(const Duration(seconds: 3));
+    // the lens ring, top left, opens the tray; a cap puts that lens on
+    await tester.tapAt(const Offset(30, 30));
+    await tester.pump(const Duration(milliseconds: 300));
+    await shoot('lens_tray');
+    await tester.tap(find.text('FISH'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(container.read(filmLensProvider), LensKind.fisheye);
     await tester.pump(const Duration(seconds: 3));
   });
 

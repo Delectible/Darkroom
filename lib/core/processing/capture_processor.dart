@@ -32,10 +32,14 @@ class CaptureContext {
     this.rotationTurns = 0,
     this.grain = GrainStrength.normal,
     this.exposureComp = 0,
+    this.lens = LensKind.standard,
   });
 
   /// Exposure compensation at the shutter (stops).
   final double exposureComp;
+
+  /// The lens on the camera (film).
+  final LensKind lens;
 
   final CameraSpec spec;
   final AspectRatioOption aspect;
@@ -187,6 +191,7 @@ class CaptureProcessor {
       rotationTurns: ctx.rotationTurns,
       grain: ctx.grain,
       exposureComp: ctx.exposureComp,
+      lens: ctx.lens,
       originalCopyPath: ctx.global.saveOriginalCopy
           ? p.join(paths.captureCacheDir.path, '${id}_original.jpg')
           : null,

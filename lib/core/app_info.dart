@@ -9,8 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Double exposures land in the darkroom straight away. Your zoom stays put when you change film, '
-      'and messages sit neatly inside the viewfinder.';
+      'Lenses for the film cameras: tap the ring in the viewfinder corner for wide, fish-eye, plastic, '
+      'soft focus, swirl, tilt-shift, star, anamorphic and pinhole. New focus marks that wait for the camera, '
+      'double exposures straight to the darkroom, and one swipe home on Android.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

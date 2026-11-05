@@ -17,6 +17,7 @@ import '../../cameras/domain/camera_spec.dart';
 import '../../settings/application/settings_controllers.dart';
 import 'camera_session_controller.dart';
 import 'exposure_controller.dart';
+import 'lens_controller.dart';
 import 'multi_exposure_controller.dart';
 import 'camera_ui_state.dart';
 import 'lab_note.dart';
@@ -106,6 +107,7 @@ class CaptureController extends Notifier<CaptureState> {
       global: ref.read(globalSettingsProvider),
       grain: local.grain,
       exposureComp: spec.exposure == null ? 0 : ref.read(exposureCompProvider),
+      lens: ref.read(filmLensProvider),
       // Gravity, not c.value.deviceOrientation: with the activity locked to
       // portrait the plugin keeps reporting portraitUp.
       rotationTurns: rotationTurnsFor(

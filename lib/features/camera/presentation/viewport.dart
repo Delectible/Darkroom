@@ -29,6 +29,7 @@ import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
 import '../application/zoom_controller.dart';
 import 'film_dials.dart';
+import 'lens_preview.dart';
 import 'viewfinder_shut.dart';
 
 /// The viewfinder: shader-filtered live preview, aspect-ratio mask, burned-in
@@ -152,15 +153,17 @@ class CameraViewport extends ConsumerWidget {
                                       ? _FocusablePreview(
                                           film: spec.mode == AppMode.film,
                                           controller: controller!,
-                                          child: LiveLookPreview(
-                                            spec: spec,
-                                            grain: local.grain,
-                                            crop: mask,
-                                            canvas: strip,
-                                            turns: turns,
-                                            spin: spin,
-                                            spinScale: spinScale,
-                                            child: _RotationCorrectedPreview(controller: controller),
+                                          child: LensPreview(
+                                            child: LiveLookPreview(
+                                              spec: spec,
+                                              grain: local.grain,
+                                              crop: mask,
+                                              canvas: strip,
+                                              turns: turns,
+                                              spin: spin,
+                                              spinScale: spinScale,
+                                              child: _RotationCorrectedPreview(controller: controller),
+                                            ),
                                           ),
                                         )
                                       : _Standby(session: session),

@@ -1370,7 +1370,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
                                                     ),
                                                   ),
                                                 ),
-                                                PickerCaret(onOpen: _openSelector),
+                                                const SizedBox(height: 8),
                                                 Padding(
                                                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
                                                   child: Row(

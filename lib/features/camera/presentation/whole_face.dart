@@ -119,11 +119,6 @@ class WholeFace extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      at(
-                        Offset(art.design.width / 2, (lay.frame.bottom + lay.label.top) / 2),
-                        const Size(80, 16),
-                        FittedBox(child: PickerCaret(onOpen: onOpenSelector)),
-                      ),
                       // Top controls.
                       at(part(film ? 'flash' : 'pill'), const Size(76, 36), const FlashButton()),
                       at(

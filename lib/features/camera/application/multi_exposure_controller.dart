@@ -35,7 +35,8 @@ class MultiExposureController extends Notifier<MultiExposureState> {
 
   /// Where the first exposure waits (outside the capture cache, which is
   /// swept of files no row refers to).
-  String get _firstPath => '${ref.read(appPathsProvider).supportDir.path}/multi_exposure_first.jpg';
+  String get _firstPath =>
+      '${ref.read(appPathsProvider).supportDir.path}/multi_exposure_${DateTime.now().microsecondsSinceEpoch}.jpg';
 
   void toggle() => state.armed ? cancel() : state = const MultiExposureState(armed: true);
 
@@ -51,8 +52,16 @@ class MultiExposureController extends Notifier<MultiExposureState> {
     state = MultiExposureState(armed: true, first: dest);
   }
 
-  /// The second exposure is in: done (the held one is consumed by the caller).
+  /// The second exposure is in: done (the held one is the caller's now, to
+  /// [release] once it's blended).
   void done() => state = const MultiExposureState();
+
+  /// A held first exposure that has been used.
+  void release(String path) {
+    try {
+      File(path).deleteSync();
+    } catch (_) {}
+  }
 
   void cancel() {
     final f = state.first;

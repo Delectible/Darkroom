@@ -162,8 +162,10 @@ class _NotesViewState extends State<_NotesView> {
         if (last == null) return const SizedBox.shrink();
         final on = note != null;
         return Positioned(
-          left: 24,
-          right: 24,
+          // (well inside the viewfinder's width, clear of the tabs at the
+          // screen's sides)
+          left: 64,
+          right: 64,
           bottom: bottom,
           child: IgnorePointer(
             ignoring: !on,
@@ -177,7 +179,7 @@ class _NotesViewState extends State<_NotesView> {
                 curve: Curves.easeOut,
                 child: Center(
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
+                    constraints: const BoxConstraints(maxWidth: 340),
                     // (over any screen: the app's own text style under it)
                     child: NoteBox(
                       text: last.text,

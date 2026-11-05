@@ -156,8 +156,9 @@ class CaptureController extends Notifier<CaptureState> {
       final file = await c.takePicture();
       // Multiple exposure: the first is held (no frame used), the second
       // lands on it and the two go on as one capture.
-      var path = file.path;
+      final path = file.path;
       final me = ref.read(multiExposureProvider);
+      Future<void> Function(String raw)? prepare;
       if (me.armed && ctx.spec.special == CameraSpecial.multipleExposure) {
         final first = me.first;
         if (first == null) {
@@ -165,13 +166,18 @@ class CaptureController extends Notifier<CaptureState> {
           state = state.copyWith(busy: false);
           return;
         }
-        final blended = '$path.me.jpg';
-        await MultiExposure.blend(first, path, blended);
-        try {
-          await File(path).delete();
-        } catch (_) {}
-        path = blended;
-        ref.read(multiExposureProvider.notifier).cancel();
+        // The second exposure goes to the darkroom at once, like any shot;
+        // the first is blended into it there before it develops.
+        final notifier = ref.read(multiExposureProvider.notifier)..done();
+        prepare = (raw) async {
+          final out = '$raw.me';
+          try {
+            await MultiExposure.blend(first, raw, out);
+            await File(out).rename(raw);
+          } finally {
+            notifier.release(first);
+          }
+        };
       }
       // Read before the hand-off moves the file.
       final note = await LabNote.forFile(
@@ -182,7 +188,7 @@ class CaptureController extends Notifier<CaptureState> {
       );
       // Hand-off: moves the file into our cache + writes the queue row.
       // Processing then continues in the background isolate.
-      final id = await ref.read(captureProcessorProvider).enqueuePhoto(path, ctx);
+      final id = await ref.read(captureProcessorProvider).enqueuePhoto(path, ctx, prepare: prepare);
       // The lab says so once the print is developed (DarkroomController).
       if (note != null) await LabNote.keep(ref.read(sharedPrefsProvider), id, note);
       ref.read(allowanceProvider.notifier).usePhoto(ctx.spec);

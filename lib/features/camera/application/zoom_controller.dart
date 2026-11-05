@@ -75,11 +75,10 @@ class ZoomController extends Notifier<ZoomState> {
       // Film bodies (no ZoomSpec) are fixed at 1x, even if the session was
       // left zoomed by a digital body that shared it.
       final hi = zoom == null ? lo : math.max(lo, math.min(zoom.max, hwMax));
-      // Film: the same focal length as the stock before, if this lens reaches
-      // it; else the nearest it does (2.1.3).
-      final wide = zoom?.wideMm;
-      final mm = _filmMm;
-      final level = wide != null && mm != null ? (mm / wide).clamp(lo, hi) : lo;
+      // Film: the same zoom (magnification) as the stock before, if this lens
+      // goes that far; else as far as it does (2.1.4).
+      final kept = _filmLevel;
+      final level = zoom?.wideMm != null && kept != null ? kept.clamp(lo, hi) : lo;
       state = ZoomState(level: level, min: lo, max: hi);
       await c.setZoomLevel(level);
     } catch (_) {
@@ -87,14 +86,14 @@ class ZoomController extends Notifier<ZoomState> {
     }
   }
 
-  /// The focal length (mm) the film ring was last set to, kept across stocks.
-  double? _filmMm;
+  /// The zoom the film ring was last set to, kept across stocks.
+  double? _filmLevel;
 
   /// The film zoom ring: straight to [level] (clamped), as the finger turns it.
   void setLevel(double level) {
     if (!state.canZoom) return;
     final next = level.clamp(state.min, state.max);
-    if (ref.read(activeSpecProvider).zoom?.wideMm case final wide?) _filmMm = wide * next;
+    if (ref.read(activeSpecProvider).zoom?.wideMm != null) _filmLevel = next;
     if (next == state.level) return;
     state = state.copyWith(level: next, changedAt: DateTime.now());
     _send(next);

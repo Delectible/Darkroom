@@ -158,7 +158,14 @@ class CaptureProcessor {
       ctx.spec.mode == AppMode.film && ctx.global.darkroomEnabled ? now.add(ctx.spec.developTime) : now;
 
   /// Queues a still. Returns as soon as the capture is safely persisted.
-  Future<String> enqueuePhoto(String capturedPath, CaptureContext ctx) async {
+  /// [prepare] runs on the queued capture (its path in the cache) before
+  /// it's developed: a double exposure blends its first exposure in there,
+  /// while the shot is already in the darkroom.
+  Future<String> enqueuePhoto(
+    String capturedPath,
+    CaptureContext ctx, {
+    Future<void> Function(String raw)? prepare,
+  }) async {
     final id = _newId();
     final now = DateTime.now();
     final spec = ctx.spec;
@@ -196,7 +203,11 @@ class CaptureProcessor {
       jobJson: jsonEncode({'type': 'photo', ...job.toJson()}),
     );
     if (spec.mode == AppMode.film) unawaited(onFilmQueueChanged());
-    _enqueue(_readyAt(ctx, now), () => _runPhoto(repo, job));
+    final ready = prepare?.call(raw).catchError((Object _) {});
+    _enqueue(_readyAt(ctx, now), () async {
+      await ready;
+      await _runPhoto(repo, job);
+    });
     return id;
   }
 

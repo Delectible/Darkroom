@@ -3,21 +3,28 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.0.16';
+  static const version = '2.1.0';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The viewfinder now shuts while the camera is off: the film cameras\' mirror goes up, the digital '
-      'screens go to sleep. Settings opens more smoothly on slower phones. Still new: a big '
-      'smoothness update. The camera opens sooner, then fades in gently. Swiping between cameras '
-      'runs at your screen\'s full speed, and graphics now tune themselves to your phone, keeping as much '
-      'detail as it can draw smoothly. Settings pauses the camera behind it, and the corkboard slides in '
-      'more smoothly on slower phones.';
+      'Smoother everywhere. The camera opens sooner and fades in gently, swipes run at your screen\'s full '
+      'speed, and the graphics tune themselves to your phone. While the camera is off, the viewfinder shuts: '
+      'the film cameras\' mirror goes up, the digital screens go to sleep. The film viewfinder shows its '
+      'focusing circle, and Settings opens more smoothly on slower phones.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
+    (
+      '2.1',
+      [
+        'Graphics that tune themselves',
+        'Faster, gentler launch',
+        'Viewfinders that shut',
+        'Focusing circle on film',
+      ],
+    ),
     (
       '2.0',
       [

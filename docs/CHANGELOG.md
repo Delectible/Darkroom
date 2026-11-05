@@ -477,15 +477,15 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   full-height blur. Viewfinder / body stills at the screen's resolution
   (were 60%; 80% on the slowest phones).
 
-- [x] **61.33** → 2.0.16 · A quick flick toward the other camera while its
+- [x] **61.33** → 2.1.0 · A quick flick toward the other camera while its
   3D model is still loading no longer tosses to a camera with no body (the
   note shows, the camera stays). 3D quality report: stale low-RAM wording.
-- [x] **61.34** → 2.0.16 · Settings on slow tablets (44 fps, half the
+- [x] **61.34** → 2.1.0 · Settings on slow tablets (44 fps, half the
   refreshes dropped): the camera screen under the sheet was drawn again
   every frame, all its layers. Now it's one picture of itself while the
   sheet is up (`_coverScreen`, taken as it opens: the same pixels), dropped
   at once if a setting changes the camera so the change shows.
-- [x] **61.35** → 2.0.16 · The viewfinder shuts while the camera is off
+- [x] **61.35** → 2.1.0 · The viewfinder shuts while the camera is off
   (swipes, Settings, the picker) instead of holding a still: film = mirror
   up (dark from the edges, the focusing screen's etched circle left),
   digital = LCD sleep (bigger pixels as the backlight goes). Opens over the

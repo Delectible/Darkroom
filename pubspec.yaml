@@ -49,7 +49,9 @@ dependencies:
 
   # Fallback live-shader path for devices still on the Skia backend
   flutter_shaders: ^0.1.3
-  flutter_scene: ^0.24.3
+  # Our copy, with one change (packages/flutter_scene/DARKROOM.md).
+  flutter_scene:
+    path: packages/flutter_scene
   flutter_gpu:
     sdk: flutter
   hooks: ^2.2.0

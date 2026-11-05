@@ -546,7 +546,9 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   in the darkroom frame. Put up once per install (existing ones too), after
   the launch. Count as saved, never offered Save or Share, skipped by the
   photo library check; thrown away like any print. Ids `sample-*`.
-- [ ] **63.10** Half-size 3D textures where they can't be compressed (Pixel:
-  192 -> 48 MB a camera): needs a change inside flutter_scene (its rgba8
-  fallback, `_prepare` in texture/compressed_texture.dart); asked.
+- [x] **63.10** → 2.1.1 · Half-size 3D textures where they can't be
+  compressed (Pixel 9 Pro: 192 -> ~48 MB a camera): our own copy of
+  flutter_scene 0.24.3 in packages/flutter_scene with one patch in its rgba8
+  fallback (DARKROOM.md). iPhones and the tablet (ASTC) untouched. Check
+  pub.dev for updates now and then (CLAUDE.md).
 

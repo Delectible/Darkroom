@@ -49,6 +49,13 @@ matching section of **`docs/NOTES.md`** before changing an area
 - Opacity layers inside an `OnTop` on the 3D face; `Colors.white/black` in
   Win98 UI (use `W98.*`); `HapticFeedback` (use `Haptics`).
 
+## Our copy of flutter_scene
+
+`packages/flutter_scene` is flutter_scene 0.24.3 with one patch (half-size
+textures where the GPU can't compress them; `packages/flutter_scene/
+DARKROOM.md`). Now and then check pub.dev for a newer version: if it handles
+this itself, go back to the hosted package; else move the patch over.
+
 ## Checks
 
 `flutter analyze lib test`, `flutter test` (SDK may be at

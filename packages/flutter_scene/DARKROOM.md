@@ -3,7 +3,8 @@
 A copy of [flutter_scene](https://pub.dev/packages/flutter_scene) 0.24.3
 (MIT, see LICENSE), used by the app through a path dependency in the root
 `pubspec.yaml`. Its tests, build cache, screenshots, skills and example are
-left out; `resolution: workspace` is removed from its pubspec.
+left out; `resolution: workspace` and `screenshots:` are removed from its
+pubspec. The root `analysis_options.yaml` excludes `packages/**`.
 
 ## The one change
 

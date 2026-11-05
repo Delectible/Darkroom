@@ -12,6 +12,8 @@ analyzer:
     - android/**
     - ios/**
     - linux/**
+    # our copy of flutter_scene (its own code, its own lints)
+    - packages/**
 
 linter:
   rules:

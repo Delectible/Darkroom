@@ -49,9 +49,38 @@ class MainActivity : FlutterActivity() {
     private var rotationChannel: MethodChannel? = null
     private var rotationObserver: ContentObserver? = null
 
+    // Launch Timing: where the time before Dart's main goes (ms).
+    private var activityAt = -1L
+    private var onCreateMs = -1L
+    private var pluginsMs = -1L
+
+    companion object {
+        /// The video library's native code loading (FFmpeg: tens of MB), ms;
+        /// -1 until done. Its plugin loads it as it registers, on the main
+        /// thread before Dart starts: started here on its own thread first,
+        /// so the engine's own start-up runs alongside it.
+        @Volatile var videoLibMs = -1L
+        private var videoLibStarted = false
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        val created = android.os.SystemClock.elapsedRealtime()
+        activityAt = created - android.os.Process.getStartElapsedRealtime()
+        if (!videoLibStarted) {
+            videoLibStarted = true
+            Thread {
+                val t = android.os.SystemClock.elapsedRealtime()
+                try {
+                    Class.forName("com.antonkarpenko.ffmpegkit.FFmpegKitConfig")
+                } catch (e: Throwable) {
+                    // (not there or failed: the plugin loads it as before)
+                }
+                videoLibMs = android.os.SystemClock.elapsedRealtime() - t
+            }.apply { name = "video-lib-preload" }.start()
+        }
         CrashCatcher.install(filesDir)
         super.onCreate(savedInstanceState)
+        onCreateMs = android.os.SystemClock.elapsedRealtime() - created
         // The app turns its own screens (they already look landscape when
         // Android rotates), so no rotate animation. Cross-fade: Android
         // freezes a picture of the screen as it was and fades it into the
@@ -200,7 +229,9 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        val t = android.os.SystemClock.elapsedRealtime()
         super.configureFlutterEngine(flutterEngine)
+        pluginsMs = android.os.SystemClock.elapsedRealtime() - t
         volumeChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/volume").also {
             it.setMethodCallHandler { call, result ->
                 when (call.method) {
@@ -263,6 +294,15 @@ class MainActivity : FlutterActivity() {
                     }
                     // the phone's maker and model (speed test results)
                     "device" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")
+                    // Launch Timing's breakdown of the time before Dart's main
+                    "startTimes" -> result.success(
+                        mapOf(
+                            "activity" to activityAt,
+                            "onCreate" to onCreateMs,
+                            "plugins" to pluginsMs,
+                            "videoLib" to videoLibMs,
+                        ),
+                    )
                     "sinceStart" -> result.success(
                         android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime(),
                     )

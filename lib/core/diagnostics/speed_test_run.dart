@@ -213,6 +213,7 @@ class SpeedTestRun {
     _Step('no look', [_swipes], flags: [SpeedTests.noLook], variant: true),
     _Step('grain 12', [_rest], flags: [SpeedTests.slowGrain], variant: true),
     _Step('still vf', [_swipes], flags: [SpeedTests.stillSwipe], variant: true),
+    _Step('freeze vf', [_swipes], flags: [SpeedTests.freezeSwipe], variant: true),
     _Step('no strap', [_swipes], flags: [SpeedTests.noStrap], variant: true),
     _Step('fxaa', [_swipes], flags: [SpeedTests.cheapEdges], variant: true),
     _Step('3D 70%', [_swipes], flags: [SpeedTests.small3d], variant: true),

@@ -418,6 +418,27 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   `stateLine` shows "max", every Android number is checked finite, the
   screen rate falls back to 60 if odd, and building the results can't
   throw (a failure still ends with text to send). Test with Infinity/NaN.
+- Owner's tablet (Galaxy Tab, SM-X218U, 3.3 GB, 90 Hz, 2.0.14): GPU-bound
+  (UI 1-5 ms, GPU 20-48 ms with the camera live); camera swipe 30 fps / 66%
+  dropped, settings 18 fps / 80%; with the camera's stream stopped the swipe
+  ran 84 fps / 7%. ~540 MB free RAM. ASTC works there (3D 48 MB a body).
+  2.2 s before Dart's main (Pixel 0.1-0.25).
+- [x] **61.24** → 2.0.15 · Settings stops the camera's stream while it's open
+  (as the picker; a still in its place). `_openSettings`.
+- [x] **61.25** → 2.0.15 · `SwipeTuning`: each real swipe's frame rate from
+  the frames produced; after a warm-up swipe, two of the last three under
+  42 fps = this phone swipes with a still viewfinder and the stream stopped
+  until the camera lands (saved, `PrefKeys.freezeSwipes`; Debug >
+  Performance > Swipe Freeze forgets it). Pixel (~55 fps) never trips.
+  Speed test step "freeze vf" (switch "Freeze Camera in Swipes"); its own
+  swipes don't count, and the header shows the state.
+- [x] **61.26** → 2.0.15 · Low RAM cutoff 3.2 → 4.2 GB (`DeviceMemory.lowGb`).
+- [x] **61.27** → 2.0.15 · Start-up investigation: FFmpegKit's plugin loads
+  FFmpeg's native libraries in `registerGlobalCallbacks` (FFmpegKitConfig's
+  static init) on the main thread before Dart starts. MainActivity now
+  starts that class loading on its own thread first (`videoLibMs`), and
+  Launch Timing breaks the time before Dart's main down: Android to the
+  activity, onCreate, plugin registration, video library (alongside).
 
 ## 62. Ideas (2026-11-05)
 

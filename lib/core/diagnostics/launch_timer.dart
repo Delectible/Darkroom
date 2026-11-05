@@ -17,13 +17,35 @@ class LaunchTimer {
   /// plugins), once known; null on iPhone.
   static int? beforeMain;
 
+  /// Where that time went (Android only): "Android 310, app start 1500
+  /// (plugins 900), video library 800 alongside".
+  static String? beforeMainDetail;
+
   /// Asks Android how long ago the process started (main.dart, early).
   static Future<void> measureBeforeMain() async {
     if (!Platform.isAndroid) return;
     final at = _clock.elapsedMilliseconds;
+    const channel = MethodChannel('darkroom/display');
     try {
-      final since = await const MethodChannel('darkroom/display').invokeMethod<int>('sinceStart');
+      final since = await channel.invokeMethod<int>('sinceStart');
       if (since != null) beforeMain = since - at;
+    } catch (_) {}
+    try {
+      final m = await channel.invokeMapMethod<String, Object?>('startTimes');
+      int? v(String k) => (m?[k] as num?)?.toInt();
+      String ms(int? x) => x == null || x < 0 ? '?' : '$x';
+      // (the video library may still be loading: asked again a moment later)
+      var lib = v('videoLib');
+      if (lib == null || lib < 0) {
+        await Future<void>.delayed(const Duration(seconds: 3));
+        final again = await channel.invokeMapMethod<String, Object?>('startTimes');
+        lib = (again?['videoLib'] as num?)?.toInt();
+      }
+      beforeMainDetail =
+          'Android ${ms(v('activity'))}, app start ${ms(v('onCreate'))} (plugins ${ms(v('plugins'))}), '
+          'video library ${ms(lib)} alongside';
+      // (the launch may have been saved already: saved again with this)
+      if (_done) _save(replace: true);
     } catch (_) {}
   }
 
@@ -55,9 +77,14 @@ class LaunchTimer {
     if (_done) return;
     mark(label);
     _done = true;
+    _save(replace: false);
+  }
+
+  static void _save({required bool replace}) {
     final p = prefs;
     if (p == null) return;
-    final kept = [_current(), ...?p.getStringList(_key)];
+    final old = p.getStringList(_key) ?? const <String>[];
+    final kept = [_current(), ...(replace ? old.skip(1) : old)];
     p.setStringList(_key, kept.take(_keep).toList());
   }
 
@@ -66,7 +93,9 @@ class LaunchTimer {
     final b = StringBuffer(
       'Launch ${when.year}-${_two(when.month)}-${_two(when.day)} ${_two(when.hour)}:${_two(when.minute)}\n',
     );
-    if (beforeMain case final ms?) b.writeln('  (+$ms ms before the app\'s code: Android, engine, plugins)');
+    if (beforeMain case final ms?) {
+      b.writeln('  (+$ms ms before the app\'s code: ${beforeMainDetail ?? 'Android, engine, plugins'})');
+    }
     var last = 0;
     for (final (label, ms) in _marks) {
       b.writeln('${_ms(ms).padLeft(7)}  (+${ms - last} ms)  $label');
@@ -90,10 +119,11 @@ class LaunchTimer {
       return null;
     }
 
-    final before = RegExp(r'\+(\d+) ms before').firstMatch(last)?.group(1);
+    final before = RegExp(r"\+(\d+) ms before the app's code(: ([^)]*))?").firstMatch(last);
     final total = at('curtain lifts') ?? at('curtain lifts (gave up waiting)');
     return '${total ?? '?'} s to the camera (3D ${at('3D camera in') ?? '?'}, camera ${at('camera open') ?? '?'}'
-        '${before == null ? '' : '; $before ms before the app\'s code'})';
+        '${before == null ? '' : '; ${before.group(1)} ms before the app\'s code'})'
+        '${before?.group(3) == null ? '' : '\n  before the app\'s code: ${before!.group(3)}'}';
   }
 
   /// This launch (so far) and the ones before it, newest first.

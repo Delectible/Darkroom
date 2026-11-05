@@ -683,7 +683,13 @@ UI
   tags frames: ticker running or finger down); "drop" = refreshes missed.
   Numbers from Android can be odd (a Pixel's peak_refresh_rate is
   Infinity): check `isFinite` before rounding. If a run misbehaves on a
-  phone, ask for Debug > Diagnostics > Crash Reports first. Launch curtain since
+  phone, ask for Debug > Diagnostics > Crash Reports first.
+- Slow phones (2.0.15): Settings stops the camera's stream while open (as
+  the picker). `SwipeTuning` (camera/presentation/swipe_tuning.dart) judges
+  real swipes; slow ones (2 of 3 under 42 fps) switch swipes to a still
+  viewfinder with the stream stopped, saved per install. Low RAM is <= 4.2
+  GB now. MainActivity preloads FFmpegKitConfig (its native libraries) on
+  a thread at onCreate; Launch Timing breaks down the time before main. Launch curtain since
   2.0.9: 0.3 s minimum, 150 ms after the camera opens, 300 ms fade.
 - Slower phones: the camera reopens only after a panel's exit animation
   (`_settled`), the live viewfinder isn't built under a held still, and

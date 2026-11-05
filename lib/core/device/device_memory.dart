@@ -19,7 +19,9 @@ class DeviceMemory {
   /// Total RAM in GB, once read (null: unknown, tests).
   static double? gb;
 
-  /// A phone with little RAM (about 3 GB or less, or Android's low-RAM flag).
+  /// A phone with little RAM (about 4 GB or less, or Android's low-RAM flag).
+  /// (Was 3 GB: a 3.3 GB tablet with ~0.5 GB free still got the full
+  /// settings and dropped most frames while swiping; 2.0.15.)
   static bool low = false;
 
   /// The slowest phones (about 2 GB, or 3 GB with 4 cores or fewer): a
@@ -32,6 +34,9 @@ class DeviceMemory {
   static final _ready = Completer<void>();
   static bool _started = false;
 
+  /// The "low" cutoff, GB (4 GB phones report about 3.6-3.8).
+  static const lowGb = 4.2;
+
   /// Reads the RAM and sets the limits from it.
   static Future<void> apply() async {
     _started = true;
@@ -41,7 +46,7 @@ class DeviceMemory {
       if (total == null || total <= 0) return;
       gb = total / (1024 * 1024 * 1024);
       final lowRam = m?['lowRam'] == true;
-      low = lowRam || gb! <= 3.2;
+      low = lowRam || gb! <= lowGb;
       lowest = gb! <= 2.2 || (gb! <= 3.2 && Platform.numberOfProcessors <= 4);
       CaptureProcessor.maxWorkers = workersFor(gb!, lowRam: lowRam);
       PaintingBinding.instance.imageCache.maximumSizeBytes = cacheBytesFor(gb!, lowRam: lowRam);

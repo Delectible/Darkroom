@@ -43,6 +43,7 @@ import '../../../core/device/haptics.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
 import '../../../core/diagnostics/speed_test_run.dart';
 import '../../../core/diagnostics/speed_tests.dart';
+import 'swipe_tuning.dart';
 
 class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
@@ -99,9 +100,21 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   void _dropMoving() {
     BodyQuality.moving(false);
+    SwipeTuning.end();
     _stopMirror();
+    if (_pausedForSwipe) {
+      // The stream was stopped for the swipe: start it again (the new body's
+      // camera, after a toss) and let go of the still once it's live.
+      _pausedForSwipe = false;
+      ref.read(cameraSessionProvider.notifier).setScreenVisible(true);
+      _dropWhenLive();
+      return;
+    }
     CameraViewport.freeze.value = null;
   }
+
+  /// The camera's stream is stopped for this swipe (SwipeTuning.freeze).
+  bool _pausedForSwipe = false;
 
   /// 3D on: the viewfinder stays live while the body turns. The live
   /// picture keeps running under a still of itself, retaken flat every
@@ -111,8 +124,19 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
 
   void _startMoving() {
     BodyQuality.moving(true);
+    SwipeTuning.start();
     // (Debug > Speed Tests > Still Viewfinder in Swipes: as in performance mode)
     if (ref.read(globalSettingsProvider).performance || SpeedTests.stillSwipe.value) return _snapMoving();
+    // A phone too slow for the live picture and the moving body together:
+    // a still, and the stream stopped until the camera lands.
+    if (SwipeTuning.freeze && !ref.read(captureControllerProvider).isRecording) {
+      _snapMoving();
+      if (!_pausedForSwipe) {
+        _pausedForSwipe = true;
+        ref.read(cameraSessionProvider.notifier).setScreenVisible(false);
+      }
+      return;
+    }
     if (_mirroring) return;
     _mirroring = true;
     CameraViewport.liveUnder.value = true;
@@ -195,7 +219,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
           unawaited(_openSelector());
         case 'settings':
           // (errors show in the speed test's results)
-          final sheet = showSettingsSheet(context);
+          final sheet = _openSettings();
           await Future.any([sheet, Future<void>.delayed(const Duration(milliseconds: 300))]);
         default:
           unawaited(_push(screen == 'win98' ? const ExplorerScreen() : const CorkboardScreen()));
@@ -566,6 +590,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     Future<void>.delayed(const Duration(milliseconds: 100), () => _dropWhenLive(tries + 1));
   }
 
+  /// Settings, with the camera's stream stopped while the sheet covers it
+  /// (as the picker does: a live picture under it cost slow phones most of
+  /// their frames, 18 fps on a tablet) and a still in its place.
+  Future<void> _openSettings() async {
+    _releaseEdges();
+    final session = ref.read(cameraSessionProvider.notifier);
+    final pause = !ref.read(captureControllerProvider).isRecording;
+    if (pause) {
+      _snapMoving();
+      session.setScreenVisible(false);
+    }
+    await showSettingsSheet(context);
+    _claimEdges();
+    if (!pause) return;
+    // Let the sheet finish closing before the camera starts up.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (!mounted) return;
+    session.setScreenVisible(true);
+    _dropWhenLive();
+  }
+
   bool _selectorOpen = false;
   bool _swipeFromEdge = false;
   double _swipeStartY = 0;
@@ -683,11 +728,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
     final mode = ref.watch(appModeProvider);
     final wholeArt = ref.watch(wholeArtProvider).value;
     final whole = ref.watch(wholeBodyProvider(mode));
-    Future<void> settings() async {
-      _releaseEdges();
-      await showSettingsSheet(context);
-      _claimEdges();
-    }
+    Future<void> settings() => _openSettings();
 
     if (wholeArt != null && whole != null) {
       final other = mode == AppMode.film ? AppMode.digital : AppMode.film;

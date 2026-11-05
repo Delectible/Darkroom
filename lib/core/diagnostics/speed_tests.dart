@@ -31,6 +31,10 @@ class SpeedTests {
   /// frame to keep it live under the turn.
   static final stillSwipe = ValueNotifier<bool>(false);
 
+  /// Swipes stop the camera's stream and show a still until the camera
+  /// lands (what slow phones get on their own: SwipeTuning).
+  static final freezeSwipe = ValueNotifier<bool>(false);
+
   /// Swipes without the hanging strap (its rope is simulated every frame).
   static final noStrap = ValueNotifier<bool>(false);
 
@@ -41,6 +45,7 @@ class SpeedTests {
     'no look': noLook,
     'slow grain': slowGrain,
     'still swipe': stillSwipe,
+    'freeze vf': freezeSwipe,
     'no strap': noStrap,
   };
 

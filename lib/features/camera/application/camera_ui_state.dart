@@ -36,6 +36,10 @@ class PrefKeys {
   /// The last few launches' timings (LaunchTimer, Debug > Performance Report).
   static const launchTimes = 'debug.launchTimes';
 
+  /// This phone's swipes were judged too slow for a live viewfinder
+  /// (SwipeTuning): swipes show a still.
+  static const freezeSwipes = 'device.freezeSwipes';
+
   /// The first start began with Fancy graphics off (a slow phone): say so
   /// once the tour is done.
   static const lowGraphicsNote = 'ui.lowGraphicsNote';
@@ -118,6 +122,7 @@ class PrefKeys {
     userName,
     tourSkipped,
     launchTimes,
+    freezeSwipes,
     lowGraphicsNote,
     bodyFinish,
     filmFinish,

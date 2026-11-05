@@ -584,6 +584,7 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   tour explains the picker). Message box: 64 dp in from each side, at most
   340 wide. ME: the second exposure goes to the darkroom at once; the first
   is blended into it in the queue before it develops (`enqueuePhoto(prepare:)`).
-- [ ] **64.9** Focus mark: options to the owner (AF brackets, AF-point blink,
-  microprism ring).
+- [x] **64.9** → 2.1.4 · Focus mark (`_FocusMark` in viewport.dart): film, a
+  microprism ring tightening to an amber dot; digital, AF brackets that snap
+  in, blink and go green. Replaces the square.
 

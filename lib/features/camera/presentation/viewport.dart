@@ -150,6 +150,7 @@ class CameraViewport extends ConsumerWidget {
                                       ? const SizedBox.expand()
                                       : session.isReady
                                       ? _FocusablePreview(
+                                          film: spec.mode == AppMode.film,
                                           controller: controller!,
                                           child: LiveLookPreview(
                                             spec: spec,
@@ -379,22 +380,26 @@ class _RotationCorrectedPreview extends StatelessWidget {
 }
 
 class _FocusablePreview extends StatefulWidget {
-  const _FocusablePreview({required this.controller, required this.child});
+  const _FocusablePreview({required this.controller, required this.child, required this.film});
 
   final CameraController controller;
   final Widget child;
+
+  /// Film: the focusing screen's microprism ring tightening to a dot;
+  /// digital: AF brackets that snap in and go green when focus locks.
+  final bool film;
 
   @override
   State<_FocusablePreview> createState() => _FocusablePreviewState();
 }
 
-class _FocusablePreviewState extends State<_FocusablePreview> {
+class _FocusablePreviewState extends State<_FocusablePreview> with SingleTickerProviderStateMixin {
   Offset? _point;
-  Timer? _hide;
+  late final _mark = AnimationController(vsync: this, duration: const Duration(milliseconds: 1600));
 
   @override
   void dispose() {
-    _hide?.cancel();
+    _mark.dispose();
     super.dispose();
   }
 
@@ -406,10 +411,7 @@ class _FocusablePreviewState extends State<_FocusablePreview> {
       (d.localPosition.dy / box.maxHeight).clamp(0.0, 1.0),
     );
     setState(() => _point = d.localPosition);
-    _hide?.cancel();
-    _hide = Timer(const Duration(milliseconds: 1100), () {
-      if (mounted) setState(() => _point = null);
-    });
+    unawaited(_mark.forward(from: 0));
     try {
       if (c.value.focusPointSupported) await c.setFocusPoint(n);
       if (c.value.exposurePointSupported) await c.setExposurePoint(n);
@@ -430,20 +432,9 @@ class _FocusablePreviewState extends State<_FocusablePreview> {
           children: [
             widget.child,
             if (_point != null)
-              Positioned(
-                left: _point!.dx - 34,
-                top: _point!.dy - 34,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 1.4, end: 1),
-                  duration: const Duration(milliseconds: 220),
-                  builder: (context, s, _) => Transform.scale(
-                    scale: s,
-                    child: Container(
-                      width: 68,
-                      height: 68,
-                      decoration: BoxDecoration(border: Border.all(color: ink, width: 1.4)),
-                    ),
-                  ),
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: _FocusMark(t: _mark, at: _point!, film: widget.film, ink: ink),
                 ),
               ),
           ],
@@ -451,6 +442,76 @@ class _FocusablePreviewState extends State<_FocusablePreview> {
       ),
     );
   }
+}
+
+class _FocusMark extends CustomPainter {
+  _FocusMark({required this.t, required this.at, required this.film, required this.ink}) : super(repaint: t);
+
+  final Animation<double> t;
+  final Offset at;
+  final bool film;
+  final Color ink;
+
+  static const _amber = Color(0xFFE0A43C);
+  static const _lock = Color(0xFF78DC6E);
+  static double _ease(double v) => 1 - math.pow(1 - v.clamp(0.0, 1.0), 3).toDouble();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = t.value * 1.6; // seconds
+    if (s <= 0 || s >= 1.6) return;
+    if (film) {
+      // a shimmering ring that tightens to a dot, then fades
+      final p = _ease(s / 0.55), a = s > 1.1 ? (1 - (s - 1.1) / 0.5).clamp(0.0, 1.0) : 1.0;
+      final r = 26 - 15 * p;
+      const n = 28;
+      for (var i = 0; i < n; i++) {
+        final ang = s * 2.5 + i * math.pi * 2 / n;
+        final shimmer = 0.35 + 0.65 * (math.sin(ang * 3 + s * 9)).abs() * (1 - p);
+        final d = Offset(math.cos(ang), math.sin(ang));
+        canvas.drawLine(
+          at + d * (r - 3),
+          at + d * r,
+          Paint()
+            ..color = ink.withValues(alpha: a * (0.35 + 0.5 * shimmer))
+            ..strokeWidth = 1.2
+            ..strokeCap = StrokeCap.round,
+        );
+      }
+      canvas.drawCircle(at, 2.4, Paint()..color = _amber.withValues(alpha: a * p));
+      return;
+    }
+    // brackets: snap in, blink once, green on lock, fade
+    final on = s < 0.45 || (s > 0.5 && s < 0.62) || s > 0.72;
+    if (!on) return;
+    final fade = s > 1.2 ? (1 - (s - 1.2) / 0.4).clamp(0.0, 1.0) : 1.0;
+    final half = 30 * (1 + 0.5 * (1 - _ease(s / 0.18)));
+    const arm = 10.0;
+    final color = (s > 0.45 ? _lock : ink).withValues(alpha: fade);
+    final shade = Paint()
+      ..color = const Color(0xFF000000).withValues(alpha: 0.45 * fade)
+      ..strokeWidth = 3.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final line = Paint()
+      ..color = color
+      ..strokeWidth = 1.8
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    for (final q in const [Offset(-1, -1), Offset(1, -1), Offset(-1, 1), Offset(1, 1)]) {
+      final c = at + q * half;
+      final path = Path()
+        ..moveTo(c.dx - q.dx * arm, c.dy)
+        ..lineTo(c.dx, c.dy)
+        ..lineTo(c.dx, c.dy - q.dy * arm);
+      canvas
+        ..drawPath(path, shade)
+        ..drawPath(path, line);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_FocusMark old) => old.at != at || old.film != film || old.ink != ink;
 }
 
 class _Standby extends ConsumerWidget {

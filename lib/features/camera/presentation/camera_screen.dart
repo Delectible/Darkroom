@@ -1222,7 +1222,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
                       borderRadius: BorderRadius.circular(mode == AppMode.film ? 6 : 3),
                       child: ValueListenableBuilder<ui.Image?>(
                         valueListenable: CameraViewport.freeze,
-                        builder: (context, still, _) => ViewfinderShut(mode: mode, still: still),
+                        builder: (context, still, _) => still == null
+                            // (the marks are in the picture already)
+                            ? const SizedBox.shrink()
+                            : ViewfinderShut(mode: mode, still: still),
                       ),
                     ),
                   ),

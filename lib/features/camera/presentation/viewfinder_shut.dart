@@ -37,9 +37,18 @@ class ViewfinderShutter {
 /// if any) shutting as [ViewfinderShutter.shut] says, or at a fixed
 /// [progress] (1: a camera not in hand, shut).
 class ViewfinderShut extends StatefulWidget {
-  const ViewfinderShut({super.key, required this.mode, required this.still, this.progress});
+  const ViewfinderShut({
+    super.key,
+    required this.mode,
+    required this.still,
+    this.progress,
+    this.marks = true,
+  });
 
   final AppMode mode;
+
+  /// Film: the focusing screen's marks.
+  final bool marks;
   final ui.Image? still;
   final double? progress;
 
@@ -71,6 +80,7 @@ class _ViewfinderShutState extends State<ViewfinderShut> {
           size: Size.infinite,
           painter: _ShutPainter(
             film: widget.mode == AppMode.film,
+            marks: widget.marks,
             still: widget.still,
             fixed: widget.progress,
             shut: ViewfinderShutter.shut,
@@ -122,6 +132,7 @@ class _PixelSteps {
 class _ShutPainter extends CustomPainter {
   _ShutPainter({
     required this.film,
+    required this.marks,
     required this.still,
     required this.fixed,
     required this.shut,
@@ -130,7 +141,7 @@ class _ShutPainter extends CustomPainter {
     required this.pixels,
   }) : super(repaint: fixed == null ? shut : null);
 
-  final bool film;
+  final bool film, marks;
   final ui.Image? still;
   final double? fixed;
   final Animation<double> shut;
@@ -149,13 +160,16 @@ class _ShutPainter extends CustomPainter {
     if (p >= 1) {
       // Shut: no picture under it to draw.
       canvas.drawRect(rect, Paint()..color = screen.withValues(alpha: 1));
-      if (film) _marks(canvas, rect, 1);
+      if (film && marks) _marks(canvas, rect);
       if (!film) _glass(canvas, rect, 1);
       return;
     }
     if (film) {
       if (still != null) _picture(canvas, rect, still, FilterQuality.low);
-      if (p <= 0) return;
+      if (p <= 0) {
+        if (marks) _marks(canvas, rect);
+        return;
+      }
       // The mirror going up: dark from the edges in, then all of it.
       final reach = rect.longestSide / rect.shortestSide * 0.62;
       final inner = (1 - p) * 0.9;
@@ -172,7 +186,7 @@ class _ShutPainter extends CustomPainter {
           ).createShader(rect),
       );
       canvas.drawRect(rect, Paint()..color = screen.withValues(alpha: _c(p * 1.2 - 0.2)));
-      _marks(canvas, rect, p);
+      if (marks) _marks(canvas, rect);
       return;
     }
     // The LCD sleeping: bigger pixels as the backlight goes (closing over
@@ -196,17 +210,21 @@ class _ShutPainter extends CustomPainter {
       paintImage(canvas: canvas, rect: rect, image: image, fit: BoxFit.cover, filterQuality: q);
 
   /// The focusing screen's etched circle and split-image line.
-  void _marks(Canvas canvas, Rect rect, double p) {
+  /// The focusing screen's etched circle and split-image line, always there
+  /// on film (live or shut): a light line with a faint dark edge, so it
+  /// reads on a bright sky and on the dark alike.
+  void _marks(Canvas canvas, Rect rect) {
     final c = rect.center, s = rect.shortestSide;
+    void etch(Paint paint, Offset o) => canvas
+      ..drawCircle(c + o, s * 0.17, paint)
+      ..drawCircle(c + o, s * 0.065, paint)
+      ..drawLine(c + o - Offset(s * 0.065, 0), c + o + Offset(s * 0.065, 0), paint);
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1
-      ..isAntiAlias = true
-      ..color = ink.withValues(alpha: 0.26 * p);
-    canvas
-      ..drawCircle(c, s * 0.17, paint)
-      ..drawCircle(c, s * 0.065, paint)
-      ..drawLine(c - Offset(s * 0.065, 0), c + Offset(s * 0.065, 0), paint);
+      ..isAntiAlias = true;
+    etch(paint..color = const Color(0x2E000000), const Offset(0, 1));
+    etch(paint..color = ink.withValues(alpha: 0.3), Offset.zero);
   }
 
   /// An unlit LCD's glass: a faint sheen from the top left.
@@ -231,6 +249,7 @@ class _ShutPainter extends CustomPainter {
   @override
   bool shouldRepaint(_ShutPainter old) =>
       old.film != film ||
+      old.marks != marks ||
       old.still != still ||
       old.fixed != fixed ||
       old.shut != shut ||

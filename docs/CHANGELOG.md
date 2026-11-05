@@ -490,7 +490,8 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   up (dark from the edges, the focusing screen's etched circle left),
   digital = LCD sleep (bigger pixels as the backlight goes). Opens over the
   live picture when the camera's back (`viewfinder_shut.dart`; mockups of
-  six ideas, F3 and D2 picked).
+  six ideas, F3 and D2 picked). The focusing screen's etched circle and
+  split line stay on the film viewfinder all the time (not in photos).
 
 ## 62. Ideas (2026-11-05)
 

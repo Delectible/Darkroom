@@ -9,7 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'A quick swipe just after opening no longer shows a camera without its body. Still new: a big '
+      'The viewfinder now shuts while the camera is off: the film cameras\' mirror goes up, the digital '
+      'screens go to sleep. Settings opens more smoothly on slower phones. Still new: a big '
       'smoothness update. The camera opens sooner, then fades in gently. Swiping between cameras '
       'runs at your screen\'s full speed, and graphics now tune themselves to your phone, keeping as much '
       'detail as it can draw smoothly. Settings pauses the camera behind it, and the corkboard slides in '

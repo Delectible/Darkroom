@@ -27,6 +27,7 @@ import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
 import '../application/zoom_controller.dart';
+import 'viewfinder_shut.dart';
 
 /// The viewfinder: shader-filtered live preview, aspect-ratio mask, burned-in
 /// timestamp preview, tap-to-focus and the shutter blink.
@@ -51,6 +52,10 @@ class CameraViewport extends ConsumerWidget {
   /// still of it every frame, taken flat: the viewfinder stays live while
   /// the body turns).
   static final liveUnder = ValueNotifier<bool>(false);
+
+  /// Where the viewfinder's shutter is drawn (the camera screen covers
+  /// itself under Settings, and draws the shutter over that picture).
+  static final shutKey = GlobalKey(debugLabel: 'viewfinder shut');
 
   /// The stream's aspect ratio last time a camera was open: while it's
   /// closed (behind a panel, mid-swap) the box keeps its shape, so the still
@@ -193,16 +198,16 @@ class CameraViewport extends ConsumerWidget {
                   bottom: h - maskRect.bottom + 34,
                   child: const Center(child: _PermissionNote()),
                 ),
-                // While the body is tossed, a still of the viewfinder stands in
-                // for it (see [freeze]).
-                ValueListenableBuilder<ui.Image?>(
-                  valueListenable: freeze,
-                  builder: (context, still, _) => still == null
-                      ? const SizedBox.shrink()
-                      : ClipRRect(
-                          borderRadius: radius,
-                          child: RawImage(image: still, fit: BoxFit.cover),
-                        ),
+                // While the camera is stopped (a toss, Settings, the picker) the
+                // viewfinder shuts over the still it stopped on (see [freeze],
+                // viewfinder_shut.dart), and opens again over the live picture.
+                ClipRRect(
+                  key: shutKey,
+                  borderRadius: radius,
+                  child: ValueListenableBuilder<ui.Image?>(
+                    valueListenable: freeze,
+                    builder: (context, still, _) => ViewfinderShut(mode: spec.mode, still: still),
+                  ),
                 ),
                 // "Loading film…": over the frame (outside the snapshot), only
                 // when you try to use a camera that's still loading.

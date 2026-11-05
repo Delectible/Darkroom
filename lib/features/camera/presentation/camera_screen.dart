@@ -34,6 +34,7 @@ import '../application/capture_controller.dart';
 import '../application/zoom_controller.dart';
 import 'body_swap.dart';
 import 'photo_body.dart';
+import 'viewfinder_shut.dart';
 import 'viewport.dart';
 import 'body_quality.dart';
 import 'launch_picture.dart';
@@ -55,7 +56,7 @@ class CameraScreen extends ConsumerStatefulWidget {
   ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerProviderStateMixin {
+class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProviderStateMixin {
   // ---- Film <-> Digital: toss one camera aside, grab the other -------------
   //
   // Drag the body sideways (or tap the other camera peeking in from the
@@ -105,8 +106,24 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   static double _stillRatio(BuildContext context) =>
       MediaQuery.devicePixelRatioOf(context) * (DeviceMemory.lowest ? 0.8 : 1);
 
-  static Widget _still(ui.Image? image) =>
-      image == null ? const ColoredBox(color: Color(0xFF0C0B0A)) : RawImage(image: image, fit: BoxFit.cover);
+  /// The viewfinder shuts while the camera's picture is stopped and held,
+  /// and opens when it's live again (viewfinder_shut.dart).
+  late final _shutter = AnimationController(
+    vsync: this,
+    duration: ViewfinderShutter.close,
+    reverseDuration: ViewfinderShutter.open,
+  );
+
+  void _syncShutter() {
+    final shut = CameraViewport.freeze.value != null && !CameraViewport.liveUnder.value;
+    if (shut) {
+      if (_shutter.status != AnimationStatus.forward && _shutter.status != AnimationStatus.completed) {
+        _shutter.forward();
+      }
+    } else if (_shutter.value > 0 && _shutter.status != AnimationStatus.reverse) {
+      _shutter.reverse();
+    }
+  }
 
   void _dropMoving() {
     BodyQuality.moving(false);
@@ -221,6 +238,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   @override
   void initState() {
     super.initState();
+    ViewfinderShutter.shut = _shutter;
+    CameraViewport.freeze.addListener(_syncShutter);
+    CameraViewport.liveUnder.addListener(_syncShutter);
     // The launch picture is kept up to date (see _keepPicture).
     _pictureTimer = Timer.periodic(const Duration(seconds: 2), (_) => _keepPicture());
     // Debug > Speed Tests > Run Speed Tests drives the screen through these.
@@ -263,6 +283,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   @override
   void dispose() {
     _cover?.dispose();
+    CameraViewport.freeze.removeListener(_syncShutter);
+    CameraViewport.liveUnder.removeListener(_syncShutter);
+    if (ViewfinderShutter.shut == _shutter) ViewfinderShutter.shut = kAlwaysDismissedAnimation;
+    _shutter.dispose();
     SpeedTestRun.tossDirection = null;
     SpeedTestRun.open = null;
     SpeedTestRun.fancy = null;
@@ -520,6 +544,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       // (its camera restarts for the new body).
       _stopMirror();
       CameraViewport.freeze.value = _lastFrame[from == AppMode.film ? AppMode.digital : AppMode.film];
+      // (it came in shut: it stays shut until its camera is live)
+      _shutter.value = 1;
       // Flips the mode synchronously (the save happens after), so this
       // frame already builds the new body in the arriving slot.
       unawaited(ref.read(appModeProvider.notifier).toggle());
@@ -663,6 +689,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
   /// layers (desk, 3D body, face, mask), most of a slow tablet's frame.
   /// A setting that changes the camera drops it at once, so the change shows.
   final _screenKey = GlobalKey();
+
+  /// Where the viewfinder is in [_cover]: its shutter is drawn over it.
+  Rect? _coverShut;
   int _settingsRun = 0;
   ui.Image? _cover;
 
@@ -672,6 +701,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
       final boundary = _screenKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null || !boundary.hasSize) return;
       final image = boundary.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context));
+      final vf = CameraViewport.shutKey.currentContext?.findRenderObject() as RenderBox?;
+      _coverShut = vf == null || !vf.hasSize
+          ? null
+          : MatrixUtils.transformRect(vf.getTransformTo(boundary), Offset.zero & vf.size);
       setState(() => _cover = image);
     } catch (_) {}
   }
@@ -969,13 +1002,22 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                                               if (!spec.recordsVideo) return 'shutter';
                                               return m == AppMode.film ? 'run' : 'rec';
                                             },
+                                            // (shutting as the camera stops; the
+                                            // other camera's shut, unless the live
+                                            // swipe switch is on)
                                             viewfinder: (m, live) => live
                                                 ? ValueListenableBuilder<ui.Image?>(
                                                     valueListenable: CameraViewport.freeze,
-                                                    builder: (context, still, _) =>
-                                                        _still(still ?? _lastFrame[m]),
+                                                    builder: (context, still, _) => ViewfinderShut(
+                                                      mode: m,
+                                                      still: still ?? _lastFrame[m],
+                                                    ),
                                                   )
-                                                : _still(_lastFrame[m]),
+                                                : ViewfinderShut(
+                                                    mode: m,
+                                                    still: _lastFrame[m],
+                                                    progress: CameraViewport.liveUnder.value ? 0 : 1,
+                                                  ),
                                           );
 
                                     if (!moving) {
@@ -1172,6 +1214,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with SingleTickerPr
                 if (_cover case final cover?)
                   Positioned.fill(
                     child: RawImage(image: cover, fit: BoxFit.fill, filterQuality: FilterQuality.none),
+                  ),
+                if (_cover != null && _coverShut != null)
+                  Positioned.fromRect(
+                    rect: _coverShut!,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(mode == AppMode.film ? 6 : 3),
+                      child: ValueListenableBuilder<ui.Image?>(
+                        valueListenable: CameraViewport.freeze,
+                        builder: (context, still, _) => ViewfinderShut(mode: mode, still: still),
+                      ),
+                    ),
                   ),
                 // The launch picture: the camera in your hands is a picture of
                 // itself until its 3D model is in (a second at most). Touches

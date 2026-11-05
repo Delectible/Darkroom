@@ -485,6 +485,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   every frame, all its layers. Now it's one picture of itself while the
   sheet is up (`_coverScreen`, taken as it opens: the same pixels), dropped
   at once if a setting changes the camera so the change shows.
+- [x] **61.35** → 2.0.16 · The viewfinder shuts while the camera is off
+  (swipes, Settings, the picker) instead of holding a still: film = mirror
+  up (dark from the edges, the focusing screen's etched circle left),
+  digital = LCD sleep (bigger pixels as the backlight goes). Opens over the
+  live picture when the camera's back (`viewfinder_shut.dart`; mockups of
+  six ideas, F3 and D2 picked).
 
 ## 62. Ideas (2026-11-05)
 

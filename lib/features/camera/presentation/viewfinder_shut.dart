@@ -1,0 +1,239 @@
+import 'dart:ui' as ui;
+
+import 'package:flutter/widgets.dart';
+
+import '../../../core/theme/retro_theme.dart';
+import '../../cameras/domain/camera_spec.dart';
+
+/// While the camera is off (a swipe, Settings, the picker) the viewfinder
+/// shuts instead of holding a still of itself:
+///
+/// * film: the mirror goes up. The picture darkens from the edges to the
+///   viewfinder's black, leaving the focusing screen's etched circle and
+///   split line faintly lit.
+/// * digital: the LCD sleeps. The picture breaks into ever bigger pixels
+///   as its backlight goes, down to the dark of an unlit screen.
+///
+/// Opening, over the live picture again: the darkness draws back to the
+/// edges (film) / the backlight comes on (digital).
+///
+/// Cheap: a still (while closing), a gradient and a few strokes; shut, a
+/// flat colour. The pixel steps are a handful of tiny pictures made once
+/// per still on the GPU.
+class ViewfinderShutter {
+  ViewfinderShutter._();
+
+  /// 0 = open (live), 1 = shut. Driven by the camera screen: it closes
+  /// when the camera's picture is stopped and held ([CameraViewport.freeze]
+  /// without the live picture under it) and opens when it's live again.
+  static Animation<double> shut = kAlwaysDismissedAnimation;
+
+  /// How long closing and opening take.
+  static const close = Duration(milliseconds: 320);
+  static const open = Duration(milliseconds: 280);
+}
+
+/// The viewfinder of a [mode] camera: [still] (the picture as it stopped,
+/// if any) shutting as [ViewfinderShutter.shut] says, or at a fixed
+/// [progress] (1: a camera not in hand, shut).
+class ViewfinderShut extends StatefulWidget {
+  const ViewfinderShut({super.key, required this.mode, required this.still, this.progress});
+
+  final AppMode mode;
+  final ui.Image? still;
+  final double? progress;
+
+  @override
+  State<ViewfinderShut> createState() => _ViewfinderShutState();
+}
+
+class _ViewfinderShutState extends State<ViewfinderShut> {
+  final _pixels = _PixelSteps();
+
+  @override
+  void didUpdateWidget(ViewfinderShut old) {
+    super.didUpdateWidget(old);
+    if (old.still != widget.still) _pixels.clear();
+  }
+
+  @override
+  void dispose() {
+    _pixels.clear();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = RetroPalette.ofBody(context, widget.mode);
+    return IgnorePointer(
+      child: RepaintBoundary(
+        child: CustomPaint(
+          size: Size.infinite,
+          painter: _ShutPainter(
+            film: widget.mode == AppMode.film,
+            still: widget.still,
+            fixed: widget.progress,
+            shut: ViewfinderShutter.shut,
+            screen: p.screen,
+            ink: p.screenInk,
+            pixels: _pixels,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The still at a few pixel sizes (columns across), made as needed.
+class _PixelSteps {
+  static const columns = [96, 56, 34, 22, 15];
+  final Map<int, ui.Image> _made = {};
+  ui.Image? _of;
+
+  ui.Image step(ui.Image still, int i) {
+    if (_of != still) clear();
+    _of = still;
+    return _made[i] ??= () {
+      final cols = columns[i];
+      final rows = (cols * still.height / still.width).round().clamp(1, 4096);
+      final rec = ui.PictureRecorder();
+      Canvas(rec).drawImageRect(
+        still,
+        Rect.fromLTWH(0, 0, still.width.toDouble(), still.height.toDouble()),
+        Rect.fromLTWH(0, 0, cols.toDouble(), rows.toDouble()),
+        Paint()..filterQuality = FilterQuality.medium,
+      );
+      final picture = rec.endRecording();
+      final image = picture.toImageSync(cols, rows);
+      picture.dispose();
+      return image;
+    }();
+  }
+
+  void clear() {
+    for (final i in _made.values) {
+      i.dispose();
+    }
+    _made.clear();
+    _of = null;
+  }
+}
+
+class _ShutPainter extends CustomPainter {
+  _ShutPainter({
+    required this.film,
+    required this.still,
+    required this.fixed,
+    required this.shut,
+    required this.screen,
+    required this.ink,
+    required this.pixels,
+  }) : super(repaint: fixed == null ? shut : null);
+
+  final bool film;
+  final ui.Image? still;
+  final double? fixed;
+  final Animation<double> shut;
+  final Color screen, ink;
+  final _PixelSteps pixels;
+
+  static double _c(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final raw = fixed ?? shut.value;
+    final opening = fixed == null && shut.status == AnimationStatus.reverse;
+    final p = Curves.easeInOut.transform(_c(raw));
+    final still = this.still;
+    if (p >= 1) {
+      // Shut: no picture under it to draw.
+      canvas.drawRect(rect, Paint()..color = screen.withValues(alpha: 1));
+      if (film) _marks(canvas, rect, 1);
+      if (!film) _glass(canvas, rect, 1);
+      return;
+    }
+    if (film) {
+      if (still != null) _picture(canvas, rect, still, FilterQuality.low);
+      if (p <= 0) return;
+      // The mirror going up: dark from the edges in, then all of it.
+      final reach = rect.longestSide / rect.shortestSide * 0.62;
+      final inner = (1 - p) * 0.9;
+      canvas.drawRect(
+        rect,
+        Paint()
+          ..shader = RadialGradient(
+            radius: reach,
+            colors: [
+              screen.withValues(alpha: 0),
+              screen.withValues(alpha: _c(p * 2)),
+            ],
+            stops: [inner, _c(inner + 0.45)],
+          ).createShader(rect),
+      );
+      canvas.drawRect(rect, Paint()..color = screen.withValues(alpha: _c(p * 1.2 - 0.2)));
+      _marks(canvas, rect, p);
+      return;
+    }
+    // The LCD sleeping: bigger pixels as the backlight goes (closing over
+    // the still; opening over the live picture, the backlight only).
+    if (still != null) {
+      final n = _PixelSteps.columns.length;
+      final i = opening ? -1 : ((p - 0.08) / 0.7 * n).floor();
+      if (i < 0) {
+        _picture(canvas, rect, still, FilterQuality.low);
+      } else {
+        _picture(canvas, rect, pixels.step(still, i.clamp(0, n - 1)), FilterQuality.none);
+      }
+    }
+    if (p <= 0) return;
+    // (slow at first, so the big pixels show before it goes dark)
+    canvas.drawRect(rect, Paint()..color = screen.withValues(alpha: _c(p * p * 1.3)));
+    _glass(canvas, rect, p);
+  }
+
+  static void _picture(Canvas canvas, Rect rect, ui.Image image, FilterQuality q) =>
+      paintImage(canvas: canvas, rect: rect, image: image, fit: BoxFit.cover, filterQuality: q);
+
+  /// The focusing screen's etched circle and split-image line.
+  void _marks(Canvas canvas, Rect rect, double p) {
+    final c = rect.center, s = rect.shortestSide;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..isAntiAlias = true
+      ..color = ink.withValues(alpha: 0.26 * p);
+    canvas
+      ..drawCircle(c, s * 0.17, paint)
+      ..drawCircle(c, s * 0.065, paint)
+      ..drawLine(c - Offset(s * 0.065, 0), c + Offset(s * 0.065, 0), paint);
+  }
+
+  /// An unlit LCD's glass: a faint sheen from the top left.
+  void _glass(Canvas canvas, Rect rect, double p) {
+    final a = 0.06 * _c((p - 0.5) * 2);
+    if (a <= 0) return;
+    canvas.drawRect(
+      rect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            ink.withValues(alpha: a),
+            ink.withValues(alpha: 0),
+          ],
+          stops: const [0, 0.55],
+        ).createShader(rect),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ShutPainter old) =>
+      old.film != film ||
+      old.still != still ||
+      old.fixed != fixed ||
+      old.shut != shut ||
+      old.screen != screen ||
+      old.ink != ink;
+}

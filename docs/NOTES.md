@@ -689,6 +689,9 @@ UI
   the camera screen is a picture of itself (`_coverScreen`; Offstage +
   TickerMode on the real one); a sheet over a live screen redraws it all
   each frame. Same idea would suit any panel that half-covers the camera.
+  2.0.16: the viewfinder shuts while the camera is stopped
+  (`viewfinder_shut.dart`, driven by `_shutter` from `CameraViewport.freeze`
+  without `liveUnder`): a CustomPainter over the still, no shader.
 - **Quality manager** (`core/performance/quality.dart`, 2.0.15): dials
   (`fxaa`, `noHalation`, `scale3d`, `cap60`, `lightStrap`, `slowGrain`) read
   by whole_body (edges), settings_controllers (halation, refresh rate),

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -17,7 +18,9 @@ import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
 import '../../../core/shaders/shader_library.dart';
 import '../../camera/application/camera_ui_state.dart' show PrefKeys, userNameProvider;
+import '../../camera/presentation/lens_preview.dart';
 import '../../cameras/domain/camera_catalog.dart';
+import '../../cameras/domain/camera_spec.dart';
 import '../../viewer/presentation/media_actions.dart';
 import 'instant_print.dart';
 import '../../../core/processing/instant_frame.dart';
@@ -2609,15 +2612,32 @@ double _instantDevelop(MediaItem item, double progress) =>
 /// The picture in an instant print: the finished print, or the original
 /// photo while the print is still being made (it swaps in when ready).
 Widget _instantPicture(MediaItem item, int cacheWidth) {
-  final path = item.status == MediaStatus.processing ? item.rawPath : item.thumbPath;
+  final raw = item.status == MediaStatus.processing;
+  final path = raw ? item.rawPath : item.thumbPath;
   if (path == null || item.status == MediaStatus.failed) return const SizedBox.shrink();
-  return Image.file(
+  final image = Image.file(
     File(path),
     fit: BoxFit.cover,
     cacheWidth: cacheWidth,
     gaplessPlayback: true,
     errorBuilder: (_, _, _) => const SizedBox.shrink(),
   );
+  // (the photo as taken has no lens yet: the print's lens goes over it,
+  // as the viewfinder showed it, until the finished print swaps in)
+  final lens = raw ? _lensOf(item) : LensKind.standard;
+  return lens == LensKind.standard ? image : LensFilter(lens: lens, child: image);
+}
+
+/// The lens a print was taken with (from its queued job).
+LensKind _lensOf(MediaItem item) {
+  final job = item.job;
+  if (job == null || !job.contains('"lens"')) return LensKind.standard;
+  try {
+    final name = (jsonDecode(job) as Map<String, Object?>)['lens'];
+    return LensKind.values.asNameMap()[name] ?? LensKind.standard;
+  } catch (_) {
+    return LensKind.standard;
+  }
 }
 
 /// A slow loop (0..1 over [period], round and round) moved on 30 times a

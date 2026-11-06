@@ -10,7 +10,7 @@ import '../application/lens_controller.dart';
 /// The lens on the camera, over the live viewfinder (shaders/lens.frag as an
 /// ImageFilter.shader). The standard lens: nothing, the picture as it is.
 /// Where shader filters aren't supported (Skia) only the photo shows it.
-class LensPreview extends ConsumerStatefulWidget {
+class LensPreview extends ConsumerWidget {
   const LensPreview({super.key, required this.crop, required this.child});
 
   /// The frame that's seen (the photo) in the picture: the lens sits on it.
@@ -18,10 +18,26 @@ class LensPreview extends ConsumerStatefulWidget {
   final Widget child;
 
   @override
-  ConsumerState<LensPreview> createState() => _LensPreviewState();
+  Widget build(BuildContext context, WidgetRef ref) =>
+      LensFilter(lens: ref.watch(filmLensProvider), crop: crop, child: child);
 }
 
-class _LensPreviewState extends ConsumerState<LensPreview> {
+/// [child] through [lens] (shaders/lens.frag), the lens sitting on [crop]:
+/// the viewfinder, and an instant print developing on the photo as taken.
+class LensFilter extends StatefulWidget {
+  const LensFilter({super.key, required this.lens, this.crop = full, required this.child});
+
+  static const full = UnitRect(0, 0, 1, 1);
+
+  final LensKind lens;
+  final UnitRect crop;
+  final Widget child;
+
+  @override
+  State<LensFilter> createState() => _LensFilterState();
+}
+
+class _LensFilterState extends State<LensFilter> {
   static Future<ui.FragmentProgram>? _program;
   ui.FragmentShader? _shader;
 
@@ -42,7 +58,7 @@ class _LensPreviewState extends ConsumerState<LensPreview> {
 
   @override
   Widget build(BuildContext context) {
-    final lens = ref.watch(filmLensProvider);
+    final lens = widget.lens;
     final shader = _shader;
     // (a still child either way: switching lens doesn't rebuild the picture)
     final child = KeyedSubtree(key: const ValueKey('picture'), child: widget.child);

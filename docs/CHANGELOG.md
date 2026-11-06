@@ -670,6 +670,9 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   pixel font (`DigitalKeys`): lens under the flash readout, FX top right
   (hidden while recording); the same tray of caps as film. Wide and
   fish-eye reach the ultra-wide on digital too.
+- [x] **64.27** → 2.1.7 · An instant print developing showed the photo as
+  taken, without its lens (fine once developed): the print's lens (from its
+  queued job) now goes over it, the viewfinder's shader (`LensFilter`).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

@@ -35,7 +35,7 @@ class VideoJob {
     this.grain = GrainStrength.normal,
     this.zoomTrack = const [],
     this.batteryBars = 3,
-    this.fade = false,
+    this.slow = false,
     this.lens = LensKind.standard,
   });
 
@@ -43,9 +43,9 @@ class VideoJob {
   /// strip / OSD.
   final LensKind lens;
 
-  /// Fades in from black at the start and out to it at the end (the
-  /// cine cameras' and camcorders' special).
-  final bool fade;
+  /// Slow motion (the movie cameras' special): plays at half speed, the
+  /// frames between blended, the sound stretched to match.
+  final bool slow;
 
   final String id;
   final String cameraId;
@@ -92,7 +92,7 @@ class VideoJob {
     'grain': grain.name,
     'zoomTrack': zoomTrack,
     'batteryBars': batteryBars,
-    'fade': fade,
+    'slow': slow,
     'lens': lens.name,
   };
 
@@ -112,7 +112,7 @@ class VideoJob {
     grain: GrainStrength.fromName(j['grain'] as String?),
     zoomTrack: [for (final v in (j['zoomTrack'] as List<Object?>? ?? const [])) (v! as num).toDouble()],
     batteryBars: j['batteryBars'] as int? ?? 3,
-    fade: j['fade'] as bool? ?? false,
+    slow: j['slow'] as bool? ?? false,
     lens: LensKind.values.asNameMap()[j['lens']] ?? LensKind.standard,
   );
 }
@@ -169,6 +169,9 @@ class VideoPlanner {
     Directory(job.workDir).createSync(recursive: true);
 
     final turns = (probeHeight > probeWidth) ? job.rotationTurns % 4 : 0;
+    // How long the finished take runs (SLOW: twice the shot).
+    final pace = job.slow ? Specials.slowFactor : 1.0;
+    final seconds = job.durationMs / 1000 * pace;
     final crop = CropMath.stillCrop(
       width: probeWidth,
       height: probeHeight,
@@ -244,7 +247,7 @@ class VideoPlanner {
       // four frames each), on takes long enough to be a reel.
       int? cueInput;
       final cueTimes = <(double, double)>[];
-      final secs = job.durationMs / 1000;
+      final secs = seconds;
       if (film.gate == 0 && secs >= 12) {
         const four = 4 / 24;
         cueTimes
@@ -258,6 +261,7 @@ class VideoPlanner {
       final lensInput = _inputCount(inputs);
       if (lens != null) inputs.addAll(lens.inputArgs);
       graph = VideoFilters.filmGraph(
+        slow: job.slow,
         lens: lens == null ? null : (from, to) => lens.chain(from, to, lensInput),
         film: film,
         grain: job.grain,
@@ -288,7 +292,7 @@ class VideoPlanner {
           job.workDir,
           outW,
           outH,
-          seconds: job.durationMs / 1000,
+          seconds: seconds,
           rate: look.tracking,
           seed: job.id.hashCode,
         )) {
@@ -303,7 +307,7 @@ class VideoPlanner {
           dir: job.workDir,
           style: spec.timestampStyle,
           start: DateTime.fromMillisecondsSinceEpoch(job.capturedAtMs),
-          frames: (job.durationMs / 1000).ceil() + 1,
+          frames: seconds.ceil() + 1,
           frameHeight: outH,
         );
         inputs.addAll(['-framerate', '1', '-start_number', '0', '-i', p.join(job.workDir, 'osd_%05d.png')]);
@@ -313,13 +317,10 @@ class VideoPlanner {
       final extras = <String>[];
       if (hasOsd && spec.timestampStyle == TimestampStyle.camcorderOsd) {
         var idx = nextInput + 1;
-        for (final o in CamcorderOsd.render(
-          job.workDir,
-          outW,
-          outH,
-          job.zoomTrack,
-          batteryBars: job.batteryBars,
-        )) {
+        for (final o in CamcorderOsd.render(job.workDir, outW, outH, [
+          for (var i = 0; i < job.zoomTrack.length; i++)
+            i.isEven ? job.zoomTrack[i] * pace : job.zoomTrack[i],
+        ], batteryBars: job.batteryBars)) {
           inputs.addAll(['-loop', '1', '-framerate', profile.fps, '-i', o.path]);
           extras.add(o.overlay(idx++));
         }
@@ -328,6 +329,7 @@ class VideoPlanner {
       final lensInput = _inputCount(inputs);
       if (lens != null) inputs.addAll(lens.inputArgs);
       graph = VideoFilters.graph(
+        slow: job.slow,
         lens: lens == null ? null : (from, to) => lens.chain(from, to, lensInput),
         look: look,
         crop: crop,
@@ -344,16 +346,14 @@ class VideoPlanner {
       );
     }
 
-    // The camera's FADE: in from black, out to it (picture and sound).
-    final seconds = job.durationMs / 1000;
-    final fadedGraph = job.fade ? Specials.fadeGraph(graph, seconds) : graph;
-    final audioFilter = job.fade ? Specials.fadeAudio(profile.audioFilter, seconds) : profile.audioFilter;
+    // SLOW: the sound stretched to the picture's half speed.
+    final audioFilter = job.slow ? Specials.slowAudio(profile.audioFilter) : profile.audioFilter;
     final pass1 = profile.upscale > 1 ? p.join(job.workDir, 'pass1.mp4') : job.outputPath;
     return VideoPlan(
       mainInputArgs: [
         ...inputs,
         '-filter_complex',
-        fadedGraph,
+        graph,
         '-map',
         '[vout]',
         '-map',

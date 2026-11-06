@@ -136,7 +136,7 @@ class CameraCatalog {
     pickerTag: 'MOVIE · 18 FPS',
     boxColor: 0xFF22447A,
     boxInk: 0xFFF4C542,
-    special: CameraSpecial.fade,
+    special: CameraSpecial.slow,
     lenses: _lensesMovie,
   );
 
@@ -268,7 +268,7 @@ class CameraCatalog {
     boxColor: 0xFF101010,
     boxInk: 0xFFD8B25A,
     pro: true,
-    special: CameraSpecial.fade,
+    special: CameraSpecial.slow,
     lenses: _lensesMovie,
   );
 
@@ -473,7 +473,7 @@ class CameraCatalog {
     pickerTag: 'VIDEO',
     // Tapes are captured onto floppies; copying them off takes disk swaps.
     storage: DigitalStorage.floppy,
-    special: CameraSpecial.fade,
+    special: CameraSpecial.slow,
     lenses: _lensesMovie,
   );
 
@@ -665,7 +665,7 @@ class CameraCatalog {
     zoom: ZoomSpec(max: 10, endToEnd: Duration(milliseconds: 3000)),
     pickerTag: 'VIDEO',
     pro: true,
-    special: CameraSpecial.fade,
+    special: CameraSpecial.slow,
     lenses: _lensesMovie,
   );
 

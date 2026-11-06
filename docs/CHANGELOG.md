@@ -706,6 +706,19 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   the readable-strings dump stays as a fallback). After a background crash
   on the tablet (SIGSEGV, null pointer, camera + video player open) whose
   report was cut short.
+- [x] **64.37** → 2.1.7 · SLOW replaces FADE on every movie camera: the take
+  plays at half speed (`setpts` + `framerate` blending the frames between),
+  the sound stretched (`atempo=0.5`); cue marks, OSD and zoom bar follow
+  the longer take. FADE removed.
+- [x] **64.38** → 2.1.7 · The movie lenses checked on all four video cameras
+  (FFmpeg test, Epic 70 included). On a 16:9 frame the fish-eye's circle is
+  15% wider than the short side (cropped top and bottom: a small dot in
+  black looked odd; `FISH_FILL_WIDE`, `LensRenderer.fishRadius`).
+- [ ] **64.39** Tablet / squarer screens: a bigger viewfinder. The 3D body
+  only stretches in height (body.top / mid / bot split at cutY); widening
+  the viewfinder needs a column split too (export_glb.py `split_band` in x)
+  and a re-export of both bodies in Blender, then the app stretching the
+  middle column on wide screens and moving the lower controls in.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

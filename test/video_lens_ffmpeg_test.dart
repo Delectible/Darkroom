@@ -26,10 +26,16 @@ void main() {
     }
   });
 
-  for (final camera in [CameraCatalog.super8, CameraCatalog.camcorder]) {
-    for (final lens in [LensKind.fisheye, LensKind.mist, LensKind.anamorphic]) {
+  for (final camera in [
+    CameraCatalog.super8,
+    CameraCatalog.epic70,
+    CameraCatalog.camcorder,
+    CameraCatalog.miniDv,
+  ]) {
+    for (final lens in [LensKind.standard, LensKind.fisheye, LensKind.mist, LensKind.anamorphic]) {
+      final slow = lens == LensKind.standard;
       test(
-        '${camera.id} through the ${lens.name} lens',
+        slow ? '${camera.id}: SLOW runs twice as long' : '${camera.id} through the ${lens.name} lens',
         () async {
           final dir = await Directory.systemTemp.createTemp('vlens');
           final raw = '${dir.path}/raw.mp4';
@@ -51,6 +57,7 @@ void main() {
             capturedAtMs: 0,
             durationMs: 2000,
             lens: lens,
+            slow: slow,
           );
           final plan = VideoPlanner.prepare(job, probeWidth: 480, probeHeight: 640);
           final graph = plan.mainInputArgs[plan.mainInputArgs.indexOf('-filter_complex') + 1];
@@ -67,6 +74,12 @@ void main() {
             0,
             reason: run.stderr.toString().split('\n').reversed.take(25).toList().reversed.join('\n'),
           );
+          if (slow) {
+            final probe = await Process.run(ffmpeg, ['-i', plan.pass1Path]);
+            final m = RegExp(r'Duration: (\d+):(\d+):([\d.]+)').firstMatch(probe.stderr.toString())!;
+            final secs = double.parse(m.group(3)!) + int.parse(m.group(2)!) * 60;
+            expect(secs, closeTo(4, 0.4), reason: 'a 2 s take at half speed');
+          }
           final shots = Platform.environment['SHOTS'];
           if (shots != null) {
             await Process.run(ffmpeg, [

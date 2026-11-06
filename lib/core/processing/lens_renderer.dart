@@ -142,7 +142,15 @@ class LensRenderer {
 
   // ---- the fish-eye (the same as shaders/lens.frag; its FISH_* numbers) ----
 
-  static const fishFill = 0.96, fishCap = 1.05, fishCa = 0.01;
+  static const fishFill = 0.96, fishFillWide = 1.15, fishCap = 1.05, fishCa = 0.01;
+
+  /// The circle's radius in a [w]x[h] frame: across the short side, or on a
+  /// 16:9 frame a bit more (cropped top and bottom, not a dot in black).
+  static double fishRadius(int w, int h) {
+    final mn = math.min(w, h).toDouble(), mx = math.max(w, h).toDouble();
+    return (mx > 1.7 * mn ? fishFillWide : fishFill) * 0.5 * mn;
+  }
+
   static const fishBevel = 0.93, fishJog = 0.55, fishRainbow = 0.035;
 
   /// A 180-degree circular lens (equisolid) on black, the picture bent to
@@ -151,7 +159,7 @@ class LensRenderer {
   /// rainbow just outside where light hits it.
   static void _fisheye(Uint8List src, int w, int h, int x, int y, List<double> out, List<double> tmp) {
     final mn = math.min(w, h).toDouble();
-    final rad = fishFill * 0.5 * mn;
+    final rad = fishRadius(w, h);
     final px = x + 0.5 - w / 2, py = y + 0.5 - h / 2;
     final len = math.sqrt(px * px + py * py);
     final rm = len / rad;
@@ -229,7 +237,7 @@ class LensRenderer {
   void finish(Uint8List data, int w, int h) {
     if (lens != LensKind.fisheye) return;
     final mn = math.min(w, h).toDouble();
-    final rad = fishFill * 0.5 * mn;
+    final rad = fishRadius(w, h);
     final inner = rad - 0.004 * mn; // (inside this, the picture as developed)
     final tmp = List<double>.filled(3, 0), out = List<double>.filled(3, 0);
     for (var y = 0; y < h; y++) {

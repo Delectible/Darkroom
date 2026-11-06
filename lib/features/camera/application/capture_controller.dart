@@ -122,7 +122,7 @@ class CaptureController extends Notifier<CaptureState> {
       lens: ref.read(filmLensProvider),
       leak: spec.special == CameraSpecial.lightLeak && special > 0,
       colorFx: ref.read(activeColorFxProvider),
-      fade: spec.special == CameraSpecial.fade && special > 0,
+      slow: spec.special == CameraSpecial.slow && special > 0,
       // Gravity, not c.value.deviceOrientation: with the activity locked to
       // portrait the plugin keeps reporting portraitUp.
       rotationTurns: rotationTurnsFor(

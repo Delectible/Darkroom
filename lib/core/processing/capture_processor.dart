@@ -35,14 +35,14 @@ class CaptureContext {
     this.lens = LensKind.standard,
     this.leak = false,
     this.colorFx = ColorFx.none,
-    this.fade = false,
+    this.slow = false,
   });
 
   /// The camera's special at the shutter: a light leak (stills), the
-  /// colour effect (digital stills), fades (video).
+  /// colour effect (digital stills), slow motion (video).
   final bool leak;
   final ColorFx colorFx;
-  final bool fade;
+  final bool slow;
 
   /// Exposure compensation at the shutter (stops).
   final double exposureComp;
@@ -260,7 +260,7 @@ class CaptureProcessor {
       grain: ctx.grain,
       zoomTrack: zoomTrack,
       batteryBars: batteryBars,
-      fade: ctx.fade,
+      slow: ctx.slow,
       lens: ctx.lens,
     );
     final repo = _repoFor(spec);

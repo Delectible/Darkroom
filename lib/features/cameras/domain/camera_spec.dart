@@ -150,8 +150,9 @@ enum CameraSpecial {
   /// The shutter fires 10 s after it's pressed (instant).
   selfTimer('SELF', 'Self-timer', ['SELF', 'SELF']),
 
-  /// Takes fade in from black and out to it (cine, camcorders).
-  fade('FADE', 'Fade', ['FADE', 'FADE']),
+  /// Slow motion: the take plays at half speed, the frames between blended
+  /// (cine, camcorders).
+  slow('SLOW', 'Slow motion', ['SLOW', 'SLOW']),
 
   /// The digital cameras' colour modes: black & white, sepia.
   colorFx('FX', 'Colour effect', ['FX', 'B&W', 'SEPIA']);

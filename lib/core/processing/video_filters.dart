@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../../features/cameras/domain/camera_spec.dart';
 import 'cine_strip.dart';
 import 'crop_math.dart';
+import 'specials.dart';
 import 'film/film_profile.dart';
 import 'film/grain_plates.dart';
 import 'look_spec.dart';
@@ -143,19 +144,30 @@ class VideoFilters {
     return (math.max(2, w - w % 2), math.max(2, h - h % 2));
   }
 
-  static List<String> _geometry(PixelRect crop, int rotateTurns, int outW, int outH, VideoProfile profile) =>
-      [
-        'crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}',
-        ...switch (rotateTurns % 4) {
-          1 => ['transpose=1'],
-          2 => ['hflip', 'vflip'],
-          3 => ['transpose=2'],
-          _ => const <String>[],
-        },
-        'scale=$outW:$outH:flags=area',
-        'fps=${profile.fps}',
-        'setsar=1',
-      ];
+  static List<String> _geometry(
+    PixelRect crop,
+    int rotateTurns,
+    int outW,
+    int outH,
+    VideoProfile profile, {
+    bool slow = false,
+  }) => [
+    'crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}',
+    ...switch (rotateTurns % 4) {
+      1 => ['transpose=1'],
+      2 => ['hflip', 'vflip'],
+      3 => ['transpose=2'],
+      _ => const <String>[],
+    },
+    'scale=$outW:$outH:flags=area',
+    // SLOW: half speed, the frames between blended (not doubled).
+    if (slow) ...[
+      'setpts=${Specials.slowFactor}*PTS',
+      'framerate=fps=${profile.fps}',
+    ] else
+      'fps=${profile.fps}',
+    'setsar=1',
+  ];
 
   /// Digital looks. Inputs: [0:v] camera clip, [1:v] scanline PNG (VHS only,
   /// looped), [N:v] timestamp PNG sequence (if [hasOsd]). Output: [vout].
@@ -173,8 +185,9 @@ class VideoFilters {
     List<String> extraOverlays = const [],
     List<String> tapeOverlays = const [],
     String Function(String from, String to)? lens,
+    bool slow = false,
   }) {
-    final chain = _geometry(crop, rotateTurns, outW, outH, profile);
+    final chain = _geometry(crop, rotateTurns, outW, outH, profile, slow: slow);
 
     switch (look.kind) {
       case ShaderKind.ccd || ShaderKind.film:
@@ -274,6 +287,7 @@ class VideoFilters {
     List<(double, double)> cueTimes = const [],
     bool stripPortrait = false,
     String Function(String from, String to)? lens,
+    bool slow = false,
   }) {
     // [canvasW] x [canvasH]: the strip, holes on the left. A portrait frame
     // goes in on its side ([stripPortrait]) and the strip is turned back up.
@@ -307,7 +321,7 @@ class VideoFilters {
         ? math.max(0.6, outH / 720 * 1.1)
         : math.max(0.6, form.clouds[1] * plateScale);
     final base = [
-      ..._geometry(crop, rotateTurns, outW, outH, profile),
+      ..._geometry(crop, rotateTurns, outW, outH, profile, slow: slow),
       // Super 8 is soft: a small lens on a 5.8 mm frame.
       'gblur=sigma=${_f(softness)}',
       'format=gbrp',

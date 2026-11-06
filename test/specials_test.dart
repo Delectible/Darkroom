@@ -6,10 +6,10 @@ import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('every camera has a special; the cine cameras and camcorders fade', () {
+  test('every camera has a special; the movie cameras slow motion', () {
     for (final c in [...CameraCatalog.film, ...CameraCatalog.digital]) {
       expect(c.special, isNotNull, reason: c.id);
-      if (c.recordsVideo) expect(c.special, CameraSpecial.fade, reason: c.id);
+      if (c.recordsVideo) expect(c.special, CameraSpecial.slow, reason: c.id);
     }
   });
 
@@ -40,14 +40,9 @@ void main() {
     expect(s[1], greaterThan(s[2]));
   });
 
-  test('fade: picture and sound fade in at the start and out at the end', () {
-    final g = Specials.fadeGraph('[0:v]scale=640:480,format=yuv420p[vout]', 10);
-    expect(g, contains('fade=t=in:st=0:d=0.80'));
-    expect(g, contains('fade=t=out:st=9.20:d=0.80'));
-    expect(g, endsWith('format=yuv420p[vout]'));
-    expect(Specials.fadeAudio(null, 10), 'afade=t=in:st=0:d=0.80,afade=t=out:st=9.20:d=0.80');
-    expect(Specials.fadeAudio('highpass=f=150', 10), startsWith('highpass=f=150,afade'));
-    // a short take fades for a third of it at most
-    expect(Specials.fadeGraph('format=yuv420p[vout]', 1.5), contains('d=0.50'));
+  test('slow motion: the sound stretched to match, after the camera sound', () {
+    expect(Specials.slowFactor, 2);
+    expect(Specials.slowAudio(null), 'atempo=0.5');
+    expect(Specials.slowAudio('highpass=f=150'), 'highpass=f=150,atempo=0.5');
   });
 }

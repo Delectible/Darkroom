@@ -22,6 +22,7 @@ out vec4 fragColor;
 // where the glass bevel starts and how far it jogs the picture back, and
 // the rainbow's reach outside (of the short side).
 #define FISH_FILL 0.96
+#define FISH_FILL_WIDE 1.15
 #define FISH_CAP 1.05
 #define FISH_CA 0.01
 #define FISH_BEVEL 0.93
@@ -80,7 +81,8 @@ void main() {
     // edge, light falling off to the rim, colour fringes, a thin blue
     // coating line and a faint rainbow just outside where light hits it.
     float mn = min(fs.x, fs.y);
-    float rad = FISH_FILL * 0.5 * mn;
+    // (a 16:9 frame: the circle cropped top and bottom, not a dot in black)
+    float rad = (max(fs.x, fs.y) > 1.7 * mn ? FISH_FILL_WIDE : FISH_FILL) * 0.5 * mn;
     vec2 dp = d * fs;
     float rm = length(dp) / rad;
     vec2 dir = dp / max(length(dp), 1e-4);

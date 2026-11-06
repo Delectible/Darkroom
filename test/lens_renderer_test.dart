@@ -73,6 +73,7 @@ void main() {
     // the fish-eye's numbers are the photo's
     for (final (name, v) in [
       ('FISH_FILL', LensRenderer.fishFill),
+      ('FISH_FILL_WIDE', LensRenderer.fishFillWide),
       ('FISH_CAP', LensRenderer.fishCap),
       ('FISH_CA', LensRenderer.fishCa),
       ('FISH_BEVEL', LensRenderer.fishBevel),

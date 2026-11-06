@@ -9,9 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Movie cameras get lenses: fish-eye, mist and anamorphic. New lens caps that look like the real thing. '
-      'Super 8 shoots the way you hold it, the single-use camera is fixed like the real one, ratio changes '
-      'glide, the camcorder hiss is quieter, and a video that froze after rewinding in Darkroom 98 now plays.';
+      'Movie cameras get SLOW (half-speed slow motion) and lenses: fish-eye, mist and anamorphic. New lens '
+      'caps that look like the real thing. Super 8 shoots the way you hold it, the single-use camera is fixed, '
+      'ratio changes glide, the camcorder hiss is quieter, and a stuck video in Darkroom 98 now plays.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

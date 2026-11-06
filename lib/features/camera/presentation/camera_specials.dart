@@ -75,7 +75,7 @@ class CameraSpecials {
         mode > 0
             ? 'Self-timer: the shutter fires ${CaptureController.selfTimerSeconds} s after you press it'
             : 'Self-timer off',
-      CameraSpecial.fade => mode > 0 ? 'Fade: takes fade in and out' : 'Fade off',
+      CameraSpecial.slow => mode > 0 ? 'Slow motion: takes play back at half speed' : 'Slow motion off',
       CameraSpecial.colorFx => const ['Colour', 'Black & white', 'Sepia'][mode],
       CameraSpecial.multipleExposure => '',
     });

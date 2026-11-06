@@ -53,7 +53,7 @@ class VideoLens {
     final xs = Uint8List(w * h * 2), ys = Uint8List(w * h * 2);
     final over = img.Image(width: w, height: h, numChannels: 4);
     final mn = math.min(w, h).toDouble();
-    final rad = LensRenderer.fishFill * 0.5 * mn, sh = 0.5 * mn;
+    final rad = LensRenderer.fishRadius(w, h), sh = 0.5 * mn;
     const bevel = LensRenderer.fishBevel, jog = LensRenderer.fishJog, cap = LensRenderer.fishCap;
     for (var y = 0; y < h; y++) {
       for (var x = 0; x < w; x++) {

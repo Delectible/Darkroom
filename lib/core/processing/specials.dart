@@ -86,28 +86,9 @@ class Specials {
     ],
   };
 
-  /// How long a fade takes (in and out).
-  static const fadeSeconds = 0.8;
+  /// SLOW: how much longer the take runs (half speed).
+  static const slowFactor = 2.0;
 
-  /// [graph] (ending `format=yuv420p[vout]`) fading in from black and out
-  /// to it over [seconds] of footage.
-  static String fadeGraph(String graph, double seconds) {
-    const tail = 'format=yuv420p[vout]';
-    if (!graph.endsWith(tail)) return graph;
-    return graph.substring(0, graph.length - tail.length) + _fades('fade', seconds) + tail;
-  }
-
-  /// The sound fading with the picture, after [filter] (if any).
-  static String fadeAudio(String? filter, double seconds) {
-    final f = _fades('afade', seconds);
-    final fades = f.substring(0, f.length - 1); // (no trailing comma)
-    return filter == null ? fades : '$filter,$fades';
-  }
-
-  static String _fades(String name, double seconds) {
-    final d = math.min(fadeSeconds, seconds / 3);
-    final dd = d.toStringAsFixed(2);
-    final out = math.max(0.0, seconds - d).toStringAsFixed(2);
-    return '$name=t=in:st=0:d=$dd,$name=t=out:st=$out:d=$dd,';
-  }
+  /// The sound stretched to match (pitch kept), after [filter] (if any).
+  static String slowAudio(String? filter) => filter == null ? 'atempo=0.5' : '$filter,atempo=0.5';
 }

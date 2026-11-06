@@ -9,10 +9,11 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'A more real fish-eye: a circle with a blue rim on clean black. Changing lens closes the viewfinder '
-      'for a moment and opens on the new lens, and switching film or camera does the same. The wide lens '
-      'shows only on phones with an ultra-wide camera. Star and anamorphic lenses are gone, and a fix for '
-      'a viewfinder that could stay frozen after quick swipes.';
+      'A real-looking fish-eye: a circle on clean black, the glass curling the picture at its edge, colour '
+      'fringes and a faint rainbow rim. Every camera now has its own special: light leaks on the single-use, '
+      'a self-timer on the instant, fades on the movie cameras and camcorders, and colour modes (B&W, sepia) '
+      'plus screw-on lenses on the digital cameras. Changing lens or film closes the viewfinder for a '
+      'moment and opens on the new one. Star and anamorphic lenses are gone, and a frozen viewfinder fix.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

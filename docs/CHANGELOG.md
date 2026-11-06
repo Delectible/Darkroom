@@ -585,7 +585,7 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   it (shaders/lens.frag via `LensPreview`), the photo gets it in Dart
   (`LensRenderer`, before the film look; blurs/streaks on a <=1024 px copy).
   Per camera while the app runs. Cine cameras (video): later.
-- [ ] **64.5** The same for the digital cameras.
+- [x] **64.5** → 2.1.6 · The same for the digital cameras (64.26).
 - [x] **64.8** → 2.1.4 · Zoom carries across stocks as the zoom level itself
   (not the mm), clamped to the new lens. Picker notch / SD tab removed (the
   tour explains the picker). Message box: 64 dp in from each side, at most
@@ -645,7 +645,10 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   fill it, light falling off to the rim, colour fringe, a blue coating line
   and a faint halo outside; the black is unexposed (no grain or fade after
   the film, `LensRenderer.finish`). The lens sits on the frame, not the
-  whole preview (uCrop).
+  whole preview (uCrop). Then after a second reference: the glass bevel
+  (the last 7% jogs the picture back, lines curl at the edge), a soft
+  edge, stronger fringes there, and a faint rainbow outside where the rim
+  is bright (in place of the blue halo).
 - [x] **64.21** → 2.1.6 · Star filter and anamorphic removed.
 - [x] **64.22** → 2.1.6 · Wide lens only where there's an ultra-wide (the
   only way to reach it, with the fish-eye).
@@ -655,3 +658,15 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **64.24** → 2.1.6 · Another stock / camera whose viewfinder differs
   (film <-> movie, photo <-> video): the old shape is held while it shuts,
   the new one laid out in the dark, and it opens on the new picture.
+- [x] **64.25** → 2.1.6 · Specials on every camera (`CameraSpecial`,
+  `specialProvider`, `CameraSpecials`): Single-Use LEAK (a warm light leak
+  from one edge, different each frame, before the film; `Specials`),
+  Instant SELF (self-timer: 10 s, ticking, the chip counts down, pressed
+  again it stops), Super 8 / Epic 70 / camcorders FADE (picture and sound
+  fade in and out, 0.8 s or a third of a short take).
+- [x] **64.26** → 2.1.6 · Digital stills: conversion lenses (standard,
+  wide, fish-eye, soft, swirl, tilt-shift) and FX (colour, B&W, sepia; the
+  viewfinder shows it, the photo gets it after the look). OSD keys in the
+  pixel font (`DigitalKeys`): lens under the flash readout, FX top right
+  (hidden while recording); the same tray of caps as film. Wide and
+  fish-eye reach the ultra-wide on digital too.

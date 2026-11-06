@@ -13,6 +13,7 @@ import '../application/lens_controller.dart';
 import '../application/multi_exposure_controller.dart';
 import '../application/zoom_controller.dart';
 import 'viewfinder_shut.dart';
+import 'camera_specials.dart';
 import 'viewport.dart' show CameraNote;
 
 /// The film viewfinder's controls, drawn into the viewfinder itself:
@@ -237,22 +238,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
 
   // ---- the special ----------------------------------------------------------
 
-  void _special() {
-    switch (widget.spec.special) {
-      case CameraSpecial.multipleExposure:
-        final n = ref.read(multiExposureProvider.notifier);
-        final was = ref.read(multiExposureProvider);
-        n.toggle();
-        unawaited(Haptics.lightImpact());
-        CameraNote.show(
-          was.armed
-              ? (was.holding ? 'Double exposure cancelled' : 'Multiple exposure off')
-              : 'Multiple exposure: the next two shots share a frame',
-        );
-      case null:
-        break;
-    }
-  }
+  void _special() => CameraSpecials.press(ref, widget.spec);
 
   // ---- build ----------------------------------------------------------------
 
@@ -260,7 +246,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
   Widget build(BuildContext context) {
     final z = ref.watch(zoomProvider);
     final ev = ref.watch(exposureCompProvider);
-    final me = ref.watch(multiExposureProvider);
+    final chip = CameraSpecials.chip(ref, widget.spec);
     final lens = ref.watch(filmLensProvider);
     ref.listen(multiExposureProvider, (was, now) {
       if (now.holding && !(was?.holding ?? false)) CameraNote.show('First exposure in. Now the second');
@@ -285,7 +271,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                     zoom: z,
                     special: widget.spec.special,
                     lens: widget.spec.lenses.length > 1 ? lens : null,
-                    me: me,
+                    chip: chip,
                     wide: _wide,
                     marks: _marks,
                     exposure: widget.spec.exposure,
@@ -347,7 +333,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                         child: Row(
                           children: [
                             for (final l in lensesFor(widget.spec, ref.watch(ultraWideProvider)))
-                              _LensCap(
+                              LensCap(
                                 lens: l,
                                 on: l == lens,
                                 onTap: () {
@@ -413,7 +399,7 @@ class _DialsPainter extends CustomPainter {
     required this.scaleTop,
     required this.scaleBottom,
     required this.special,
-    required this.me,
+    required this.chip,
     required this.lens,
   }) : super(repaint: repaint);
 
@@ -426,7 +412,7 @@ class _DialsPainter extends CustomPainter {
   final Animation<double> zoomLit, evLit;
   final double scaleTop, scaleBottom;
   final CameraSpecial? special;
-  final MultiExposureState me;
+  final SpecialChip chip;
 
   /// The lens on (null: the camera takes no other).
   final LensKind? lens;
@@ -611,7 +597,7 @@ class _DialsPainter extends CustomPainter {
       final unit = (w / 360).clamp(0.85, 1.4);
       final c = Offset(w - 30, 30);
       final rad = 14.5 * unit;
-      final on = special != null && me.armed;
+      final on = special != null && chip.on;
       final a = (special == null ? 0.22 : (on ? 0.95 : 0.42)) * shown;
       canvas.drawCircle(
         c,
@@ -629,11 +615,14 @@ class _DialsPainter extends CustomPainter {
           ..strokeWidth = on ? 1.8 : 1.3
           ..color = (on ? _amber : _ink).withValues(alpha: a),
       );
-      if (on && me.holding) {
+      if (on && chip.fill) {
         // the first exposure is in: the ring fills a little
         canvas.drawCircle(c, rad - 3, Paint()..color = _amber.withValues(alpha: 0.28 * shown));
       }
-      if (special != null) _label(canvas, special!.mark, c, 10.5 * unit, a, bold: true);
+      if (special != null) {
+        final t = chip.text;
+        _label(canvas, t, c, (t.length > 3 ? 8 : (t.length > 2 ? 9.5 : 10.5)) * unit, a, bold: true);
+      }
     }
 
     // ---- the exposure scale ----
@@ -702,7 +691,7 @@ class _DialsPainter extends CustomPainter {
   @override
   bool shouldRepaint(_DialsPainter old) =>
       old.zoom != zoom ||
-      old.me != me ||
+      old.chip != chip ||
       old.lens != lens ||
       old.special != special ||
       old.ev != ev ||
@@ -711,8 +700,8 @@ class _DialsPainter extends CustomPainter {
 }
 
 /// A lens cap in the tray: dark glass in a rim, its name under it.
-class _LensCap extends StatelessWidget {
-  const _LensCap({required this.lens, required this.on, required this.onTap});
+class LensCap extends StatelessWidget {
+  const LensCap({super.key, required this.lens, required this.on, required this.onTap});
 
   final LensKind lens;
   final bool on;

@@ -33,7 +33,16 @@ class CaptureContext {
     this.grain = GrainStrength.normal,
     this.exposureComp = 0,
     this.lens = LensKind.standard,
+    this.leak = false,
+    this.colorFx = ColorFx.none,
+    this.fade = false,
   });
+
+  /// The camera's special at the shutter: a light leak (stills), the
+  /// colour effect (digital stills), fades (video).
+  final bool leak;
+  final ColorFx colorFx;
+  final bool fade;
 
   /// Exposure compensation at the shutter (stops).
   final double exposureComp;
@@ -192,6 +201,8 @@ class CaptureProcessor {
       grain: ctx.grain,
       exposureComp: ctx.exposureComp,
       lens: ctx.lens,
+      leak: ctx.leak,
+      colorFx: ctx.colorFx,
       originalCopyPath: ctx.global.saveOriginalCopy
           ? p.join(paths.captureCacheDir.path, '${id}_original.jpg')
           : null,
@@ -249,6 +260,7 @@ class CaptureProcessor {
       grain: ctx.grain,
       zoomTrack: zoomTrack,
       batteryBars: batteryBars,
+      fade: ctx.fade,
     );
     final repo = _repoFor(spec);
     await repo.insertProcessing(

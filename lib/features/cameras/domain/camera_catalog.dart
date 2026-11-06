@@ -30,6 +30,16 @@ class CameraCatalog {
     LensKind.tiltShift,
     LensKind.pinhole,
   ];
+  /// The digital cameras' conversion lenses (the screw-on kind sold for
+  /// compacts and camcorders), and the effects their era liked.
+  static const _lensesDigital = [
+    LensKind.standard,
+    LensKind.wide,
+    LensKind.fisheye,
+    LensKind.soft,
+    LensKind.swirl,
+    LensKind.tiltShift,
+  ];
   static const _lensesInstant = [
     LensKind.standard,
     LensKind.wide,
@@ -122,6 +132,7 @@ class CameraCatalog {
     pickerTag: 'MOVIE · 18 FPS',
     boxColor: 0xFF22447A,
     boxInk: 0xFFF4C542,
+    special: CameraSpecial.fade,
   );
 
   static const polaroid600 = CameraSpec(
@@ -144,6 +155,7 @@ class CameraCatalog {
     pickerTag: 'INSTANT · 20 S',
     boxColor: 0xFFF7F5EF,
     boxInk: 0xFF1A1A1A,
+    special: CameraSpecial.selfTimer,
   );
 
   // --- Pro films (1.9). Artwork: placeholders until their renders are made.
@@ -227,6 +239,7 @@ class CameraCatalog {
     boxColor: 0xFF2F8F3E,
     boxInk: 0xFFF6F2E6,
     pro: true,
+    special: CameraSpecial.lightLeak,
   );
 
   static const epic70 = CameraSpec(
@@ -251,6 +264,7 @@ class CameraCatalog {
     boxColor: 0xFF101010,
     boxInk: 0xFFD8B25A,
     pro: true,
+    special: CameraSpecial.fade,
   );
 
   // --------------------------------------------------------------------------
@@ -296,6 +310,8 @@ class CameraCatalog {
     artwork: 'assets/artwork/floppy99.webp',
     photoPrefix: 'FLP0',
     zoom: ZoomSpec(max: 3),
+    lenses: _lensesDigital,
+    special: CameraSpecial.colorFx,
   );
 
   static const ccd2003 = CameraSpec(
@@ -341,6 +357,8 @@ class CameraCatalog {
     timestampStyle: TimestampStyle.ledDate,
     photoPrefix: 'DSC0',
     zoom: ZoomSpec(max: 3),
+    lenses: _lensesDigital,
+    special: CameraSpecial.colorFx,
   );
 
   static const flipPhone = CameraSpec(
@@ -390,6 +408,8 @@ class CameraCatalog {
     photoPrefix: 'IMG_',
     // Phone-camera digital zoom.
     zoom: ZoomSpec(max: 4, endToEnd: Duration(milliseconds: 1600)),
+    lenses: _lensesDigital,
+    special: CameraSpecial.colorFx,
   );
 
   static const camcorder = CameraSpec(
@@ -448,6 +468,7 @@ class CameraCatalog {
     pickerTag: 'VIDEO',
     // Tapes are captured onto floppies; copying them off takes disk swaps.
     storage: DigitalStorage.floppy,
+    special: CameraSpecial.fade,
   );
 
   // --- Pro cameras (1.9). Artwork: placeholders until their renders are made.
@@ -498,6 +519,8 @@ class CameraCatalog {
     photoPrefix: 'SNAP',
     zoom: ZoomSpec(max: 2),
     pro: true,
+    lenses: _lensesDigital,
+    special: CameraSpecial.colorFx,
   );
 
   static const dslr = CameraSpec(
@@ -538,6 +561,8 @@ class CameraCatalog {
     photoPrefix: 'IMG_',
     zoom: ZoomSpec(max: 3),
     pro: true,
+    lenses: _lensesDigital,
+    special: CameraSpecial.colorFx,
   );
 
   static const toyCam = CameraSpec(
@@ -580,6 +605,8 @@ class CameraCatalog {
     photoPrefix: 'TOY_',
     zoom: ZoomSpec(max: 2),
     pro: true,
+    lenses: _lensesDigital,
+    special: CameraSpecial.colorFx,
   );
 
   static const miniDv = CameraSpec(
@@ -632,6 +659,7 @@ class CameraCatalog {
     zoom: ZoomSpec(max: 10, endToEnd: Duration(milliseconds: 3000)),
     pickerTag: 'VIDEO',
     pro: true,
+    special: CameraSpecial.fade,
   );
 
   static const List<CameraSpec> film = [

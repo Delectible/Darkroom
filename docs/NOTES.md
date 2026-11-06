@@ -846,6 +846,13 @@ UI
   (shape, sensor mode) holds the old layout while it shuts
   (`heldLayoutProvider`) and opens on the new. `_checkStuck` puts right a
   stopped camera or a held still left behind at rest (logged "unstuck").
+- Specials (`CameraSpecial`): one per camera, the film viewfinder's
+  top-right chip / the digital OSD's key (`CameraSpecials.press/chip`).
+  ME has its own controller; the rest step `specialProvider` (per camera,
+  0 = off). LEAK and FX change the photo (`Specials`, PhotoJob.leak /
+  colorFx), FADE the video graph (VideoJob.fade), SELF the shutter
+  (`CaptureController`, `countdown`). Digital cameras get lenses too
+  (`DigitalKeys`); cine cameras none yet.
   While the camera is closed the viewport keeps the last stream's aspect
   (`_lastPreviewAspect`), so the frozen still never squashes.
 - App icon shortcuts (`core/device/app_shortcuts.dart`, quick_actions):

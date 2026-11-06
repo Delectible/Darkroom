@@ -25,11 +25,14 @@ import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../../core/utils/pixel_font.dart';
 import '../../cameras/domain/camera_spec.dart';
+import '../../../core/processing/specials.dart';
 import '../application/preview_probe.dart';
+import '../application/special_controller.dart';
 import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
 import '../application/zoom_controller.dart';
+import 'digital_keys.dart';
 import 'film_dials.dart';
 import 'lens_preview.dart';
 import 'viewfinder_shut.dart';
@@ -185,17 +188,19 @@ class CameraViewport extends ConsumerWidget {
                                       ? _FocusablePreview(
                                           film: spec.mode == AppMode.film,
                                           controller: controller!,
-                                          child: LensPreview(
-                                            crop: mask,
-                                            child: LiveLookPreview(
-                                              spec: spec,
-                                              grain: local.grain,
+                                          child: _ColorFx(
+                                            child: LensPreview(
                                               crop: mask,
-                                              canvas: strip,
-                                              turns: turns,
-                                              spin: spin,
-                                              spinScale: spinScale,
-                                              child: _RotationCorrectedPreview(controller: controller),
+                                              child: LiveLookPreview(
+                                                spec: spec,
+                                                grain: local.grain,
+                                                crop: mask,
+                                                canvas: strip,
+                                                turns: turns,
+                                                spin: spin,
+                                                spinScale: spinScale,
+                                                child: _RotationCorrectedPreview(controller: controller),
+                                              ),
                                             ),
                                           ),
                                         )
@@ -253,10 +258,20 @@ class CameraViewport extends ConsumerWidget {
                 ),
                 // Film: the zoom ring and exposure scale, in the viewfinder
                 // (outside the snapshot, over the shutter).
-                if (spec.mode == AppMode.film && (spec.zoom != null || spec.exposure != null))
+                if (spec.mode == AppMode.film &&
+                    (spec.zoom != null ||
+                        spec.exposure != null ||
+                        spec.special != null ||
+                        spec.lenses.length > 1))
                   Positioned.fromRect(
                     rect: maskRect,
                     child: FilmDials(key: ValueKey(spec.id), spec: spec),
+                  ),
+                // Digital: the OSD's lens and FX keys.
+                if (spec.mode == AppMode.digital && (spec.special != null || spec.lenses.length > 1))
+                  Positioned.fromRect(
+                    rect: maskRect,
+                    child: DigitalKeys(key: ValueKey(spec.id), spec: spec),
                   ),
                 // "Loading film…": over the frame (outside the snapshot), only
                 // when you try to use a camera that's still loading.
@@ -389,6 +404,26 @@ class _StripTurnState extends State<_StripTurn> with SingleTickerProviderStateMi
 /// flip the box to landscape, which would squash the image in a UI that does
 /// not rotate. iOS needs nothing: capture orientation is locked to portrait,
 /// so its preview buffer stays portrait.
+/// The digital cameras' colour mode (FX), over the viewfinder as it will be
+/// in the photo (Specials.colorFx).
+class _ColorFx extends ConsumerWidget {
+  const _ColorFx({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final matrix = Specials.colorMatrix(ref.watch(activeColorFxProvider));
+    // (one widget either way: switching the mode doesn't rebuild the picture)
+    return ColorFiltered(
+      colorFilter: matrix == null
+          ? const ColorFilter.mode(Color(0x00000000), BlendMode.dst)
+          : ColorFilter.matrix(matrix),
+      child: child,
+    );
+  }
+}
+
 class _RotationCorrectedPreview extends StatelessWidget {
   const _RotationCorrectedPreview({required this.controller});
 

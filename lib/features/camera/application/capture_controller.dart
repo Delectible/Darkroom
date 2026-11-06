@@ -19,6 +19,7 @@ import 'camera_session_controller.dart';
 import 'exposure_controller.dart';
 import 'lens_controller.dart';
 import 'multi_exposure_controller.dart';
+import 'special_controller.dart';
 import 'camera_ui_state.dart';
 import 'lab_note.dart';
 import 'zoom_controller.dart';
@@ -33,7 +34,11 @@ class CaptureState {
     this.shutterCount = 0,
     this.flashFired = false,
     this.message,
+    this.countdown,
   });
+
+  /// The self-timer's seconds to go (null: not running).
+  final int? countdown;
 
   /// A still is between shutter press and the file being handed off.
   final bool busy;
@@ -54,12 +59,15 @@ class CaptureState {
     int? shutterCount,
     bool? flashFired,
     String? message,
+    int? countdown,
+    bool clearCountdown = false,
   }) => CaptureState(
     busy: busy ?? this.busy,
     recordingSince: clearRecording ? null : (recordingSince ?? this.recordingSince),
     shutterCount: shutterCount ?? this.shutterCount,
     flashFired: flashFired ?? this.flashFired,
     message: message,
+    countdown: clearCountdown ? null : (countdown ?? this.countdown),
   );
 }
 
@@ -88,8 +96,11 @@ class CaptureController extends Notifier<CaptureState> {
     final session = ref.read(cameraSessionProvider.notifier);
     session.beforeRelease = _finaliseRecordingOn;
     ref.listen<ZoomState>(zoomProvider, (_, z) => _recordZoom(z));
+    // (another camera: its timer stops)
+    ref.listen(activeSpecProvider, (_, _) => _cancelTimer());
     ref.onDispose(() {
       _maxLengthTimer?.cancel();
+      _selfTimer?.cancel();
       session.beforeRelease = null;
     });
     return const CaptureState();
@@ -98,6 +109,7 @@ class CaptureController extends Notifier<CaptureState> {
   CaptureContext _context(CameraController c) {
     final spec = ref.read(activeSpecProvider);
     final local = ref.read(activeCameraSettingsProvider);
+    final special = ref.read(activeSpecialModeProvider);
     return CaptureContext(
       spec: spec,
       aspect: spec.aspectLocked ? spec.defaultAspect : local.aspect,
@@ -108,6 +120,9 @@ class CaptureController extends Notifier<CaptureState> {
       grain: local.grain,
       exposureComp: spec.exposure == null ? 0 : ref.read(exposureCompProvider),
       lens: ref.read(filmLensProvider),
+      leak: spec.special == CameraSpecial.lightLeak && special > 0,
+      colorFx: ref.read(activeColorFxProvider),
+      fade: spec.special == CameraSpecial.fade && special > 0,
       // Gravity, not c.value.deviceOrientation: with the activity locked to
       // portrait the plugin keeps reporting portraitUp.
       rotationTurns: rotationTurnsFor(
@@ -142,7 +157,46 @@ class CaptureController extends Notifier<CaptureState> {
   /// The one shutter action: the camera style decides the medium.
   Future<void> shutter() => ref.read(activeSpecProvider).recordsVideo ? toggleRecording() : takePhoto();
 
-  Future<void> takePhoto() async {
+  /// The self-timer (instant's special): the press starts 10 s, ticking
+  /// each second; pressed again, it stops.
+  Timer? _selfTimer;
+  static const selfTimerSeconds = 10;
+
+  bool _startTimer() {
+    final spec = ref.read(activeSpecProvider);
+    if (spec.special != CameraSpecial.selfTimer || ref.read(activeSpecialModeProvider) == 0) return false;
+    if (state.countdown != null) {
+      _cancelTimer();
+      unawaited(Haptics.lightImpact());
+      return true;
+    }
+    if (_ready == null || state.busy) return true;
+    unawaited(Haptics.mediumImpact());
+    state = state.copyWith(countdown: selfTimerSeconds);
+    _selfTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      final left = (state.countdown ?? 1) - 1;
+      if (left <= 0) {
+        _cancelTimer();
+        unawaited(takePhoto(fromTimer: true));
+        return;
+      }
+      // (the last three quicker, like the lamp's blink)
+      unawaited(left <= 3 ? Haptics.mediumImpact() : Haptics.selectionClick());
+      state = state.copyWith(countdown: left);
+    });
+    return true;
+  }
+
+  void cancelTimer() => _cancelTimer();
+
+  void _cancelTimer() {
+    _selfTimer?.cancel();
+    _selfTimer = null;
+    if (state.countdown != null) state = state.copyWith(clearCountdown: true);
+  }
+
+  Future<void> takePhoto({bool fromTimer = false}) async {
+    if (!fromTimer && _startTimer()) return;
     final c = _ready;
     if (c == null || state.busy || c.value.isTakingPicture) return;
     if (ref.read(activeSpecProvider).recordsVideo) return;

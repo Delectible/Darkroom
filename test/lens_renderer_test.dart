@@ -56,9 +56,9 @@ void main() {
     fish.finish(data, w, h);
     expect(at(2, 2), 0);
     expect(at(w - 3, h - 3), 0);
-    // just outside the rim along the short side: a faint blue halo
-    final i = ((h ~/ 2) * w + (w ~/ 2 + (0.48 * h).round() + 1)) * 3;
-    expect(data[i + 2], greaterThan(data[i]));
+    // the outside stays dark (a faint rainbow at most)
+    final i = ((h ~/ 2) * w + (w ~/ 2 + (0.48 * h).round() + 6)) * 3;
+    expect(data[i] + data[i + 1] + data[i + 2], lessThan(120));
     if (shots != null) {
       final out = img.Image.fromBytes(width: w, height: h, bytes: data.buffer, numChannels: 3);
       File('$shots/lens_fisheye_finished.jpg').writeAsBytesSync(img.encodeJpg(out, quality: 92));
@@ -75,7 +75,9 @@ void main() {
       ('FISH_FILL', LensRenderer.fishFill),
       ('FISH_CAP', LensRenderer.fishCap),
       ('FISH_CA', LensRenderer.fishCa),
-      ('FISH_HALO', LensRenderer.fishHalo),
+      ('FISH_BEVEL', LensRenderer.fishBevel),
+      ('FISH_JOG', LensRenderer.fishJog),
+      ('FISH_RAINBOW', LensRenderer.fishRainbow),
     ]) {
       expect(src, contains('#define $name $v'), reason: name);
     }

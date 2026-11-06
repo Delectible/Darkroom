@@ -7,6 +7,9 @@ import 'package:darkroom/features/camera/application/lens_controller.dart';
 import 'package:darkroom/features/camera/application/multi_exposure_controller.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:darkroom/features/camera/application/zoom_controller.dart';
+import 'package:darkroom/features/camera/application/capture_controller.dart';
+import 'package:darkroom/features/camera/application/special_controller.dart';
+import 'package:darkroom/features/camera/presentation/digital_keys.dart';
 import 'package:darkroom/features/camera/presentation/film_dials.dart';
 import 'package:darkroom/features/cameras/domain/camera_catalog.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +43,11 @@ class _Lens extends FilmLensController {
 
   @override
   void set(LensKind lens) => state = lens;
+}
+
+class _Capture extends CaptureController {
+  @override
+  CaptureState build() => const CaptureState();
 }
 
 class _Ev extends ExposureController {
@@ -165,5 +173,65 @@ void main() {
     // both lights are in it
     expect(p.r, greaterThan(150));
     expect(p.b, greaterThan(100));
+  });
+
+  testWidgets('digital: the FX key steps colour, B&W, sepia; the lens key opens the tray', (tester) async {
+    tester.view.physicalSize = const Size(1080, 1440);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+    final key = GlobalKey();
+    final spec = CameraCatalog.byId('ccd2003');
+    final container = ProviderContainer(
+      overrides: [
+        filmLensProvider.overrideWith(_Lens.new),
+        captureControllerProvider.overrideWith(_Capture.new),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp(
+          home: RepaintBoundary(
+            key: key,
+            child: ColoredBox(
+              color: const Color(0xFF3B4A3A),
+              child: DigitalKeys(spec: spec),
+            ),
+          ),
+        ),
+      ),
+    );
+    Future<void> shoot(String name) async {
+      expect(tester.takeException(), isNull);
+      if (shots == null) return;
+      final image = await tester.runAsync(
+        () => (key.currentContext!.findRenderObject()! as RenderRepaintBoundary).toImage(pixelRatio: 2),
+      );
+      final bytes = await tester.runAsync(() => image!.toByteData(format: ui.ImageByteFormat.png));
+      File('$shots/digital_keys_$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());
+    }
+
+    await tester.pump();
+    await shoot('rest');
+    final fx = find.bySemanticsLabel('Colour effect');
+    await tester.tap(fx);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(container.read(specialProvider)[spec.id], 1);
+    await shoot('mono');
+    await tester.tap(fx);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(container.read(specialProvider)[spec.id], 2);
+    await tester.tap(fx);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(container.read(specialProvider)[spec.id], 0);
+    await tester.tap(find.bySemanticsLabel('Standard lens'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await shoot('tray');
+    await tester.tap(find.text('FISH'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(container.read(filmLensProvider), LensKind.fisheye);
+    await tester.pump(const Duration(seconds: 3));
   });
 }

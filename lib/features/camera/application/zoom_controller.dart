@@ -83,7 +83,10 @@ class ZoomController extends Notifier<ZoomState> {
           c.description.lensDirection == CameraLensDirection.back) {
         ref.read(ultraWideProvider.notifier).set(hwMin < 1);
       }
-      final widest = zoom?.wideMm != null && _wantsWidest(ref.read(filmLensProvider)) && hwMin < 1;
+      final widest =
+          c.description.lensDirection == CameraLensDirection.back &&
+          _wantsWidest(ref.read(filmLensProvider)) &&
+          hwMin < 1;
       final lo = widest ? hwMin : math.max(1.0, hwMin);
       // Film bodies (no ZoomSpec) are fixed at 1x, even if the session was
       // left zoomed by a digital body that shared it.
@@ -115,15 +118,17 @@ class ZoomController extends Notifier<ZoomState> {
     final min = _hwMin;
     final c = _controller;
     if (min == null || min >= 1 || c == null || !c.value.isInitialized) return;
-    if (ref.read(activeSpecProvider).zoom?.wideMm == null) return;
+    if (c.description.lensDirection != CameraLensDirection.back) return;
+    // (a camera without a zoom stays fixed: at the ultra-wide, or at 1x)
+    final fixed = ref.read(activeSpecProvider).zoom == null;
     final wide = _wantsWidest(lens);
     if (wide && state.min > min) {
       _beforeWide = state.level;
-      state = state.copyWith(min: min, level: min, changedAt: DateTime.now());
+      state = state.copyWith(min: min, level: min, max: fixed ? min : null, changedAt: DateTime.now());
     } else if (!wide && state.min < 1) {
-      final back = (_beforeWide ?? 1.0).clamp(1.0, state.max);
+      final back = (_beforeWide ?? 1.0).clamp(1.0, fixed ? 1.0 : state.max);
       _beforeWide = null;
-      state = state.copyWith(min: 1, level: back, changedAt: DateTime.now());
+      state = state.copyWith(min: 1, level: back, max: fixed ? 1 : null, changedAt: DateTime.now());
     } else {
       return;
     }

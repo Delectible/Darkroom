@@ -131,16 +131,38 @@ enum LensKind {
 }
 
 /// A camera's one special, on the button that changes per camera (film:
-/// the chip in the viewfinder's top-right corner). None: a blank chip.
+/// the chip in the viewfinder's top-right corner; digital: the OSD's FX
+/// key). Tapping it steps through its [labels] (the first is off).
 enum CameraSpecial {
   /// The next shot lands on the same frame as this one (35 mm stills).
-  multipleExposure('ME');
+  multipleExposure('ME', 'Multiple exposure', ['ME', 'ME']),
 
-  const CameraSpecial(this.mark);
+  /// Light gets in at the back: a warm leak across each frame (single-use).
+  lightLeak('LEAK', 'Light leak', ['LEAK', 'LEAK']),
 
-  /// What the chip shows.
+  /// The shutter fires 10 s after it's pressed (instant).
+  selfTimer('SELF', 'Self-timer', ['SELF', 'SELF']),
+
+  /// Takes fade in from black and out to it (cine, camcorders).
+  fade('FADE', 'Fade', ['FADE', 'FADE']),
+
+  /// The digital cameras' colour modes: black & white, sepia.
+  colorFx('FX', 'Colour effect', ['FX', 'B&W', 'SEPIA']);
+
+  const CameraSpecial(this.mark, this.label, this.labels);
+
+  /// What the chip shows at rest.
   final String mark;
+  final String label;
+
+  /// What it shows in each of its modes (0: off).
+  final List<String> labels;
+
+  int get modes => labels.length;
 }
+
+/// The colour effect's modes ([CameraSpecial.colorFx]).
+enum ColorFx { none, mono, sepia }
 
 class CameraSpec {
   const CameraSpec({

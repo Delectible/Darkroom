@@ -60,7 +60,8 @@ class FilmProcess {
 
   /// Stops under for a scene at [sceneEv] (EV at ISO 100); 0 if it's fine,
   /// at most [maxUnder].
-  double underFor(double sceneEv) => (darkLimit - math.log(iso / 100) / math.ln2 - sceneEv).clamp(0.0, maxUnder);
+  double underFor(double sceneEv) =>
+      (darkLimit - math.log(iso / 100) / math.ln2 - sceneEv).clamp(0.0, maxUnder);
 
   /// Most stops under a frame can come out (3: past that the lab couldn't
   /// print it anyway). Lower for a wide-latitude film a minilab printed

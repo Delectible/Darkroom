@@ -12,6 +12,7 @@ import 'film/film_profile.dart';
 import 'film/film_process.dart';
 import 'film/film_renderer.dart';
 import 'lens_renderer.dart';
+import 'specials.dart';
 import 'look_renderer.dart';
 import 'look_spec.dart';
 import 'taken_date.dart';
@@ -40,10 +41,18 @@ class PhotoJob {
     this.grain = GrainStrength.normal,
     this.exposureComp = 0,
     this.lens = LensKind.standard,
+    this.leak = false,
+    this.colorFx = ColorFx.none,
   });
 
-  /// The lens on the camera (film): drawn in before the film's look.
+  /// The lens on the camera: drawn in before the film's look.
   final LensKind lens;
+
+  /// A light leak across the frame (the single-use's special), before the film.
+  final bool leak;
+
+  /// The digital cameras' colour mode, after their look.
+  final ColorFx colorFx;
 
   /// Exposure compensation at the shutter (stops): the phone exposed the
   /// shot this much brighter, so the scene was this much darker than the
@@ -94,6 +103,8 @@ class PhotoJob {
     'grain': grain.name,
     'exposureComp': exposureComp,
     'lens': lens.name,
+    'leak': leak,
+    'colorFx': colorFx.name,
   };
 
   factory PhotoJob.fromJson(Map<String, Object?> j) => PhotoJob(
@@ -112,6 +123,8 @@ class PhotoJob {
     grain: GrainStrength.fromName(j['grain'] as String?),
     exposureComp: (j['exposureComp'] as num?)?.toDouble() ?? 0,
     lens: LensKind.values.asNameMap()[j['lens']] ?? LensKind.standard,
+    leak: j['leak'] as bool? ?? false,
+    colorFx: ColorFx.values.asNameMap()[j['colorFx']] ?? ColorFx.none,
   );
 }
 
@@ -212,6 +225,8 @@ class PhotoPipeline {
     var data = image.toUint8List();
     // the lens first: it's in front of the film
     LensRenderer(job.lens).render(data, w, h);
+    // light getting in at the back, onto the film
+    if (job.leak) Specials.lightLeak(data, w, h, seed: job.seed);
     final flashFired = switch (job.flash) {
       FlashSetting.on => true,
       FlashSetting.off => false,
@@ -254,6 +269,7 @@ class PhotoPipeline {
 
     // (the fish-eye's black stays unexposed: no grain on it)
     LensRenderer(job.lens).finish(data, w, h);
+    Specials.colorFx(data, job.colorFx);
 
     if (job.timestamp && spec.timestampStyle != TimestampStyle.none) {
       _drawTimestamp(data, w, h, spec.timestampStyle, DateTime.fromMillisecondsSinceEpoch(job.capturedAtMs));

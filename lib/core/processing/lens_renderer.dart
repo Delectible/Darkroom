@@ -126,11 +126,13 @@ class LensRenderer {
 
   // ---- the fish-eye (the same as shaders/lens.frag; its FISH_* numbers) ----
 
-  static const fishFill = 0.96, fishCap = 1.05, fishCa = 0.010, fishHalo = 0.0035;
+  static const fishFill = 0.96, fishCap = 1.05, fishCa = 0.01;
+  static const fishBevel = 0.93, fishJog = 0.55, fishRainbow = 0.035;
 
   /// A 180-degree circular lens (equisolid) on black, the picture bent to
-  /// fill it: light falling off to the rim, a blue coating line at the edge
-  /// and a faint halo just outside it.
+  /// fill it: its glass bevel refracting a band at the edge, light falling
+  /// off to the rim, colour fringes, a thin blue coating line and a faint
+  /// rainbow just outside where light hits it.
   static void _fisheye(Uint8List src, int w, int h, int x, int y, List<double> out, List<double> tmp) {
     final mn = math.min(w, h).toDouble();
     final rad = fishFill * 0.5 * mn;
@@ -139,11 +141,15 @@ class LensRenderer {
     final rm = len / rad;
     final dx = len > 1e-4 ? px / len : 0.0, dy = len > 1e-4 ? py / len : 0.0;
     final sh = 0.5 * mn;
-    final edge = ((1 - rm) * rad / 1.2 + 0.5).clamp(0.0, 1.0);
+    final edge = _fishEdge(rm, rad, mn);
     if (edge > 0) {
-      final th = 2 * math.asin(math.min(rm, 1.0) * 0.7071068);
+      final r1 = math.min(rm, 1.0);
+      final b = ((r1 - fishBevel) / (1 - fishBevel)).clamp(0.0, 1.0);
+      final sb = b * b * (3 - 2 * b);
+      final rq = r1 - fishJog * (1 - fishBevel) * sb;
+      final th = 2 * math.asin(rq * 0.7071068);
       final rs = math.tan(th * fishCap / 1.5707963) / math.tan(fishCap);
-      final lat = fishCa * rm * rm;
+      final lat = fishCa * rm * rm + 0.012 * sb;
       final ax = dx * rs * sh / w, ay = dy * rs * sh / h;
       _sample(src, w, h, 0.5 + ax * (1 - lat), 0.5 + ay * (1 - lat), tmp);
       final red = tmp[0];
@@ -152,13 +158,12 @@ class LensRenderer {
       _sample(src, w, h, 0.5 + ax, 0.5 + ay, out);
       out[0] = red;
       out[2] = blue;
-      final r1 = math.min(rm, 1.0);
-      final f = ((r1 - 0.88) / 0.12).clamp(0.0, 1.0);
-      _scale(out, (1 - 0.22 * math.pow(r1, 4)) * (1 - 0.45 * f * f));
-      final ring = math.pow(((r1 - 0.972) / 0.028).clamp(0.0, 1.0), 1.3).toDouble();
+      final f = ((r1 - 0.86) / 0.14).clamp(0.0, 1.0);
+      _scale(out, (1 - 0.22 * math.pow(r1, 4)) * (1 - 0.5 * f * f));
+      final ring = math.pow(((r1 - 0.982) / 0.018).clamp(0.0, 1.0), 1.5).toDouble();
       if (ring > 0) {
         final l = _luma(out);
-        const k = [0.35, 0.60, 1.55], add = [0.01, 0.04, 0.14];
+        const k = [0.30, 0.50, 1.25], add = [0.01, 0.03, 0.10];
         for (var c = 0; c < 3; c++) {
           out[c] += (l * k[c] + add[c] - out[c]) * ring;
         }
@@ -171,7 +176,10 @@ class LensRenderer {
     if (edge < 1) _addGlow(src, w, h, dx, dy, rm, rad, mn, 0.985 * sh, edge, out, tmp);
   }
 
-  /// Just outside the rim: a faint blue halo, from the light at the rim.
+  static double _fishEdge(double rm, double rad, double mn) =>
+      ((1 - rm) * rad / (0.004 * mn) + 0.5).clamp(0.0, 1.0);
+
+  /// Just outside the rim: a faint rainbow, from the light at the rim.
   static void _addGlow(
     Uint8List s,
     int w,
@@ -186,14 +194,17 @@ class LensRenderer {
     List<double> out,
     List<double> tmp,
   ) {
-    final o = (rm - 1) * rad;
-    if (o <= -0.5) return;
+    final o = (rm - 1) * rad / (fishRainbow * mn);
+    if (o <= -0.2) return;
+    final band = math.exp(-math.pow((o - 0.45) / 0.32, 2));
+    if (band < 0.002) return;
     _sample(s, w, h, 0.5 + dx * rimAt / w, 0.5 + dy * rimAt / h, tmp);
-    final halo = math.exp(-math.max(o, 0.0) / (fishHalo * mn));
-    final g = (0.15 + 0.7 * _luma(tmp)) * halo * 0.7 * (1 - edge);
-    out[0] += 0.12 * g;
-    out[1] += 0.25 * g;
-    out[2] += 0.75 * g;
+    final l = _luma(tmp);
+    final g = band * (0.02 + 0.6 * l * l * l) * 0.8 * (1 - edge);
+    final t = o.clamp(0.0, 1.0);
+    out[0] += (1.5 - (t - 1.0).abs() * 3.0).clamp(0.0, 1.0) * g;
+    out[1] += (1.5 - (t - 0.62).abs() * 3.4).clamp(0.0, 1.0) * g;
+    out[2] += (1.5 - (t - 0.22).abs() * 3.4).clamp(0.0, 1.0) * g;
   }
 
   /// After the film's look: the fish-eye's black is film that never saw
@@ -203,7 +214,7 @@ class LensRenderer {
     if (lens != LensKind.fisheye) return;
     final mn = math.min(w, h).toDouble();
     final rad = fishFill * 0.5 * mn;
-    final inner = rad - 1.5; // (inside this, the picture as developed)
+    final inner = rad - 0.004 * mn; // (inside this, the picture as developed)
     final tmp = List<double>.filled(3, 0), out = List<double>.filled(3, 0);
     for (var y = 0; y < h; y++) {
       final py = y + 0.5 - h / 2;
@@ -213,7 +224,7 @@ class LensRenderer {
         if (len2 < inner * inner) continue;
         final len = math.sqrt(len2);
         final rm = len / rad;
-        final edge = ((1 - rm) * rad / 1.2 + 0.5).clamp(0.0, 1.0);
+        final edge = _fishEdge(rm, rad, mn);
         final i = (y * w + x) * 3;
         final dx = px / len, dy = py / len;
         for (var c = 0; c < 3; c++) {

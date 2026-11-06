@@ -14,6 +14,7 @@ import 'film/film_lut.dart';
 import 'film/film_profile.dart';
 import 'film/grain_plates.dart';
 import 'look_spec.dart';
+import 'specials.dart';
 import 'video_filters.dart';
 
 class VideoJob {
@@ -33,7 +34,12 @@ class VideoJob {
     this.grain = GrainStrength.normal,
     this.zoomTrack = const [],
     this.batteryBars = 3,
+    this.fade = false,
   });
+
+  /// Fades in from black at the start and out to it at the end (the
+  /// cine cameras' and camcorders' special).
+  final bool fade;
 
   final String id;
   final String cameraId;
@@ -80,6 +86,7 @@ class VideoJob {
     'grain': grain.name,
     'zoomTrack': zoomTrack,
     'batteryBars': batteryBars,
+    'fade': fade,
   };
 
   factory VideoJob.fromJson(Map<String, Object?> j) => VideoJob(
@@ -98,6 +105,7 @@ class VideoJob {
     grain: GrainStrength.fromName(j['grain'] as String?),
     zoomTrack: [for (final v in (j['zoomTrack'] as List<Object?>? ?? const [])) (v! as num).toDouble()],
     batteryBars: j['batteryBars'] as int? ?? 3,
+    fade: j['fade'] as bool? ?? false,
   );
 }
 
@@ -310,17 +318,21 @@ class VideoPlanner {
       );
     }
 
+    // The camera's FADE: in from black, out to it (picture and sound).
+    final seconds = job.durationMs / 1000;
+    final fadedGraph = job.fade ? Specials.fadeGraph(graph, seconds) : graph;
+    final audioFilter = job.fade ? Specials.fadeAudio(profile.audioFilter, seconds) : profile.audioFilter;
     final pass1 = profile.upscale > 1 ? p.join(job.workDir, 'pass1.mp4') : job.outputPath;
     return VideoPlan(
       mainInputArgs: [
         ...inputs,
         '-filter_complex',
-        graph,
+        fadedGraph,
         '-map',
         '[vout]',
         '-map',
         '0:a?',
-        if (profile.audioFilter != null) ...['-af', profile.audioFilter!],
+        if (audioFilter != null) ...['-af', audioFilter],
         ...profile.audioArgs,
       ],
       mainOutputArgs: ['-movflags', '+faststart', '-shortest', pass1],

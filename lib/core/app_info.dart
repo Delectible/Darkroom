@@ -10,8 +10,8 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'Super 8 now shoots the way you hold it: upright for a tall reel with the sprocket holes along the top. '
-      'Switching between photo and movie cameras keeps the viewfinder as it was until it has closed, and '
-      'instant photos taken with a lens show it while they develop.';
+      'The single-use camera is fixed like the real thing (no zoom or exposure), the focusing marks keep one '
+      'size, messages in the viewfinder sit further in, and switching photo and movie cameras is smoother.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

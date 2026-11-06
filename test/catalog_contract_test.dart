@@ -46,7 +46,12 @@ void main() {
         });
         // (2.1.2: every film camera zooms on its ring, in mm, and has an
         // exposure scale)
-        test('film: a zoom ring and an exposure scale', () {
+        test('film: a zoom ring and an exposure scale (the disposable: neither)', () {
+          if (c.id == CameraCatalog.singleUse.id) {
+            expect(c.zoom, isNull);
+            expect(c.exposure, isNull);
+            return;
+          }
           expect(c.zoom?.wideMm, isNotNull, reason: 'its lens in mm (the ring is marked in it)');
           expect(c.zoom!.max, inInclusiveRange(1.2, 5));
           expect(c.exposure, isNotNull);

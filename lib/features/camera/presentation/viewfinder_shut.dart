@@ -37,6 +37,12 @@ class ViewfinderShutter {
   /// LCD comes on (the live picture itself can't be, cheaply).
   static final waking = ValueNotifier<ui.Image?>(null);
 
+  /// The film focusing screen's marks are sized from this (the viewfinder's
+  /// short side as the video cameras' taller picture leaves it), so they
+  /// keep one size whichever camera's picture is behind them. Set by the
+  /// viewport from the space it has; null: the box's own short side.
+  static double? markSide;
+
   /// How long closing and opening take.
   static const close = Duration(milliseconds: 320);
   static const open = Duration(milliseconds: 280);
@@ -96,6 +102,7 @@ class _ViewfinderShutState extends State<ViewfinderShut> {
             screen: p.screen,
             ink: p.screenInk,
             pixels: _pixels,
+            markSide: ViewfinderShutter.markSide,
           ),
         ),
       ),
@@ -148,6 +155,7 @@ class _ShutPainter extends CustomPainter {
     required this.screen,
     required this.ink,
     required this.pixels,
+    this.markSide,
   }) : super(repaint: fixed == null ? shut : null);
 
   final bool film, marks;
@@ -156,6 +164,7 @@ class _ShutPainter extends CustomPainter {
   final Animation<double> shut;
   final Color screen, ink;
   final _PixelSteps pixels;
+  final double? markSide;
 
   static double _c(double v) => v < 0 ? 0 : (v > 1 ? 1 : v);
 
@@ -234,7 +243,7 @@ class _ShutPainter extends CustomPainter {
   /// on film (live or shut): a light line with a faint dark edge, so it
   /// reads on a bright sky and on the dark alike.
   void _marks(Canvas canvas, Rect rect) {
-    final c = rect.center, s = rect.shortestSide;
+    final c = rect.center, s = markSide ?? rect.shortestSide;
     void etch(Paint paint, Offset o) => canvas
       ..drawCircle(c + o, s * 0.17, paint)
       ..drawCircle(c + o, s * 0.065, paint)
@@ -274,5 +283,6 @@ class _ShutPainter extends CustomPainter {
       old.fixed != fixed ||
       old.shut != shut ||
       old.screen != screen ||
+      old.markSide != markSide ||
       old.ink != ink;
 }

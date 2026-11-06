@@ -681,6 +681,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **64.29** → 2.1.7 · Photo <-> video camera: the old viewfinder is held
   until it has shut even though the new sensor mode has already stopped
   the camera (the session hears of the change first; `_canHoldForChange`).
+- [x] **64.30** → 2.1.7 · The focusing screen's marks keep one size (the
+  smaller, video one: `ViewfinderShutter.markSide` from the viewport's
+  space, not the stream's box). Single-Use 27: no zoom, no exposure scale.
+  The message over the viewfinder (`CameraNote`) is held well in from the
+  frame's edges (at most 300 wide, 72% of the frame); 64.8 had only fixed
+  the app-wide one.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

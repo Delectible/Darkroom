@@ -30,6 +30,7 @@ class CameraCatalog {
     LensKind.tiltShift,
     LensKind.pinhole,
   ];
+
   /// The digital cameras' conversion lenses (the screw-on kind sold for
   /// compacts and camcorders), and the effects their era liked.
   static const _lensesDigital = [
@@ -223,8 +224,7 @@ class CameraCatalog {
     id: 'superia400',
     mode: AppMode.film,
     lenses: _lenses35,
-    zoom: ZoomSpec(max: 1.5, wideMm: 32),
-    exposure: ExposureSpec(min: -1, max: 1, step: 1),
+    // (a disposable: fixed lens, fixed exposure)
     name: 'Single-Use 27',
     subtitle: 'Disposable: fixed f/8, use the flash indoors',
     badge: '27 EXP',

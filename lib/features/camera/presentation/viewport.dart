@@ -136,6 +136,9 @@ class CameraViewport extends ConsumerWidget {
 
     return LayoutBuilder(
       builder: (context, box) {
+        // The focusing screen's marks: one size whatever the stream's shape
+        // (the 16:9 video picture's short side, the smaller of the two).
+        ViewfinderShutter.markSide = math.min(box.maxWidth, box.maxHeight * 9 / 16);
         final portrait = 1 / previewAspect; // width / height of the preview box
         var w = box.maxWidth, h = w / portrait;
         if (h > box.maxHeight) {
@@ -339,7 +342,15 @@ class _CameraNoteViewState extends State<_CameraNoteView> {
         opacity: note == null ? 0 : 1,
         duration: Duration(milliseconds: note == null ? 420 : 180),
         curve: Curves.easeOut,
-        child: Center(child: NoteBox(text: _last)),
+        // (well in from the frame's edges, like the app's other messages)
+        child: LayoutBuilder(
+          builder: (context, box) => Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: math.min(300, box.maxWidth * 0.72)),
+              child: NoteBox(text: _last),
+            ),
+          ),
+        ),
       );
     },
   );

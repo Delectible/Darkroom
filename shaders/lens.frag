@@ -2,7 +2,7 @@
 // The lens on the film camera, over the live viewfinder (ImageFilter.shader;
 // the photo gets the same in Dart, lens_renderer.dart). One lens at a time
 // by uLens: 1 wide adapter, 2 fish-eye, 3 plastic, 4 soft focus, 5 swirl,
-// 6 tilt-shift, 7 pinhole (0: none, the plain picture). uCrop is the
+// 6 tilt-shift, 7 pinhole, 8 mist, 9 anamorphic (0: none, the plain picture). uCrop is the
 // frame that's seen (the photo) in the picture, so the lens sits on it.
 // No y-flip: see the contract test.
 #include <flutter/runtime_effect.glsl>
@@ -139,6 +139,25 @@ void main() {
     // pinhole: soft all over, deep vignette
     c = (disc(uv, 0.006) - 0.5) * 0.9 + 0.5;
     c *= 1.0 - 0.95 * pow(r, 2.6);
+  } else if (lens == 8) {
+    // mist: a diffusion filter; light glows into its surroundings, blacks
+    // lift and contrast eases (the video's: VideoLens.mist)
+    vec3 s = tex(uv);
+    vec3 g = max(disc(uv, 0.03) - 0.35, 0.0) / 0.65;
+    c = (1.0 - (1.0 - s) * (1.0 - g * 0.6)) * 0.9 + 0.06;
+  } else if (lens == 9) {
+    // anamorphic: long blue streaks off bright lights, an oval falloff
+    c = tex(uv);
+    float streak = 0.0;
+    for (int i = 1; i <= 16; i++) {
+      float w = exp(-float(i) / 6.0) * 0.16;
+      float o = float(i) * 0.016;
+      streak += max(luma(tex(uv + vec2(o, 0.0))) - 0.85, 0.0) / 0.15 * w;
+      streak += max(luma(tex(uv - vec2(o, 0.0))) - 0.85, 0.0) / 0.15 * w;
+    }
+    c = 1.0 - (1.0 - c) * (1.0 - clamp(streak, 0.0, 1.0) * vec3(0.35, 0.6, 1.0));
+    float ov = length(vec2(d.x * 2.0, d.y * 3.0));
+    c *= 1.0 - 0.3 * pow(clamp(ov - 0.5, 0.0, 1.0), 1.5);
   } else {
     c = tex(uv);
   }

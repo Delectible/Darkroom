@@ -687,6 +687,25 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   The message over the viewfinder (`CameraNote`) is held well in from the
   frame's edges (at most 300 wide, 72% of the frame); 64.8 had only fixed
   the app-wide one.
+- [x] **64.31** → 2.1.7 · Win98 player: a clip run to its end, wound back
+  and played again sat still (Android's player stuck "ended"): it reopens at
+  that spot; and any play that hasn't moved after 1.2 s reopens there.
+- [x] **64.32** → 2.1.7 · Camcorder tape hiss halved.
+- [x] **64.33** → 2.1.7 · A new ratio: the frame's edges glide to it (280 ms;
+  a new camera's change happens behind the shutter).
+- [x] **64.34** → 2.1.7 · Movie lenses on every video camera: fish-eye, mist,
+  anamorphic (`LensKind.mist/anamorphic`, lens.frag 8/9; in the video,
+  `VideoLens`: fish-eye by remap with written maps on a doubled picture plus
+  an overlay, mist and anamorphic by LGPL filters; before the strip / OSD).
+- [x] **64.35** → 2.1.7 · Lens caps redrawn, each its own lens (knurled
+  standard, petal-hood wide, fish-eye dome, red toy, hazy soft, brass
+  Petzval swirl, shifted tilt-shift with knobs, pinhole body cap, frosted
+  mist filter, oval anamorphic).
+- [x] **64.36** → 2.1.7 · Native crash reports read the tombstone: signal,
+  cause, the crashing thread's frames, the last log lines (`Tombstone`;
+  the readable-strings dump stays as a fallback). After a background crash
+  on the tablet (SIGSEGV, null pointer, camera + video player open) whose
+  report was cut short.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

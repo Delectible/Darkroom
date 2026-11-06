@@ -9,9 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Super 8 now shoots the way you hold it: upright for a tall reel with the sprocket holes along the top. '
-      'The single-use camera is fixed like the real thing (no zoom or exposure), the focusing marks keep one '
-      'size, messages in the viewfinder sit further in, and switching photo and movie cameras is smoother.';
+      'Movie cameras get lenses: fish-eye, mist and anamorphic. New lens caps that look like the real thing. '
+      'Super 8 shoots the way you hold it, the single-use camera is fixed like the real one, ratio changes '
+      'glide, the camcorder hiss is quieter, and a video that froze after rewinding in Darkroom 98 now plays.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

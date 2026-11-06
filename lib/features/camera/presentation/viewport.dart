@@ -44,6 +44,17 @@ import 'viewfinder_shut.dart';
 /// stream's portrait aspect ratio (never cover-cropped), and the unmasked
 /// rect is CropMath.previewMask(...). The export uses CropMath.stillCrop(...)
 /// with the same inputs, so the saved frame == what's inside the mask.
+class _UnitRectTween extends Tween<UnitRect> {
+  _UnitRectTween({super.end});
+
+  @override
+  UnitRect lerp(double t) {
+    final a = begin ?? end!, b = end!;
+    double l(double x, double y) => x + (y - x) * t;
+    return UnitRect(l(a.left, b.left), l(a.top, b.top), l(a.width, b.width), l(a.height, b.height));
+  }
+}
+
 /// The viewfinder's layout held while it shuts for a new camera.
 @immutable
 class HeldLayout {
@@ -116,14 +127,12 @@ class CameraViewport extends ConsumerWidget {
         : (controller != null && controller.value.previewSize != null)
         ? _lastPreviewAspect = controller.value.aspectRatio
         : _lastPreviewAspect;
-    // Super 8 frames landscape however the phone is held, inside a full-gate
-    // film strip that stays upright for the viewer.
     // Super 8's strip turns with the phone: upright, a portrait frame with
     // the sprocket holes along the top; sideways, a landscape frame with
     // them on the viewer's left (the frame itself is shot the way it's held).
     final gate = (spec.film?.gate ?? 0) > 0;
     final turns = gate ? stripTurns(uprightQuarterTurns(ref.watch(physicalOrientationProvider))) : 0;
-    final mask = CropMath.previewMask(
+    final target = CropMath.previewMask(
       previewAspect: previewAspect,
       ratio: aspect,
       acrossShortSide: spec.landscapeOnly,
@@ -131,9 +140,33 @@ class CameraViewport extends ConsumerWidget {
     final strip = (spec.film?.gate ?? 0) > 0
         ? CineStrip.previewCanvas(boxAspect: previewAspect, turns: turns, pictureAspect: aspect.ratio)
         : null;
+
+    // A new ratio: the frame's edges glide to it (a new camera's happens
+    // with the viewfinder shut, so it's not seen).
+    return TweenAnimationBuilder<UnitRect>(
+      tween: _UnitRectTween(end: target),
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeInOutCubic,
+      builder: (context, mask, _) =>
+          _build(context, ref, session, spec, local, palette, previewAspect, turns, mask, strip),
+    );
+  }
+
+  Widget _build(
+    BuildContext context,
+    WidgetRef ref,
+    CameraSessionState session,
+    CameraSpec spec,
+    CameraLocalSettings local,
+    RetroPalette palette,
+    double previewAspect,
+    int turns,
+    UnitRect mask,
+    UnitRect? strip,
+  ) {
+    final controller = session.controller;
     // What the viewer sees unmasked: the strip, or just the frame.
     final shown = strip ?? mask;
-
     return LayoutBuilder(
       builder: (context, box) {
         // The focusing screen's marks: one size whatever the stream's shape

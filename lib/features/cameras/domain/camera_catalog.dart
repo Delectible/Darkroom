@@ -41,6 +41,10 @@ class CameraCatalog {
     LensKind.swirl,
     LensKind.tiltShift,
   ];
+
+  /// The movie cameras' (film and tape): the lenses that make a film look
+  /// like a film (the skate-video fish-eye, a mist filter, anamorphic).
+  static const _lensesMovie = [LensKind.standard, LensKind.fisheye, LensKind.mist, LensKind.anamorphic];
   static const _lensesInstant = [
     LensKind.standard,
     LensKind.wide,
@@ -133,6 +137,7 @@ class CameraCatalog {
     boxColor: 0xFF22447A,
     boxInk: 0xFFF4C542,
     special: CameraSpecial.fade,
+    lenses: _lensesMovie,
   );
 
   static const polaroid600 = CameraSpec(
@@ -264,6 +269,7 @@ class CameraCatalog {
     boxInk: 0xFFD8B25A,
     pro: true,
     special: CameraSpecial.fade,
+    lenses: _lensesMovie,
   );
 
   // --------------------------------------------------------------------------
@@ -468,6 +474,7 @@ class CameraCatalog {
     // Tapes are captured onto floppies; copying them off takes disk swaps.
     storage: DigitalStorage.floppy,
     special: CameraSpecial.fade,
+    lenses: _lensesMovie,
   );
 
   // --- Pro cameras (1.9). Artwork: placeholders until their renders are made.
@@ -659,6 +666,7 @@ class CameraCatalog {
     pickerTag: 'VIDEO',
     pro: true,
     special: CameraSpecial.fade,
+    lenses: _lensesMovie,
   );
 
   static const List<CameraSpec> film = [

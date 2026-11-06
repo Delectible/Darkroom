@@ -114,6 +114,22 @@ class LensRenderer {
             for (var c = 0; c < 3; c++) {
               out[c] = ((out[c] - 0.5) * 0.9 + 0.5) * vig;
             }
+          case LensKind.mist:
+            _read(src, i, out);
+            blurred(0.03).sample(u, v, tmp);
+            for (var c = 0; c < 3; c++) {
+              final g = math.max(tmp[c] - 0.35, 0.0) / 0.65;
+              out[c] = (1 - (1 - out[c]) * (1 - g * 0.6)) * 0.9 + 0.06;
+            }
+          case LensKind.anamorphic:
+            _read(src, i, out);
+            final st = small.streak(u, v).clamp(0.0, 1.0);
+            const blueish = [0.35, 0.6, 1.0];
+            for (var c = 0; c < 3; c++) {
+              out[c] = 1 - (1 - out[c]) * (1 - st * blueish[c]);
+            }
+            final ov = math.sqrt(dx * dx * 4 + dy * dy * 9);
+            _scale(out, 1 - 0.3 * math.pow((ov - 0.5).clamp(0.0, 1.0), 1.5));
           case LensKind.standard:
             _read(src, i, out);
         }
@@ -346,5 +362,37 @@ class _Small {
       final cc = px[(y1 * w + x0) * 3 + c], d = px[(y1 * w + x1) * 3 + c];
       out[c] = (a * (1 - fx) + b * fx) * (1 - fy) + (cc * (1 - fx) + d * fx) * fy;
     }
+  }
+
+  // ---- highlight streaks (anamorphic), worked out once on this small frame ----
+
+  Float32List? _streaks;
+
+  double streak(double u, double v) {
+    final s = _streaks ??= _makeStreaks();
+    final x = (u * w).floor().clamp(0, w - 1), y = (v * h).floor().clamp(0, h - 1);
+    return s[y * w + x];
+  }
+
+  Float32List _makeStreaks() {
+    final o = Float32List(w * h);
+    final hi = Float32List(w * h);
+    for (var i = 0; i < w * h; i++) {
+      final l = 0.2126 * px[i * 3] + 0.7152 * px[i * 3 + 1] + 0.0722 * px[i * 3 + 2];
+      hi[i] = math.max(0, l - 0.85) / 0.15;
+    }
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var acc = 0.0;
+        for (var i = 1; i <= 16; i++) {
+          final wt = math.exp(-i / 6) * 0.16;
+          final off = (i * 0.016 * w).round();
+          if (x + off < w) acc += hi[y * w + x + off] * wt;
+          if (x - off >= 0) acc += hi[y * w + x - off] * wt;
+        }
+        o[y * w + x] = acc;
+      }
+    }
+    return o;
   }
 }

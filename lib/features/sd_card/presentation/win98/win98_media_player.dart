@@ -45,14 +45,16 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
   @override
   void dispose() {
     _scanTimer?.cancel();
+    _c?.removeListener(_watch);
     unawaited(_c?.dispose());
     super.dispose();
   }
 
   /// (Re)opens the clip. Re-opening is also how a finished clip restarts:
   /// Android's player can stay stuck in its "ended" state otherwise.
-  Future<void> _load({required bool play}) async {
+  Future<void> _load({required bool play, Duration at = Duration.zero}) async {
     final old = _c;
+    old?.removeListener(_watch);
     final c = VideoPlayerController.file(File(widget.path));
     try {
       await c.initialize();
@@ -60,17 +62,44 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
         await c.dispose();
         return;
       }
+      _finished = false;
+      if (at > Duration.zero) await c.seekTo(at);
+      c.addListener(_watch);
       setState(() {
         _c = c;
         _stopped = !play;
       });
       if (old != null) WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(old.dispose()));
-      if (play) await c.play();
+      if (play) await _play(c);
     } catch (_) {
       await c.dispose();
       if (mounted) setState(() => _error = 'Cannot play this file.\n\nThe file may be damaged.');
     }
   }
+
+  /// The clip has run to its end on this player: Android's then sits in its
+  /// "ended" state, and a seek back followed by play doesn't move (it does
+  /// after a reopen).
+  bool _finished = false;
+
+  void _watch() {
+    final c = _c;
+    if (c != null && c.value.isCompleted) _finished = true;
+  }
+
+  /// Plays, and makes sure it moves: if the picture hasn't moved a moment
+  /// later (a player stuck after a seek), it reopens at the same spot.
+  Future<void> _play(VideoPlayerController c) async {
+    final from = c.value.position;
+    await c.play();
+    final serial = ++_playSerial;
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    if (!mounted || serial != _playSerial || !identical(c, _c) || _stopped || _scan != 0) return;
+    final v = c.value;
+    if (v.isPlaying && v.position == from && !_atEnd(v)) unawaited(_load(play: true, at: from));
+  }
+
+  int _playSerial = 0;
 
   bool _atEnd(VideoPlayerValue v) =>
       v.isCompleted || v.position >= v.duration - const Duration(milliseconds: 250);
@@ -83,8 +112,11 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
       case _Transport.play:
         if (_atEnd(c.value)) {
           unawaited(_load(play: true));
+        } else if (_finished) {
+          // (run to the end before, then wound back: reopen right there)
+          unawaited(_load(play: true, at: c.value.position));
         } else {
-          unawaited(c.play());
+          unawaited(_play(c));
         }
         setState(() => _stopped = false);
       case _Transport.pause:
@@ -129,7 +161,9 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
     _scanTimer = null;
     final c = _c;
     setState(() => _scan = 0);
-    if (c != null && _wasPlaying && !_atEnd(c.value)) unawaited(c.play());
+    if (c != null && _wasPlaying && !_atEnd(c.value)) {
+      unawaited(_finished ? _load(play: true, at: c.value.position) : _play(c));
+    }
   }
 
   @override

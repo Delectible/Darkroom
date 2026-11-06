@@ -51,6 +51,17 @@ class UnitRect {
   final double top;
   final double width;
   final double height;
+
+  @override
+  bool operator ==(Object other) =>
+      other is UnitRect &&
+      other.left == left &&
+      other.top == top &&
+      other.width == width &&
+      other.height == height;
+
+  @override
+  int get hashCode => Object.hash(left, top, width, height);
 }
 
 /// Maps the aspect-ratio mask shown over the live preview onto the pixels of

@@ -548,7 +548,10 @@ class MainActivity : FlutterActivity() {
                             javaCrash?.takeIf { abs(it.first - e.timestamp) < 15_000 }?.second
                         android.app.ApplicationExitInfo.REASON_ANR ->
                             e.traceInputStream?.bufferedReader()?.use { it.readText().take(8000) }
-                        else -> e.traceInputStream?.use { readableStrings(it.readBytes()) }
+                        else -> e.traceInputStream?.use {
+                            val bytes = it.readBytes()
+                            Tombstone.summary(bytes) ?: readableStrings(bytes)
+                        }
                     }
                 } catch (_: Exception) {
                     null
@@ -662,4 +665,177 @@ private object LateFrameGuard {
     private fun isLateFrame(e: RuntimeException): Boolean =
         e.message?.contains("FlutterJNI is not attached") == true &&
             e.stackTrace.any { it.methodName == "scheduleFrame" || it.className.contains("ImageReader") }
+}
+
+/// The parts of a native crash's tombstone (Android's protobuf, see
+/// system/core/debuggerd/proto/tombstone.proto) that say what happened: the
+/// signal, the abort message, the crashing thread's frames and the last log
+/// lines. Read by hand (no protobuf library); null if it doesn't parse.
+private object Tombstone {
+    private class Reader(val b: ByteArray, var i: Int = 0, val end: Int = b.size) {
+        fun more() = i < end
+        fun varint(): Long {
+            var r = 0L
+            var shift = 0
+            while (true) {
+                val x = b[i++].toInt() and 0xFF
+                r = r or ((x and 0x7F).toLong() shl shift)
+                if ((x and 0x80) == 0) return r
+                shift += 7
+            }
+        }
+        /// (field, wire type, a reader over a length-delimited value or null)
+        fun next(): Triple<Int, Int, Reader?> {
+            val key = varint().toInt()
+            val field = key ushr 3
+            val wire = key and 7
+            return when (wire) {
+                0 -> { varint(); Triple(field, wire, null) }
+                1 -> { i += 8; Triple(field, wire, null) }
+                5 -> { i += 4; Triple(field, wire, null) }
+                2 -> {
+                    val len = varint().toInt()
+                    val r = Reader(b, i, i + len)
+                    i += len
+                    Triple(field, wire, r)
+                }
+                else -> throw IllegalStateException("wire $wire")
+            }
+        }
+        fun string() = String(b, i, end - i)
+    }
+
+    private fun varintField(r: Reader, want: Int): Long? {
+        while (r.more()) {
+            val key = r.varint().toInt()
+            val field = key ushr 3
+            when (key and 7) {
+                0 -> { val v = r.varint(); if (field == want) return v }
+                1 -> r.i += 8
+                5 -> r.i += 4
+                2 -> { val len = r.varint().toInt(); r.i += len }
+                else -> return null
+            }
+        }
+        return null
+    }
+
+    fun summary(bytes: ByteArray): String? = try {
+        parse(bytes)
+    } catch (_: Throwable) {
+        null
+    }
+
+    private fun parse(bytes: ByteArray): String? {
+        val top = Reader(bytes)
+        val tid = varintField(Reader(bytes), 6)
+        val out = StringBuilder()
+        var signal = ""
+        var abort = ""
+        val threads = mutableMapOf<Long, Pair<String, List<String>>>()
+        val logs = mutableListOf<String>()
+        val causes = mutableListOf<String>()
+        while (top.more()) {
+            val next = top.next()
+            val field = next.first
+            val v = next.third ?: continue
+            when (field) {
+                10 -> { // Signal: name 2, code_name 4, fault address 6? (kept as text)
+                    val parts = mutableListOf<String>()
+                    while (v.more()) {
+                        val (f, _, sv) = v.next()
+                        if (sv != null && (f == 2 || f == 4)) parts += sv.string()
+                    }
+                    signal = parts.joinToString(" ")
+                }
+                14 -> abort = v.string()
+                15 -> { // Cause: human_readable 1 ("null pointer dereference")
+                    while (v.more()) {
+                        val (cf, _, cv) = v.next()
+                        if (cf == 1 && cv != null) causes += cv.string()
+                    }
+                }
+                16 -> { // map<uint32, Thread>: key 1, value 2
+                    var key = -1L
+                    var name = ""
+                    val frames = mutableListOf<String>()
+                    while (v.more()) {
+                        val key0 = v.varint().toInt()
+                        val f = key0 ushr 3
+                        if (f == 1 && (key0 and 7) == 0) { key = v.varint(); continue }
+                        if ((key0 and 7) != 2) {
+                            if ((key0 and 7) == 0) v.varint() else return null
+                            continue
+                        }
+                        val len = v.varint().toInt()
+                        val t = Reader(v.b, v.i, v.i + len)
+                        v.i += len
+                        if (f != 2) continue
+                        while (t.more()) {
+                            val (tf, _, tv) = t.next()
+                            if (tv == null) continue
+                            if (tf == 2) name = tv.string()
+                            if (tf == 4 && frames.size < 24) {
+                                var fn = ""
+                                var file = ""
+                                var rel = 0L
+                                while (tv.more()) {
+                                    val k = tv.varint().toInt()
+                                    val ff = k ushr 3
+                                    when (k and 7) {
+                                        0 -> { val x = tv.varint(); if (ff == 1) rel = x }
+                                        1 -> tv.i += 8
+                                        5 -> tv.i += 4
+                                        2 -> {
+                                            val l = tv.varint().toInt()
+                                            val str = String(tv.b, tv.i, l)
+                                            tv.i += l
+                                            if (ff == 4) fn = str
+                                            if (ff == 6) file = str
+                                        }
+                                    }
+                                }
+                                frames += "  #%02d pc %08x  %s%s".format(
+                                    frames.size, rel, file.substringAfterLast('/'),
+                                    if (fn.isNotEmpty()) " ($fn)" else "",
+                                )
+                            }
+                        }
+                    }
+                    if (key >= 0) threads[key] = name to frames
+                }
+                18 -> { // LogBuffer: name 1, logs 2 (LogMessage: tag 5, message 6, priority 4)
+                    while (v.more()) {
+                        val (lf, _, lv) = v.next()
+                        if (lf != 2 || lv == null) continue
+                        var tag = ""
+                        var msg = ""
+                        while (lv.more()) {
+                            val (mf, _, mv) = lv.next()
+                            if (mv != null && mf == 5) tag = mv.string()
+                            if (mv != null && mf == 6) msg = mv.string()
+                        }
+                        logs += "$tag: ${msg.trim()}"
+                    }
+                }
+            }
+        }
+        val crashing = tid?.let { threads[it] }
+        return if (crashing == null && signal.isEmpty()) {
+            null
+        } else {
+            out.append("Signal: ").append(signal.ifEmpty { "?" }).append('\n')
+            if (causes.isNotEmpty()) out.append("Cause: ").append(causes.joinToString("; ")).append('\n')
+            if (abort.isNotEmpty()) out.append("Abort: ").append(abort.take(600)).append('\n')
+            if (crashing != null) {
+                out.append("Thread: ").append(crashing.first).append('\n')
+                crashing.second.forEach { out.append(it).append('\n') }
+            }
+            if (logs.isNotEmpty()) {
+                out.append("\nLast log lines:\n")
+                logs.takeLast(30).forEach { out.append(it.take(240)).append('\n') }
+            }
+            out.toString().take(9000)
+        }
+    }
 }

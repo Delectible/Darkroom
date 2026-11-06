@@ -742,48 +742,328 @@ class LensCap extends StatelessWidget {
   );
 }
 
+/// A lens as you'd see it from the front, each one its own: the barrel,
+/// rings and glass of the real thing, drawn small (no two alike).
 class _CapPainter extends CustomPainter {
   const _CapPainter({required this.lens, required this.on});
 
   final LensKind lens;
   final bool on;
 
+  static const _black = Color(0xFF141416), _anodised = Color(0xFF26272B), _silver = Color(0xFFB9BCC2);
+  static const _brass = Color(0xFFC9A251), _amber = Color(0xFFE6A83F);
+
   @override
   void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero), r = size.shortestSide / 2;
-    // its barrel
-    canvas.drawCircle(c, r, Paint()..color = const Color(0xF0151518));
-    // the glass: tinted a little by what it is
-    final tint = switch (lens) {
-      LensKind.plastic => const Color(0xFF6B5A2A),
-      LensKind.soft => const Color(0xFF7A6E66),
-      LensKind.pinhole => const Color(0xFF111111),
-      _ => const Color(0xFF3A4656),
-    };
-    final glass = Rect.fromCircle(center: c, radius: r - 5);
+    final c = size.center(Offset.zero), r = size.shortestSide / 2 - 1;
+    // a soft shadow under it, so it sits on the picture
     canvas.drawCircle(
-      c,
-      r - 5,
+      c.translate(0, 1.5),
+      r,
       Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-0.35, -0.4),
-          colors: [Color.lerp(tint, const Color(0xFFFFFFFF), 0.35)!, tint, const Color(0xFF0A0B0D)],
-          stops: const [0, 0.45, 1],
-        ).createShader(glass),
+        ..color = const Color(0x66000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
     );
-    if (lens == LensKind.pinhole) canvas.drawCircle(c, 1.6, Paint()..color = const Color(0xFFE8E2D6));
-    if (lens == LensKind.fisheye) {
-      canvas.drawCircle(c.translate(-3, -3), 4, Paint()..color = const Color(0x66FFFFFF));
+    switch (lens) {
+      case LensKind.standard:
+        _barrel(canvas, c, r, _black);
+        _knurl(canvas, c, r - 1.5, 36, const Color(0x33FFFFFF));
+        _ring(canvas, c, r * 0.80, _silver.withValues(alpha: 0.55), 0.8);
+        _glass(canvas, c, r * 0.68, const Color(0xFF243246), coat: const Color(0xFF6CE0A2));
+      case LensKind.wide:
+        // a petal hood round a big front element
+        _petals(canvas, c, r, _black);
+        _ring(canvas, c, r * 0.80, const Color(0x55FFFFFF), 0.8);
+        _glass(canvas, c, r * 0.76, const Color(0xFF1E2C40), coat: const Color(0xFFB27BE8));
+      case LensKind.fisheye:
+        // a dome of glass bulging out of a short barrel
+        _barrel(canvas, c, r, _black);
+        _ring(canvas, c, r * 0.9, _silver.withValues(alpha: 0.5), 0.8);
+        _dome(canvas, c, r * 0.84);
+      case LensKind.plastic:
+        // a toy camera's bright plastic barrel, one plain element
+        _barrel(canvas, c, r, const Color(0xFFD8432F), shine: 0.35);
+        _ring(canvas, c, r * 0.74, const Color(0xFFF4D23A), 2.2);
+        _glass(canvas, c, r * 0.6, const Color(0xFF39434F), coat: null, flat: true);
+      case LensKind.soft:
+        // glass with a haze in it, in a warm brass ring
+        _barrel(canvas, c, r, _anodised);
+        _ring(canvas, c, r * 0.82, _brass, 1.4);
+        _glass(canvas, c, r * 0.72, const Color(0xFF3A4150), coat: const Color(0xFFF0C080));
+        canvas.drawCircle(
+          c,
+          r * 0.6,
+          Paint()
+            ..color = const Color(0x55FFF2E0)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+        );
+      case LensKind.swirl:
+        // an old brass portrait lens: deep barrel, small glass, a swirl
+        _barrel(canvas, c, r, _brass, shine: 0.45);
+        _ring(canvas, c, r * 0.78, const Color(0xFF7A5A22), 1.2);
+        _ring(canvas, c, r * 0.64, const Color(0xFF7A5A22), 0.8);
+        _glass(canvas, c, r * 0.54, const Color(0xFF1C2230), coat: const Color(0xFFE8B860));
+        final sw = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = const Color(0x88FFFFFF);
+        for (var k = 0; k < 3; k++) {
+          canvas.drawArc(Rect.fromCircle(center: c, radius: r * (0.2 + 0.1 * k)), k * 2.1, 1.6, false, sw);
+        }
+      case LensKind.tiltShift:
+        // the glass shifted off-centre in its barrel, a knob each side
+        final knob = Paint()..color = _silver;
+        canvas
+          ..drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromCenter(center: c.translate(-r, 0), width: 5, height: 9),
+              const Radius.circular(1.5),
+            ),
+            knob,
+          )
+          ..drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromCenter(center: c.translate(r, 0), width: 5, height: 9),
+              const Radius.circular(1.5),
+            ),
+            knob,
+          );
+        _barrel(canvas, c, r * 0.92, _black);
+        _ring(canvas, c, r * 0.8, const Color(0x44FFFFFF), 0.8);
+        _glass(
+          canvas,
+          c.translate(0, -r * 0.14),
+          r * 0.56,
+          const Color(0xFF223047),
+          coat: const Color(0xFF7FD0E8),
+        );
+      case LensKind.pinhole:
+        // a body cap: matte black, a bright point in the middle
+        _barrel(canvas, c, r, const Color(0xFF1B1B1D), shine: 0.12);
+        _ring(canvas, c, r * 0.7, const Color(0x22FFFFFF), 0.8);
+        _ring(canvas, c, r * 0.35, const Color(0x1AFFFFFF), 0.6);
+        canvas
+          ..drawCircle(
+            c,
+            3.2,
+            Paint()
+              ..color = const Color(0x55FFE9C0)
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+          )
+          ..drawCircle(c, 1.1, Paint()..color = const Color(0xFFFFF4DC));
+      case LensKind.mist:
+        // a screw-in filter: thin silver ring, frosted glass
+        _ring(canvas, c, r - 0.5, _silver, 2.4);
+        _ring(canvas, c, r - 3, const Color(0xFF55585E), 1);
+        canvas.drawCircle(
+          c,
+          r - 3.6,
+          Paint()
+            ..shader = const RadialGradient(
+              center: Alignment(-0.3, -0.35),
+              colors: [Color(0xF0F4F6F8), Color(0xC8C9CED6), Color(0xB0868C96)],
+              stops: [0, 0.55, 1],
+            ).createShader(Rect.fromCircle(center: c, radius: r - 3.6)),
+        );
+        final rnd = math.Random(7);
+        final grain = Paint()..color = const Color(0x22FFFFFF);
+        for (var k = 0; k < 40; k++) {
+          final a = rnd.nextDouble() * math.pi * 2, d = math.sqrt(rnd.nextDouble()) * (r - 5);
+          canvas.drawCircle(c + Offset(math.cos(a) * d, math.sin(a) * d), 0.6, grain);
+        }
+      case LensKind.anamorphic:
+        // a wide oval front element, a blue streak across it
+        _barrel(canvas, c, r, _black);
+        final oval = Rect.fromCenter(center: c, width: r * 1.62, height: r * 1.02);
+        canvas.drawOval(oval.inflate(1.6), Paint()..color = _silver.withValues(alpha: 0.5));
+        canvas.drawOval(
+          oval,
+          Paint()
+            ..shader = const RadialGradient(
+              center: Alignment(-0.3, -0.4),
+              colors: [Color(0xFF6E86B8), Color(0xFF1C2742), Color(0xFF07090E)],
+              stops: [0, 0.5, 1],
+            ).createShader(oval),
+        );
+        canvas.drawRect(
+          Rect.fromCenter(center: c, width: r * 1.5, height: 1.4),
+          Paint()
+            ..color = const Color(0xCC8EC5FF)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
+        );
+        canvas.drawCircle(c.translate(-r * 0.32, -r * 0.18), 1.6, Paint()..color = const Color(0xCCFFFFFF));
     }
-    // the rim
+    // chosen: a bright rim round it
+    if (on) {
+      canvas.drawCircle(
+        c,
+        r + 0.4,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = _amber,
+      );
+    }
+  }
+
+  /// A round barrel seen end-on, lit from the top left.
+  static void _barrel(Canvas canvas, Offset c, double r, Color base, {double shine = 0.22}) {
+    final rect = Rect.fromCircle(center: c, radius: r);
     canvas.drawCircle(
       c,
-      r - 1,
+      r,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.lerp(base, const Color(0xFFFFFFFF), shine)!,
+            base,
+            Color.lerp(base, const Color(0xFF000000), 0.5)!,
+          ],
+          stops: const [0, 0.5, 1],
+        ).createShader(rect),
+    );
+    // its outer lip
+    canvas.drawCircle(
+      c,
+      r - 0.5,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = on ? 2.2 : 1.4
-        ..color = on ? const Color(0xFFE6A83F) : const Color(0x80F5EEE2),
+        ..strokeWidth = 1
+        ..color = const Color(0x33FFFFFF),
     );
+  }
+
+  static void _ring(Canvas canvas, Offset c, double r, Color color, double width) => canvas.drawCircle(
+    c,
+    r,
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = width
+      ..color = color,
+  );
+
+  /// The focus ring's grip: fine ridges round the edge.
+  static void _knurl(Canvas canvas, Offset c, double r, int n, Color color) {
+    final p = Paint()
+      ..color = color
+      ..strokeWidth = 0.8;
+    for (var i = 0; i < n; i++) {
+      final a = i / n * math.pi * 2;
+      final d = Offset(math.cos(a), math.sin(a));
+      canvas.drawLine(c + d * (r - 2.6), c + d * r, p);
+    }
+  }
+
+  /// A petal hood: four lobes, the long ones top and bottom.
+  static void _petals(Canvas canvas, Offset c, double r, Color base) {
+    final path = Path();
+    for (var i = 0; i <= 72; i++) {
+      final a = i / 72 * math.pi * 2;
+      final k = 0.86 + 0.14 * math.pow(math.sin(a).abs(), 3);
+      final pt = c + Offset(math.cos(a), math.sin(a)) * r * k;
+      i == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
+    }
+    path.close();
+    final rect = Rect.fromCircle(center: c, radius: r);
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color.lerp(base, const Color(0xFFFFFFFF), 0.25)!, base, const Color(0xFF050506)],
+        ).createShader(rect),
+    );
+  }
+
+  /// Coated glass: deep, a coloured sheen across it, a highlight.
+  static void _glass(
+    Canvas canvas,
+    Offset c,
+    double r,
+    Color deep, {
+    required Color? coat,
+    bool flat = false,
+  }) {
+    final rect = Rect.fromCircle(center: c, radius: r);
+    canvas.drawCircle(c, r + 0.8, Paint()..color = const Color(0xFF060607));
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.25, -0.3),
+          radius: flat ? 1.1 : 0.9,
+          colors: [
+            Color.lerp(deep, const Color(0xFFFFFFFF), flat ? 0.18 : 0.08)!,
+            deep,
+            const Color(0xFF040507),
+          ],
+          stops: const [0, 0.55, 1],
+        ).createShader(rect),
+    );
+    if (coat != null) {
+      // the coating's colour, a crescent on the far side
+      canvas.drawArc(
+        rect.deflate(r * 0.18),
+        0.35,
+        1.5,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = r * 0.16
+          ..strokeCap = StrokeCap.round
+          ..color = coat.withValues(alpha: 0.5)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
+      );
+    }
+    // the window's reflection
+    canvas.drawOval(
+      Rect.fromCenter(center: c.translate(-r * 0.36, -r * 0.4), width: r * 0.5, height: r * 0.3),
+      Paint()..color = Color.fromRGBO(255, 255, 255, flat ? 0.55 : 0.75),
+    );
+    canvas.drawCircle(c.translate(r * 0.3, r * 0.34), r * 0.07, Paint()..color = const Color(0x66FFFFFF));
+  }
+
+  /// The fish-eye's dome: bulging glass, the window wrapped round it.
+  static void _dome(Canvas canvas, Offset c, double r) {
+    final rect = Rect.fromCircle(center: c, radius: r);
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.15, -0.2),
+          radius: 1.0,
+          colors: [Color(0xFF5A4B86), Color(0xFF1B2340), Color(0xFF050608)],
+          stops: [0, 0.6, 1],
+        ).createShader(rect),
+    );
+    // the bulge: a bright rim of light round its far edge, a curved window
+    canvas.drawArc(
+      rect.deflate(1.2),
+      0.2,
+      2.4,
+      false,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6
+        ..color = const Color(0x8899C8FF)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1),
+    );
+    final win = Path()
+      ..addArc(Rect.fromCircle(center: c.translate(-r * 0.12, -r * 0.1), radius: r * 0.62), 3.5, 1.6);
+    canvas.drawPath(
+      win,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = r * 0.16
+        ..strokeCap = StrokeCap.round
+        ..color = const Color(0xBBFFFFFF),
+    );
+    canvas.drawCircle(c.translate(r * 0.38, r * 0.3), r * 0.08, Paint()..color = const Color(0x77FFFFFF));
   }
 
   @override

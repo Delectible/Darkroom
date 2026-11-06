@@ -41,13 +41,14 @@ class VideoProfile {
       'vibrato=f=0.7:d=0.25,vibrato=f=6.5:d=0.012,'
       "aeval=exprs='val(0)+0.0025*(random(0)*2-1)',$_clean";
 
-  /// 90s camcorder tape: mono, a little muffled, tape hiss that the
+  /// 90s camcorder tape: mono, a little muffled, tape hiss (half what it
+  /// was in 2.1.6: it was too loud) that the
   /// automatic level control pumps up in the quiet bits (hiss goes in before
   /// the compressor), a slight wow, and a click as the heads engage.
   static const camcorderAudio =
       'aformat=sample_fmts=dbl:channel_layouts=mono,$_clean,'
       'highpass=f=90,lowpass=f=8000,lowpass=f=9500,'
-      "aeval=exprs='val(0)+0.004*(random(0)*2-1)+if(lt(t,0.012),0.15*(random(1)*2-1)*(1-t/0.012),0)',"
+      "aeval=exprs='val(0)+0.002*(random(0)*2-1)+if(lt(t,0.012),0.15*(random(1)*2-1)*(1-t/0.012),0)',"
       'acompressor=threshold=0.05:ratio=6:attack=5:release=400:makeup=3,'
       'vibrato=f=0.5:d=0.1,$_clean';
 
@@ -171,6 +172,7 @@ class VideoFilters {
     int rotateTurns = 0,
     List<String> extraOverlays = const [],
     List<String> tapeOverlays = const [],
+    String Function(String from, String to)? lens,
   }) {
     final chain = _geometry(crop, rotateTurns, outW, outH, profile);
 
@@ -223,6 +225,11 @@ class VideoFilters {
 
     final g = StringBuffer('[0:v]${chain.join(',')}[base]');
     var last = 'base';
+    // The lens (VideoLens), on the picture, under the scanlines and OSD.
+    if (lens != null) {
+      g.write(';${lens(last, 'lensed')}');
+      last = 'lensed';
+    }
     if (look.kind == ShaderKind.vhs) {
       g.write(';[$last][1:v]overlay=0:0:shortest=1:format=auto[scan]');
       last = 'scan';
@@ -266,6 +273,7 @@ class VideoFilters {
     int? cueInput,
     List<(double, double)> cueTimes = const [],
     bool stripPortrait = false,
+    String Function(String from, String to)? lens,
   }) {
     // [canvasW] x [canvasH]: the strip, holes on the left. A portrait frame
     // goes in on its side ([stripPortrait]) and the strip is turned back up.
@@ -356,7 +364,13 @@ class VideoFilters {
         "[hal][grain]lut2=c0='$plateMix':c1='$plateMix':c2='$plateMix'[grained]",
       ],
       '[grained]format=yuv444p,vignette=a=${_f(film.vignette * 2.2)}[vig]',
-      '[vig][1:v]overlay=0:0:shortest=1:format=auto[dusty]',
+      if (lens == null)
+        '[vig][1:v]overlay=0:0:shortest=1:format=auto[dusty]'
+      else ...[
+        // The lens (VideoLens), on the picture before the strip.
+        '[vig][1:v]overlay=0:0:shortest=1:format=auto[dusty0]',
+        lens('dusty0', 'dusty'),
+      ],
       ...strip,
       // Gate weave: the film hops a pixel or two in the gate every frame.
       '[gated]pad=${ow + 2 * pad}:${oh + 2 * pad}:$pad:$pad:color=0x120c0a,'

@@ -124,7 +124,14 @@ enum LensKind {
   soft('Soft focus', 'SOFT'),
   swirl('Swirl', 'SWRL'),
   tiltShift('Tilt-shift', 'TILT'),
-  pinhole('Pinhole', 'PIN');
+  pinhole('Pinhole', 'PIN'),
+
+  // ---- the movie cameras' ----
+  /// A diffusion filter: light glows into its surroundings, blacks lift.
+  mist('Mist', 'MIST'),
+
+  /// Long blue streaks off bright lights, an oval falloff.
+  anamorphic('Anamorphic', 'ANAM');
 
   const LensKind(this.label, this.mark);
   final String label, mark;

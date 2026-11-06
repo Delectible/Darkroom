@@ -16,6 +16,7 @@ import 'film/grain_plates.dart';
 import 'look_spec.dart';
 import 'specials.dart';
 import 'video_filters.dart';
+import 'video_lens.dart';
 
 class VideoJob {
   const VideoJob({
@@ -35,7 +36,12 @@ class VideoJob {
     this.zoomTrack = const [],
     this.batteryBars = 3,
     this.fade = false,
+    this.lens = LensKind.standard,
   });
+
+  /// The lens on the movie camera (VideoLens), on the picture before the
+  /// strip / OSD.
+  final LensKind lens;
 
   /// Fades in from black at the start and out to it at the end (the
   /// cine cameras' and camcorders' special).
@@ -87,6 +93,7 @@ class VideoJob {
     'zoomTrack': zoomTrack,
     'batteryBars': batteryBars,
     'fade': fade,
+    'lens': lens.name,
   };
 
   factory VideoJob.fromJson(Map<String, Object?> j) => VideoJob(
@@ -106,6 +113,7 @@ class VideoJob {
     zoomTrack: [for (final v in (j['zoomTrack'] as List<Object?>? ?? const [])) (v! as num).toDouble()],
     batteryBars: j['batteryBars'] as int? ?? 3,
     fade: j['fade'] as bool? ?? false,
+    lens: LensKind.values.asNameMap()[j['lens']] ?? LensKind.standard,
   );
 }
 
@@ -246,7 +254,11 @@ class VideoPlanner {
         cueInput = form == null ? 3 : 4;
         inputs.addAll(['-loop', '1', '-framerate', profile.fps, '-i', p.join(job.workDir, 'cue.png')]);
       }
+      final lens = VideoLens.prepare(job.lens, outW, outH, job.workDir);
+      final lensInput = _inputCount(inputs);
+      if (lens != null) inputs.addAll(lens.inputArgs);
       graph = VideoFilters.filmGraph(
+        lens: lens == null ? null : (from, to) => lens.chain(from, to, lensInput),
         film: film,
         grain: job.grain,
         cubePath: cube,
@@ -312,7 +324,11 @@ class VideoPlanner {
           extras.add(o.overlay(idx++));
         }
       }
+      final lens = VideoLens.prepare(job.lens, outW, outH, job.workDir);
+      final lensInput = _inputCount(inputs);
+      if (lens != null) inputs.addAll(lens.inputArgs);
       graph = VideoFilters.graph(
+        lens: lens == null ? null : (from, to) => lens.chain(from, to, lensInput),
         look: look,
         crop: crop,
         outW: outW,
@@ -353,6 +369,9 @@ class VideoPlanner {
       pass1Path: pass1,
     );
   }
+
+  /// How many inputs [args] opens (the next one's index).
+  static int _inputCount(List<String> args) => args.where((a) => a == '-i').length;
 
   /// 54 frames of a clean cinema print's dirt: most frames spotless, now
   /// and then one tiny speck, a frame long. Dirt on the camera negative

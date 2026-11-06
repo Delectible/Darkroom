@@ -261,6 +261,7 @@ class CaptureProcessor {
       zoomTrack: zoomTrack,
       batteryBars: batteryBars,
       fade: ctx.fade,
+      lens: ctx.lens,
     );
     final repo = _repoFor(spec);
     await repo.insertProcessing(

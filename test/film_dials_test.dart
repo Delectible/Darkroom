@@ -150,6 +150,7 @@ void main() {
     await tester.tapAt(const Offset(30, 30));
     await tester.pump(const Duration(milliseconds: 300));
     await shoot('lens_tray');
+    await shoot('tray_caps');
     await tester.tap(find.text('FISH'));
     await tester.pump(const Duration(milliseconds: 400));
     expect(container.read(filmLensProvider), LensKind.fisheye);
@@ -229,6 +230,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     await shoot('tray');
+    await shoot('tray_caps');
     await tester.tap(find.text('FISH'));
     await tester.pump(const Duration(milliseconds: 300));
     expect(container.read(filmLensProvider), LensKind.fisheye);

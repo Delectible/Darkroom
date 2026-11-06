@@ -844,44 +844,68 @@ Future<void> showAboutDarkroom(BuildContext context) => showWin98Window<void>(
 /// The camera session's recent events, for diagnosing a viewfinder that
 /// drops out (screenshot this and send it).
 Future<void> showCameraLog(BuildContext context) {
-  final lines = CameraLog.lines;
   return showWin98Window<void>(
     context,
     title: 'Camera Log - Notepad',
     width: 340,
     icon: const PixelIconView(PixelIcon.info),
-    builder: (context) => Padding(
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 300),
-            child: Win98Bevel(
-              style: BevelStyle.sunken,
-              color: W98.window,
-              padding: const EdgeInsets.all(6),
-              child: SingleChildScrollView(
-                reverse: true,
-                child: Text(
-                  lines.isEmpty ? '(nothing yet)' : lines.join('\n'),
-                  style: W98.text.copyWith(fontSize: 11),
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) {
+        final lines = CameraLog.lines;
+        return Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: Win98Bevel(
+                  style: BevelStyle.sunken,
+                  color: W98.window,
+                  padding: const EdgeInsets.all(6),
+                  child: SingleChildScrollView(
+                    reverse: true,
+                    child: Text(
+                      lines.isEmpty ? '(nothing yet)' : lines.join('\n'),
+                      style: W98.text.copyWith(fontSize: 11),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (lines.isNotEmpty) ...[
+                    Win98Button(
+                      minWidth: 64,
+                      onPressed: () => setState(CameraLog.clear),
+                      child: const Text('Clear'),
+                    ),
+                    const SizedBox(width: 6),
+                    Win98Button(
+                      minWidth: 64,
+                      onPressed: () => unawaited(
+                        Clipboard.setData(
+                          ClipboardData(text: '${AppInfo.version}, ${CameraLog.device}\n${lines.join('\n')}'),
+                        ),
+                      ),
+                      child: const Text('Copy'),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  Win98Button(
+                    minWidth: 64,
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Win98Button(
-              minWidth: 76,
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     ),
   );
 }

@@ -212,6 +212,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onDestroy() {
         rotationObserver?.let { contentResolver.unregisterContentObserver(it) }
+        LateFrameGuard.install()
         super.onDestroy()
     }
 
@@ -632,4 +633,33 @@ private class CrashCatcher(
             null
         }
     }
+}
+
+/// The engine goes as the activity does, but the camera can still hand the
+/// viewfinder a frame or two on its way out: Flutter's ImageReader texture
+/// then asks a detached engine for a frame and throws ("FlutterJNI is not
+/// attached to native"), crashing the app as it closes (Pixel 9 Pro, 2.1.x).
+/// From the first onDestroy, the main thread's loop runs inside this one,
+/// which drops exactly that throw and lets every other one through.
+private object LateFrameGuard {
+    private var installed = false
+
+    fun install() {
+        if (installed) return
+        installed = true
+        Handler(Looper.getMainLooper()).post {
+            while (true) {
+                try {
+                    Looper.loop()
+                    return@post
+                } catch (e: RuntimeException) {
+                    if (!isLateFrame(e)) throw e
+                }
+            }
+        }
+    }
+
+    private fun isLateFrame(e: RuntimeException): Boolean =
+        e.message?.contains("FlutterJNI is not attached") == true &&
+            e.stackTrace.any { it.methodName == "scheduleFrame" || it.className.contains("ImageReader") }
 }

@@ -3,15 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.1.4';
+  static const version = '2.1.5';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Lenses for the film cameras: tap the ring in the viewfinder corner for wide, fish-eye, plastic, '
-      'soft focus, swirl, tilt-shift, star, anamorphic and pinhole. New focus marks that wait for the camera, '
-      'double exposures straight to the darkroom, and one swipe home on Android.';
+      'Wide and fish-eye now use your phone\'s widest camera. On iPhones with the Camera Control, it takes '
+      'the picture and the volume buttons stay the shutter. A fix for the viewfinder sometimes staying frozen '
+      'after a swipe, and for a crash when closing the app.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

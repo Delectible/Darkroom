@@ -24,6 +24,7 @@ import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../../core/utils/pixel_font.dart';
 import '../../cameras/domain/camera_spec.dart';
+import '../application/preview_probe.dart';
 import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
@@ -374,7 +375,8 @@ class _RotationCorrectedPreview extends StatelessWidget {
       valueListenable: controller,
       builder: (context, value, _) {
         if (!value.isInitialized) return const SizedBox.shrink();
-        final preview = controller.buildPreview();
+        // (its own layer, so the probe can read the raw frames)
+        final preview = RepaintBoundary(key: PreviewProbe.key, child: controller.buildPreview());
         if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return preview;
         return RotatedBox(quarterTurns: _turns(value.deviceOrientation), child: preview);
       },

@@ -30,6 +30,7 @@ import '../../monetization/pro_sheet.dart';
 import '../../sd_card/presentation/win98/explorer_screen.dart';
 import '../../settings/application/settings_controllers.dart';
 import '../../settings/presentation/settings_sheet.dart';
+import '../application/camera_log.dart';
 import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
@@ -864,12 +865,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   void _dropWhenLive([int tries = 0]) {
     if (!mounted || CameraViewport.freeze.value == null) return;
     if (ref.read(cameraSessionProvider).isReady || tries > 100) {
-      Future<void>.delayed(const Duration(milliseconds: 350), () {
-        if (mounted && !_dragging && !_committing && _swap.value == 0) _dropMoving();
-      });
+      if (tries > 100) CameraLog.add('still dropped: the camera never got ready');
+      Future<void>.delayed(const Duration(milliseconds: 350), () => _dropWhenIdle());
       return;
     }
     Future<void>.delayed(const Duration(milliseconds: 100), () => _dropWhenLive(tries + 1));
+  }
+
+  /// The still goes once nothing's moving: a finger on the screen at that
+  /// moment used to leave it up for good (a "frozen" viewfinder). A new
+  /// swipe takes it over (and drops it again when it lands).
+  void _dropWhenIdle([int tries = 0]) {
+    if (!mounted || CameraViewport.freeze.value == null) return;
+    if (!_dragging && !_committing && _swap.value == 0) {
+      if (tries > 0) CameraLog.add('still dropped after ${tries * 200} ms waiting');
+      _dropMoving();
+      return;
+    }
+    if (_pausedForSwipe && _dragging) return; // (this swipe's own still now)
+    if (tries < 150) {
+      Future<void>.delayed(const Duration(milliseconds: 200), () => _dropWhenIdle(tries + 1));
+    }
   }
 
   /// Settings, with the camera's stream stopped while the sheet covers it

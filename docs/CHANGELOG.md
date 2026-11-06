@@ -619,3 +619,20 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   there the volume buttons are only ever the shutter (the Camera Control's
   press arrives as volume-down) and "Volume buttons zoom" is hidden.
 
+- [x] **64.16** → 2.1.5 · Frozen viewfinder (Pixel 9 Pro). The still shown
+  during a swipe dropped once, ~0.35 s after "ready", and only if nothing
+  was touching: a touch at that moment left it up until the next swipe. Now
+  it waits for the finger and drops then (`_dropWhenIdle`). And "ready" only
+  means the camera opened: `PreviewProbe` reads two 64 px pictures of the
+  raw preview texture a moment apart (identical twice = frozen), after each
+  open and every 6 s; a frozen picture is logged and the camera reopened
+  (twice at most until frames come back).
+- [x] **64.17** → 2.1.5 · Camera Log: kept in a file across launches (150
+  lines, a "launch" marker between runs), Copy (with version and system)
+  and Clear; logs the lens on open, frames ok / frozen, and a still held
+  over a ready camera.
+- [x] **64.18** → 2.1.5 · Crash as the app closes ("FlutterJNI is not
+  attached to native", Pixel): the camera handed Flutter's ImageReader
+  texture a frame after the engine had gone. From the activity's
+  onDestroy the main loop runs inside `LateFrameGuard`, which drops only
+  that throw.

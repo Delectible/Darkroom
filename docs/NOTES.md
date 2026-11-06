@@ -828,6 +828,11 @@ UI
 - Camera session: "inactive" does NOT close the camera (Android sends it on
   any focus blip; closing made the Pixel's viewfinder flap). Only hidden /
   paused do. `CameraLog` keeps recent session events: Win98 Help > Debug.
+  It's kept in a file across launches (Copy pastes it). "Ready" isn't
+  "live": `PreviewProbe` compares two tiny reads of the raw preview texture
+  after each open and every 6 s, logs frozen pictures and reopens (twice at
+  most). A swipe's still only drops when no finger is down (`_dropWhenIdle`
+  waits for it).
   While the camera is closed the viewport keeps the last stream's aspect
   (`_lastPreviewAspect`), so the frozen still never squashes.
 - App icon shortcuts (`core/device/app_shortcuts.dart`, quick_actions):

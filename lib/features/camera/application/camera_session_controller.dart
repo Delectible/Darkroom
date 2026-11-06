@@ -12,6 +12,7 @@ import '../../../core/providers.dart';
 import 'camera_log.dart';
 import 'camera_ui_state.dart';
 import 'lens_controller.dart';
+import 'preview_probe.dart';
 import '../../cameras/domain/camera_spec.dart';
 
 enum SessionStatus { idle, initializing, ready, permissionDenied, noCamera, error }
@@ -268,7 +269,11 @@ class CameraSessionController extends Notifier<CameraSessionState> {
               orElse: () => facing.isNotEmpty ? facing.first : cams.first,
             ),
           );
-    CameraLog.add('open ${cfg.lens.name} ${cfg.preset.name}');
+    final film = ref.read(filmLensProvider);
+    CameraLog.add(
+      'open ${cfg.lens.name} ${cfg.preset.name}'
+      '${cfg.ultraWide ? ' ultra-wide' : ''}${film == LensKind.standard ? '' : ' (${film.name} lens)'}',
+    );
     final hasFront = cams.any((c) => c.lensDirection == CameraLensDirection.front);
 
     const maxAttempts = 4;
@@ -322,6 +327,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       _controllerConfig = cfg;
       CameraLog.add('ready');
       c.addListener(_onControllerValue);
+      unawaited(_watchFrames(c));
       await _applyFlash(c, ref.read(activeFlashProvider));
       state = CameraSessionState(
         status: SessionStatus.ready,
@@ -378,6 +384,57 @@ class CameraSessionController extends Notifier<CameraSessionState> {
         _errorPending = false;
         if (ref.mounted) _kick();
       });
+    }
+  }
+
+  /// Reopens for a frozen picture since frames last came (not forever).
+  int _frozenReopens = 0;
+
+  /// "Ready" only means the camera opened: check that the viewfinder is
+  /// really getting frames, now and every few seconds while it's open (see
+  /// [PreviewProbe]), log what it finds, and reopen a frozen camera.
+  Future<void> _watchFrames(CameraController c) async {
+    bool still() => _controller == c && ref.mounted;
+    final ready = DateTime.now();
+    int ms() => DateTime.now().difference(ready).inMilliseconds;
+    await Future<void>.delayed(const Duration(milliseconds: 1200));
+    // The still over the viewfinder goes once the camera's live.
+    var waited = 0;
+    while (!PreviewProbe.mounted) {
+      if (!still()) return;
+      if (++waited == 40) CameraLog.add('still over the viewfinder ${ms()} ms after ready');
+      if (waited > 480) return;
+      await Future<void>.delayed(const Duration(milliseconds: 125));
+    }
+    if (waited >= 40) CameraLog.add('live picture shown ${ms()} ms after ready');
+    var first = true;
+    var frozen = false;
+    while (still()) {
+      var moving = await PreviewProbe.moving();
+      // (a perfectly still scene: look once more, for longer)
+      if (moving == false && still()) {
+        moving = await PreviewProbe.moving(gap: const Duration(milliseconds: 900));
+      }
+      if (!still()) return;
+      if (moving == null) {
+        if (first) CameraLog.add("frames: can't tell");
+      } else if (moving) {
+        if (first || frozen) CameraLog.add('frames ok${first ? '' : ' again'} (${ms()} ms after ready)');
+        _frozenReopens = 0;
+        frozen = false;
+      } else if (!frozen) {
+        frozen = true;
+        CameraLog.add('no frames: picture frozen ${ms()} ms after ready');
+        if (_frozenReopens < 2 && !c.value.isRecordingVideo) {
+          _frozenReopens++;
+          CameraLog.add('reopening for the frozen picture');
+          _controllerConfig = null;
+          _kick();
+          return;
+        }
+      }
+      first = false;
+      await Future<void>.delayed(const Duration(seconds: 6));
     }
   }
 

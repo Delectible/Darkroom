@@ -19,6 +19,7 @@ import '../../../core/processing/cine_strip.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
+import '../../../core/settings/settings_repository.dart';
 import '../../../core/shaders/live_look_preview.dart';
 import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
@@ -40,8 +41,30 @@ import 'viewfinder_shut.dart';
 /// stream's portrait aspect ratio (never cover-cropped), and the unmasked
 /// rect is CropMath.previewMask(...). The export uses CropMath.stillCrop(...)
 /// with the same inputs, so the saved frame == what's inside the mask.
+/// The viewfinder's layout held while it shuts for a new camera.
+@immutable
+class HeldLayout {
+  const HeldLayout(this.spec, this.local, this.previewAspect);
+
+  final CameraSpec spec;
+  final CameraLocalSettings local;
+  final double previewAspect;
+}
+
+final heldLayoutProvider = NotifierProvider<HeldLayoutNotifier, HeldLayout?>(HeldLayoutNotifier.new);
+
+class HeldLayoutNotifier extends Notifier<HeldLayout?> {
+  @override
+  HeldLayout? build() => null;
+
+  void hold(HeldLayout? layout) => state = layout;
+}
+
 class CameraViewport extends ConsumerWidget {
   const CameraViewport({super.key});
+
+  /// The stream's aspect as last drawn (for [HeldLayout]).
+  static double get previewAspectNow => _lastPreviewAspect;
 
   /// The live viewfinder's own layer, for taking a still of it.
   static final snapKey = GlobalKey(debugLabel: 'viewfinder');
@@ -69,12 +92,20 @@ class CameraViewport extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(cameraSessionProvider);
-    final spec = ref.watch(activeSpecProvider);
-    final local = ref.watch(activeCameraSettingsProvider);
+    // A new camera of the same kind (another stock, film <-> movie): the
+    // viewfinder keeps the old one's shape and marks until it has shut, and
+    // opens on the new (see heldLayoutProvider).
+    final held = ref.watch(heldLayoutProvider);
+    final liveSpec = ref.watch(activeSpecProvider);
+    final liveLocal = ref.watch(activeCameraSettingsProvider);
+    final spec = held?.spec ?? liveSpec;
+    final local = held?.local ?? liveLocal;
     final palette = RetroPalette.of(context);
     final aspect = spec.aspectLocked ? spec.defaultAspect : local.aspect;
     final controller = session.controller;
-    final previewAspect = (controller != null && controller.value.previewSize != null)
+    final previewAspect = held != null
+        ? held.previewAspect
+        : (controller != null && controller.value.previewSize != null)
         ? _lastPreviewAspect = controller.value.aspectRatio
         : _lastPreviewAspect;
     // Super 8 frames landscape however the phone is held, inside a full-gate
@@ -155,6 +186,7 @@ class CameraViewport extends ConsumerWidget {
                                           film: spec.mode == AppMode.film,
                                           controller: controller!,
                                           child: LensPreview(
+                                            crop: mask,
                                             child: LiveLookPreview(
                                               spec: spec,
                                               grain: local.grain,

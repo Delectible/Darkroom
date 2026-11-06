@@ -346,13 +346,13 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: Row(
                           children: [
-                            for (final l in widget.spec.lenses)
+                            for (final l in lensesFor(widget.spec, ref.watch(ultraWideProvider)))
                               _LensCap(
                                 lens: l,
                                 on: l == lens,
                                 onTap: () {
                                   unawaited(Haptics.lightImpact());
-                                  ref.read(filmLensProvider.notifier).set(l);
+                                  if (l != lens) LensChange.request(ref, l);
                                   CameraNote.show(l.label);
                                   Future<void>.delayed(const Duration(milliseconds: 180), () {
                                     if (mounted) setState(() => _tray = false);
@@ -768,8 +768,6 @@ class _CapPainter extends CustomPainter {
     final tint = switch (lens) {
       LensKind.plastic => const Color(0xFF6B5A2A),
       LensKind.soft => const Color(0xFF7A6E66),
-      LensKind.anamorphic => const Color(0xFF2E4A7A),
-      LensKind.star => const Color(0xFF5B5E6E),
       LensKind.pinhole => const Color(0xFF111111),
       _ => const Color(0xFF3A4656),
     };

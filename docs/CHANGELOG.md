@@ -636,3 +636,22 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   texture a frame after the engine had gone. From the activity's
   onDestroy the main loop runs inside `LateFrameGuard`, which drops only
   that throw.
+- [x] **64.19** → 2.1.6 · Viewfinder stuck on the other body's still over a
+  stopped camera after quick swipes on resume (Pixel, log ended on "screen
+  covered"): `_checkStuck` at rest restarts the camera / drops the still /
+  lands a toss that never landed after 3 s, and logs "unstuck: …".
+- [x] **64.20** → 2.1.6 · Fish-eye after the owner's references: an
+  equisolid 180° circle filling 96% of the short side, the picture bent to
+  fill it, light falling off to the rim, colour fringe, a blue coating line
+  and a faint halo outside; the black is unexposed (no grain or fade after
+  the film, `LensRenderer.finish`). The lens sits on the frame, not the
+  whole preview (uCrop).
+- [x] **64.21** → 2.1.6 · Star filter and anamorphic removed.
+- [x] **64.22** → 2.1.6 · Wide lens only where there's an ultra-wide (the
+  only way to reach it, with the fish-eye).
+- [x] **64.23** → 2.1.6 · Changing lens shuts the viewfinder (the shutter
+  animation), puts the lens on, waits for the camera's zoom / ultra-wide
+  switch, then opens: lens and camera arrive together.
+- [x] **64.24** → 2.1.6 · Another stock / camera whose viewfinder differs
+  (film <-> movie, photo <-> video): the old shape is held while it shuts,
+  the new one laid out in the dark, and it opens on the new picture.

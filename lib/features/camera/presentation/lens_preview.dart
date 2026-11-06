@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/processing/crop_math.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../application/lens_controller.dart';
 
@@ -10,8 +11,10 @@ import '../application/lens_controller.dart';
 /// ImageFilter.shader). The standard lens: nothing, the picture as it is.
 /// Where shader filters aren't supported (Skia) only the photo shows it.
 class LensPreview extends ConsumerStatefulWidget {
-  const LensPreview({super.key, required this.child});
+  const LensPreview({super.key, required this.crop, required this.child});
 
+  /// The frame that's seen (the photo) in the picture: the lens sits on it.
+  final UnitRect crop;
   final Widget child;
 
   @override
@@ -46,8 +49,13 @@ class _LensPreviewState extends ConsumerState<LensPreview> {
     if (shader == null || lens == LensKind.standard) {
       return ImageFiltered(enabled: false, imageFilter: _none, child: child);
     }
-    // uniforms: 0-1 the size (the engine's), 2 the lens
-    shader.setFloat(2, lens.index.toDouble());
+    // uniforms: 0-1 the size (the engine's), 2 the lens, 3-6 the frame
+    shader
+      ..setFloat(2, lens.index.toDouble())
+      ..setFloat(3, widget.crop.left)
+      ..setFloat(4, widget.crop.top)
+      ..setFloat(5, widget.crop.width)
+      ..setFloat(6, widget.crop.height);
     return ImageFiltered(imageFilter: ui.ImageFilter.shader(shader), child: child);
   }
 

@@ -28,8 +28,6 @@ class CameraCatalog {
     LensKind.plastic,
     LensKind.swirl,
     LensKind.tiltShift,
-    LensKind.star,
-    LensKind.anamorphic,
     LensKind.pinhole,
   ];
   static const _lensesInstant = [
@@ -39,8 +37,6 @@ class CameraCatalog {
     LensKind.soft,
     LensKind.swirl,
     LensKind.tiltShift,
-    LensKind.star,
-    LensKind.anamorphic,
     LensKind.pinhole,
   ];
 

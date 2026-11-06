@@ -3,15 +3,16 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.1.5';
+  static const version = '2.1.6';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Wide and fish-eye now use your phone\'s widest camera. On iPhones with the Camera Control, it takes '
-      'the picture and the volume buttons stay the shutter. A fix for the viewfinder sometimes staying frozen '
-      'after a swipe, and for a crash when closing the app.';
+      'A more real fish-eye: a circle with a blue rim on clean black. Changing lens closes the viewfinder '
+      'for a moment and opens on the new lens, and switching film or camera does the same. The wide lens '
+      'shows only on phones with an ultra-wide camera. Star and anamorphic lenses are gone, and a fix for '
+      'a viewfinder that could stay frozen after quick swipes.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

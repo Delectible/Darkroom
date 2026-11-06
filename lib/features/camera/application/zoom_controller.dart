@@ -77,6 +77,12 @@ class ZoomController extends Notifier<ZoomState> {
       final hwMax = await c.getMaxZoomLevel();
       if (!ref.mounted || !identical(_controller, c)) return;
       _hwMin = hwMin;
+      // Android: a back camera that zooms below 1x has an ultra-wide behind
+      // it (iPhone: the session knows from the list of cameras).
+      if (defaultTargetPlatform == TargetPlatform.android &&
+          c.description.lensDirection == CameraLensDirection.back) {
+        ref.read(ultraWideProvider.notifier).set(hwMin < 1);
+      }
       final widest = zoom?.wideMm != null && _wantsWidest(ref.read(filmLensProvider)) && hwMin < 1;
       final lo = widest ? hwMin : math.max(1.0, hwMin);
       // Film bodies (no ZoomSpec) are fixed at 1x, even if the session was
@@ -105,6 +111,7 @@ class ZoomController extends Notifier<ZoomState> {
   double? _beforeWide;
 
   void _lensChanged(LensKind lens) {
+    lensMove = null;
     final min = _hwMin;
     final c = _controller;
     if (min == null || min >= 1 || c == null || !c.value.isInitialized) return;
@@ -120,9 +127,13 @@ class ZoomController extends Notifier<ZoomState> {
     } else {
       return;
     }
-    _lastSent = null;
-    _send(state.level);
+    _lastSent = DateTime.now();
+    // (awaited: the lens change opens the viewfinder once it's through)
+    lensMove = c.setZoomLevel(state.level).catchError((Object _) {});
   }
+
+  /// The zoom a lens change asked for, done once the camera has applied it.
+  Future<void>? lensMove;
 
   /// The film zoom ring: straight to [level] (clamped), as the finger turns it.
   void setLevel(double level) {

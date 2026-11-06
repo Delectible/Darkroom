@@ -39,15 +39,52 @@ void main() {
     }
   });
 
-  test('shaders/lens.frag: size, lens, picture; no GLES flip', () {
+  test('fish-eye: a circle on black, the black untouched by the film after', () {
+    final base = img.decodeJpg(File('assets/samples/bridge.jpg').readAsBytesSync())!;
+    final small = img.copyResize(base, width: 450, height: 300);
+    final w = small.width, h = small.height;
+    final data = small.convert(numChannels: 3).toUint8List();
+    const fish = LensRenderer(LensKind.fisheye);
+    fish.render(data, w, h);
+    int at(int x, int y) => data[(y * w + x) * 3] + data[(y * w + x) * 3 + 1] + data[(y * w + x) * 3 + 2];
+    expect(at(2, 2), 0); // a corner: black
+    expect(at(w ~/ 2, h ~/ 2), greaterThan(0)); // the middle: picture
+    // the film's grain and fade land everywhere: the finish blacks it out again
+    for (var i = 0; i < data.length; i++) {
+      data[i] = (data[i] + 18 + (i * 7919) % 23).clamp(0, 255);
+    }
+    fish.finish(data, w, h);
+    expect(at(2, 2), 0);
+    expect(at(w - 3, h - 3), 0);
+    // just outside the rim along the short side: a faint blue halo
+    final i = ((h ~/ 2) * w + (w ~/ 2 + (0.48 * h).round() + 1)) * 3;
+    expect(data[i + 2], greaterThan(data[i]));
+    if (shots != null) {
+      final out = img.Image.fromBytes(width: w, height: h, bytes: data.buffer, numChannels: 3);
+      File('$shots/lens_fisheye_finished.jpg').writeAsBytesSync(img.encodeJpg(out, quality: 92));
+    }
+  });
+
+  test('shaders/lens.frag: size, lens, frame, picture; no GLES flip', () {
     final src = File('shaders/lens.frag').readAsStringSync();
     expect(RegExp(r'^uniform vec2 uSize;', multiLine: true).hasMatch(src), isTrue);
     expect(RegExp(r'^uniform float uLens;', multiLine: true).hasMatch(src), isTrue);
+    expect(RegExp(r'^uniform vec4 uCrop;', multiLine: true).hasMatch(src), isTrue);
+    // the fish-eye's numbers are the photo's
+    for (final (name, v) in [
+      ('FISH_FILL', LensRenderer.fishFill),
+      ('FISH_CAP', LensRenderer.fishCap),
+      ('FISH_CA', LensRenderer.fishCa),
+      ('FISH_HALO', LensRenderer.fishHalo),
+    ]) {
+      expect(src, contains('#define $name $v'), reason: name);
+    }
     expect(RegExp(r'^uniform sampler2D', multiLine: true).allMatches(src).length, 1);
     expect(src, isNot(contains('IMPELLER_TARGET_OPENGLES')));
     // every lens the app knows has its branch
     for (final l in LensKind.values.skip(1)) {
       expect(src, contains('lens == ${l.index}'), reason: l.name);
     }
+    expect(src, isNot(contains('lens == ${LensKind.values.length}')));
   });
 }

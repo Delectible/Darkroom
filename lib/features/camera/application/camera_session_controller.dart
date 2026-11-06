@@ -156,6 +156,9 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     _kick();
   }
 
+  /// Whether the camera screen has asked for the camera (see [setScreenVisible]).
+  bool get screenVisible => _screenVisible;
+
   /// "Grant access" button.
   void retry() {
     _permissionBlocked = false;
@@ -253,6 +256,9 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       return;
     }
     final cams = _cameras!;
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      ref.read(ultraWideProvider.notifier).set(cams.any((c) => c.lensType == CameraLensType.ultraWide));
+    }
     if (cams.isEmpty) {
       state = state.copyWith(status: SessionStatus.noCamera, message: 'No camera found');
       return;

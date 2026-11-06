@@ -30,10 +30,12 @@ import '../../monetization/pro_sheet.dart';
 import '../../sd_card/presentation/win98/explorer_screen.dart';
 import '../../settings/application/settings_controllers.dart';
 import '../../settings/presentation/settings_sheet.dart';
+import '../../../core/settings/settings_repository.dart';
 import '../application/camera_log.dart';
 import '../application/camera_session_controller.dart';
 import '../application/camera_ui_state.dart';
 import '../application/capture_controller.dart';
+import '../application/lens_controller.dart';
 import '../application/zoom_controller.dart';
 import 'body_swap.dart';
 import 'photo_body.dart';
@@ -391,6 +393,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
       }),
     );
     ViewfinderShutter.noteOff = _noteCamera;
+    LensChange.handler = _changeLens;
     // Launch: shut until the camera is live (see _live).
     _shutter.value = 1;
     _watchLive();
@@ -398,6 +401,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     CameraViewport.liveUnder.addListener(_syncShutter);
     // The launch picture is kept up to date (see _keepPicture).
     _pictureTimer = Timer.periodic(const Duration(seconds: 2), (_) => _keepPicture());
+    _stuckTimer = Timer.periodic(const Duration(milliseconds: 500), (_) => _checkStuck());
     // Debug > Speed Tests > Run Speed Tests drives the screen through these.
     SpeedTestRun.tossDirection = () => _dirFor(ref.read(appModeProvider));
     SpeedTestRun.open = (screen) async {
@@ -439,6 +443,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   void dispose() {
     _cover?.dispose();
     _earlyCamera?.cancel();
+    _stuckTimer?.cancel();
+    if (LensChange.handler == _changeLens) LensChange.handler = null;
     CameraViewport.freeze.removeListener(_syncShutter);
     CameraViewport.liveUnder.removeListener(_syncShutter);
     if (ViewfinderShutter.shut == _shutter) {
@@ -745,6 +751,143 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
 
   /// The mode the body flying in was tossed from (null once it's landed).
   AppMode? _landingFrom;
+
+  // ---- a new lens, a new camera: the viewfinder shuts over the change -----
+
+  int _changeRun = 0;
+
+  /// Whether the viewfinder may shut over a change now: open and live, at
+  /// rest, in plain view, not recording.
+  bool get _canShutForChange =>
+      mounted &&
+      _live &&
+      CameraViewport.freeze.value == null &&
+      !_dragging &&
+      !_committing &&
+      _swap.value == 0 &&
+      !ref.read(captureControllerProvider).isRecording &&
+      ModalRoute.of(context)?.isCurrent == true;
+
+  /// Shut (a still of the viewfinder as it is, darkening), then [change].
+  Future<bool> _shutThen(int run) async {
+    _snapMoving();
+    if (CameraViewport.freeze.value == null) return false;
+    final until = DateTime.now().add(ViewfinderShutter.close + const Duration(milliseconds: 250));
+    while (mounted && run == _changeRun && !_shutter.isCompleted && DateTime.now().isBefore(until)) {
+      await Future<void>.delayed(const Duration(milliseconds: 16));
+    }
+    return mounted && run == _changeRun;
+  }
+
+  /// A lens from the tray: the viewfinder shuts, the lens goes on (and the
+  /// camera switches to its ultra-wide or back), and it opens once the
+  /// camera says it's through, so the new lens and the new camera arrive
+  /// together.
+  Future<void> _changeLens(LensKind lens) async {
+    final lenses = ref.read(filmLensProvider.notifier);
+    if (!_canShutForChange) return lenses.set(lens);
+    final run = ++_changeRun;
+    CameraLog.add('lens ${lens.name}');
+    if (!await _shutThen(run)) return lenses.set(lens);
+    lenses.set(lens);
+    // The zoom it asked for (Android: across to the ultra-wide or back),
+    // then a beat for the camera's own switch and the first frames.
+    final move = ref.read(zoomProvider.notifier).lensMove;
+    if (move != null) {
+      await move.timeout(const Duration(milliseconds: 1500), onTimeout: () {});
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    if (!mounted || run != _changeRun) return;
+    _dropWhenLive();
+  }
+
+  /// Another camera of the same kind (a stock, film <-> movie, photo <->
+  /// video): when its viewfinder differs (shape, sensor mode), the old one
+  /// is held while it shuts, the new one is laid out in the dark, and it
+  /// opens on the new camera's picture.
+  void _changeCamera(CameraSpec prev, CameraSpec next) {
+    if (prev.id == next.id || prev.mode != next.mode || _committing) return;
+    final settings = ref.read(cameraSettingsProvider);
+    final prevLocal = settings[prev.id] ?? CameraLocalSettings.defaultsFor(prev);
+    final nextLocal = settings[next.id] ?? CameraLocalSettings.defaultsFor(next);
+    final prevAspect = prev.aspectLocked ? prev.defaultAspect : prevLocal.aspect;
+    final nextAspect = next.aspectLocked ? next.defaultAspect : nextLocal.aspect;
+    final differs =
+        prevAspect != nextAspect ||
+        presetFor(prev) != presetFor(next) ||
+        (prev.film?.gate ?? 0) != (next.film?.gate ?? 0) ||
+        prev.landscapeOnly != next.landscapeOnly;
+    if (!differs || !_canShutForChange) return;
+    final run = ++_changeRun;
+    ref.read(heldLayoutProvider.notifier).hold(HeldLayout(prev, prevLocal, CameraViewport.previewAspectNow));
+    unawaited(() async {
+      final shut = await _shutThen(run);
+      if (run != _changeRun) return;
+      _endHold();
+      if (shut) _dropWhenLive();
+    }());
+  }
+
+  void _endHold() {
+    if (ref.read(heldLayoutProvider) != null) ref.read(heldLayoutProvider.notifier).hold(null);
+  }
+
+  /// A safety net: at rest on the camera (nothing moving, nothing over it),
+  /// the camera must be asked for and no still held over a ready camera. A
+  /// gesture path that left either behind (a still of the other body stuck
+  /// over a stopped camera, Pixel 9 Pro, 2.1.5) is put right after 3 s and
+  /// logged with the state it was found in.
+  Timer? _stuckTimer;
+  int _stuckFor = 0;
+
+  void _checkStuck() {
+    if (!mounted) return;
+    final session = ref.read(cameraSessionProvider.notifier);
+    final atRest =
+        LaunchCurtain.isGone &&
+        !_picturePhase &&
+        !_dragging &&
+        // (a toss whose spring was stopped and never landed counts too)
+        (!_committing || !_swap.isAnimating) &&
+        (_swap.value == 0 || _committing) &&
+        !_selectorOpen &&
+        _cover == null &&
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed &&
+        ModalRoute.of(context)?.isCurrent == true;
+    final held = CameraViewport.freeze.value != null && !CameraViewport.liveUnder.value;
+    final stuck =
+        atRest &&
+        (_committing || !session.screenVisible || (held && ref.read(cameraSessionProvider).isReady && _live));
+    if (!stuck) {
+      _stuckFor = 0;
+      return;
+    }
+    if (++_stuckFor < 6) return;
+    _stuckFor = 0;
+    CameraLog.add(
+      'unstuck: camera ${session.screenVisible ? 'on' : 'off'}, still ${held ? 'held' : 'none'}'
+      '${_pausedForSwipe ? ', paused for swipe' : ''}${_cameraEarly ? ', early' : ''}',
+    );
+    if (_committing) {
+      CameraLog.add('unstuck: a toss that never landed');
+      final from = _landingFrom;
+      if (from != null) {
+        _land(from);
+      } else {
+        setState(() {
+          _committing = false;
+          _committed = false;
+          _swap.value = 0;
+        });
+      }
+    }
+    _pausedForSwipe = false;
+    _cameraEarly = false;
+    BodyQuality.moving(false);
+    _stopMirror();
+    session.setScreenVisible(true);
+    if (CameraViewport.freeze.value != null) _dropWhenLive();
+  }
 
   /// The tossed body has landed: the arriving one is the camera in hand.
   /// [grabbed]: caught again by a new swipe just before landing (its
@@ -1068,6 +1211,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     }
     ref.listen(cameraSessionProvider.select((s) => s.isReady), (_, ready) {
       if (!ready) _cameraStopped();
+    });
+    // Another camera of the same kind: the viewfinder shuts on the old
+    // one's layout and opens on the new one's (see _changeCamera).
+    ref.listen<CameraSpec>(activeSpecProvider, (prev, next) {
+      if (prev != null) _changeCamera(prev, next);
     });
     final mode = ref.watch(appModeProvider);
     final wholeArt = ref.watch(wholeArtProvider).value;

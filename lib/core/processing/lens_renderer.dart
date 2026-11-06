@@ -10,7 +10,7 @@ import '../../features/cameras/domain/camera_spec.dart';
 /// small copy of the frame (long edge ~1024) so even a full-size print takes
 /// a moment, not minutes; bending and the sharp parts use the full frame.
 class LensRenderer {
-  LensRenderer(this.lens);
+  const LensRenderer(this.lens);
 
   final LensKind lens;
 
@@ -20,7 +20,6 @@ class LensRenderer {
     final small = _Small.of(src, w, h);
     final aspect = w / h;
     final diag = math.sqrt(0.25 * aspect * aspect + 0.25);
-    final mn = math.min(w, h).toDouble();
     final out = List<double>.filled(3, 0);
     final tmp = List<double>.filled(3, 0);
 
@@ -50,22 +49,7 @@ class LensRenderer {
             }
             _scale(out, 1 - 0.35 * r * r);
           case LensKind.fisheye:
-            final px = dx * w, py = dy * h;
-            final rad = 0.49 * mn;
-            final rm = math.sqrt(px * px + py * py) / rad;
-            final th = math.min(rm * 1.25, 1.45);
-            final k = (math.tan(th) / math.tan(1.25)) / math.max(rm, 1e-4);
-            final dg = 0.5 * math.sqrt(w * w + h * h);
-            _sample(
-              src,
-              w,
-              h,
-              0.5 + (px / rad) * k * dg * 0.72 / w,
-              0.5 + (py / rad) * k * dg * 0.72 / h,
-              out,
-            );
-            final edge = ((1 - rm) * rad / 2).clamp(0.0, 1.0);
-            _scale(out, (1 - 0.25 * rm * rm) * edge);
+            _fisheye(src, w, h, x, y, out, tmp);
           case LensKind.plastic:
             final f = 1 + 0.06 * r * r;
             _sample(src, w, h, 0.5 + dx * f * 1.006, 0.5 + dy * f * 1.006, tmp);
@@ -124,21 +108,6 @@ class LensRenderer {
             for (var c = 0; c < 3; c++) {
               out[c] = ((l + (out[c] - l) * 1.35) - 0.5) * 1.12 + 0.5;
             }
-          case LensKind.star:
-            _read(src, i, out);
-            small.stars(u, v, tmp);
-            for (var c = 0; c < 3; c++) {
-              out[c] = 1 - (1 - out[c]) * (1 - tmp[c].clamp(0.0, 1.0));
-            }
-          case LensKind.anamorphic:
-            _read(src, i, out);
-            final s = small.streak(u, v).clamp(0.0, 1.0);
-            const blueish = [0.35, 0.6, 1.0];
-            for (var c = 0; c < 3; c++) {
-              out[c] = 1 - (1 - out[c]) * (1 - s * blueish[c]);
-            }
-            final ov = math.sqrt(dx * dx * 4 + dy * dy * 9);
-            _scale(out, 1 - 0.3 * math.pow((ov - 0.5).clamp(0.0, 1.0), 1.5));
           case LensKind.pinhole:
             blurred(0.006).sample(u, v, out);
             final vig = 1 - 0.95 * math.pow(r, 2.6);
@@ -148,6 +117,110 @@ class LensRenderer {
           case LensKind.standard:
             _read(src, i, out);
         }
+        for (var c = 0; c < 3; c++) {
+          data[i + c] = (out[c] * 255).round().clamp(0, 255);
+        }
+      }
+    }
+  }
+
+  // ---- the fish-eye (the same as shaders/lens.frag; its FISH_* numbers) ----
+
+  static const fishFill = 0.96, fishCap = 1.05, fishCa = 0.010, fishHalo = 0.0035;
+
+  /// A 180-degree circular lens (equisolid) on black, the picture bent to
+  /// fill it: light falling off to the rim, a blue coating line at the edge
+  /// and a faint halo just outside it.
+  static void _fisheye(Uint8List src, int w, int h, int x, int y, List<double> out, List<double> tmp) {
+    final mn = math.min(w, h).toDouble();
+    final rad = fishFill * 0.5 * mn;
+    final px = x + 0.5 - w / 2, py = y + 0.5 - h / 2;
+    final len = math.sqrt(px * px + py * py);
+    final rm = len / rad;
+    final dx = len > 1e-4 ? px / len : 0.0, dy = len > 1e-4 ? py / len : 0.0;
+    final sh = 0.5 * mn;
+    final edge = ((1 - rm) * rad / 1.2 + 0.5).clamp(0.0, 1.0);
+    if (edge > 0) {
+      final th = 2 * math.asin(math.min(rm, 1.0) * 0.7071068);
+      final rs = math.tan(th * fishCap / 1.5707963) / math.tan(fishCap);
+      final lat = fishCa * rm * rm;
+      final ax = dx * rs * sh / w, ay = dy * rs * sh / h;
+      _sample(src, w, h, 0.5 + ax * (1 - lat), 0.5 + ay * (1 - lat), tmp);
+      final red = tmp[0];
+      _sample(src, w, h, 0.5 + ax * (1 + lat), 0.5 + ay * (1 + lat), tmp);
+      final blue = tmp[2];
+      _sample(src, w, h, 0.5 + ax, 0.5 + ay, out);
+      out[0] = red;
+      out[2] = blue;
+      final r1 = math.min(rm, 1.0);
+      final f = ((r1 - 0.88) / 0.12).clamp(0.0, 1.0);
+      _scale(out, (1 - 0.22 * math.pow(r1, 4)) * (1 - 0.45 * f * f));
+      final ring = math.pow(((r1 - 0.972) / 0.028).clamp(0.0, 1.0), 1.3).toDouble();
+      if (ring > 0) {
+        final l = _luma(out);
+        const k = [0.35, 0.60, 1.55], add = [0.01, 0.04, 0.14];
+        for (var c = 0; c < 3; c++) {
+          out[c] += (l * k[c] + add[c] - out[c]) * ring;
+        }
+      }
+      _scale(out, edge);
+    } else {
+      out.fillRange(0, 3, 0);
+    }
+    // (the rim's light: the source's at the short side's edge)
+    if (edge < 1) _addGlow(src, w, h, dx, dy, rm, rad, mn, 0.985 * sh, edge, out, tmp);
+  }
+
+  /// Just outside the rim: a faint blue halo, from the light at the rim.
+  static void _addGlow(
+    Uint8List s,
+    int w,
+    int h,
+    double dx,
+    double dy,
+    double rm,
+    double rad,
+    double mn,
+    double rimAt,
+    double edge,
+    List<double> out,
+    List<double> tmp,
+  ) {
+    final o = (rm - 1) * rad;
+    if (o <= -0.5) return;
+    _sample(s, w, h, 0.5 + dx * rimAt / w, 0.5 + dy * rimAt / h, tmp);
+    final halo = math.exp(-math.max(o, 0.0) / (fishHalo * mn));
+    final g = (0.15 + 0.7 * _luma(tmp)) * halo * 0.7 * (1 - edge);
+    out[0] += 0.12 * g;
+    out[1] += 0.25 * g;
+    out[2] += 0.75 * g;
+  }
+
+  /// After the film's look: the fish-eye's black is film that never saw
+  /// light (no grain, no fade, the print's deepest black); its rim and halo
+  /// are drawn again over it, from the developed picture.
+  void finish(Uint8List data, int w, int h) {
+    if (lens != LensKind.fisheye) return;
+    final mn = math.min(w, h).toDouble();
+    final rad = fishFill * 0.5 * mn;
+    final inner = rad - 1.5; // (inside this, the picture as developed)
+    final tmp = List<double>.filled(3, 0), out = List<double>.filled(3, 0);
+    for (var y = 0; y < h; y++) {
+      final py = y + 0.5 - h / 2;
+      for (var x = 0; x < w; x++) {
+        final px = x + 0.5 - w / 2;
+        final len2 = px * px + py * py;
+        if (len2 < inner * inner) continue;
+        final len = math.sqrt(len2);
+        final rm = len / rad;
+        final edge = ((1 - rm) * rad / 1.2 + 0.5).clamp(0.0, 1.0);
+        final i = (y * w + x) * 3;
+        final dx = px / len, dy = py / len;
+        for (var c = 0; c < 3; c++) {
+          out[c] = data[i + c] / 255 * edge;
+        }
+        // (the rim's light: the developed picture's, just inside it)
+        _addGlow(data, w, h, dx, dy, rm, rad, mn, 0.95 * rad, edge, out, tmp);
         for (var c = 0; c < 3; c++) {
           data[i + c] = (out[c] * 255).round().clamp(0, 255);
         }
@@ -262,71 +335,5 @@ class _Small {
       final cc = px[(y1 * w + x0) * 3 + c], d = px[(y1 * w + x1) * 3 + c];
       out[c] = (a * (1 - fx) + b * fx) * (1 - fy) + (cc * (1 - fx) + d * fx) * fy;
     }
-  }
-
-  // ---- highlight streaks, worked out once on this small frame ----
-
-  Float32List? _stars, _streaks;
-
-  void stars(double u, double v, List<double> out) {
-    final s = _stars ??= _makeStars();
-    final x = (u * w).floor().clamp(0, w - 1), y = (v * h).floor().clamp(0, h - 1);
-    for (var c = 0; c < 3; c++) {
-      out[c] = s[(y * w + x) * 3 + c];
-    }
-  }
-
-  Float32List _makeStars() {
-    final o = Float32List(px.length);
-    final aspect = w / h;
-    for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        for (var dir = 0; dir < 3; dir++) {
-          final a = 0.5236 + dir * 1.0472;
-          final sx = math.cos(a) / aspect * 0.006 * w, sy = math.sin(a) * 0.006 * h;
-          for (var i = 1; i <= 10; i++) {
-            final wt = math.exp(-i / 3.5) * 0.22 * 10;
-            for (final sg in const [1, -1]) {
-              final xx = (x + sx * i * sg).round(), yy = (y + sy * i * sg).round();
-              if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-              final j = (yy * w + xx) * 3;
-              for (var c = 0; c < 3; c++) {
-                final hi = px[j + c] - 0.9;
-                if (hi > 0) o[(y * w + x) * 3 + c] += hi * wt;
-              }
-            }
-          }
-        }
-      }
-    }
-    return o;
-  }
-
-  double streak(double u, double v) {
-    final s = _streaks ??= _makeStreaks();
-    final x = (u * w).floor().clamp(0, w - 1), y = (v * h).floor().clamp(0, h - 1);
-    return s[y * w + x];
-  }
-
-  Float32List _makeStreaks() {
-    final o = Float32List(w * h);
-    final hi = Float32List(w * h);
-    for (var i = 0; i < w * h; i++) {
-      final l = 0.2126 * px[i * 3] + 0.7152 * px[i * 3 + 1] + 0.0722 * px[i * 3 + 2];
-      hi[i] = math.max(0, l - 0.85) / 0.15;
-    }
-    for (var y = 0; y < h; y++) {
-      for (var x = 0; x < w; x++) {
-        var acc = 0.0;
-        for (var i = 1; i <= 16; i++) {
-          final wt = math.exp(-i / 6) * 0.16;
-          final off = (i * 0.016 * w).round();
-          if (x + off < w) acc += hi[y * w + x + off] * wt;
-          if (x - off >= 0) acc += hi[y * w + x - off] * wt;
-        }
-        o[y * w + x] = acc;
-      }
-    }
-    return o;
   }
 }

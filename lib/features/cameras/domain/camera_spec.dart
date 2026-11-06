@@ -124,8 +124,6 @@ enum LensKind {
   soft('Soft focus', 'SOFT'),
   swirl('Swirl', 'SWRL'),
   tiltShift('Tilt-shift', 'TILT'),
-  star('Star filter', 'STAR'),
-  anamorphic('Anamorphic', 'ANAM'),
   pinhole('Pinhole', 'PIN');
 
   const LensKind(this.label, this.mark);

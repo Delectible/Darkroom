@@ -252,6 +252,9 @@ class PhotoPipeline {
       }
     }
 
+    // (the fish-eye's black stays unexposed: no grain on it)
+    LensRenderer(job.lens).finish(data, w, h);
+
     if (job.timestamp && spec.timestampStyle != TimestampStyle.none) {
       _drawTimestamp(data, w, h, spec.timestampStyle, DateTime.fromMillisecondsSinceEpoch(job.capturedAtMs));
     }

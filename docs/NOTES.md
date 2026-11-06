@@ -833,6 +833,19 @@ UI
   after each open and every 6 s, logs frozen pictures and reopens (twice at
   most). A swipe's still only drops when no finger is down (`_dropWhenIdle`
   waits for it).
+- Film lenses (`LensKind`, the tray in the viewfinder's top-left corner):
+  `shaders/lens.frag` over the viewfinder (uCrop = the frame, so the lens
+  sits on what's photographed), `LensRenderer` in the photo before the film
+  (and `finish` after it: the fish-eye's black is unexposed film, no grain,
+  rim and halo redrawn). The fish-eye's numbers (`FISH_*` / `fish*`) must
+  match; a test checks. Wide only where the back has an ultra-wide
+  (`ultraWideProvider`; Android: zoom below 1x, iPhone: listed), and wide /
+  fish-eye are the only way to it. A lens change shuts the viewfinder
+  (`LensChange` -> `_changeLens`), waits for the camera's zoom / switch,
+  then opens. A new camera of the same kind whose viewfinder differs
+  (shape, sensor mode) holds the old layout while it shuts
+  (`heldLayoutProvider`) and opens on the new. `_checkStuck` puts right a
+  stopped camera or a held still left behind at rest (logged "unstuck").
   While the camera is closed the viewport keeps the last stream's aspect
   (`_lastPreviewAspect`), so the frozen still never squashes.
 - App icon shortcuts (`core/device/app_shortcuts.dart`, quick_actions):

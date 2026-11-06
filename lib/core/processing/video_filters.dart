@@ -265,8 +265,13 @@ class VideoFilters {
     int? canvasH,
     int? cueInput,
     List<(double, double)> cueTimes = const [],
+    bool stripPortrait = false,
   }) {
+    // [canvasW] x [canvasH]: the strip, holes on the left. A portrait frame
+    // goes in on its side ([stripPortrait]) and the strip is turned back up.
     final cw = canvasW ?? outW, chh = canvasH ?? outH;
+    final (fw, fh) = stripPortrait ? (outH, outW) : (outW, outH);
+    final (ow, oh) = stripPortrait ? (chh, cw) : (cw, chh);
     // A cinema print sits still in the gate (no weave at all).
     final weaveX = film.weave == 0 ? 0.0 : math.max(1.0, outH * 0.0035 * film.weave);
     final weaveY = film.weave == 0 ? 0.0 : math.max(1.0, outH * 0.0055 * film.weave);
@@ -310,16 +315,16 @@ class VideoFilters {
     // frame lines, then the strip (edges, sprocket hole) on top.
     final x0 = (CineStrip.picX * cw).round(), y0 = (CineStrip.picY * chh).round();
     final gapPx = (CineStrip.gap * chh).round();
-    final topH = math.max(2, y0 - gapPx), botY = y0 + outH + gapPx, botH = math.max(2, chh - botY);
+    final topH = math.max(2, y0 - gapPx), botY = y0 + fh + gapPx, botH = math.max(2, chh - botY);
     final strip = film.gate > 0
         ? [
-            '[dusty]split=3[fa][fb][fc]',
-            '[fb]crop=$outW:$topH:0:${outH - topH}[ftop]',
-            '[fc]crop=$outW:$botH:0:0[fbot]',
+            '[dusty]${stripPortrait ? 'transpose=2,' : ''}split=3[fa][fb][fc]',
+            '[fb]crop=$fw:$topH:0:${fh - topH}[ftop]',
+            '[fc]crop=$fw:$botH:0:0[fbot]',
             '[fa]pad=$cw:$chh:$x0:$y0:color=0x120c0a[c0]',
             '[c0][ftop]overlay=$x0:0[c1]',
             '[c1][fbot]overlay=$x0:$botY[c2]',
-            '[c2][2:v]overlay=0:0:format=auto[gated]',
+            '[c2][2:v]overlay=0:0:format=auto${stripPortrait ? ',transpose=1' : ''}[gated]',
           ]
         : cueInput != null && cueTimes.isNotEmpty
         // Reel-change cue marks: a dot top right for four frames.
@@ -354,8 +359,8 @@ class VideoFilters {
       '[vig][1:v]overlay=0:0:shortest=1:format=auto[dusty]',
       ...strip,
       // Gate weave: the film hops a pixel or two in the gate every frame.
-      '[gated]pad=${cw + 2 * pad}:${chh + 2 * pad}:$pad:$pad:color=0x120c0a,'
-          "crop=$cw:$chh:'$pad+${_f(weaveX)}*(random(1)-0.5)':'$pad+${_f(weaveY)}*(random(2)-0.5)',"
+      '[gated]pad=${ow + 2 * pad}:${oh + 2 * pad}:$pad:$pad:color=0x120c0a,'
+          "crop=$ow:$oh:'$pad+${_f(weaveX)}*(random(1)-0.5)':'$pad+${_f(weaveY)}*(random(2)-0.5)',"
           'format=yuv420p[vout]',
     ].join(';');
   }

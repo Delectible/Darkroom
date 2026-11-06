@@ -9,9 +9,10 @@ import 'package:image/image.dart' as img;
 
 import 'lgpl_filters.dart';
 
-/// Super 8 reels are full-gate scans: always landscape (even shot upright),
-/// the picture inside a film strip with the sprocket hole on the left and
-/// slivers of the neighbouring frames. Runs the real graph through a desktop
+/// Super 8 reels are full-gate scans: the picture inside a film strip with
+/// slivers of the neighbouring frames. Shot sideways, a landscape reel with
+/// the sprocket hole on the left; shot upright, a portrait one with it
+/// along the top. Runs the real graph through a desktop
 /// ffmpeg when one is installed. `SHOTS=dir` keeps a frame.
 void main() {
   final ffmpeg = Platform.environment['FFMPEG'] ?? 'ffmpeg';
@@ -23,7 +24,7 @@ void main() {
     }
   }();
 
-  test('upright phone still gives a landscape crop', () {
+  test('a crop across the short side is landscape (CropMath)', () {
     final c = CropMath.stillCrop(
       width: 480,
       height: 640,
@@ -44,7 +45,7 @@ void main() {
 
   for (final (name, turns) in [('upright', 0), ('sideways', 1)]) {
     test(
-      'Super 8 reel ($name): landscape full-gate strip',
+      'Super 8 reel ($name): full-gate strip the way it was held',
       () async {
         final dir = await Directory.systemTemp.createTemp('super8');
         final raw = '${dir.path}/raw.mp4';
@@ -72,9 +73,11 @@ void main() {
         for (final banned in notInMinBuild) {
           expect(graph, isNot(contains('$banned=')), reason: '$banned is not in the LGPL build');
         }
-        // Landscape canvas with the strip's proportions.
-        expect(plan.outW, greaterThan(plan.outH));
-        expect(plan.outW / plan.outH, closeTo(CineStrip.canvasAspect(4 / 3), 0.03));
+        // The strip's proportions: landscape sideways, portrait upright.
+        final upright = turns.isEven;
+        final long = upright ? plan.outH : plan.outW, short = upright ? plan.outW : plan.outH;
+        expect(long, greaterThan(short));
+        expect(long / short, closeTo(CineStrip.canvasAspect(4 / 3), 0.03));
 
         final run = await Process.run(ffmpeg, [
           ...plan.mainInputArgs,
@@ -102,11 +105,13 @@ void main() {
         expect(f.width, plan.outW);
         // Sprocket hole is black, the film edge left of it near-black, and
         // the picture area is not.
-        // Only the hole's right edge is on the canvas (scanned a touch wide).
-        final hx = ((CineStrip.holeX + CineStrip.holeW) * f.width * 0.4).round();
-        final hole = f.getPixel(hx, f.height ~/ 2);
+        // Only the hole's inner edge is on the canvas (scanned a touch wide).
+        final across = upright ? f.height : f.width;
+        final hx = ((CineStrip.holeX + CineStrip.holeW) * across * 0.4).round();
+        final hole = upright ? f.getPixel(f.width ~/ 2, hx) : f.getPixel(hx, f.height ~/ 2);
         expect(hole.r + hole.g + hole.b, lessThan(60));
-        final pic = f.getPixel(((CineStrip.picX + CineStrip.picW / 2) * f.width).round(), f.height ~/ 2);
+        final mid = ((CineStrip.picX + CineStrip.picW / 2) * across).round();
+        final pic = upright ? f.getPixel(f.width ~/ 2, mid) : f.getPixel(mid, f.height ~/ 2);
         expect(pic.r + pic.g + pic.b, greaterThan(60));
         final shots = Platform.environment['SHOTS'];
         if (shots != null) File('$shots/super8_$name.png').writeAsBytesSync(File(png).readAsBytesSync());

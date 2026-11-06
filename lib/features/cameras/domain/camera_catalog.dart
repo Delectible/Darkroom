@@ -128,7 +128,6 @@ class CameraCatalog {
     videoPrefix: 'REEL',
     // One 50 ft cartridge runs 3 min 20 s at 18 fps.
     videoMaxSeconds: 200,
-    landscapeOnly: true,
     pickerTag: 'MOVIE · 18 FPS',
     boxColor: 0xFF22447A,
     boxInk: 0xFFF4C542,

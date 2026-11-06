@@ -673,6 +673,14 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **64.27** → 2.1.7 · An instant print developing showed the photo as
   taken, without its lens (fine once developed): the print's lens (from its
   queued job) now goes over it, the viewfinder's shader (`LensFilter`).
+- [x] **64.28** → 2.1.7 · Super 8 shoots the way it's held: upright a
+  portrait frame with the sprocket holes along the top (the strip turned,
+  `CameraViewport.stripTurns`; the export lays the frame in on its side and
+  turns the strip back, `stripPortrait`), sideways landscape with them on
+  the left as before. No swing any more (the frame keeps its shape).
+- [x] **64.29** → 2.1.7 · Photo <-> video camera: the old viewfinder is held
+  until it has shut even though the new sensor mode has already stopped
+  the camera (the session hears of the change first; `_canHoldForChange`).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

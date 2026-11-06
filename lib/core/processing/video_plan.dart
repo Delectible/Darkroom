@@ -166,7 +166,6 @@ class VideoPlanner {
       height: probeHeight,
       previewAspect: job.previewAspect,
       ratio: job.aspect,
-      // Super 8 is landscape even with the phone upright.
       acrossShortSide: spec.landscapeOnly && probeHeight > probeWidth && turns.isEven,
     );
     final (cw, ch) = VideoFilters.outputSize(crop, profile);
@@ -188,10 +187,20 @@ class VideoPlanner {
       } else {
         _renderPrintDirt(job.workDir, outW, outH, seed: job.id.hashCode);
       }
-      if (film.gate > 0) (planW, planH) = CineStrip.canvasSize(outW, outH);
+      // Super 8's strip runs down a landscape frame, holes on the left; a
+      // portrait frame (shot upright) is laid in it on its side and the
+      // whole strip turned back up: holes along the top.
+      final stripPortrait = film.gate > 0 && outH > outW;
+      var (stripW, stripH) = (outW, outH);
+      if (film.gate > 0) {
+        (stripW, stripH) = stripPortrait
+            ? CineStrip.canvasSize(outH, outW)
+            : CineStrip.canvasSize(outW, outH);
+        (planW, planH) = stripPortrait ? (stripH, stripW) : (stripW, stripH);
+      }
       File(
         p.join(job.workDir, 'gate.png'),
-      ).writeAsBytesSync(film.gate > 0 ? _stripPng(planW, planH) : _gatePng(outW, outH, 0));
+      ).writeAsBytesSync(film.gate > 0 ? _stripPng(stripW, stripH) : _gatePng(outW, outH, 0));
       inputs
         ..addAll([
           '-stream_loop',
@@ -246,8 +255,9 @@ class VideoPlanner {
         outH: outH,
         profile: profile,
         rotateTurns: turns,
-        canvasW: planW,
-        canvasH: planH,
+        canvasW: stripW,
+        canvasH: stripH,
+        stripPortrait: stripPortrait,
         cueInput: cueInput,
         cueTimes: cueTimes,
       );

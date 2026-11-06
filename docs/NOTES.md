@@ -405,18 +405,19 @@ Film Mode
   PLAY (`_ended`; Android's player sticks), plus a one-shot stall watchdog.
   Prev/next blank only the screen while the next reel threads; the deck
   stays (on the old, paused player, keys idle: `_threading`).
-  No swiping or tapping on the screen; only the keys. No REC badge in the Super 8 viewfinder. Always landscape
-  (`CameraSpec.landscapeOnly`: held upright it records a landscape slice,
-  `CropMath` `acrossShortSide`). Reels are scanned a touch wide (`CineStrip`,
+  No swiping or tapping on the screen; only the keys. No REC badge in the Super 8 viewfinder. Shot the
+  way it's held (2.1.7; was always landscape): upright a portrait frame with
+  the sprocket holes along the top, sideways landscape with them on the
+  viewer's left (`CameraViewport.stripTurns`; the export lays a portrait
+  frame in the strip on its side and turns it back, `stripPortrait`). Reels are scanned a touch wide (`CineStrip`,
   `core/processing/cine_strip.dart`; 1.9.4, was the full gate): rounded
   frame corners, just the edge of the sprocket hole (glowing rim) on the
   viewer's left, thin frame lines. Grain is formed (1.9.4,
   `film/grain_plates.dart`): 16 plates of grain from the stills' model
   (`GrainFormation(frameHeight: 700)`), one per frame at a random offset,
   mixed by tone with `lut2`; the picture softens to the grain's size. The viewfinder shader draws the same strip (uniforms
-  `uCanvas`, `uTurns`: it rotates with the phone so the hole stays on the
-  viewer's left; `_StripTurn` swings it round when the phone turns, in the shader via
-  `uSpin` so the hole turns with the strip); FFmpeg composites it from `gate.png`. Faded look tuned to
+  `uCanvas`, `uTurns`: the strip turns as above; the frame keeps its
+  shape, so there's no swing any more (`uSpin` stays 0)); FFmpeg composites it from `gate.png`. Faded look tuned to
   the owner's scans, strong flicker, dust (dark + light), hairs, long scratches
   and the odd warm flare (`_renderDustFrames`).
 - Corkboard pins must sit **on** the photo, not in the cork above it.

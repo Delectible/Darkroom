@@ -9,7 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Instant photos taken with a lens show it while they develop, not just once they are done.';
+      'Super 8 now shoots the way you hold it: upright for a tall reel with the sprocket holes along the top. '
+      'Switching between photo and movie cameras keeps the viewfinder as it was until it has closed, and '
+      'instant photos taken with a lens show it while they develop.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

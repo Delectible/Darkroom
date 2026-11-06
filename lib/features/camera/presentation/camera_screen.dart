@@ -758,9 +758,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
 
   /// Whether the viewfinder may shut over a change now: open and live, at
   /// rest, in plain view, not recording.
-  bool get _canShutForChange =>
+  bool get _canShutForChange => _live && _canHoldForChange;
+
+  /// The same, whether or not the camera's still live: a new camera's
+  /// sensor mode restarts it before this hears of the change (the session
+  /// listens first), and the viewfinder is still drawn as it was.
+  bool get _canHoldForChange =>
       mounted &&
-      _live &&
       CameraViewport.freeze.value == null &&
       !_dragging &&
       !_committing &&
@@ -817,7 +821,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
         presetFor(prev) != presetFor(next) ||
         (prev.film?.gate ?? 0) != (next.film?.gate ?? 0) ||
         prev.landscapeOnly != next.landscapeOnly;
-    if (!differs || !_canShutForChange) return;
+    if (!differs || !_canHoldForChange) return;
     final run = ++_changeRun;
     ref.read(heldLayoutProvider.notifier).hold(HeldLayout(prev, prevLocal, CameraViewport.previewAspectNow));
     unawaited(() async {

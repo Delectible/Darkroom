@@ -66,6 +66,11 @@ class HeldLayoutNotifier extends Notifier<HeldLayout?> {
 class CameraViewport extends ConsumerWidget {
   const CameraViewport({super.key});
 
+  /// The strip's quarter turns (box -> its upright frame, where the holes
+  /// are on the left) for the phone held [q] quarter turns: sideways as
+  /// held, upright turned so the holes run along the top.
+  static int stripTurns(int q) => q.isOdd ? q : (q == 0 ? 1 : 3);
+
   /// The stream's aspect as last drawn (for [HeldLayout]).
   static double get previewAspectNow => _lastPreviewAspect;
 
@@ -113,11 +118,15 @@ class CameraViewport extends ConsumerWidget {
         : _lastPreviewAspect;
     // Super 8 frames landscape however the phone is held, inside a full-gate
     // film strip that stays upright for the viewer.
-    final turns = spec.landscapeOnly ? uprightQuarterTurns(ref.watch(physicalOrientationProvider)) : 0;
+    // Super 8's strip turns with the phone: upright, a portrait frame with
+    // the sprocket holes along the top; sideways, a landscape frame with
+    // them on the viewer's left (the frame itself is shot the way it's held).
+    final gate = (spec.film?.gate ?? 0) > 0;
+    final turns = gate ? stripTurns(uprightQuarterTurns(ref.watch(physicalOrientationProvider))) : 0;
     final mask = CropMath.previewMask(
       previewAspect: previewAspect,
       ratio: aspect,
-      acrossShortSide: spec.landscapeOnly && turns.isEven,
+      acrossShortSide: spec.landscapeOnly,
     );
     final strip = (spec.film?.gate ?? 0) > 0
         ? CineStrip.previewCanvas(boxAspect: previewAspect, turns: turns, pictureAspect: aspect.ratio)
@@ -154,7 +163,9 @@ class CameraViewport extends ConsumerWidget {
                         // Super 8: when the phone turns, the strip swings round into
                         // its new place instead of jumping.
                         _StripTurn(
-                          turns: turns,
+                          // (the frame keeps its shape now: only the holes
+                          // move, no swing)
+                          turns: 0,
                           cameraId: spec.id,
                           strip: maskRect.size,
                           builder: (spin, spinScale) {
@@ -394,16 +405,6 @@ class _StripTurnState extends State<_StripTurn> with SingleTickerProviderStateMi
   );
 }
 
-/// Rotation contract with camera_android_camerax for a portrait-locked UI.
-///
-/// The plugin's buildPreview() *subtracts* the quarter turns it assumes the
-/// stock CameraPreview widget pre-applied, computed from the **live** device
-/// orientation stream (even when capture orientation is locked). We apply
-/// exactly that pre-rotation from the same live value so the two cancel out
-/// (net rotation == display rotation == 0), but unlike CameraPreview we never
-/// flip the box to landscape, which would squash the image in a UI that does
-/// not rotate. iOS needs nothing: capture orientation is locked to portrait,
-/// so its preview buffer stays portrait.
 /// The digital cameras' colour mode (FX), over the viewfinder as it will be
 /// in the photo (Specials.colorFx).
 class _ColorFx extends ConsumerWidget {
@@ -424,6 +425,16 @@ class _ColorFx extends ConsumerWidget {
   }
 }
 
+/// Rotation contract with camera_android_camerax for a portrait-locked UI.
+///
+/// The plugin's buildPreview() *subtracts* the quarter turns it assumes the
+/// stock CameraPreview widget pre-applied, computed from the **live** device
+/// orientation stream (even when capture orientation is locked). We apply
+/// exactly that pre-rotation from the same live value so the two cancel out
+/// (net rotation == display rotation == 0), but unlike CameraPreview we never
+/// flip the box to landscape, which would squash the image in a UI that does
+/// not rotate. iOS needs nothing: capture orientation is locked to portrait,
+/// so its preview buffer stays portrait.
 class _RotationCorrectedPreview extends StatelessWidget {
   const _RotationCorrectedPreview({required this.controller});
 

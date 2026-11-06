@@ -670,3 +670,20 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   pixel font (`DigitalKeys`): lens under the flash readout, FX top right
   (hidden while recording); the same tray of caps as film. Wide and
   fish-eye reach the ultra-wide on digital too.
+
+## 65. App inspiration: Toned (2026-11-06)
+
+Toned: Halation & Darkroom (iPhone, Aug 2026; an editor for library
+photos, not a camera): expose, push/pull, negative, enlarger onto paper
+(grades, 5 papers), dodge and burn, toners; 13 films, half frame to 4x5;
+free tier + $14.99 once, "TONED" in the edge print on free exports. No
+reviews yet. Ideas kept (on the checklist under App Inspiration):
+
+- [ ] **65.1** Push / pull a roll at the lab (Pro), the lab note says what changed.
+- [ ] **65.2** The negative as part of the story (lab film strips; hold a print to see its negative).
+- [ ] **65.3** Paper per film (glossy, matte, warmtone fibre) and toners for B&W prints, shown on the corkboard.
+- [ ] **65.4** Halation only from blown highlights, per stock; grain thinner in deep shadows / highlights: side-by-side check.
+- [ ] **65.5** "DARKROOM" in the edge print on free lab exports instead of a watermark.
+- [ ] **65.6** Hold a print to compare with the phone's original (where kept).
+- [ ] **65.7** More formats: half frame, medium format 6x6 / 6x7.
+- [ ] **65.8** Pro price vs theirs; translated store listings.

@@ -23,4 +23,5 @@ def whats_new(src):
 
 if __name__ == '__main__':
     with open(os.path.join(ROOT, 'lib', 'core', 'app_info.dart'), encoding='utf-8') as f:
-        sys.stdout.write(whats_new(f.read()) + '\n')
+        # (no newline after: Play counts it towards the 500)
+        sys.stdout.write(whats_new(f.read()))

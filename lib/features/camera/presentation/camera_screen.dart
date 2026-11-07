@@ -807,18 +807,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   }
 
   /// Another camera of the same kind (a stock, film <-> movie, photo <->
-  /// video): when its viewfinder differs (shape, sensor mode), the old one
+  /// video): when its sensor setup differs (mode, gate, orientation), the old one
   /// is held while it shuts, the new one is laid out in the dark, and it
   /// opens on the new camera's picture.
   void _changeCamera(CameraSpec prev, CameraSpec next) {
     if (prev.id == next.id || prev.mode != next.mode || _committing) return;
     final settings = ref.read(cameraSettingsProvider);
     final prevLocal = settings[prev.id] ?? CameraLocalSettings.defaultsFor(prev);
-    final nextLocal = settings[next.id] ?? CameraLocalSettings.defaultsFor(next);
-    final prevAspect = prev.aspectLocked ? prev.defaultAspect : prevLocal.aspect;
-    final nextAspect = next.aspectLocked ? next.defaultAspect : nextLocal.aspect;
+    // Only the frame's shape differs: no restart, the frame glides to it as a ratio change does.
     final differs =
-        prevAspect != nextAspect ||
         presetFor(prev) != presetFor(next) ||
         (prev.film?.gate ?? 0) != (next.film?.gate ?? 0) ||
         prev.landscapeOnly != next.landscapeOnly;

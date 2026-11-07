@@ -753,6 +753,9 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   they develop, digital photos when ready (to C:), only what finishes after
   it went on). Grid lines (`gridLines`, `_GridPainter`) built but not in
   Settings until the owner picks it from the mock.
+- [x] **64.45** → 2.1.9 · Swapping to a stock with the same camera setup
+  but another frame shape glides the frame (as a ratio change does) instead
+  of fading out and in; the fade stays for a real camera restart.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

@@ -120,9 +120,15 @@ class _Manual extends ConsumerStatefulWidget {
     letterSpacing: 1.2,
     height: 1.1,
   );
-  // (the system face, named so tests draw letters)
-  static const body = TextStyle(fontFamily: 'Roboto', color: ink, fontSize: 14, height: 1.3);
-  static const small = TextStyle(fontFamily: 'Roboto', color: faint, fontSize: 12, height: 1.35);
+  // (the dial lettering's family, a little wider and calmer for reading)
+  static const body = TextStyle(
+    fontFamily: 'Manual',
+    color: ink,
+    fontSize: 15,
+    height: 1.3,
+    letterSpacing: 0.1,
+  );
+  static const small = TextStyle(fontFamily: 'Manual', color: faint, fontSize: 12.5, height: 1.35);
 
   @override
   ConsumerState<_Manual> createState() => _ManualState();
@@ -240,6 +246,8 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                   child: _ManualBoxes(
                     values: [for (final v in GrainStrength.values) _grainName(v)],
                     selected: GrainStrength.values.indexOf(local.grain),
+                    // weak grain a cool dark blue, strong a warm dark orange
+                    inks: const [Color(0xFF243B5E), _Manual.ink, Color(0xFF9A4A14)],
                     onSelected: (i) => unawaited(n.setGrain(spec.id, GrainStrength.values[i])),
                   ),
                 ),
@@ -276,16 +284,8 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                       : null,
                   value: global.controls3d,
                   onChanged: (v) => unawaited(g.setControls3d(v)),
-                  last: CameraControl.present,
+                  last: true,
                 ),
-                // (not on iPhones with the Camera Control: the volume buttons stay the shutter there)
-                if (!CameraControl.present)
-                  _ManualTick(
-                    label: 'Volume buttons zoom (digital)',
-                    value: global.volumeZoom,
-                    onChanged: (v) => unawaited(g.setVolumeZoom(v)),
-                    last: true,
-                  ),
               ],
             ),
             _ManualSection(
@@ -414,11 +414,14 @@ class _ManualRow extends StatelessWidget {
 
 /// Printed option boxes, the chosen one inked in.
 class _ManualBoxes extends StatelessWidget {
-  const _ManualBoxes({required this.values, required this.selected, required this.onSelected});
+  const _ManualBoxes({required this.values, required this.selected, required this.onSelected, this.inks});
 
   final List<String> values;
   final int selected;
   final ValueChanged<int> onSelected;
+
+  /// Each option's ink when chosen (default: the manual's black).
+  final List<Color>? inks;
 
   @override
   Widget build(BuildContext context) => Wrap(
@@ -441,14 +444,18 @@ class _ManualBoxes extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                 decoration: BoxDecoration(
-                  color: i == selected ? _Manual.ink : null,
-                  border: Border.all(color: _Manual.ink, width: 1.5),
+                  color: i == selected ? (inks?[i] ?? _Manual.ink) : null,
+                  border: Border.all(
+                    color: i == selected ? (inks?[i] ?? _Manual.ink) : _Manual.ink,
+                    width: 1.5,
+                  ),
                 ),
                 child: Text(
                   values[i],
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Manual',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
                     color: i == selected ? _Manual.paper : _Manual.ink,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
@@ -566,7 +573,8 @@ class _ManualScale extends StatelessWidget {
                   thumbShape: _BarThumb(),
                   trackShape: RectangularSliderTrackShape(),
                 ),
-                child: Slider(value: value, onChanged: onChanged, onChangeEnd: onChangeEnd),
+                // (in tens: 0, 10 ... 100%)
+                child: Slider(value: value, divisions: 10, onChanged: onChanged, onChangeEnd: onChangeEnd),
               ),
             ],
           ),

@@ -3,15 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.1.8';
+  static const version = '2.1.9';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'New settings: an owner\'s manual for the film cameras and a camera menu screen for the digital ones. '
-      'The viewfinder\'s dials and readouts turn to read upright when you hold the phone sideways, and '
-      'Darkroom 98 windows close the way they opened.';
+      'Film settings in a matching typeface, grain choices tinted (weak blue, strong orange) and sound in '
+      'steps of ten.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -29,6 +29,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     ('Caveat', 'Caveat-SemiBold.ttf'),
     ('W98', 'DotGothic16-Regular.ttf'),
     ('Dial', 'BarlowCondensed-SemiBold.ttf'),
+    ('Manual', 'BarlowSemiCondensed-Medium.ttf'),
   ]) {
     final f = File('assets/fonts/$file');
     if (f.existsSync()) {

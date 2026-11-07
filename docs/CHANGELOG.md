@@ -739,6 +739,10 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   face, CAMERA / SOUND / SETUP / PRO tabs, < > values, the touched row
   inverted, today's battery as a meter). Same settings; per-camera ones for
   any film / camera through < name > arrows. `settings_screens_test`.
+- [x] **64.43** → 2.1.9 · Owner's manual: its text in Barlow Semi Condensed
+  Medium (bundled, family `Manual`, beside the dial's Barlow Condensed);
+  volume-buttons zoom only in the digital menu; weak grain inks dark blue,
+  strong dark orange; sound in steps of 10%.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

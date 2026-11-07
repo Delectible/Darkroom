@@ -25,7 +25,11 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
     }
   }
   // The app's own bundled fonts (pubspec `fonts:`), by family.
-  for (final (family, file) in [('Caveat', 'Caveat-SemiBold.ttf'), ('W98', 'DotGothic16-Regular.ttf')]) {
+  for (final (family, file) in [
+    ('Caveat', 'Caveat-SemiBold.ttf'),
+    ('W98', 'DotGothic16-Regular.ttf'),
+    ('Dial', 'BarlowCondensed-SemiBold.ttf'),
+  ]) {
     final f = File('assets/fonts/$file');
     if (f.existsSync()) {
       await (FontLoader(family)..addFont(Future.value(ByteData.sublistView(f.readAsBytesSync())))).load();

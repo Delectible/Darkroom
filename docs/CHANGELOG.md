@@ -732,6 +732,13 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   the shots-left counter under the lens ring. Digital's lens key steps
   beside the flash readout when sideways. `viewfinder_turn_screens_test`
   (SHOTS=dir: each mode, each way round).
+- [x] **64.42** → 2.1.8 · Settings redressed per camera (owner's pick from
+  three mockups): film, the owner's manual (printed paper, numbered
+  sections, inked option boxes, tick boxes, a printed sound scale; Dial
+  face for headings); digital, the camera's menu screen (dot-matrix W98
+  face, CAMERA / SOUND / SETUP / PRO tabs, < > values, the touched row
+  inverted, today's battery as a meter). Same settings; per-camera ones for
+  any film / camera through < name > arrows. `settings_screens_test`.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

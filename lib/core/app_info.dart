@@ -9,8 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Hold the camera sideways or upside down and the viewfinder\'s dials, buttons and readouts stay where '
-      'they are and turn to read the right way up. Darkroom 98 windows close the way they opened.';
+      'New settings: an owner\'s manual for the film cameras and a camera menu screen for the digital ones. '
+      'The viewfinder\'s dials and readouts turn to read upright when you hold the phone sideways, and '
+      'Darkroom 98 windows close the way they opened.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

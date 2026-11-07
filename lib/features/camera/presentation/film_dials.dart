@@ -14,6 +14,7 @@ import '../application/exposure_controller.dart';
 import '../application/lens_controller.dart';
 import '../application/multi_exposure_controller.dart';
 import '../application/zoom_controller.dart';
+import 'turn_fade.dart';
 import 'viewfinder_shut.dart';
 import 'camera_specials.dart';
 import 'viewport.dart' show CameraNote;
@@ -41,6 +42,10 @@ class FilmDials extends ConsumerStatefulWidget {
 }
 
 class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateMixin {
+  /// The labels' turn (radians, running: the way round last laid out).
+  int? _q;
+  double _turnTo = 0;
+
   /// The lens tray is open.
   bool _tray = false;
 
@@ -251,6 +256,13 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
     final chip = CameraSpecials.chip(ref, widget.spec);
     // the phone's way round: labels turn to read upright, nothing moves
     final q = uprightQuarterTurns(ref.watch(uprightOrientationProvider));
+    // (the labels swing round the short way, 3 -> 0 going on to a full turn)
+    if (_q != q) {
+      var d = (q - (_q ?? q)) % 4;
+      if (d == 3) d = -1;
+      _turnTo = _q == null ? q * math.pi / 2 : _turnTo + d * math.pi / 2;
+      _q = q;
+    }
     final lens = ref.watch(filmLensProvider);
     ref.listen(multiExposureProvider, (was, now) {
       if (now.holding && !(was?.holding ?? false)) CameraNote.show('First exposure in. Now the second');
@@ -268,23 +280,28 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
           children: [
             IgnorePointer(
               child: RepaintBoundary(
-                child: CustomPaint(
-                  painter: _DialsPainter(
-                    repaint: Listenable.merge([_paint, _zoomLit, _evLit, ViewfinderShutter.shut]),
-                    ring: () => _ring,
-                    zoom: z,
-                    special: widget.spec.special,
-                    lens: widget.spec.lenses.length > 1 ? lens : null,
-                    chip: chip,
-                    turn: q * math.pi / 2,
-                    wide: _wide,
-                    marks: _marks,
-                    exposure: widget.spec.exposure,
-                    ev: ev,
-                    zoomLit: _zoomLit,
-                    evLit: _evLit,
-                    scaleTop: scaleTop,
-                    scaleBottom: scaleBottom,
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween(end: _turnTo),
+                  duration: TurnFade.duration,
+                  curve: Curves.easeInOutCubic,
+                  builder: (context, turn, _) => CustomPaint(
+                    painter: _DialsPainter(
+                      repaint: Listenable.merge([_paint, _zoomLit, _evLit, ViewfinderShutter.shut]),
+                      ring: () => _ring,
+                      zoom: z,
+                      special: widget.spec.special,
+                      lens: widget.spec.lenses.length > 1 ? lens : null,
+                      chip: chip,
+                      turn: turn,
+                      wide: _wide,
+                      marks: _marks,
+                      exposure: widget.spec.exposure,
+                      ev: ev,
+                      zoomLit: _zoomLit,
+                      evLit: _evLit,
+                      scaleTop: scaleTop,
+                      scaleBottom: scaleBottom,
+                    ),
                   ),
                 ),
               ),
@@ -338,7 +355,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                         child: Row(
                           children: [
                             for (final l in lensesFor(widget.spec, ref.watch(ultraWideProvider)))
-                              RotatedBox(
+                              TurnFade(
                                 quarterTurns: q,
                                 child: LensCap(
                                   lens: l,
@@ -578,7 +595,14 @@ class _DialsPainter extends CustomPainter {
         ..restore();
       // what it's at, while in use
       final mm = math.exp(r.clamp(lo, hi)).round();
-      _label(canvas, '$mm mm', on(0, 44 * unit), 13 * unit, zl * shown, bold: true);
+      // (clear of the ring's numbers whichever way round the labels read:
+      // sideways, the words stand on end and reach further out)
+      double reach(TextPainter tp) =>
+          (math.sin(turn).abs() * tp.width + math.cos(turn).abs() * tp.height) / 2;
+      final numbers = reach(_text(math.exp(hi).round().toString(), 10.5 * unit));
+      final readout = _text('$mm mm', 13 * unit, bold: true);
+      final out = 21 * unit + numbers + 6 * unit + reach(readout);
+      _label(canvas, '$mm mm', on(0, out), 13 * unit, zl * shown, bold: true);
     }
 
     // ---- the lens ring (top left) ----

@@ -756,6 +756,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **64.45** → 2.1.9 · Swapping to a stock with the same camera setup
   but another frame shape glides the frame (as a ratio change does) instead
   of fading out and in; the fade stays for a real camera restart.
+- [x] **64.46** → 2.1.9 · Turning the phone: the readouts (shots left, flash,
+  REC, date, keys, notes) fade round to the new way instead of snapping, and
+  the dial labels swing round. The zoom ring's "mm" readout sits clear of the
+  ring's numbers however the labels read. Digital Settings: sound effects as
+  an old TV's volume bar (ten glowing boxes, slide or tap, - and +).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

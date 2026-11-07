@@ -879,25 +879,15 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
   List<Widget> _setup() {
     final global = ref.watch(globalSettingsProvider);
     final g = ref.read(globalSettingsProvider.notifier);
-    void volumeBy(double by) {
-      final v = ((global.sfxVolume + by) * 10).round().clamp(0, 10) / 10;
-      unawaited(g.setSfxVolume(v));
-      Sfx.shutterFilm.play();
-    }
-
     return [
-      _MenuRow(
-        label: 'SOUND EFFECTS',
-        value: global.sfxVolume <= 0 ? 'OFF' : '${(global.sfxVolume * 100).round()}%',
+      _VolumeRow(
+        value: global.sfxVolume,
         selected: _cursor == 'sound',
-        onTap: () => _touch('sound'),
-        onPrev: () {
+        onChanged: (v, {required save}) {
           _touch('sound');
-          volumeBy(-0.1);
-        },
-        onNext: () {
-          _touch('sound');
-          volumeBy(0.1);
+          final was = (global.sfxVolume * 10).round();
+          unawaited(g.setSfxVolume(v, save: save));
+          if ((v * 10).round() != was) Sfx.shutterFilm.play();
         },
       ),
       _toggle('haptics', 'VIBRATE ON TAPS', global.haptics, (v) => unawaited(g.setHaptics(v))),
@@ -999,6 +989,124 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
       onTap();
     },
   );
+}
+
+/// Sound effects as an old TV's volume overlay: ten glowing boxes (as the
+/// battery's), slid along or tapped, - and + at the ends a step each.
+class _VolumeRow extends StatelessWidget {
+  const _VolumeRow({required this.value, required this.selected, required this.onChanged});
+
+  final double value;
+  final bool selected;
+  final void Function(double v, {required bool save}) onChanged;
+
+  static const _cells = 10;
+
+  static String _say(int n) => n <= 0 ? 'off' : '${n.clamp(0, _cells) * 10} percent';
+
+  @override
+  Widget build(BuildContext context) {
+    final lit = (value * _cells).round().clamp(0, _cells);
+    const glow = [Shadow(color: Color(0x99C9E7B8), blurRadius: 6)];
+    void set(int n, {bool save = true}) => onChanged(n.clamp(0, _cells) / _cells, save: save);
+    Widget step(String glyph, int by, String what) => Semantics(
+      button: true,
+      label: what,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => set(lit + by),
+        child: SizedBox(
+          width: 34,
+          height: 40,
+          child: Center(
+            child: Text(glyph, style: _Menu.text.copyWith(fontSize: 20, shadows: glow)),
+          ),
+        ),
+      ),
+    );
+    return Semantics(
+      slider: true,
+      label: 'Sound effects',
+      value: _say(lit),
+      increasedValue: _say(lit + 1),
+      decreasedValue: _say(lit - 1),
+      onIncrease: () => set(lit + 1),
+      onDecrease: () => set(lit - 1),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 8, 0, 4),
+        decoration: BoxDecoration(
+          border: selected
+              ? Border.all(color: _Menu.ink)
+              : const Border(bottom: BorderSide(color: _Menu.line)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: Row(
+                children: [
+                  const Expanded(child: Text('SOUND EFFECTS', style: _Menu.text)),
+                  Text(
+                    lit == 0 ? 'MUTE' : '${lit * 10}',
+                    style: _Menu.text.copyWith(color: lit == 0 ? _Menu.dim : _Menu.ink, shadows: glow),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text('VOL', style: _Menu.text.copyWith(fontSize: 13, color: _Menu.dim)),
+                ),
+                step('-', -1, 'Quieter'),
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, box) {
+                      // (a box is lit up to where the finger is; the far left mutes)
+                      int at(double dx) => dx < box.maxWidth * 0.03 ? 0 : (dx / box.maxWidth * _cells).ceil();
+                      return GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTapUp: (d) => set(at(d.localPosition.dx)),
+                        onHorizontalDragUpdate: (d) {
+                          final n = at(d.localPosition.dx).clamp(0, _cells);
+                          if (n != lit) set(n, save: false);
+                        },
+                        onHorizontalDragEnd: (_) => set(lit),
+                        child: SizedBox(
+                          height: 40,
+                          child: Row(
+                            children: [
+                              for (var i = 0; i < _cells; i++) ...[
+                                if (i > 0) const SizedBox(width: 3),
+                                Expanded(
+                                  child: Container(
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: i < lit ? _Menu.ink : _Menu.line,
+                                      boxShadow: i < lit
+                                          ? const [BoxShadow(color: Color(0x66C9E7B8), blurRadius: 5)]
+                                          : null,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                step('+', 1, 'Louder'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// One menu line: its name, its value on the right (◀ ▶ either side when it

@@ -13,6 +13,7 @@ import '../application/capture_controller.dart';
 import '../application/lens_controller.dart';
 import 'camera_specials.dart';
 import 'film_dials.dart' show LensCap;
+import 'turn_fade.dart';
 import 'viewfinder_shut.dart';
 import 'viewport.dart' show CameraNote;
 
@@ -53,7 +54,9 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
         fit: StackFit.expand,
         children: [
           if (widget.spec.lenses.length > 1)
-            Positioned(
+            AnimatedPositioned(
+              duration: TurnFade.duration,
+              curve: Curves.easeInOutCubic,
               left: q.isOdd ? 26 : 6,
               top: q.isOdd ? 4 : 26,
               child: _Key(
@@ -102,7 +105,7 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
                       child: Row(
                         children: [
                           for (final l in lenses)
-                            RotatedBox(
+                            TurnFade(
                               quarterTurns: q,
                               child: LensCap(
                                 lens: l,
@@ -160,7 +163,7 @@ class _Key extends StatelessWidget {
       // (a finger-sized target round a small key)
       child: Padding(
         padding: const EdgeInsets.all(6),
-        child: RotatedBox(
+        child: TurnFade(
           quarterTurns: turns,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),

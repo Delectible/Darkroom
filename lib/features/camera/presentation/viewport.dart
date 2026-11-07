@@ -36,6 +36,7 @@ import '../application/zoom_controller.dart';
 import 'digital_keys.dart';
 import 'film_dials.dart';
 import 'lens_preview.dart';
+import 'turn_fade.dart';
 import 'viewfinder_shut.dart';
 
 /// The viewfinder: shader-filtered live preview, aspect-ratio mask, burned-in
@@ -307,7 +308,10 @@ class CameraViewport extends ConsumerWidget {
                             rect: maskRect,
                             child: IgnorePointer(
                               child: CustomPaint(
-                                painter: _GridPainter(film: spec.mode == AppMode.film, ink: palette.screenInk),
+                                painter: _GridPainter(
+                                  film: spec.mode == AppMode.film,
+                                  ink: palette.screenInk,
+                                ),
                               ),
                             ),
                           ),
@@ -429,7 +433,7 @@ class _CameraNoteViewState extends State<_CameraNoteView> {
               builder: (context, box) {
                 final across = q.isOdd ? box.maxHeight : box.maxWidth;
                 return Center(
-                  child: RotatedBox(
+                  child: TurnFade(
                     quarterTurns: q,
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxWidth: math.min(300, across * 0.72)),
@@ -990,7 +994,9 @@ class _HudOverlay extends ConsumerWidget {
     // frame and turns to read upright, as the dials and keys do: laid out
     // again for the viewer, they moved into the controls' corners.
     final q = uprightQuarterTurns(ref.watch(uprightOrientationProvider));
-    Widget turn(Widget w) => RotatedBox(quarterTurns: q, child: w);
+    // (blending round as the phone turns)
+    Widget turn(Widget w, [Alignment at = Alignment.center]) =>
+        TurnFade(quarterTurns: q, alignment: at, child: w);
 
     return LayoutBuilder(
       builder: (context, box) {
@@ -1011,20 +1017,27 @@ class _HudOverlay extends ConsumerWidget {
                     dot: 1.6,
                     color: palette.screenInk,
                   ),
+                  Alignment.topLeft,
                 ),
               ),
             if (!digital)
               Positioned(
                 left: 12,
                 bottom: 10,
-                child: turn(_FilmCounter(spec: spec, color: palette.screenInk.withValues(alpha: 0.85))),
+                child: turn(
+                  _FilmCounter(spec: spec, color: palette.screenInk.withValues(alpha: 0.85)),
+                  Alignment.bottomLeft,
+                ),
               ),
             // Film (Super 8) just runs its footage counter down: no REC badge.
             if (capture.isRecording && digital)
               Positioned(
                 right: 12,
                 top: 10,
-                child: turn(_RecTimer(since: capture.recordingSince!, color: palette.danger)),
+                child: turn(
+                  _RecTimer(since: capture.recordingSince!, color: palette.danger),
+                  Alignment.topRight,
+                ),
               ),
             if (digital && spec.zoom != null)
               Positioned(
@@ -1039,7 +1052,10 @@ class _HudOverlay extends ConsumerWidget {
               Positioned(
                 right: spec.timestampStyle == TimestampStyle.phone ? 4 : box.maxWidth * 0.05,
                 bottom: spec.timestampStyle == TimestampStyle.phone ? 4 : box.maxHeight * 0.05,
-                child: turn(_TimestampPreview(style: spec.timestampStyle, short: short)),
+                child: turn(
+                  _TimestampPreview(style: spec.timestampStyle, short: short),
+                  Alignment.bottomRight,
+                ),
               ),
           ],
         );

@@ -1469,9 +1469,12 @@ class _CentredFit extends StatelessWidget {
   );
 }
 
-/// The 9x "animate windows" effect: a dotted outline grows from the centre,
-/// then the window appears.
-class Win98ZoomTransition extends StatelessWidget {
+/// The 9x "animate windows" effect. Opening: an outline grows from where it
+/// was opened (the file; null = the middle), then the window appears.
+/// Closing: the window itself shrinks back there and fades, the outline
+/// with it (only an outline closing read as the window just vanishing).
+/// The window stays built throughout (its state isn't lost mid-way).
+class Win98ZoomTransition extends StatefulWidget {
   const Win98ZoomTransition({super.key, required this.animation, required this.child, this.origin});
 
   final Animation<double> animation;
@@ -1482,50 +1485,64 @@ class Win98ZoomTransition extends StatelessWidget {
   final Offset? origin;
 
   @override
+  State<Win98ZoomTransition> createState() => _Win98ZoomTransitionState();
+}
+
+class _Win98ZoomTransitionState extends State<Win98ZoomTransition> {
+  /// Keeps the window's state as it moves between the animation's layers.
+  final _key = GlobalKey();
+
+  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: animation,
-      child: child,
-      builder: (context, child) {
-        final t = animation.value;
-        if (t >= 0.999) return child!;
-        final o = origin;
-        if (o != null) {
-          // The outline grows from the opened file out to the window.
-          return LayoutBuilder(
-            builder: (context, box) {
-              final from = Rect.fromCenter(center: o, width: 36, height: 28);
-              final to = (Offset.zero & box.biggest).deflate(6);
-              final r = Rect.lerp(from, to, Curves.easeOut.transform(t))!;
-              return Stack(
-                children: [
-                  Positioned.fromRect(
-                    rect: r,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: W98.dark.withValues(alpha: 0.7), width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          );
-        }
-        return Stack(
-          children: [
-            Center(
-              child: FractionallySizedBox(
-                widthFactor: 0.15 + 0.7 * t,
-                heightFactor: 0.08 + 0.5 * t,
+    final window = KeyedSubtree(key: _key, child: widget.child);
+    return LayoutBuilder(
+      builder: (context, box) {
+        final full = (Offset.zero & box.biggest).deflate(6);
+        final o = widget.origin;
+        final from = Rect.fromCenter(center: o ?? full.center, width: 36, height: 28);
+        // (from the middle: the outline grows to a window's usual size)
+        final outlineTo = o != null
+            ? full
+            : Rect.fromCenter(center: full.center, width: box.maxWidth * 0.85, height: box.maxHeight * 0.58);
+        return AnimatedBuilder(
+          animation: widget.animation,
+          builder: (context, _) {
+            final t = widget.animation.value;
+            if (t >= 0.999) return window;
+            final closing = widget.animation.status == AnimationStatus.reverse;
+            final e = (closing ? Curves.easeIn : Curves.easeOut).transform(t);
+            final outline = Positioned.fromRect(
+              rect: Rect.lerp(from, outlineTo, e)!,
+              child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     border: Border.all(color: W98.dark.withValues(alpha: 0.7), width: 2),
                   ),
                 ),
               ),
-            ),
-          ],
+            );
+            return Stack(
+              children: [
+                if (closing)
+                  Positioned.fromRect(
+                    rect: Rect.lerp(from, Offset.zero & box.biggest, e)!,
+                    child: IgnorePointer(
+                      child: Opacity(
+                        opacity: (t * 1.6).clamp(0.0, 1.0),
+                        child: FittedBox(
+                          fit: BoxFit.fill,
+                          child: SizedBox(width: box.maxWidth, height: box.maxHeight, child: window),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  // (built but not shown until it has opened)
+                  Positioned.fill(child: Offstage(child: window)),
+                outline,
+              ],
+            );
+          },
         );
       },
     );

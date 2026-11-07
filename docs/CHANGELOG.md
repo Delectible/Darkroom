@@ -719,6 +719,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   the viewfinder needs a column split too (export_glb.py `split_band` in x)
   and a re-export of both bodies in Blender, then the app stretching the
   middle column on wide screens and moving the lower controls in.
+- [x] **64.40** → 2.1.8 · Win98 windows (the viewer, dialogs) closed as if
+  they'd vanished: only a thin outline shrank. Now the window itself
+  shrinks back to the file it opened from and fades, outline with it (220
+  ms); and it stays built while it opens (`Win98ZoomTransition`, its state
+  kept under a GlobalKey; it used to be rebuilt as the zoom ended).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

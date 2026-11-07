@@ -319,6 +319,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       // the growing outline (the same bezel is drawn over the old one).
       opaque: false,
       transitionDuration: const Duration(milliseconds: 160),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
       // Inside the same monitor: the window zooms open on its screen from
       // the file, the bezel stays where it is.
       pageBuilder: (_, a, _) => UprightPage(

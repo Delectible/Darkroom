@@ -271,9 +271,9 @@ class CameraViewport extends ConsumerWidget {
                           // In the user's frame: held sideways, the readouts (and the
                           // date, which is burned into the upright photo) follow.
                           child: IgnorePointer(
-                            child: UprightBox(
-                              child: _HudOverlay(spec: spec, timestamp: local.timestamp),
-                            ),
+                            // (each readout stays where it is and turns to
+                            // face the viewer: see _HudOverlay)
+                            child: _HudOverlay(spec: spec, timestamp: local.timestamp),
                           ),
                         ),
                         const IgnorePointer(child: _ShutterBlink()),
@@ -376,13 +376,25 @@ class _CameraNoteViewState extends State<_CameraNoteView> {
         duration: Duration(milliseconds: note == null ? 420 : 180),
         curve: Curves.easeOut,
         // (well in from the frame's edges, like the app's other messages)
-        child: LayoutBuilder(
-          builder: (context, box) => Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: math.min(300, box.maxWidth * 0.72)),
-              child: NoteBox(text: _last),
-            ),
-          ),
+        child: Consumer(
+          builder: (context, ref, _) {
+            // (turned to read upright, as the readouts are)
+            final q = uprightQuarterTurns(ref.watch(uprightOrientationProvider));
+            return LayoutBuilder(
+              builder: (context, box) {
+                final across = q.isOdd ? box.maxHeight : box.maxWidth;
+                return Center(
+                  child: RotatedBox(
+                    quarterTurns: q,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: math.min(300, across * 0.72)),
+                      child: NoteBox(text: _last),
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         ),
       );
     },
@@ -929,6 +941,11 @@ class _HudOverlay extends ConsumerWidget {
     final capture = ref.watch(captureControllerProvider);
     final flash = ref.watch(activeFlashProvider);
     final digital = spec.mode == AppMode.digital;
+    // Held sideways (or upside down) every readout keeps its place in the
+    // frame and turns to read upright, as the dials and keys do: laid out
+    // again for the viewer, they moved into the controls' corners.
+    final q = uprightQuarterTurns(ref.watch(uprightOrientationProvider));
+    Widget turn(Widget w) => RotatedBox(quarterTurns: q, child: w);
 
     return LayoutBuilder(
       builder: (context, box) {
@@ -939,28 +956,30 @@ class _HudOverlay extends ConsumerWidget {
               Positioned(
                 left: 12,
                 top: 10,
-                child: PixelText(
-                  '${switch (flash) {
-                    FlashSetting.auto => 'FLASH A',
-                    FlashSetting.on => 'FLASH *',
-                    FlashSetting.off => 'FLASH -',
-                  }}  ${spec.badge}',
-                  dot: 1.6,
-                  color: palette.screenInk,
+                child: turn(
+                  PixelText(
+                    '${switch (flash) {
+                      FlashSetting.auto => 'FLASH A',
+                      FlashSetting.on => 'FLASH *',
+                      FlashSetting.off => 'FLASH -',
+                    }}  ${spec.badge}',
+                    dot: 1.6,
+                    color: palette.screenInk,
+                  ),
                 ),
               ),
             if (!digital)
               Positioned(
                 left: 12,
                 bottom: 10,
-                child: _FilmCounter(spec: spec, color: palette.screenInk.withValues(alpha: 0.85)),
+                child: turn(_FilmCounter(spec: spec, color: palette.screenInk.withValues(alpha: 0.85))),
               ),
             // Film (Super 8) just runs its footage counter down: no REC badge.
             if (capture.isRecording && digital)
               Positioned(
                 right: 12,
                 top: 10,
-                child: _RecTimer(since: capture.recordingSince!, color: palette.danger),
+                child: turn(_RecTimer(since: capture.recordingSince!, color: palette.danger)),
               ),
             if (digital && spec.zoom != null)
               Positioned(
@@ -968,14 +987,14 @@ class _HudOverlay extends ConsumerWidget {
                 right: 0,
                 top: box.maxHeight * 0.12,
                 child: Center(
-                  child: _ZoomIndicator(bar: spec.recordsVideo, short: short),
+                  child: turn(_ZoomIndicator(bar: spec.recordsVideo, short: short)),
                 ),
               ),
             if (timestamp && spec.supportsTimestamp)
               Positioned(
                 right: spec.timestampStyle == TimestampStyle.phone ? 4 : box.maxWidth * 0.05,
                 bottom: spec.timestampStyle == TimestampStyle.phone ? 4 : box.maxHeight * 0.05,
-                child: _TimestampPreview(style: spec.timestampStyle, short: short),
+                child: turn(_TimestampPreview(style: spec.timestampStyle, short: short)),
               ),
           ],
         );

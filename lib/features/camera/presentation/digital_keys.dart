@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/device/haptics.dart';
+import '../../../core/device/physical_orientation.dart';
+import '../../../core/device/upright.dart';
 import '../../../core/theme/retro_theme.dart';
 import '../../../core/theme/surfaces.dart';
 import '../../cameras/domain/camera_spec.dart';
@@ -38,6 +40,10 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
     final lenses = lensesFor(widget.spec, ref.watch(ultraWideProvider));
     final chip = CameraSpecials.chip(ref, widget.spec);
     final recording = ref.watch(captureControllerProvider.select((s) => s.isRecording));
+    // Held sideways or upside down the keys stay put and their words turn
+    // upright; the lens key steps out from under the flash readout (which
+    // runs down the left edge then).
+    final q = uprightQuarterTurns(ref.watch(uprightOrientationProvider));
     return AnimatedBuilder(
       // (gone while the screen sleeps)
       animation: ViewfinderShutter.shut,
@@ -48,9 +54,10 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
         children: [
           if (widget.spec.lenses.length > 1)
             Positioned(
-              left: 6,
-              top: 26,
+              left: q.isOdd ? 26 : 6,
+              top: q.isOdd ? 4 : 26,
               child: _Key(
+                turns: q,
                 text: lens.mark,
                 on: lens != LensKind.standard || _tray,
                 ink: palette.screenInk,
@@ -66,6 +73,7 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
               right: 6,
               top: 4,
               child: _Key(
+                turns: q,
                 text: chip.text,
                 on: chip.on,
                 ink: palette.screenInk,
@@ -94,17 +102,20 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
                       child: Row(
                         children: [
                           for (final l in lenses)
-                            LensCap(
-                              lens: l,
-                              on: l == lens,
-                              onTap: () {
-                                unawaited(Haptics.lightImpact());
-                                if (l != lens) LensChange.request(ref, l);
-                                CameraNote.show(l.label);
-                                Future<void>.delayed(const Duration(milliseconds: 180), () {
-                                  if (mounted) setState(() => _tray = false);
-                                });
-                              },
+                            RotatedBox(
+                              quarterTurns: q,
+                              child: LensCap(
+                                lens: l,
+                                on: l == lens,
+                                onTap: () {
+                                  unawaited(Haptics.lightImpact());
+                                  if (l != lens) LensChange.request(ref, l);
+                                  CameraNote.show(l.label);
+                                  Future<void>.delayed(const Duration(milliseconds: 180), () {
+                                    if (mounted) setState(() => _tray = false);
+                                  });
+                                },
+                              ),
                             ),
                         ],
                       ),
@@ -127,8 +138,11 @@ class _Key extends StatelessWidget {
     required this.ink,
     required this.label,
     required this.onTap,
+    this.turns = 0,
   });
 
+  /// Quarter turns its word is turned by (to read upright).
+  final int turns;
   final String text;
   final bool on;
   final Color ink;
@@ -146,13 +160,16 @@ class _Key extends StatelessWidget {
       // (a finger-sized target round a small key)
       child: Padding(
         padding: const EdgeInsets.all(6),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-          decoration: BoxDecoration(
-            color: on ? ink : ink.withValues(alpha: 0),
-            border: Border.all(color: ink.withValues(alpha: on ? 1 : 0.7), width: 1.2),
+        child: RotatedBox(
+          quarterTurns: turns,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            decoration: BoxDecoration(
+              color: on ? ink : ink.withValues(alpha: 0),
+              border: Border.all(color: ink.withValues(alpha: on ? 1 : 0.7), width: 1.2),
+            ),
+            child: PixelText(text, dot: 1.6, color: on ? const Color(0xFF0A0A0A) : ink),
           ),
-          child: PixelText(text, dot: 1.6, color: on ? const Color(0xFF0A0A0A) : ink),
         ),
       ),
     ),

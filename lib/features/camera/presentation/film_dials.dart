@@ -7,6 +7,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/device/haptics.dart';
+import '../../../core/device/physical_orientation.dart';
+import '../../../core/device/upright.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../application/exposure_controller.dart';
 import '../application/lens_controller.dart';
@@ -247,6 +249,8 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
     final z = ref.watch(zoomProvider);
     final ev = ref.watch(exposureCompProvider);
     final chip = CameraSpecials.chip(ref, widget.spec);
+    // the phone's way round: labels turn to read upright, nothing moves
+    final q = uprightQuarterTurns(ref.watch(uprightOrientationProvider));
     final lens = ref.watch(filmLensProvider);
     ref.listen(multiExposureProvider, (was, now) {
       if (now.holding && !(was?.holding ?? false)) CameraNote.show('First exposure in. Now the second');
@@ -272,6 +276,7 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                     special: widget.spec.special,
                     lens: widget.spec.lenses.length > 1 ? lens : null,
                     chip: chip,
+                    turn: q * math.pi / 2,
                     wide: _wide,
                     marks: _marks,
                     exposure: widget.spec.exposure,
@@ -333,17 +338,20 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                         child: Row(
                           children: [
                             for (final l in lensesFor(widget.spec, ref.watch(ultraWideProvider)))
-                              LensCap(
-                                lens: l,
-                                on: l == lens,
-                                onTap: () {
-                                  unawaited(Haptics.lightImpact());
-                                  if (l != lens) LensChange.request(ref, l);
-                                  CameraNote.show(l.label);
-                                  Future<void>.delayed(const Duration(milliseconds: 180), () {
-                                    if (mounted) setState(() => _tray = false);
-                                  });
-                                },
+                              RotatedBox(
+                                quarterTurns: q,
+                                child: LensCap(
+                                  lens: l,
+                                  on: l == lens,
+                                  onTap: () {
+                                    unawaited(Haptics.lightImpact());
+                                    if (l != lens) LensChange.request(ref, l);
+                                    CameraNote.show(l.label);
+                                    Future<void>.delayed(const Duration(milliseconds: 180), () {
+                                      if (mounted) setState(() => _tray = false);
+                                    });
+                                  },
+                                ),
                               ),
                           ],
                         ),
@@ -401,7 +409,12 @@ class _DialsPainter extends CustomPainter {
     required this.special,
     required this.chip,
     required this.lens,
+    this.turn = 0,
   }) : super(repaint: repaint);
+
+  /// Held sideways or upside down: every label turns by this (radians,
+  /// clockwise) to read upright, the controls staying where they are.
+  final double turn;
 
   final double? Function() ring;
   final ZoomState zoom;
@@ -429,6 +442,8 @@ class _DialsPainter extends CustomPainter {
       text: TextSpan(
         text: s,
         style: TextStyle(
+          // (the system face: named, so tests draw letters, not boxes)
+          fontFamily: 'Roboto',
           color: _ink,
           fontSize: size,
           fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
@@ -457,7 +472,7 @@ class _DialsPainter extends CustomPainter {
     canvas
       ..save()
       ..translate(c.dx, c.dy)
-      ..rotate(angle);
+      ..rotate(angle + turn);
     final o = Offset(-tp.width / 2, -tp.height / 2);
     if (alpha < 0.99) {
       canvas.saveLayer((o & tp.size).inflate(3), Paint()..color = _ink.withValues(alpha: alpha));
@@ -692,6 +707,7 @@ class _DialsPainter extends CustomPainter {
   bool shouldRepaint(_DialsPainter old) =>
       old.zoom != zoom ||
       old.chip != chip ||
+      old.turn != turn ||
       old.lens != lens ||
       old.special != special ||
       old.ev != ev ||

@@ -9,7 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98 windows close the way they opened: the picture shrinks back into its file.';
+      'Hold the camera sideways or upside down and the viewfinder\'s dials, buttons and readouts stay where '
+      'they are and turn to read the right way up. Darkroom 98 windows close the way they opened.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

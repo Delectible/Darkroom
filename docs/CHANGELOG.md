@@ -724,6 +724,14 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   shrinks back to the file it opened from and fades, outline with it (220
   ms); and it stays built while it opens (`Win98ZoomTransition`, its state
   kept under a GlobalKey; it used to be rebuilt as the zoom ended).
+- [x] **64.41** → 2.1.8 · Held sideways / upside down, the viewfinder's
+  controls and readouts stay in place and turn upright (film: lens ring,
+  special chip, zoom ring and exposure labels, lens caps, counter, date;
+  digital: flash readout, keys, REC, zoom readout, date; the message box).
+  The HUD used to be laid out again for the viewer (UprightBox), which put
+  the shots-left counter under the lens ring. Digital's lens key steps
+  beside the flash readout when sideways. `viewfinder_turn_screens_test`
+  (SHOTS=dir: each mode, each way round).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

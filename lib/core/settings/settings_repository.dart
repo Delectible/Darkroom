@@ -19,7 +19,6 @@ class GlobalSettings {
     this.controls3d = true,
     this.rememberLens = false,
     this.autoSaveSince,
-    this.gridLines = false,
   });
 
   final bool darkroomEnabled;
@@ -50,9 +49,6 @@ class GlobalSettings {
   final DateTime? autoSaveSince;
   bool get autoSave => autoSaveSince != null;
 
-  /// Thirds lines over the viewfinder.
-  final bool gridLines;
-
   /// Lighter graphics for slower phones (3D off).
   bool get performance => !controls3d;
 
@@ -67,7 +63,6 @@ class GlobalSettings {
     bool? rememberLens,
     DateTime? autoSaveSince,
     bool clearAutoSave = false,
-    bool? gridLines,
   }) => GlobalSettings(
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -78,7 +73,6 @@ class GlobalSettings {
     controls3d: controls3d ?? this.controls3d,
     rememberLens: rememberLens ?? this.rememberLens,
     autoSaveSince: clearAutoSave ? null : (autoSaveSince ?? this.autoSaveSince),
-    gridLines: gridLines ?? this.gridLines,
   );
 }
 
@@ -122,7 +116,6 @@ class SettingsRepository {
   static const _k3d = 'global.controls3d';
   static const _kRememberLens = 'global.rememberLens';
   static const _kAutoSave = 'global.autoSaveSince';
-  static const _kGrid = 'global.gridLines';
   static const _kPerf = 'global.performance'; // before 1.5.1: its own switch
 
   Future<GlobalSettings> loadGlobal() async {
@@ -146,7 +139,6 @@ class SettingsRepository {
         final int ms when ms > 0 => DateTime.fromMillisecondsSinceEpoch(ms),
         _ => null,
       },
-      gridLines: read(await _db.getValue(_kGrid), d.gridLines),
     );
   }
 
@@ -160,7 +152,6 @@ class SettingsRepository {
     await _db.setValue(_k3d, s.controls3d ? '1' : '0');
     await _db.setValue(_kRememberLens, s.rememberLens ? '1' : '0');
     await _db.setValue(_kAutoSave, '${s.autoSaveSince?.millisecondsSinceEpoch ?? 0}');
-    await _db.setValue(_kGrid, s.gridLines ? '1' : '0');
     await _db.setValue(_kPerf, '0');
   }
 

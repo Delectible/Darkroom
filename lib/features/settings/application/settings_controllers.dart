@@ -160,11 +160,6 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     return true;
   }
 
-  Future<void> setGridLines(bool on) async {
-    state = state.copyWith(gridLines: on);
-    await _repo.saveGlobal(state);
-  }
-
   Future<void> setSaveOriginalCopy(bool enabled) async {
     if (enabled) {
       final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);

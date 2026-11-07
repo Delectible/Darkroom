@@ -761,6 +761,7 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   the dial labels swing round. The zoom ring's "mm" readout sits clear of the
   ring's numbers however the labels read. Digital Settings: sound effects as
   an old TV's volume bar (ten glowing boxes, slide or tap, - and +).
+- [x] **64.47** → 2.1.9 · Grid lines: tried, not wanted; taken out.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

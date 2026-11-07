@@ -26,6 +26,7 @@ import '../../../core/theme/surfaces.dart';
 import '../../../core/utils/pixel_font.dart';
 import '../../cameras/domain/camera_spec.dart';
 import '../../../core/processing/specials.dart';
+import '../../settings/application/settings_controllers.dart';
 import '../application/preview_probe.dart';
 import '../application/special_controller.dart';
 import '../application/camera_session_controller.dart';
@@ -44,6 +45,40 @@ import 'viewfinder_shut.dart';
 /// stream's portrait aspect ratio (never cover-cropped), and the unmasked
 /// rect is CropMath.previewMask(...). The export uses CropMath.stillCrop(...)
 /// with the same inputs, so the saved frame == what's inside the mask.
+/// Thirds lines over the frame: on film, etched into the focusing screen
+/// (a faint light line with a dark edge, as the focusing marks); on digital,
+/// thin lines in the screen's own ink.
+class _GridPainter extends CustomPainter {
+  const _GridPainter({required this.film, required this.ink});
+
+  final bool film;
+  final Color ink;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    void lines(Paint p, Offset o) {
+      for (final f in const [1 / 3, 2 / 3]) {
+        canvas
+          ..drawLine(Offset(size.width * f, 0) + o, Offset(size.width * f, size.height) + o, p)
+          ..drawLine(Offset(0, size.height * f) + o, Offset(size.width, size.height * f) + o, p);
+      }
+    }
+
+    final p = Paint()
+      ..strokeWidth = 1
+      ..isAntiAlias = true;
+    if (film) {
+      lines(p..color = const Color(0x2E000000), const Offset(0, 1));
+      lines(p..color = ink.withValues(alpha: 0.28), Offset.zero);
+    } else {
+      lines(p..color = ink.withValues(alpha: 0.38), Offset.zero);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GridPainter old) => old.film != film || old.ink != ink;
+}
+
 class _UnitRectTween extends Tween<UnitRect> {
   _UnitRectTween({super.end});
 
@@ -266,6 +301,16 @@ class CameraViewport extends ConsumerWidget {
                             );
                           },
                         ),
+                        // Settings > grid lines: thirds over the frame.
+                        if (ref.watch(globalSettingsProvider.select((g) => g.gridLines)))
+                          Positioned.fromRect(
+                            rect: maskRect,
+                            child: IgnorePointer(
+                              child: CustomPaint(
+                                painter: _GridPainter(film: spec.mode == AppMode.film, ink: palette.screenInk),
+                              ),
+                            ),
+                          ),
                         Positioned.fromRect(
                           rect: maskRect,
                           // In the user's frame: held sideways, the readouts (and the

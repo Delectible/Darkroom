@@ -1,4 +1,10 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/providers.dart';
+import '../../settings/application/settings_controllers.dart';
 
 import '../../cameras/domain/camera_spec.dart';
 import 'camera_ui_state.dart';
@@ -18,7 +24,19 @@ class FilmLensController extends Notifier<LensKind> {
     ref.listen<bool?>(ultraWideProvider, (_, has) {
       if (has != true && state == LensKind.wide) state = LensKind.standard;
     });
+    unawaited(_restore());
     return _for(ref.read(activeSpecProvider));
+  }
+
+  /// Settings > keep lens and special: the lenses from last time.
+  Future<void> _restore() async {
+    final kept = await Remembered.read(ref, Remembered.lensKey);
+    if (kept.isEmpty || !ref.mounted) return;
+    for (final MapEntry(:key, :value) in kept.entries) {
+      final l = LensKind.values.asNameMap()[value];
+      if (l != null) _byCamera[key] = l;
+    }
+    state = _for(ref.read(activeSpecProvider));
   }
 
   LensKind _for(CameraSpec spec) {
@@ -31,6 +49,7 @@ class FilmLensController extends Notifier<LensKind> {
     if (!lensesFor(spec, ref.read(ultraWideProvider)).contains(lens)) return;
     _byCamera[spec.id] = lens;
     state = lens;
+    Remembered.write(ref, Remembered.lensKey, {for (final e in _byCamera.entries) e.key: e.value.name});
   }
 }
 
@@ -72,5 +91,31 @@ class LensChange {
     } else {
       ref.read(filmLensProvider.notifier).set(lens);
     }
+  }
+}
+
+/// Each camera's lens and special, kept between launches when Settings asks
+/// (GlobalSettings.rememberLens): small JSON maps in the app's key store.
+class Remembered {
+  Remembered._();
+
+  static const lensKey = 'remember.lenses';
+  static const specialKey = 'remember.specials';
+
+  static Future<Map<String, Object?>> read(Ref ref, String key) async {
+    try {
+      if (!ref.read(globalSettingsProvider).rememberLens) return const {};
+      final v = await ref.read(appDatabaseProvider).getValue(key);
+      return v == null ? const {} : (jsonDecode(v) as Map<String, Object?>);
+    } catch (_) {
+      return const {}; // (no store: tests; or unreadable)
+    }
+  }
+
+  static void write(Ref ref, String key, Map<String, Object?> value) {
+    try {
+      if (!ref.read(globalSettingsProvider).rememberLens) return;
+      unawaited(ref.read(appDatabaseProvider).setValue(key, jsonEncode(value)).catchError((Object _) {}));
+    } catch (_) {}
   }
 }

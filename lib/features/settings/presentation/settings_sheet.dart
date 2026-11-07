@@ -85,6 +85,22 @@ Future<void> _notifications(BuildContext context, WidgetRef ref, bool v) async {
   if (!ok && context.mounted) Notes.show('Notifications are blocked in system settings.');
 }
 
+/// A camera's specifications in a line: its speed, roll and darkroom time.
+String _specs(CameraSpec spec) {
+  String time(Duration d) => d.inMinutes >= 1 ? '${d.inMinutes} min' : '${d.inSeconds} s';
+  if (spec.recordsVideo) {
+    final m = spec.videoMaxSeconds / 60;
+    return '${spec.badge} · ${m == m.roundToDouble() ? m.round() : m.toStringAsFixed(1)} min a reel';
+  }
+  final film = spec.film == null ? '' : ' · develops in ${time(spec.developTime)}';
+  return '${spec.badge} · ${spec.roll.frames} exposures$film';
+}
+
+Future<void> _autoSave(BuildContext context, WidgetRef ref, bool v) async {
+  final ok = await ref.read(globalSettingsProvider.notifier).setAutoSave(v);
+  if (!ok && context.mounted) Notes.show("Darkroom can't save to Photos: allow it in the phone's settings.");
+}
+
 String _grainName(GrainStrength g) => switch (g) {
   GrainStrength.weak => 'Weak',
   GrainStrength.normal => 'Normal',
@@ -177,7 +193,7 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
-                      child: Text("OWNER'S MANUAL", style: _Manual.head.copyWith(fontSize: 30)),
+                      child: Text('FILM SETTINGS', style: _Manual.head.copyWith(fontSize: 30)),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -192,36 +208,7 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                 ],
               ),
             ),
-            const SizedBox(height: 14),
-            // Pro: a boxed note, as a leaflet has for the optional extras
-            Container(
-              padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-              decoration: BoxDecoration(border: Border.all(color: _Manual.ink, width: 1.5)),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('DARKROOM PRO', style: _Manual.head.copyWith(fontSize: 17)),
-                        const SizedBox(height: 2),
-                        Text(
-                          pro
-                              ? 'Unlocked: unlimited film and battery, every film and camera. Thank you!'
-                              : 'One roll and one battery charge a day. Pro lifts the limits and adds 9 films and cameras.',
-                          style: _Manual.small,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (!pro) ...[
-                    const SizedBox(width: 10),
-                    _ManualButton(label: 'UNLOCK', onTap: () => showProSheet(context)),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
             _ManualSection(
               number: 1,
               title: 'This film',
@@ -231,8 +218,13 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                 onNext: () => stepCamera(AppMode.film, 1),
               ),
               children: [
+                // its specifications, as the manual's spec page has them
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(_specs(spec), style: _Manual.small),
+                ),
                 _ManualRow(
-                  label: 'Frame',
+                  label: 'Frame shape',
                   child: spec.aspectLocked
                       ? Text('${ratio.label} (fixed)', style: _Manual.small)
                       : _ManualBoxes(
@@ -242,7 +234,7 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                         ),
                 ),
                 _ManualRow(
-                  label: 'Grain',
+                  label: 'Film grain',
                   child: _ManualBoxes(
                     values: [for (final v in GrainStrength.values) _grainName(v)],
                     selected: GrainStrength.values.indexOf(local.grain),
@@ -256,8 +248,13 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                     label: _stampName(spec.timestampStyle),
                     value: local.timestamp,
                     onChanged: (v) => unawaited(n.setTimestamp(spec.id, v)),
-                    last: true,
                   ),
+                _ManualTick(
+                  label: 'Keep my lens and special after closing the app',
+                  value: global.rememberLens,
+                  onChanged: (v) => unawaited(g.setRememberLens(v)),
+                  last: true,
+                ),
               ],
             ),
             _ManualSection(
@@ -273,15 +270,15 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                   },
                 ),
                 _ManualTick(
-                  label: 'Haptics',
+                  label: 'Vibrate on taps and shots',
                   value: global.haptics,
                   onChanged: (v) => unawaited(g.setHaptics(v)),
                 ),
                 _ManualTick(
-                  label: 'Fancy graphics (3D cameras)',
+                  label: '3D camera bodies',
                   note: DeviceMemory.low
-                      ? 'Some effects are reduced on this phone, to keep it smooth.'
-                      : null,
+                      ? 'Off is smoother on slow phones (some effects are already reduced on this one). Photos look the same.'
+                      : 'Off is smoother on slow phones. Photos look the same.',
                   value: global.controls3d,
                   onChanged: (v) => unawaited(g.setControls3d(v)),
                   last: true,
@@ -293,13 +290,19 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
               title: 'The darkroom',
               children: [
                 _ManualTick(
-                  label: 'Tell me when prints are ready',
+                  label: 'Notify me when prints have developed',
                   value: global.notificationsEnabled,
                   onChanged: (v) => unawaited(_notifications(context, ref, v)),
                 ),
                 _ManualTick(
-                  label: 'Keep an unfiltered copy too',
-                  note: "Saved to 'Darkroom Originals'.",
+                  label: 'Save developed prints to Photos automatically',
+                  note: "Into the 'Darkroom Film' album, from now on.",
+                  value: global.autoSave,
+                  onChanged: (v) => unawaited(_autoSave(context, ref, v)),
+                ),
+                _ManualTick(
+                  label: 'Also save an unfiltered copy of each shot',
+                  note: "The photo as the phone took it, into 'Darkroom Originals'.",
                   value: global.saveOriginalCopy,
                   onChanged: (v) => unawaited(g.setSaveOriginalCopy(v)),
                   last: true,
@@ -319,6 +322,23 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                   _ManualLink('CAMERA SHOP', () => showCameraShop(context, mode: AppMode.film)),
                   _ManualLink('FEEDBACK', () => unawaited(_feedback(context))),
                   _ManualLink('PRIVACY', () => unawaited(Support.openPrivacy())),
+                ],
+              ),
+            ),
+            // Pro: a line on the back page
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      pro
+                          ? 'DARKROOM PRO · Unlocked. Thank you!'
+                          : 'DARKROOM PRO · No daily limits, 9 more films and cameras.',
+                      style: _Manual.small,
+                    ),
+                  ),
+                  if (!pro) _ManualLink('UNLOCK', () => showProSheet(context)),
                 ],
               ),
             ),
@@ -638,29 +658,6 @@ class _BarThumb extends SliderComponentShape {
   }
 }
 
-class _ManualButton extends StatelessWidget {
-  const _ManualButton({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        color: _Manual.ink,
-        child: Text(label, style: _Manual.head.copyWith(fontSize: 15, color: _Manual.paper)),
-      ),
-    ),
-  );
-}
-
 class _ManualLink extends StatelessWidget {
   const _ManualLink(this.label, this.onTap);
 
@@ -685,7 +682,7 @@ class _ManualLink extends StatelessWidget {
 // Digital: the camera's menu screen
 // ===========================================================================
 
-enum _Tab { camera, sound, setup, pro }
+enum _Tab { camera, setup, pro }
 
 class _Menu extends ConsumerStatefulWidget {
   const _Menu({required this.landscape});
@@ -709,7 +706,7 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
   _Tab _tab = _Tab.camera;
 
   /// The menu screen's height: one size for every tab (the longest fits).
-  static const _panel = 456.0;
+  static const _panel = 520.0;
 
   /// The row last touched, highlighted as the camera's cursor would be.
   String? _cursor;
@@ -755,6 +752,13 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
                 children: [
                   Row(
                     children: [
+                      Expanded(child: Text('DIGITAL SETTINGS', style: _Menu.text.copyWith(fontSize: 18))),
+                      Text('v${AppInfo.version}', style: _Menu.text.copyWith(fontSize: 12, color: _Menu.dim)),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
                       for (final t in _Tab.values) ...[
                         if (t != _Tab.camera) const SizedBox(width: 6),
                         Expanded(child: _tabKey(t)),
@@ -768,7 +772,6 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: switch (_tab) {
                           _Tab.camera => _camera(),
-                          _Tab.sound => _sound(),
                           _Tab.setup => _setup(),
                           _Tab.pro => _pro(),
                         },
@@ -776,16 +779,9 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '< > CHANGE   TAP OK',
-                          style: _Menu.text.copyWith(fontSize: 12, color: _Menu.dim),
-                        ),
-                      ),
-                      Text('v${AppInfo.version}', style: _Menu.text.copyWith(fontSize: 12, color: _Menu.dim)),
-                    ],
+                  Text(
+                    '< > CHANGE   TAP TO SWITCH',
+                    style: _Menu.text.copyWith(fontSize: 12, color: _Menu.dim),
                   ),
                 ],
               ),
@@ -850,7 +846,7 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
         onNext: () => stepCamera(AppMode.digital, 1),
       ),
       _MenuRow(
-        label: 'RATIO',
+        label: 'FRAME SHAPE',
         value: spec.aspectLocked ? '${ratio.label} FIXED' : ratio.label,
         selected: _cursor == 'ratio',
         onTap: () {
@@ -871,10 +867,16 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
             unawaited(n.setTimestamp(spec.id, !local.timestamp));
           },
         ),
+      _toggle(
+        'remember',
+        'REMEMBER LENS + FX',
+        ref.watch(globalSettingsProvider).rememberLens,
+        (v) => unawaited(ref.read(globalSettingsProvider.notifier).setRememberLens(v)),
+      ),
     ];
   }
 
-  List<Widget> _sound() {
+  List<Widget> _setup() {
     final global = ref.watch(globalSettingsProvider);
     final g = ref.read(globalSettingsProvider.notifier);
     void volumeBy(double by) {
@@ -885,7 +887,7 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
 
     return [
       _MenuRow(
-        label: 'SOUND',
+        label: 'SOUND EFFECTS',
         value: global.sfxVolume <= 0 ? 'OFF' : '${(global.sfxVolume * 100).round()}%',
         selected: _cursor == 'sound',
         onTap: () => _touch('sound'),
@@ -898,28 +900,28 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
           volumeBy(0.1);
         },
       ),
-      _toggle('haptics', 'HAPTICS', global.haptics, (v) => unawaited(g.setHaptics(v))),
+      _toggle('haptics', 'VIBRATE ON TAPS', global.haptics, (v) => unawaited(g.setHaptics(v))),
+      // (not on iPhones with the Camera Control: the volume buttons stay the shutter there)
       if (!CameraControl.present)
         _toggle('zoom', 'VOLUME KEYS ZOOM', global.volumeZoom, (v) => unawaited(g.setVolumeZoom(v))),
-    ];
-  }
-
-  List<Widget> _setup() {
-    final global = ref.watch(globalSettingsProvider);
-    final g = ref.read(globalSettingsProvider.notifier);
-    return [
-      _toggle('3d', '3D CAMERAS', global.controls3d, (v) => unawaited(g.setControls3d(v))),
+      _toggle('3d', '3D CAMERA BODIES', global.controls3d, (v) => unawaited(g.setControls3d(v))),
       _toggle(
-        'notify',
-        'NOTIFY WHEN READY',
-        global.notificationsEnabled,
-        (v) => unawaited(_notifications(context, ref, v)),
+        'autosave',
+        'AUTO-SAVE TO PHOTOS',
+        global.autoSave,
+        (v) => unawaited(_autoSave(context, ref, v)),
       ),
       _toggle(
         'original',
-        'KEEP ORIGINAL',
+        'SAVE UNFILTERED COPY',
         global.saveOriginalCopy,
         (v) => unawaited(g.setSaveOriginalCopy(v)),
+      ),
+      _toggle(
+        'notify',
+        'PRINT READY ALERTS',
+        global.notificationsEnabled,
+        (v) => unawaited(_notifications(context, ref, v)),
       ),
       _go('HOW IT WORKS', () => Navigator.of(context).push(HowItWorksScreen.route())),
       _go('CAMERA SHOP', () => showCameraShop(context, mode: AppMode.digital)),

@@ -100,7 +100,7 @@ void main() {
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         if (mode == AppMode.film) {
-          expect(find.text("OWNER'S MANUAL"), findsOneWidget);
+          expect(find.text('FILM SETTINGS'), findsOneWidget);
           expect(find.text('GOLDEN 200'), findsOneWidget);
           await tester.tap(find.bySemanticsLabel('Next film'));
           await tester.pumpAndSettle();
@@ -108,8 +108,8 @@ void main() {
           await tester.tap(find.bySemanticsLabel('Previous film'));
           await tester.pumpAndSettle();
         } else {
-          expect(find.text('CAMERA'), findsOneWidget);
-          expect(find.text('RATIO'), findsOneWidget);
+          expect(find.text('DIGITAL SETTINGS'), findsOneWidget);
+          expect(find.text('FRAME SHAPE'), findsOneWidget);
         }
         if (shots != null) {
           await tester.runAsync(() async {
@@ -121,7 +121,7 @@ void main() {
         }
         if (mode == AppMode.digital) {
           // the other tabs open, and fit
-          for (final tab in ['SOUND', 'SETUP', 'PRO']) {
+          for (final tab in ['SETUP', 'PRO']) {
             await tester.tap(find.text(tab));
             await tester.pumpAndSettle();
             expect(tester.takeException(), isNull, reason: tab);

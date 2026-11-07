@@ -143,6 +143,28 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
     await _repo.saveGlobal(state);
   }
 
+  Future<void> setRememberLens(bool on) async {
+    state = state.copyWith(rememberLens: on);
+    await _repo.saveGlobal(state);
+  }
+
+  /// On: prints and photos finished from now on go to the gallery by
+  /// themselves (asks for the gallery first). Off: none do.
+  Future<bool> setAutoSave(bool on) async {
+    if (on) {
+      final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+      if (!ok) return false;
+    }
+    state = on ? state.copyWith(autoSaveSince: DateTime.now()) : state.copyWith(clearAutoSave: true);
+    await _repo.saveGlobal(state);
+    return true;
+  }
+
+  Future<void> setGridLines(bool on) async {
+    state = state.copyWith(gridLines: on);
+    await _repo.saveGlobal(state);
+  }
+
   Future<void> setSaveOriginalCopy(bool enabled) async {
     if (enabled) {
       final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);

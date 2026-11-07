@@ -25,6 +25,7 @@ import '../../cameras/domain/camera_spec.dart';
 import '../../cameras/presentation/stock_selector_screen.dart';
 import '../../../core/shaders/shader_library.dart';
 import '../../corkboard/presentation/corkboard_screen.dart';
+import '../../darkroom/application/auto_save.dart';
 import '../../darkroom/application/darkroom_controller.dart';
 import '../../monetization/pro_sheet.dart';
 import '../../sd_card/presentation/win98/explorer_screen.dart';
@@ -1154,6 +1155,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     // Keep the session + darkroom clock alive while the camera screen exists.
     ref.watch(cameraSessionProvider);
     ref.watch(darkroomControllerProvider);
+    ref.watch(autoSaveProvider);
     // Keep the zoom motor alive (and resetting with each body) without
     // rebuilding the whole screen on every zoom step.
     // ...and its whir while it runs.

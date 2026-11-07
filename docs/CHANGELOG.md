@@ -743,6 +743,16 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   Medium (bundled, family `Manual`, beside the dial's Barlow Condensed);
   volume-buttons zoom only in the digital menu; weak grain inks dark blue,
   strong dark orange; sound in steps of 10%.
+- [x] **64.44** → 2.1.9 · "Film Settings" / "Digital Settings". Film: the
+  stock's specs under its name (badge · exposures · develop time), Pro a
+  line at the back. Digital: Sound merged into Setup (three tabs). Clearer
+  names (frame shape, film grain, vibrate on taps, 3D camera bodies, print
+  ready alerts...). New: keep lens and special after closing the app
+  (`GlobalSettings.rememberLens`, `Remembered` in the key store), save to
+  Photos automatically (`autoSaveSince`, `autoSaveProvider`: film prints as
+  they develop, digital photos when ready (to C:), only what finishes after
+  it went on). Grid lines (`gridLines`, `_GridPainter`) built but not in
+  Settings until the owner picks it from the mock.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

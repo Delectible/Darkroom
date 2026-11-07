@@ -161,7 +161,7 @@ void main() {
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
-      expect(find.text('DARKROOM PRO'), findsOneWidget);
+      expect(find.text('FILM SETTINGS'), findsOneWidget);
       await shoot(tester, 'settings_$name');
     });
 

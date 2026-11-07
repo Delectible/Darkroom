@@ -9,8 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Film settings in a matching typeface, grain choices tinted (weak blue, strong orange) and sound in '
-      'steps of ten.';
+      'Film Settings and Digital Settings, clearer names throughout. New: keep your lens and special after '
+      'closing the app, and save prints and photos to your gallery automatically.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

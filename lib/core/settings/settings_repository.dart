@@ -17,6 +17,9 @@ class GlobalSettings {
     this.sfxVolume = 0.5,
     this.haptics = true,
     this.controls3d = true,
+    this.rememberLens = false,
+    this.autoSaveSince,
+    this.gridLines = false,
   });
 
   final bool darkroomEnabled;
@@ -39,6 +42,17 @@ class GlobalSettings {
   /// halation, the body swapped as one picture.
   final bool controls3d;
 
+  /// Each camera's lens and special kept from one launch to the next.
+  final bool rememberLens;
+
+  /// Saving prints / photos to the phone's gallery by itself, for what's
+  /// finished since this moment (null: off; never the ones from before).
+  final DateTime? autoSaveSince;
+  bool get autoSave => autoSaveSince != null;
+
+  /// Thirds lines over the viewfinder.
+  final bool gridLines;
+
   /// Lighter graphics for slower phones (3D off).
   bool get performance => !controls3d;
 
@@ -50,6 +64,10 @@ class GlobalSettings {
     double? sfxVolume,
     bool? haptics,
     bool? controls3d,
+    bool? rememberLens,
+    DateTime? autoSaveSince,
+    bool clearAutoSave = false,
+    bool? gridLines,
   }) => GlobalSettings(
     darkroomEnabled: darkroomEnabled ?? this.darkroomEnabled,
     notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -58,6 +76,9 @@ class GlobalSettings {
     sfxVolume: sfxVolume ?? this.sfxVolume,
     haptics: haptics ?? this.haptics,
     controls3d: controls3d ?? this.controls3d,
+    rememberLens: rememberLens ?? this.rememberLens,
+    autoSaveSince: clearAutoSave ? null : (autoSaveSince ?? this.autoSaveSince),
+    gridLines: gridLines ?? this.gridLines,
   );
 }
 
@@ -99,6 +120,9 @@ class SettingsRepository {
   static const _kSfxVolume = 'global.sfxVolume';
   static const _kHaptics = 'global.haptics';
   static const _k3d = 'global.controls3d';
+  static const _kRememberLens = 'global.rememberLens';
+  static const _kAutoSave = 'global.autoSaveSince';
+  static const _kGrid = 'global.gridLines';
   static const _kPerf = 'global.performance'; // before 1.5.1: its own switch
 
   Future<GlobalSettings> loadGlobal() async {
@@ -117,6 +141,12 @@ class SettingsRepository {
       haptics: read(await _db.getValue(_kHaptics), d.haptics),
       // Performance mode on (the old switch) meant 3D off.
       controls3d: read(await _db.getValue(_k3d), d.controls3d) && !read(await _db.getValue(_kPerf), false),
+      rememberLens: read(await _db.getValue(_kRememberLens), d.rememberLens),
+      autoSaveSince: switch (int.tryParse(await _db.getValue(_kAutoSave) ?? '')) {
+        final int ms when ms > 0 => DateTime.fromMillisecondsSinceEpoch(ms),
+        _ => null,
+      },
+      gridLines: read(await _db.getValue(_kGrid), d.gridLines),
     );
   }
 
@@ -128,6 +158,9 @@ class SettingsRepository {
     await _db.setValue(_kSfxVolume, s.sfxVolume.toStringAsFixed(3));
     await _db.setValue(_kHaptics, s.haptics ? '1' : '0');
     await _db.setValue(_k3d, s.controls3d ? '1' : '0');
+    await _db.setValue(_kRememberLens, s.rememberLens ? '1' : '0');
+    await _db.setValue(_kAutoSave, '${s.autoSaveSince?.millisecondsSinceEpoch ?? 0}');
+    await _db.setValue(_kGrid, s.gridLines ? '1' : '0');
     await _db.setValue(_kPerf, '0');
   }
 

@@ -814,8 +814,9 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   Flutter's and the camera's threads (MainActivity.anrDigest). SLOW files
   are clean (video 4.004 s, audio 4.013 s). Likely Android's player
   reaching the end of a file (cf. 64.31): both players (Win98, projector)
-  now pause 150 ms short of the end and never run out (StopShort,
-  test/stop_short_test.dart). If it comes back, the next report shows the
+  now pause 200 ms short of the end, and every seek (slider, fast-forward,
+  shuttle, reopen) is kept out of that last stretch (StopShort.safe), so
+  nothing runs out (test/stop_short_test.dart). If it comes back, the next report shows the
   raster thread.
 
 ## 65. App inspiration: Toned (2026-11-06)

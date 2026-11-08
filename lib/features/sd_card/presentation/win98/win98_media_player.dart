@@ -71,7 +71,7 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
         return;
       }
       _finished = false;
-      if (at > Duration.zero) await c.seekTo(at);
+      if (at > Duration.zero) await c.seekTo(StopShort.safe(c, at));
       c.addListener(_watch);
       setState(() {
         _c = c;
@@ -161,11 +161,11 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
       final v = c.value;
       final next = v.position + Duration(milliseconds: 720 * dir);
       if (next <= Duration.zero || next >= v.duration) {
-        unawaited(c.seekTo(next <= Duration.zero ? Duration.zero : v.duration));
+        unawaited(c.seekTo(StopShort.safe(c, next)));
         _endScan();
         return;
       }
-      unawaited(c.seekTo(next));
+      unawaited(c.seekTo(StopShort.safe(c, next)));
     });
   }
 
@@ -231,7 +231,7 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
                     value: pos / total,
                     ticks: 20,
                     onChanged: (f) => unawaited(
-                      c.seekTo(Duration(milliseconds: (f * total).round())).then((_) {
+                      c.seekTo(StopShort.safe(c, Duration(milliseconds: (f * total).round()))).then((_) {
                         if (c.value.isPlaying) unawaited(_end.arm(c));
                       }),
                     ),

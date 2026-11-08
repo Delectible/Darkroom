@@ -6,15 +6,27 @@ import 'package:video_player/video_player.dart';
 /// out. Android's player reaching the end of a file is where things went
 /// wrong: it sat in its "ended" state (2.1.7), and once the whole app froze
 /// black as a clip finished in the Win98 player, then stopped responding
-/// (2.2.0). Paused [margin] short, the decoder never gets there; nobody
-/// misses the last few frames.
+/// (2.2.0). Paused [margin] short, and every seek kept out of that last
+/// stretch ([safe]), the decoder never gets there; nobody misses the last
+/// few frames.
 class StopShort {
   StopShort(this.onEnd);
 
   /// The clip has stopped at its end (paused [margin] short of it).
   final void Function() onEnd;
 
-  static const margin = Duration(milliseconds: 150);
+  // (room for a late timer on a busy phone: a frame or two)
+  static const margin = Duration(milliseconds: 200);
+
+  /// Where a seek to [to] may land: never in the last [margin] (a slider
+  /// pulled to the end, a fast-forward run out), never before the start.
+  /// Every seek goes through this, so only playing could reach the end,
+  /// and [arm] stops that.
+  static Duration safe(VideoPlayerController c, Duration to) {
+    final last = c.value.duration - margin;
+    if (to > last) return last.isNegative ? Duration.zero : last;
+    return to.isNegative ? Duration.zero : to;
+  }
 
   Timer? _timer;
   VideoPlayerController? _on;

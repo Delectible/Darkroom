@@ -49,13 +49,13 @@ void main() {
       final end = StopShort(() => ended++);
       c.play();
       end.arm(c);
-      clock.elapse(const Duration(milliseconds: 3800));
+      clock.elapse(const Duration(milliseconds: 3700));
       expect(ended, 0);
-      clock.elapse(const Duration(milliseconds: 100));
+      clock.elapse(const Duration(milliseconds: 150));
       expect(ended, 1);
       expect(c.value.isPlaying, isFalse);
       expect(c.now, lessThan(const Duration(seconds: 4)));
-      expect(c.now, greaterThan(const Duration(milliseconds: 3800)));
+      expect(c.now, greaterThanOrEqualTo(const Duration(milliseconds: 3700)));
     });
   });
 
@@ -105,6 +105,18 @@ void main() {
       clock.elapse(const Duration(seconds: 10));
       expect(ended, 0);
       expect(c.pauses, 1);
+    });
+  });
+
+  test('a seek can never land in the last stretch', () {
+    fakeAsync((clock) {
+      final c = _Fake(clock, const Duration(seconds: 4));
+      const last = Duration(milliseconds: 3800);
+      expect(StopShort.safe(c, const Duration(seconds: 4)), last, reason: 'slider at the end');
+      expect(StopShort.safe(c, const Duration(seconds: 9)), last, reason: 'fast-forward past it');
+      expect(StopShort.safe(c, const Duration(milliseconds: 3900)), last);
+      expect(StopShort.safe(c, const Duration(seconds: 2)), const Duration(seconds: 2));
+      expect(StopShort.safe(c, const Duration(seconds: -1)), Duration.zero);
     });
   });
 }

@@ -165,7 +165,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
         await c.dispose(); // (the old player went with the screen)
         return;
       }
-      if (startAt > Duration.zero) await c.seekTo(startAt);
+      if (startAt > Duration.zero) await c.seekTo(StopShort.safe(c, startAt));
       c.addListener(_onTick);
       _ended = false;
       _seekTarget = null;
@@ -253,7 +253,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
         while (_seekTarget != null && _c == c) {
           final t = _seekTarget!;
           _seekTarget = null;
-          await c.seekTo(t);
+          await c.seekTo(StopShort.safe(c, t));
           // The platform call returns at once, but Android's player restarts
           // its decoder on every seek: give it time to put the frame up
           // before asking for the next one, or it never draws any.

@@ -420,6 +420,7 @@ class _SpriteShutter extends StatelessWidget {
       ];
     }
     final l = lamp;
+    final still = art == null ? 1.0 : 1 - (yaw.abs() / 0.05).clamp(0.0, 1.0);
     return SizedBox.fromSize(
       size: box,
       child: Stack(
@@ -438,8 +439,12 @@ class _SpriteShutter extends StatelessWidget {
                   child: TweenAnimationBuilder<double>(
                     tween: Tween(end: l.lit ? 1 : 0),
                     duration: const Duration(milliseconds: 180),
-                    builder: (context, on, _) =>
-                        CustomPaint(painter: _LampPainter(l, on, fade: _LampFade.of(context))),
+                    builder: (context, on, _) => CustomPaint(
+                      // (out of sight while the body turns: drawn over the
+                      // model, it can't keep exact step with it in motion and
+                      // seemed to slide about by the button)
+                      painter: _LampPainter(l, on, fade: _LampFade.of(context) * still),
+                    ),
                   ),
                 ),
               ),

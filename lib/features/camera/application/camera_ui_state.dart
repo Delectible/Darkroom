@@ -129,7 +129,9 @@ class PrefKeys {
     tourSkipped,
     samplesSeeded,
     launchTimes,
-    'quality.gpu', // (Quality.keys)
+    'quality.v2.gpu', // (Quality.keys; checked by test/pref_keys_test.dart)
+    'quality.v2.ui',
+    'quality.gpu', // (Quality.oldKeys: dropped at start)
     'quality.ui',
     lowGraphicsNote,
     bodyFinish,

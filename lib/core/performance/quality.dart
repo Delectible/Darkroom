@@ -93,7 +93,7 @@ class Quality {
 
   // (v2, 2.1.10: steps saved under the old, too touchy judging are dropped)
   static const _gpuKey = 'quality.v2.gpu', _uiKey = 'quality.v2.ui';
-  static const _oldKeys = ['quality.gpu', 'quality.ui'];
+  static const oldKeys = {'quality.gpu', 'quality.ui'};
   static const keys = {_gpuKey, _uiKey};
   static SharedPreferencesWithCache? _prefs;
   static bool _saved = false;
@@ -103,7 +103,7 @@ class Quality {
   static void start(SharedPreferencesWithCache prefs) {
     _prefs = prefs;
     _clock.start();
-    for (final k in _oldKeys) {
+    for (final k in oldKeys) {
       if (prefs.containsKey(k)) unawaited(prefs.remove(k));
     }
     final g = prefs.getInt(_gpuKey), u = prefs.getInt(_uiKey);

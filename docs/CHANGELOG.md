@@ -784,6 +784,10 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   never judged against more than 60 a second; three bad windows in a row
   to step down (was two); steps saved under the old judging dropped (new
   keys).
+- [x] **64.52** → 2.1.11 · 2.1.10 failed to start ("storage: quality.v2.gpu
+  is not included in the PreferencesFilter allowlist"): the quality
+  manager's new keys weren't in PrefKeys.all. Added (old ones too, so they
+  can be removed); test/pref_keys_test.dart checks Quality's keys are there.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

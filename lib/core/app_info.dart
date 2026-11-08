@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.1.10';
+  static const version = '2.1.11';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Sharper 3D cameras: drawn at full quality again, stepping down only when a phone really struggles. '
-      'A smarter-looking Super 8 RUN button, and smoother turning on the digital keys.';
+      'Fixes 2.1.10 failing to start. Sharper 3D cameras, stepping down only when a phone really struggles, '
+      'and a smarter-looking Super 8 RUN button.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

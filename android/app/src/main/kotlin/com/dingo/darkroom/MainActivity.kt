@@ -536,6 +536,21 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    /// An ANR trace cut to what tells: its head (the reason and the main
+    /// thread) and the threads the main one is usually waiting on, Flutter's
+    /// (raster, ui, io) and the camera's. The whole trace is far too long;
+    /// cut at the front alone, the stuck thread was lost (2.2.0).
+    private fun anrDigest(text: String): String {
+        val head = text.take(6000)
+        val names = listOf("raster", ".ui\"", ".io\"", "flutter", "camera", "imagereader", "gpu", "render")
+        val threads = text.split("\n\n").filter { block ->
+            val first = block.trimStart().lineSequence().firstOrNull()?.lowercase() ?: ""
+            first.startsWith("\"") && names.any { first.contains(it) } && !head.contains(block.take(200))
+        }
+        if (threads.isEmpty()) return text.take(12000)
+        return (head + "\n...\n\n" + threads.joinToString("\n\n") { it.take(2500) }).take(16000)
+    }
+
     private fun recentExits(): List<Map<String, Any?>> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
         val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
@@ -557,7 +572,7 @@ class MainActivity : FlutterActivity() {
                         android.app.ApplicationExitInfo.REASON_CRASH ->
                             javaCrash?.takeIf { abs(it.first - e.timestamp) < 15_000 }?.second
                         android.app.ApplicationExitInfo.REASON_ANR ->
-                            e.traceInputStream?.bufferedReader()?.use { it.readText().take(8000) }
+                            e.traceInputStream?.bufferedReader()?.use { anrDigest(it.readText()) }
                         else -> e.traceInputStream?.use {
                             val bytes = it.readBytes()
                             Tombstone.summary(bytes) ?: readableStrings(bytes)

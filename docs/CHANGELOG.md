@@ -806,6 +806,13 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   of the others (upright and sideways).
 - [x] **64.57** → 2.2.0 · Version 2.2.0: main, the App Store (from 2.0.3) and
   Play closed testing.
+- [ ] **64.58** ANR on 2.2.0 (Pixel 9 Pro, 2026-11-08 11:32): main thread in
+  FlutterJNI.nativeSurfaceChanged (a relayout) waiting on the raster
+  thread for 5 s as the window lost focus; RSS 1.4 GB. The report kept
+  only the first 8000 characters (main thread): now the head plus
+  Flutter's and the camera's threads (MainActivity.anrDigest), to see what
+  the raster thread was doing next time. Suspects: full-size 3D (2.1.10),
+  the front flash's window brightness (a relayout).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

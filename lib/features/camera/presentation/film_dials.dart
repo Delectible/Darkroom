@@ -564,15 +564,32 @@ class _DialsPainter extends CustomPainter {
       final labelled = marks(math.exp(lo), math.exp(hi)).toSet()
         ..add(math.exp(lo).roundToDouble())
         ..add(math.exp(hi).roundToDouble());
+      // Numbers too close to read apart (a lens's own end, 33, beside the
+      // 35 mark): the bigger one stays (each kept clear of those kept).
+      final kept = <double, Offset>{};
+      double halfAlong(double m) {
+        final tp = _text(m.round().toString(), 10.5 * unit);
+        return math.cos(turn).abs() * tp.width / 2 + math.sin(turn).abs() * tp.height / 2;
+      }
+
+      for (final m in labelled.toList()..sort((a, b) => b.compareTo(a))) {
+        if (m < shown0 || m > shown1) continue;
+        final at = on((math.log(m) - r) * perLog, 21 * unit);
+        final clear = kept.entries.every(
+          (k) => (k.value - at).distance >= halfAlong(k.key) + halfAlong(m) + 3 * unit,
+        );
+        if (clear) kept[m] = at;
+      }
       for (var m = (shown0 / step).ceil() * step; m <= shown1; m += step) {
         final ang = (math.log(m) - r) * perLog;
         final p = on(ang, 0);
         if (p.dx < -24 || p.dx > w + 24) continue;
         final inLens = m >= math.exp(lo) - 0.01 && m <= math.exp(hi) + 0.01;
         final big = labelled.contains(m);
+        final named = kept.containsKey(m);
         final ta = inLens ? 1.0 : 0.25;
         _stroke(canvas, p, on(ang, (big ? 11 : 5.5) * unit), ta, (big ? 1.4 : 1.0) * unit);
-        if (big) {
+        if (named) {
           _label(canvas, m.round().toString(), on(ang, 21 * unit), 10.5 * unit, ta, angle: ang);
         }
       }

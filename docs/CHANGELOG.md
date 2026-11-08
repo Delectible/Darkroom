@@ -801,6 +801,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   Privacy out of Setup, a 2x2 of keys at the foot under every tab (a row
   of four sideways). Pull down to close, only a pull that starts with the
   list at the top (test/settings_swipe_test.dart).
+- [x] **64.56** → 2.2.0 · Zoom ring numbers ran together (a lens's own end,
+  34, beside the 35 mark; 48 by 50): the bigger one stays, each kept clear
+  of the others (upright and sideways).
+- [x] **64.57** → 2.2.0 · Version 2.2.0: main, the App Store (from 2.0.3) and
+  Play closed testing.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

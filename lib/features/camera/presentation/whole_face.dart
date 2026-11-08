@@ -85,7 +85,6 @@ class WholeFace extends ConsumerWidget {
         final card = film
             ? Rect.fromLTRB(label.left + 8, label.top + 7, label.right - 8, label.bottom - 7)
             : label;
-        final shutterAt = part('shutter') - shutterHub(spec);
         final live = body.live
           ?..showShutter(spec.recordsVideo)
           ..setFinish(ref.watch(cameraSkinProvider.select((m) => m[mode])));
@@ -165,7 +164,10 @@ class WholeFace extends ConsumerWidget {
                         const Size(64, 64),
                         GalleryButton(onOpen: onOpenGallery),
                       ),
-                      at(shutterAt, const Size(104, 86), const ShutterButton()),
+                      // (each kind's face set off by its own hub, inside the button: the
+                      // one going out stays put while it fades, its lamp no
+                      // longer jumping by the release's offset)
+                      at(part('shutter'), const Size(104, 86), const ShutterButton(hubOf: shutterHub)),
                       at(part('tray'), const Size(64, 64), StockButton(onOpen: onOpenSelector)),
                     ],
                   ),

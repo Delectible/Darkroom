@@ -56,7 +56,12 @@ enum _Kind { digital, film, run }
 /// (film), or a red cine RUN button in a lock collar (Super 8). Switching
 /// bodies swaps them with a little pop.
 class ShutterButton extends ConsumerStatefulWidget {
-  const ShutterButton({super.key});
+  const ShutterButton({super.key, this.hubOf});
+
+  /// On the 3D face: where a camera's shutter sits from the button's centre
+  /// (the film release is off to one side of the RUN button's place); each
+  /// face is set back by it.
+  final Offset Function(CameraSpec spec)? hubOf;
 
   @override
   ConsumerState<ShutterButton> createState() => _ShutterButtonState();
@@ -143,47 +148,50 @@ class _ShutterButtonState extends ConsumerState<ShutterButton> with SingleTicker
       animation: _stroke,
       builder: (context, _) {
         final t = _stroke.isAnimating ? _stroke.value : 0.0;
-        return switch (kind) {
-          _Kind.digital => _SpriteShutter(
-            kind: video ? 'digitalrec' : 'digital',
-            box: const Size(92, 78),
-            art: art,
-            turns: turn,
-            span: 96,
-            pressed: _down || (t > 0 && t < 0.6),
-            lamp: video
-                ? _Lamp(
-                    Offset.zero,
-                    0.09,
-                    const Color(0xFFFF3B30),
-                    lit: recording,
-                    height: BodyArt.topOf('rec'),
-                    offLens: art == null,
-                  )
-                : null,
-          ),
-          _Kind.film => _SpriteShutter(
-            kind: 'film',
-            box: const Size(108, 86),
-            art: art,
-            turns: turn,
-            span: 138,
-            hub: const Offset(0.6, 0.52),
-            // held in through the start of the shot, so a tap (or a volume
-            // key) visibly pushes the release in before the lever swings
-            pressed: _down || (t > 0 && t < 0.3),
-            lever: _leverAngle(t),
-          ),
-          _Kind.run => _SpriteShutter(
-            kind: 'run',
-            box: const Size(86, 86),
-            art: art,
-            turns: turn,
-            span: 108,
-            pressed: _down || recording,
-            lamp: _Lamp(const Offset(0.36, -0.36), 0.05, const Color(0xFFFF453A), lit: recording),
-          ),
-        };
+        return Transform.translate(
+          offset: -(widget.hubOf?.call(spec) ?? Offset.zero),
+          child: switch (kind) {
+            _Kind.digital => _SpriteShutter(
+              kind: video ? 'digitalrec' : 'digital',
+              box: const Size(92, 78),
+              art: art,
+              turns: turn,
+              span: 96,
+              pressed: _down || (t > 0 && t < 0.6),
+              lamp: video
+                  ? _Lamp(
+                      Offset.zero,
+                      0.09,
+                      const Color(0xFFFF3B30),
+                      lit: recording,
+                      height: BodyArt.topOf('rec'),
+                      offLens: art == null,
+                    )
+                  : null,
+            ),
+            _Kind.film => _SpriteShutter(
+              kind: 'film',
+              box: const Size(108, 86),
+              art: art,
+              turns: turn,
+              span: 138,
+              hub: const Offset(0.6, 0.52),
+              // held in through the start of the shot, so a tap (or a volume
+              // key) visibly pushes the release in before the lever swings
+              pressed: _down || (t > 0 && t < 0.3),
+              lever: _leverAngle(t),
+            ),
+            _Kind.run => _SpriteShutter(
+              kind: 'run',
+              box: const Size(86, 86),
+              art: art,
+              turns: turn,
+              span: 108,
+              pressed: _down || recording,
+              lamp: _Lamp(const Offset(0.36, -0.36), 0.05, const Color(0xFFFF453A), lit: recording),
+            ),
+          },
+        );
       },
     );
 
@@ -420,7 +428,6 @@ class _SpriteShutter extends StatelessWidget {
       ];
     }
     final l = lamp;
-    final still = art == null ? 1.0 : 1 - (yaw.abs() / 0.05).clamp(0.0, 1.0);
     return SizedBox.fromSize(
       size: box,
       child: Stack(
@@ -439,12 +446,8 @@ class _SpriteShutter extends StatelessWidget {
                   child: TweenAnimationBuilder<double>(
                     tween: Tween(end: l.lit ? 1 : 0),
                     duration: const Duration(milliseconds: 180),
-                    builder: (context, on, _) => CustomPaint(
-                      // (out of sight while the body turns: drawn over the
-                      // model, it can't keep exact step with it in motion and
-                      // seemed to slide about by the button)
-                      painter: _LampPainter(l, on, fade: _LampFade.of(context) * still),
-                    ),
+                    builder: (context, on, _) =>
+                        CustomPaint(painter: _LampPainter(l, on, fade: _LampFade.of(context))),
                   ),
                 ),
               ),

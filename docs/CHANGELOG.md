@@ -767,11 +767,12 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   back when the old one had gone. The box is now the new way round's from
   the start (the lens caps had the same jump), each key turning from its
   own corner. test/turn_fade_test.dart.
-- [x] **64.49** → 2.1.10 · Super 8's lamp by the RUN button slid about as
-  the body tipped for a swap (drawn over the live model, it can't keep exact
-  step with it in motion): it fades out while the body turns, back at rest.
-  For good: model the lamp in Blender (a chrome bezel and a domed lens, as
-  the REC key's) and drop the overlay.
+- [x] **64.49** → 2.1.10 · Super 8's lamp by the RUN button jumped
+  sideways as a swap went from it to a film release: the whole shutter
+  widget moved by the release's hub offset at once, while the RUN face (and
+  its lamp) were still fading out. The offset is now per face inside the
+  button (ShutterButton.hubOf), so the face going out stays put. Seen and
+  checked in the desktop 3D preview (SWITCH=, frame by frame).
 - [ ] **64.50** RUN button less cartoonish without a re-render: the press
   mesh gets its own copy of the parts material with a tint and roughness
   (set before the scene takes the model). Options shown: B satin, C deep

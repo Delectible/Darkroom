@@ -788,6 +788,9 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   is not included in the PreferencesFilter allowlist"): the quality
   manager's new keys weren't in PrefKeys.all. Added (old ones too, so they
   can be removed); test/pref_keys_test.dart checks Quality's keys are there.
+- [x] **64.53** → 2.1.12 · The film counter ("FRAME 12" -> "3 LEFT") faded
+  across, then shifted: the switcher centred both words in the longer one's
+  width and shrank once the old had gone. Lined up on their left now.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

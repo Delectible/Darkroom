@@ -913,6 +913,10 @@ class _FilmCounter extends ConsumerWidget {
     }
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 260),
+      // (lined up on their left, as the counter is pinned: centred, the new
+      // word shifted over once the old, longer one had gone)
+      layoutBuilder: (current, previous) =>
+          Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
       transitionBuilder: (c, a) => ClipRect(
         child: SlideTransition(
           position: Tween(begin: const Offset(0, 0.9), end: Offset.zero).animate(a),

@@ -16,11 +16,10 @@ CLAUDE.md.)
   Report since 2.0.8). Before it: 2.0.6
   (FLIP caption, Start menu in the CRT, projector deck stays, six How it
   works demos, Epic 70 "MOVIE · 24 FPS").
-- **App Store:** 2.0.3 is in App Review (resubmitted with notes + a demo
-  video after a Guideline 2.1 info request). The iPhone store is 4 builds
-  behind; when Apple approves, the owner says "release to iPhone" → run
-  `appstore-release.yml` for the newest build (check App Store Connect
-  first; never replace a pending submission).
+- **App Store:** 2.0.3 live since 2026-11-06 (apps.apple.com id6826318702,
+  "Darkroom: A Film Camera"). 2.2.0 (build 191) submitted to App Review
+  2026-11-08 by `appstore-release.yml`, releases itself on approval; the
+  same build promoted to Play closed testing.
 - **Google Play:** production access was refused on 2026-11-01 ("needs more
   testing"). Plan: keep promoting a stable build to closed testing about
   weekly (last: 2.0.4, build 163), then reapply. Internal testing gets every

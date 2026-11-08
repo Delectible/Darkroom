@@ -24,11 +24,24 @@ class TurnFade extends StatelessWidget {
     duration: duration,
     switchInCurve: Curves.easeOutCubic,
     switchOutCurve: Curves.easeInCubic,
+    // The box is the new way round's from the start, the old one fading out
+    // over it (its own size, from the pinned corner): the box changing size
+    // once the old one had gone made the readout jump.
     layoutBuilder: (current, previous) => Stack(
       alignment: alignment,
       clipBehavior: Clip.none,
       children: [
-        for (final p in previous) IgnorePointer(child: p),
+        for (final p in previous)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: OverflowBox(
+                alignment: alignment,
+                maxWidth: double.infinity,
+                maxHeight: double.infinity,
+                child: p,
+              ),
+            ),
+          ),
         ?current,
       ],
     ),

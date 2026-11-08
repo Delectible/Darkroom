@@ -762,6 +762,11 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   ring's numbers however the labels read. Digital Settings: sound effects as
   an old TV's volume bar (ten glowing boxes, slide or tap, - and +).
 - [x] **64.47** → 2.1.9 · Grid lines: tried, not wanted; taken out.
+- [x] **64.48** → 2.1.10 · Digital keys (lens, FX) turned smoothly then
+  jumped into place: the turn's box grew to hold both ways round and shrank
+  back when the old one had gone. The box is now the new way round's from
+  the start (the lens caps had the same jump), each key turning from its
+  own corner. test/turn_fade_test.dart.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

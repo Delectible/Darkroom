@@ -61,6 +61,7 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
               top: q.isOdd ? 4 : 26,
               child: _Key(
                 turns: q,
+                corner: Alignment.topLeft,
                 text: lens.mark,
                 on: lens != LensKind.standard || _tray,
                 ink: palette.screenInk,
@@ -77,6 +78,7 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
               top: 4,
               child: _Key(
                 turns: q,
+                corner: Alignment.topRight,
                 text: chip.text,
                 on: chip.on,
                 ink: palette.screenInk,
@@ -142,10 +144,15 @@ class _Key extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.turns = 0,
+    this.corner = Alignment.center,
   });
 
   /// Quarter turns its word is turned by (to read upright).
   final int turns;
+
+  /// The corner it's pinned by: it turns round that, so it doesn't jump
+  /// there once the old way round has faded.
+  final Alignment corner;
   final String text;
   final bool on;
   final Color ink;
@@ -165,6 +172,7 @@ class _Key extends StatelessWidget {
         padding: const EdgeInsets.all(6),
         child: TurnFade(
           quarterTurns: turns,
+          alignment: corner,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
             decoration: BoxDecoration(

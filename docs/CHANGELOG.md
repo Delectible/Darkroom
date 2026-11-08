@@ -806,13 +806,17 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   of the others (upright and sideways).
 - [x] **64.57** → 2.2.0 · Version 2.2.0: main, the App Store (from 2.0.3) and
   Play closed testing.
-- [ ] **64.58** ANR on 2.2.0 (Pixel 9 Pro, 2026-11-08 11:32): main thread in
-  FlutterJNI.nativeSurfaceChanged (a relayout) waiting on the raster
-  thread for 5 s as the window lost focus; RSS 1.4 GB. The report kept
-  only the first 8000 characters (main thread): now the head plus
-  Flutter's and the camera's threads (MainActivity.anrDigest), to see what
-  the raster thread was doing next time. Suspects: full-size 3D (2.1.10),
-  the front flash's window brightness (a relayout).
+- [x] **64.58** → 2.2.1 · ANR on 2.2.0 (Pixel 9 Pro, 2026-11-08 11:32): a
+  SLOW clip finished in the Win98 player, the screen went black and the app
+  stopped answering; leaving it, the main thread waited 5 s in
+  FlutterJNI.nativeSurfaceChanged on the raster thread. The raster thread's
+  stack wasn't in the report (cut at 8000 characters): now the head plus
+  Flutter's and the camera's threads (MainActivity.anrDigest). SLOW files
+  are clean (video 4.004 s, audio 4.013 s). Likely Android's player
+  reaching the end of a file (cf. 64.31): both players (Win98, projector)
+  now pause 150 ms short of the end and never run out (StopShort,
+  test/stop_short_test.dart). If it comes back, the next report shows the
+  raster thread.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/media/stop_short.dart';
+
 import 'win98_display.dart';
 import 'win98_widgets.dart';
 import '../../../../core/device/haptics.dart';
@@ -36,6 +38,11 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
   bool _stopped = false;
   Timer? _scanTimer;
 
+  /// Stops each clip just short of its end (see StopShort).
+  late final _end = StopShort(() {
+    if (mounted) setState(() => _finished = true);
+  });
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +52,7 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
   @override
   void dispose() {
     _scanTimer?.cancel();
+    _end.cancel();
     _c?.removeListener(_watch);
     unawaited(_c?.dispose());
     super.dispose();
@@ -84,7 +92,9 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
 
   void _watch() {
     final c = _c;
-    if (c != null && c.value.isCompleted) _finished = true;
+    if (c == null) return;
+    if (c.value.isCompleted) _finished = true;
+    _end.watch(c);
   }
 
   /// Plays, and makes sure it moves: if the picture hasn't moved a moment
@@ -92,6 +102,7 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
   Future<void> _play(VideoPlayerController c) async {
     final from = c.value.position;
     await c.play();
+    unawaited(_end.arm(c));
     final serial = ++_playSerial;
     await Future<void>.delayed(const Duration(milliseconds: 1200));
     if (!mounted || serial != _playSerial || !identical(c, _c) || _stopped || _scan != 0) return;
@@ -120,8 +131,10 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
         }
         setState(() => _stopped = false);
       case _Transport.pause:
+        _end.cancel();
         unawaited(c.pause());
       case _Transport.stop:
+        _end.cancel();
         unawaited(c.pause().then((_) => c.seekTo(Duration.zero)));
         setState(() => _stopped = true);
       case _Transport.previous:
@@ -137,6 +150,7 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
     final c = _c;
     if (c == null || _scan != 0) return;
     _wasPlaying = c.value.isPlaying;
+    _end.cancel();
     unawaited(c.pause());
     setState(() {
       _scan = dir;
@@ -216,7 +230,11 @@ class _Win98MediaPlayerState extends State<Win98MediaPlayer> {
                   Win98Slider(
                     value: pos / total,
                     ticks: 20,
-                    onChanged: (f) => unawaited(c.seekTo(Duration(milliseconds: (f * total).round()))),
+                    onChanged: (f) => unawaited(
+                      c.seekTo(Duration(milliseconds: (f * total).round())).then((_) {
+                        if (c.value.isPlaying) unawaited(_end.arm(c));
+                      }),
+                    ),
                   ),
                   Row(
                     children: [

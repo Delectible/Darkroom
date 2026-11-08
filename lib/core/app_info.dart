@@ -3,17 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.2.0';
+  static const version = '2.2.1';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Lenses for every camera: fish-eye, soft focus, swirl and more, plus a special button on '
-      'each (double exposures, light leaks, self-timer, slow motion, colour effects). New Film '
-      'and Digital Settings, auto-save to Photos and a front camera flash. The viewfinder '
-      'turns with your phone, Super 8 films upright and the 3D cameras look sharper. Plus lots '
-      'of smaller fixes.';
+      'Fixes the app freezing on a black screen when a video finished playing in Darkroom 98.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

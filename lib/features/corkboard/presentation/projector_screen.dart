@@ -10,6 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/note_box.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../core/media/stop_short.dart';
+
 import '../../../core/audio/sfx.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
@@ -100,6 +102,12 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   /// fresh player instead. [_watch] catches any other stall the same way.
   bool _ended = false;
   Timer? _watch;
+
+  /// Stops each reel just short of its end (see StopShort).
+  late final _end = StopShort(() {
+    _ended = true;
+    if (mounted) setState(() {});
+  });
   int _stallRetries = 0;
 
   /// Current shuttle speed (x real time), for the artefacts.
@@ -117,6 +125,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   void dispose() {
     _shuttleTimer?.cancel();
     _watch?.cancel();
+    _end.cancel();
     _run.dispose();
     unawaited(_c?.dispose());
     super.dispose();
@@ -184,6 +193,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     final c = _c;
     if (c == null) return;
     if (c.value.isCompleted) _ended = true;
+    _end.watch(c);
     final moving = c.value.isPlaying || _shuttle != ReelShuttle.none;
     if (moving && !_run.isAnimating) {
       _run.repeat();
@@ -221,6 +231,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
   /// at that spot (see [_ended]).
   void _watchPlayback(VideoPlayerController c, Duration from) {
     _watch?.cancel();
+    unawaited(_end.arm(c));
     _watch = Timer(const Duration(milliseconds: 1300), () {
       if (!mounted || _c != c || !c.value.isPlaying || _shuttle != ReelShuttle.none) return;
       if (c.value.position <= from + const Duration(milliseconds: 150) && _stallRetries++ < 1) {
@@ -282,6 +293,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     if (active) {
       _resumeAfterScrub = c.value.isPlaying;
       _watch?.cancel();
+      _end.cancel();
       if (_resumeAfterScrub) unawaited(c.pause());
     } else if (_resumeAfterScrub) {
       _resumeAfterScrub = false;
@@ -295,6 +307,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     unawaited(Haptics.mediumImpact());
     if (c.value.isPlaying && _shuttle == ReelShuttle.none) {
       _watch?.cancel();
+      _end.cancel();
       unawaited(c.pause());
     } else {
       _play();
@@ -333,6 +346,7 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
     if (c == null || _shuttle == mode) return;
     unawaited(Haptics.mediumImpact());
     _watch?.cancel();
+    _end.cancel();
     _scrubPos = null;
     _shuttlePos = _shuttle != ReelShuttle.none ? _shuttlePos : (_seekTarget ?? c.value.position);
     _shuttleTimer?.cancel();

@@ -32,6 +32,20 @@ class PreviewProbe {
     return false;
   }
 
+  /// How bright the raw preview is, 0..1 (the front flash's auto: fire in
+  /// the dark), or null when it can't be read.
+  static Future<double?> brightness() async {
+    final px = await _grab();
+    if (px == null || px.isEmpty) return null;
+    var sum = 0.0;
+    var n = 0;
+    for (var i = 0; i + 2 < px.length; i += 4) {
+      sum += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+      n++;
+    }
+    return n == 0 ? null : sum / n / 255;
+  }
+
   static Future<Uint8List?> _grab() async {
     final ro = key.currentContext?.findRenderObject();
     if (ro is! RenderRepaintBoundary || !ro.attached || !ro.hasSize) return null;

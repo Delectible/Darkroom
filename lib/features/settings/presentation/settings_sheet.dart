@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -31,7 +32,8 @@ Future<void> showSettingsSheet(BuildContext context) {
   final film = ProviderScope.containerOf(context).read(appModeProvider) == AppMode.film;
   return showUprightSheet<void>(
     context,
-    backgroundColor: film ? _Manual.paper : _Menu.body,
+    // (the digital menu draws its own, so it moves with a pull down)
+    backgroundColor: film ? _Manual.paper : const Color(0x00000000),
     builder: (_, {required landscape}) => film ? _Manual(landscape: landscape) : _Menu(landscape: landscape),
   );
 }
@@ -689,7 +691,6 @@ class _Menu extends ConsumerStatefulWidget {
 
   final bool landscape;
 
-  static const body = Color(0xFF2B2A28);
   static const lcd = Color(0xFF10140F);
   static const ink = Color(0xFFC9E7B8);
   static const dim = Color(0xFF7E9A71);
@@ -718,77 +719,85 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
 
   @override
   Widget build(BuildContext context) {
-    return _sheet(
-      landscape: widget.landscape,
-      // (the menu screen's own height, and no more)
-      initial: ((_panel + 70) / MediaQuery.sizeOf(context).height).clamp(0.3, 0.92),
-      child: (scroll) => ListView(
-        controller: scroll,
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-        children: [
-          Center(
-            child: Container(
-              width: 38,
-              height: 4,
-              decoration: BoxDecoration(
-                color: const Color(0xFF5A5753),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            height: _panel,
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-            decoration: BoxDecoration(
-              color: _Menu.lcd,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFF1B1A18), width: 3),
-            ),
-            child: DefaultTextStyle(
-              style: _Menu.text,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+    // The whole sheet is the camera's screen: one dark LCD, edge to edge
+    // (it was a screen set in a grey panel, a menu inside a menu).
+    final menu = DecoratedBox(
+      decoration: BoxDecoration(
+        color: _Menu.lcd,
+        borderRadius: widget.landscape ? null : const BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: DefaultTextStyle(
+        style: _Menu.text,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16, 10, 16, 16 + MediaQuery.paddingOf(context).bottom),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (!widget.landscape) ...[
+                Center(
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(color: _Menu.edge, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(child: Text('DIGITAL SETTINGS', style: _Menu.text.copyWith(fontSize: 18))),
-                      Text('v${AppInfo.version}', style: _Menu.text.copyWith(fontSize: 12, color: _Menu.dim)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      for (final t in _Tab.values) ...[
-                        if (t != _Tab.camera) const SizedBox(width: 6),
-                        Expanded(child: _tabKey(t)),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: switch (_tab) {
-                          _Tab.camera => _camera(),
-                          _Tab.setup => _setup(),
-                          _Tab.pro => _pro(),
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '< > CHANGE   TAP TO SWITCH',
-                    style: _Menu.text.copyWith(fontSize: 12, color: _Menu.dim),
-                  ),
+                  Expanded(child: Text('DIGITAL SETTINGS', style: _Menu.text.copyWith(fontSize: 18))),
+                  Text('v${AppInfo.version}', style: _Menu.text.copyWith(fontSize: 12, color: _Menu.dim)),
                 ],
               ),
-            ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  for (final t in _Tab.values) ...[
+                    if (t != _Tab.camera) const SizedBox(width: 6),
+                    Expanded(child: _tabKey(t)),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: SingleChildScrollView(
+                  // (clamped: pulled down at the top, it hands the pull to
+                  // the sheet, which closes)
+                  physics: const ClampingScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: switch (_tab) {
+                      _Tab.camera => _camera(),
+                      _Tab.setup => _setup(),
+                      _Tab.pro => _pro(),
+                    },
+                  ),
+                ),
+              ),
+              if (!widget.landscape) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '< > CHANGE   TAP TO SWITCH',
+                  style: _Menu.text.copyWith(fontSize: 12, color: _Menu.dim),
+                ),
+              ],
+              const SizedBox(height: 10),
+              Container(height: 1, color: _Menu.line),
+              const SizedBox(height: 10),
+              _links(),
+            ],
           ),
-        ],
+        ),
       ),
+    );
+    return LayoutBuilder(
+      builder: (context, box) {
+        if (widget.landscape) return SizedBox(height: box.maxHeight * 0.92, child: menu);
+        final h = MediaQuery.sizeOf(context).height;
+        return _SwipeDown(
+          child: SizedBox(height: math.min(h * 0.86, _panel + 80), child: menu),
+        );
+      },
     );
   }
 
@@ -913,10 +922,6 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
         global.notificationsEnabled,
         (v) => unawaited(_notifications(context, ref, v)),
       ),
-      _go('HOW IT WORKS', () => Navigator.of(context).push(HowItWorksScreen.route())),
-      _go('CAMERA SHOP', () => showCameraShop(context, mode: AppMode.digital)),
-      _go('FEEDBACK', () => unawaited(_feedback(context))),
-      _go('PRIVACY', () => unawaited(Support.openPrivacy())),
     ];
   }
 
@@ -980,14 +985,132 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
     },
   );
 
-  Widget _go(String label, VoidCallback onTap) => _MenuRow(
-    label: label,
-    value: '>',
-    selected: false,
-    onTap: () {
+  /// The way out to the rest of the app, under every tab.
+  Widget _links() {
+    Widget key(String label, VoidCallback onTap) => Expanded(
+      child: Semantics(
+        button: true,
+        label: label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            unawaited(Haptics.selectionClick());
+            onTap();
+          },
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 40),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            decoration: BoxDecoration(border: Border.all(color: _Menu.edge)),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text('$label >', style: _Menu.text.copyWith(fontSize: 13)),
+            ),
+          ),
+        ),
+      ),
+    );
+    final keys = [
+      key('HOW IT WORKS', () => Navigator.of(context).push(HowItWorksScreen.route())),
+      key('CAMERA SHOP', () => showCameraShop(context, mode: AppMode.digital)),
+      key('FEEDBACK', () => unawaited(_feedback(context))),
+      key('PRIVACY', () => unawaited(Support.openPrivacy())),
+    ];
+    Widget row(List<Widget> ks) => Row(
+      children: [
+        for (final (i, k) in ks.indexed) ...[if (i > 0) const SizedBox(width: 6), k],
+      ],
+    );
+    // (sideways the screen is short: one row of four)
+    if (widget.landscape) return row(keys);
+    return Column(children: [row(keys.sublist(0, 2)), const SizedBox(height: 6), row(keys.sublist(2))]);
+  }
+}
+
+/// Pulled down, the sheet follows the finger and, far or fast enough,
+/// closes. Only a pull that starts with its list at the top: one that
+/// starts mid-list scrolls the list up and stops there, so scrolling up
+/// never closes the menu by surprise.
+class _SwipeDown extends StatefulWidget {
+  const _SwipeDown({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_SwipeDown> createState() => _SwipeDownState();
+}
+
+class _SwipeDownState extends State<_SwipeDown> with SingleTickerProviderStateMixin {
+  /// How far the sheet is pulled down.
+  final _dy = ValueNotifier<double>(0);
+  late final AnimationController _back = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 220),
+  )..addListener(() => _dy.value = _from * (1 - Curves.easeOutCubic.transform(_back.value)));
+  double _from = 0;
+
+  /// The list was at the top when this pull began.
+  bool _armed = false;
+  bool _closing = false;
+
+  @override
+  void dispose() {
+    _back.dispose();
+    _dy.dispose();
+    super.dispose();
+  }
+
+  void _pull(double by) {
+    if (_closing) return;
+    _back.stop();
+    _dy.value = math.max(0, _dy.value + by);
+  }
+
+  void _let(double velocity) {
+    if (_closing) return;
+    if (_dy.value > 110 || (_dy.value > 8 && velocity > 700)) {
+      _closing = true;
       unawaited(Haptics.selectionClick());
-      onTap();
-    },
+      Navigator.of(context).maybePop();
+      return;
+    }
+    if (_dy.value <= 0) return;
+    _from = _dy.value;
+    _back.forward(from: 0);
+  }
+
+  bool _onScroll(ScrollNotification n) {
+    if (n.depth != 0) return false;
+    switch (n) {
+      case ScrollStartNotification(dragDetails: _?):
+        _armed = n.metrics.pixels <= n.metrics.minScrollExtent + 0.5;
+      case OverscrollNotification(dragDetails: _?) when _armed && n.overscroll < 0:
+        _pull(-n.overscroll);
+      case ScrollUpdateNotification(dragDetails: _?, :final scrollDelta?) when _dy.value > 0:
+        // (back up while pulled: the sheet goes up first)
+        _pull(-scrollDelta);
+      case ScrollEndNotification():
+        _let(n.dragDetails?.primaryVelocity ?? 0);
+        _armed = false;
+      default:
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    // (the header, tabs and links: no list under the finger, always a pull)
+    onVerticalDragUpdate: (d) => _pull(d.delta.dy),
+    onVerticalDragEnd: (d) => _let(d.primaryVelocity ?? 0),
+    child: NotificationListener<ScrollNotification>(
+      onNotification: _onScroll,
+      child: ValueListenableBuilder<double>(
+        valueListenable: _dy,
+        builder: (context, dy, child) => Transform.translate(offset: Offset(0, dy), child: child),
+        child: widget.child,
+      ),
+    ),
   );
 }
 

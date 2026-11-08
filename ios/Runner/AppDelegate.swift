@@ -16,6 +16,9 @@ import UserNotifications
   private var volumeChannel: FlutterMethodChannel?
   private var captureInteraction: AnyObject?
 
+  /// The screen's brightness before the front flash turned it up.
+  private var brightnessBefore: CGFloat?
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -48,6 +51,20 @@ import UserNotifications
       switch call.method {
       case "memory":
         result(["total": Int64(ProcessInfo.processInfo.physicalMemory), "lowRam": false])
+      case "brightness":
+        // the front flash: the screen at full brightness (0..1), or back to
+        // what it was (below 0)
+        let v = (call.arguments as? NSNumber)?.doubleValue ?? -1
+        if v < 0 {
+          if let was = self.brightnessBefore {
+            UIScreen.main.brightness = was
+            self.brightnessBefore = nil
+          }
+        } else {
+          if self.brightnessBefore == nil { self.brightnessBefore = UIScreen.main.brightness }
+          UIScreen.main.brightness = CGFloat(min(1, v))
+        }
+        result(nil)
       case "cameraControl":
         // An iPhone with the Camera Control button (iOS 18+: only those let a
         // capture session take on-device controls).

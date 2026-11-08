@@ -25,6 +25,8 @@ import 'lab_note.dart';
 import 'zoom_controller.dart';
 import '../../../core/device/battery.dart';
 import '../../../core/device/haptics.dart';
+import '../../../core/device/screen_flash.dart';
+import 'preview_probe.dart';
 
 @immutable
 class CaptureState {
@@ -195,6 +197,10 @@ class CaptureController extends Notifier<CaptureState> {
     if (state.countdown != null) state = state.copyWith(clearCountdown: true);
   }
 
+  /// The live picture darker than this (0..1): auto flash fires on the
+  /// front camera.
+  static const _darkPreview = 0.22;
+
   Future<void> takePhoto({bool fromTimer = false}) async {
     if (!fromTimer && _startTimer()) return;
     final c = _ready;
@@ -209,7 +215,14 @@ class CaptureController extends Notifier<CaptureState> {
       flashFired: ctx.flash == FlashSetting.on,
     );
     try {
-      final file = await c.takePicture();
+      // The front camera has no flash unit: the screen lights the face
+      // (always when on; on auto, in the dark).
+      final front = c.description.lensDirection == CameraLensDirection.front;
+      final screenFlash =
+          front &&
+          (ctx.flash == FlashSetting.on ||
+              ctx.flash == FlashSetting.auto && ((await PreviewProbe.brightness()) ?? 1) < _darkPreview);
+      final file = screenFlash ? await ScreenFlash.during(c.takePicture) : await c.takePicture();
       // Multiple exposure: the first is held (no frame used), the second
       // lands on it and the two go on as one capture.
       final path = file.path;

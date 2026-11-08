@@ -9,7 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The film counter no longer jumps sideways when it changes between frames and shots left.';
+      'Front camera flash: the screen lights your face. Digital Settings redone as one screen, with the links at '
+      'the bottom; pull it down to close. The film counter no longer jumps when it changes.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -1,3 +1,4 @@
+import 'core/device/screen_flash.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -124,6 +125,8 @@ class _DarkroomAppState extends ConsumerState<DarkroomApp> {
                 bottom: MediaQuery.paddingOf(context).bottom + 70,
                 child: const Directionality(textDirection: TextDirection.ltr, child: FpsMeter()),
               ),
+            // The front camera's flash (ScreenFlash): over everything.
+            const Positioned.fill(child: ScreenFlashLight()),
             // Debug > Run Speed Tests: what's running; a tap stops it.
             Positioned(
               left: 12,

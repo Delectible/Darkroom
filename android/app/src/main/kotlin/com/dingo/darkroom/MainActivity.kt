@@ -272,6 +272,16 @@ class MainActivity : FlutterActivity() {
                         refreshRate(call.arguments == true)
                         result.success(null)
                     }
+                    // the front flash: the screen at full brightness (0..1), or
+                    // back to the phone's own setting (below 0)
+                    "brightness" -> {
+                        val v = (call.arguments as? Number)?.toFloat() ?: -1f
+                        val lp = window.attributes
+                        lp.screenBrightness =
+                            if (v < 0f) WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE else v.coerceIn(0f, 1f)
+                        window.attributes = lp
+                        result.success(null)
+                    }
                     // ms since Android started the app's process (Launch Timing:
                     // the time before Dart's main)
                     // the display's refresh rate right now (speed test: does

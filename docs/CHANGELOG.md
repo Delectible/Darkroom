@@ -791,6 +791,16 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
 - [x] **64.53** → 2.1.12 · The film counter ("FRAME 12" -> "3 LEFT") faded
   across, then shifted: the switcher centred both words in the longer one's
   width and shrank once the old had gone. Lined up on their left now.
+- [x] **64.54** → 2.1.12 · Front flash: on the front camera the screen
+  lights warm white at full brightness (darkroom/display "brightness" on
+  Android, darkroom/device on iPhone), 420 ms to settle, then the shot;
+  flash on: always; auto: when the live picture is dark (PreviewProbe
+  brightness < 0.22). Photos only. lib/core/device/screen_flash.dart.
+- [x] **64.55** → 2.1.12 · Digital Settings: the whole sheet is the LCD (no
+  screen set in a grey panel); How it works / Camera Shop / Feedback /
+  Privacy out of Setup, a 2x2 of keys at the foot under every tab (a row
+  of four sideways). Pull down to close, only a pull that starts with the
+  list at the top (test/settings_swipe_test.dart).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

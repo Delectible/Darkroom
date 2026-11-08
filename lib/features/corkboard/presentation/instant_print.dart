@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/processing/instant_frame.dart';
+import '../../../core/processing/paper_wear.dart';
 
 /// An instant print: square picture on textured off-white paper with a deep
 /// writing strip.
@@ -17,7 +18,12 @@ class InstantPrint extends StatelessWidget {
     this.onNoteTap,
     this.shadow = true,
     this.style = InstantStyle.classic,
+    this.wear,
   });
+
+  /// The paper as a real sheet (see PaperWear); null: drawn plain (small
+  /// previews).
+  final PaperWear? wear;
 
   /// The frame's colour or design (and the note's ink to suit it).
   final InstantStyle style;
@@ -53,10 +59,12 @@ class InstantPrint extends StatelessWidget {
           final p = develop.clamp(0.0, 1.0);
           final text = note?.trim() ?? '';
           PaperTexture.ensureLoaded();
-          return DecoratedBox(
+          final wear = this.wear;
+          final worn = wear != null && wear.on;
+          final print = DecoratedBox(
             decoration: BoxDecoration(
               color: style.paper,
-              boxShadow: shadow
+              boxShadow: shadow && !worn
                   ? const [BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(3, 5))]
                   : null,
             ),
@@ -130,6 +138,8 @@ class InstantPrint extends StatelessWidget {
               ],
             ),
           );
+          if (!worn) return print;
+          return WornSheet(wear: wear, shadow: shadow, paper: style.paper, window: (_) => pic, child: print);
         },
       ),
     );

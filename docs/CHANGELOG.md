@@ -818,6 +818,16 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   shuttle, reopen) is kept out of that last stretch (StopShort.safe), so
   nothing runs out (test/stop_short_test.dart). If it comes back, the next report shows the
   raster thread.
+- [x] **64.59** → 2.2.2 · Prints as real paper (PaperWear,
+  lib/core/processing/paper_wear.dart): corners a touch round, edges
+  wandering a hair, the sheet bowed (light falling off across it), a cut
+  edge catching the light, a shadow from its own outline lifted more at one
+  end. Instant prints: the picture sunk below the frame, its corners round,
+  the developer's uneven pale edge along the top. Age: fresh out of the
+  darkroom, handled by three weeks (a little yellowing, a worn corner, a
+  faint thumbprint). Board, viewer and saved files alike (a saved copy is
+  remade as it ages). New frames: Mat (cream board, bevel-cut window) and
+  Snapshot (round corners, glossy). Taped not taken.
 
 ## 65. App inspiration: Toned (2026-11-06)
 

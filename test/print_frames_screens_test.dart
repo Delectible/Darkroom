@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/navigation.dart';
 import 'package:darkroom/core/processing/instant_frame.dart';
+import 'package:darkroom/core/processing/paper_wear.dart';
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/theme/note_box.dart';
 import 'package:darkroom/features/corkboard/presentation/print_frames.dart';
@@ -54,6 +55,7 @@ void main() {
         note: 'Sunset at the lake',
         outPath: out,
         style: InstantStyle.black,
+        wear: const PaperWear(seed: 4, level: 1.6),
       );
       expect(File(out).lengthSync(), greaterThan(1000));
       if (shots != null) File(out).copySync('$shots/papers_file_black.jpg');
@@ -143,7 +145,14 @@ void main() {
     for (final f in PrintFrame.values) {
       final out = '${dir.path}/out_${f.name}.jpg';
       await tester.runAsync(
-        () => exportFramedPrint(picturePath: big.path, frame: f, outPath: out, number: '07', seed: 3),
+        () => exportFramedPrint(
+          picturePath: big.path,
+          frame: f,
+          outPath: out,
+          number: '07',
+          seed: 3,
+          wear: const PaperWear(seed: 3, level: 1.6),
+        ),
       );
       expect(File(out).lengthSync(), greaterThan(1000));
       if (shots != null) File(out).copySync('$shots/frames_file_${f.name}.jpg');

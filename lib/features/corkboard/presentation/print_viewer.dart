@@ -22,6 +22,7 @@ import '../application/sample_prints.dart';
 import '../../camera/application/camera_ui_state.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/device/upright.dart';
+import '../../../core/processing/paper_wear.dart';
 
 /// Inspecting prints on a dark light-table: swipe between them, pinch to
 /// look closer, Save copies one to the phone's photo library.
@@ -498,6 +499,7 @@ class _Print extends StatelessWidget {
         InstantPrint(
           note: item.note,
           onNoteTap: onWrite,
+          wear: PaperWear.of(item.id, item.readyAt),
           style: PrintFrames.styleOf(frames, item.id),
           picture: path == null ? const ColoredBox(color: Colors.black12) : _photo(context, path),
         ),
@@ -514,6 +516,7 @@ class _Print extends StatelessWidget {
             frame: PrintFrames.frameOf(frames, item.id),
             number: RegExp(r'_(\d+)\.').firstMatch(item.fileName)?.group(1),
             seed: item.id.hashCode,
+            wear: PaperWear.of(item.id, item.readyAt),
             photo: path == null ? const ColoredBox(color: Colors.black12) : _photo(context, path),
           ),
         ),

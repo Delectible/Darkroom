@@ -9,6 +9,7 @@ import '../../../core/app_info.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/device/gallery_check.dart';
 import '../../../core/processing/instant_frame.dart';
+import '../../../core/processing/paper_wear.dart';
 import '../../cameras/domain/camera_catalog.dart';
 import '../../corkboard/application/sample_prints.dart';
 import '../../corkboard/presentation/print_frames.dart';
@@ -32,7 +33,9 @@ Future<String?> exportPathFor(MediaItem item) async {
   // would have had bare (the photo library check goes by it).
   final stamp = File(path).lastModifiedSync().millisecondsSinceEpoch;
   final look = instant ? style.name : frame!.name;
-  final key = '${item.id}_${stamp}_${(item.note ?? '').trim().hashCode.toUnsigned(32)}_$look';
+  // (the paper as it looks now: remade as the print ages)
+  final wear = PaperWear.of(item.id, item.readyAt);
+  final key = '${item.id}_${stamp}_${(item.note ?? '').trim().hashCode.toUnsigned(32)}_${look}_${wear.key}';
   final out = File('${Directory.systemTemp.path}/instant_export/$key/${galleryNameFor(item)}');
   if (out.existsSync() && out.lengthSync() > 0) return out.path;
   return _exporting[key] ??= () async {
@@ -47,6 +50,7 @@ Future<String?> exportPathFor(MediaItem item) async {
           outPath: part,
           takenAt: item.capturedAt,
           style: style,
+          wear: wear,
         );
       } else {
         await exportFramedPrint(
@@ -56,6 +60,7 @@ Future<String?> exportPathFor(MediaItem item) async {
           number: RegExp(r'_(\d+)\.').firstMatch(item.fileName)?.group(1),
           seed: item.id.hashCode,
           takenAt: item.capturedAt,
+          wear: wear,
         );
       }
       await File(part).rename(out.path);

@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:darkroom/core/processing/instant_frame.dart';
 import 'package:darkroom/features/corkboard/presentation/instant_print.dart';
-import 'package:darkroom/features/corkboard/presentation/paper_wear.dart';
+import 'package:darkroom/core/processing/paper_wear.dart';
 import 'package:darkroom/features/corkboard/presentation/print_frames.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -58,7 +58,7 @@ void main() {
       return AspectRatio(
         aspectRatio: InstantFrame.aspect,
         child: WornSheet(
-          wear: PaperWear(seed: 11 + level, level: level),
+          wear: PaperWear(seed: 11 + level, level: level.toDouble()),
           window: (size) => InstantFrame.pictureRect(size.width / (1 + 2 * InstantFrame.side)),
           child: print,
         ),
@@ -81,7 +81,7 @@ void main() {
       return AspectRatio(
         aspectRatio: 2 / 3,
         child: WornSheet(
-          wear: PaperWear(seed: 5 + level, level: level),
+          wear: PaperWear(seed: 5 + level, level: level.toDouble()),
           child: FramedPrint(frame: PrintFrame.classic, photo: pic, shadow: false),
         ),
       );

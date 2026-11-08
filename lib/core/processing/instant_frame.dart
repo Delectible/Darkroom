@@ -8,6 +8,7 @@ import 'package:flutter/painting.dart';
 import 'package:image/image.dart' as img;
 
 import 'taken_date.dart';
+import 'paper_wear.dart';
 
 /// Proportions of an integral instant print (square picture, thin sides and
 /// top, deep writing strip at the bottom), as fractions of the picture side.
@@ -152,6 +153,7 @@ class InstantFrame {
     required String outPath,
     DateTime? takenAt,
     InstantStyle style = InstantStyle.classic,
+    PaperWear? wear,
   }) async {
     // Decoded straight at the export size: a full-resolution decode of a
     // 12 MP shot was most of the wait.
@@ -176,30 +178,39 @@ class InstantFrame {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final texture = await PaperTexture.image();
-    paintPaper(canvas, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), texture, style);
     final dst = pictureRect(s);
-    final src = Rect.fromCenter(
-      center: Offset(picture.width / 2, picture.height / 2),
-      width: side0,
-      height: side0,
-    );
-    canvas.drawImageRect(picture, src, dst, Paint()..filterQuality = FilterQuality.high);
-    // The picture sits a hair below the paper surface.
-    canvas.drawRect(
-      dst,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = math.max(1, s / 600)
-        ..color = const Color(0x22000000),
-    );
-    if (note != null && note.trim().isNotEmpty) {
-      final tp = notePainter(note.trim(), s, color: style.ink);
-      final area = noteRect(s);
-      canvas.save();
-      canvas.translate(area.center.dx, area.center.dy);
-      canvas.rotate(noteAngle);
-      tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
-      canvas.restore();
+    void sheet(Canvas canvas) {
+      paintPaper(canvas, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), texture, style);
+      final src = Rect.fromCenter(
+        center: Offset(picture.width / 2, picture.height / 2),
+        width: side0,
+        height: side0,
+      );
+      canvas.drawImageRect(picture, src, dst, Paint()..filterQuality = FilterQuality.high);
+      // The picture sits a hair below the paper surface.
+      canvas.drawRect(
+        dst,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(1, s / 600)
+          ..color = const Color(0x22000000),
+      );
+      if (note != null && note.trim().isNotEmpty) {
+        final tp = notePainter(note.trim(), s, color: style.ink);
+        final area = noteRect(s);
+        canvas.save();
+        canvas.translate(area.center.dx, area.center.dy);
+        canvas.rotate(noteAngle);
+        tp.paint(canvas, Offset(-tp.width / 2, -tp.height / 2));
+        canvas.restore();
+      }
+    }
+
+    // (the paper as a real sheet: see PaperWear)
+    if (wear != null && wear.on) {
+      paintWornSheet(canvas, Size(w.toDouble(), h.toDouble()), wear, sheet, window: dst, paper: style.paper);
+    } else {
+      sheet(canvas);
     }
     final framed = await recorder.endRecording().toImage(w, h);
     picture.dispose();

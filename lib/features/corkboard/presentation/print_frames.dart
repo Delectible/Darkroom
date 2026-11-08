@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/processing/instant_frame.dart';
 import '../../camera/application/camera_ui_state.dart';
+import '../../../core/processing/paper_wear.dart';
 
 /// How a (non-instant) print is finished round its edges.
 enum PrintFrame {
@@ -22,7 +23,13 @@ enum PrintFrame {
 
   /// Printed through a filed-out negative carrier: the film's rough black
   /// edge round the picture, the frame number in it.
-  darkroom('Darkroom');
+  darkroom('Darkroom'),
+
+  /// Set in a cream mount board, a bevel-cut window round it.
+  mat('Mat'),
+
+  /// A drugstore print: round corners, a thin white border, glossy.
+  snapshot('Snapshot');
 
   const PrintFrame(this.label);
   final String label;
@@ -79,6 +86,7 @@ Future<String> exportFramedPrint({
   String? number,
   int seed = 0,
   DateTime? takenAt,
+  PaperWear? wear,
 }) async {
   final pic = await InstantFrame.decode(picturePath);
   final w = pic.width.toDouble(), h = pic.height.toDouble();
@@ -93,38 +101,90 @@ Future<String> exportFramedPrint({
     c.drawImageRect(pic, src, dst, Paint()..filterQuality = FilterQuality.high);
   }
 
-  switch (frame) {
-    case PrintFrame.classic:
-      c.drawRect(full, Paint()..color = FramedPrint.paper);
-      photo(full.deflate(s * 0.035));
-    case PrintFrame.borderless:
-      photo(full);
-    case PrintFrame.deckle:
-      // (outside the scallops: a dark scanner bed)
-      c.drawRect(full, Paint()..color = const Color(0xFF26231F));
-      c.save();
-      c.clipPath(deckleEdge(full.size, s * 0.018));
-      c.drawRect(full, Paint()..color = FramedPrint.decklePaper);
-      photo(full.deflate(s * 0.075));
-      c.restore();
-    case PrintFrame.darkroom:
-      c.drawRect(full, Paint()..color = FramedPrint.paper);
-      final inner = full.deflate(s * 0.03);
-      c.drawRect(inner, Paint()..color = FramedPrint.film);
-      final border = s * 0.07;
-      final pr = inner.deflate(border);
-      c.save();
-      c.translate(pr.left, pr.top);
-      c.clipPath(filedEdge(pr.size, s * 0.006, seed));
-      photo(Offset.zero & pr.size);
-      c.restore();
-      if (number != null) {
-        final tp = TextPainter(
-          text: TextSpan(text: '▸ $number', style: FramedPrint.numberStyle(border)),
-          textDirection: TextDirection.ltr,
-        )..layout();
-        tp.paint(c, Offset(inner.left + border, inner.bottom - border * 0.18 - tp.height));
-      }
+  void sheet(Canvas c) {
+    switch (frame) {
+      case PrintFrame.classic:
+        c.drawRect(full, Paint()..color = FramedPrint.paper);
+        photo(full.deflate(s * 0.035));
+      case PrintFrame.borderless:
+        photo(full);
+      case PrintFrame.mat:
+        c.drawRect(full, Paint()..color = FramedPrint.board);
+        final cut = Rect.fromLTRB(
+          s * FramedPrint.matSide,
+          s * FramedPrint.matSide,
+          w - s * FramedPrint.matSide,
+          h - s * FramedPrint.matBottom,
+        );
+        final b = s * FramedPrint.matBevel;
+        final inner = cut.deflate(b);
+        // the bevel's four faces
+        Path face(List<Offset> pts) => Path()..addPolygon(pts, true);
+        c.drawPath(
+          face([cut.topLeft, cut.topRight, inner.topRight, inner.topLeft]),
+          Paint()..color = FramedPrint.bevelTop,
+        );
+        c.drawPath(
+          face([cut.topLeft, inner.topLeft, inner.bottomLeft, cut.bottomLeft]),
+          Paint()..color = FramedPrint.bevelLeft,
+        );
+        c.drawPath(
+          face([cut.topRight, cut.bottomRight, inner.bottomRight, inner.topRight]),
+          Paint()..color = FramedPrint.bevelRight,
+        );
+        c.drawPath(
+          face([cut.bottomLeft, inner.bottomLeft, inner.bottomRight, cut.bottomRight]),
+          Paint()..color = FramedPrint.bevelBottom,
+        );
+        photo(inner.deflate(0));
+      case PrintFrame.snapshot:
+        c.drawRect(full, Paint()..color = const Color(0xFF26231F));
+        c.save();
+        c.clipRRect(RRect.fromRectAndRadius(full, Radius.circular(s * FramedPrint.snapshotCorner)));
+        c.drawRect(full, Paint()..color = FramedPrint.paper);
+        final pr = full.deflate(s * 0.045);
+        photo(pr);
+        c.drawRect(pr, Paint()..shader = FramedPrint.snapshotSheen.createShader(pr));
+        c.restore();
+      case PrintFrame.deckle:
+        // (outside the scallops: a dark scanner bed)
+        c.drawRect(full, Paint()..color = const Color(0xFF26231F));
+        c.save();
+        c.clipPath(deckleEdge(full.size, s * 0.018));
+        c.drawRect(full, Paint()..color = FramedPrint.decklePaper);
+        photo(full.deflate(s * 0.075));
+        c.restore();
+      case PrintFrame.darkroom:
+        c.drawRect(full, Paint()..color = FramedPrint.paper);
+        final inner = full.deflate(s * 0.03);
+        c.drawRect(inner, Paint()..color = FramedPrint.film);
+        final border = s * 0.07;
+        final pr = inner.deflate(border);
+        c.save();
+        c.translate(pr.left, pr.top);
+        c.clipPath(filedEdge(pr.size, s * 0.006, seed));
+        photo(Offset.zero & pr.size);
+        c.restore();
+        if (number != null) {
+          final tp = TextPainter(
+            text: TextSpan(text: '▸ $number', style: FramedPrint.numberStyle(border)),
+            textDirection: TextDirection.ltr,
+          )..layout();
+          tp.paint(c, Offset(inner.left + border, inner.bottom - border * 0.18 - tp.height));
+        }
+    }
+  }
+
+  if (wear != null && wear.on) {
+    paintWornSheet(
+      c,
+      full.size,
+      wear,
+      sheet,
+      corner: frame == PrintFrame.snapshot ? FramedPrint.snapshotCorner : 0,
+    );
+  } else {
+    sheet(c);
   }
   final framed = await rec.endRecording().toImage(w.round(), h.round());
   pic.dispose();
@@ -142,7 +202,12 @@ class FramedPrint extends StatelessWidget {
     this.seed = 0,
     this.shadow = true,
     this.shadows,
+    this.wear,
   });
+
+  /// The paper as a real sheet (see PaperWear); null: drawn plain (small
+  /// previews).
+  final PaperWear? wear;
 
   /// Its own shadow instead of the viewer's (the board's).
   final List<BoxShadow>? shadows;
@@ -159,6 +224,18 @@ class FramedPrint extends StatelessWidget {
 
   static const paper = Color(0xFFFBF8F1);
   static const decklePaper = Color(0xFFF4EEDF);
+  static const board = Color(0xFFEDE6D6);
+
+  /// A snapshot's corner radius (of its short side).
+  static const snapshotCorner = 0.05;
+
+  /// A mat's board round the window (of the short side): sides and top,
+  /// bottom; the bevel's white core.
+  static const matSide = 0.11, matBottom = 0.14, matBevel = 0.016;
+
+  /// The bevel's four faces (top in shade, bottom catching the light).
+  static const bevelTop = Color(0xFFE3DDCF), bevelLeft = Color(0xFFF2EEE5);
+  static const bevelRight = Color(0xFFFBF9F4), bevelBottom = Color(0xFFFFFFFF);
   static const film = Color(0xFF0E0D0C);
 
   /// The frame number in the darkroom edge ([border]: its width).
@@ -179,62 +256,111 @@ class FramedPrint extends StatelessWidget {
           (shadow
               ? const [BoxShadow(color: Colors.black87, blurRadius: 24, offset: Offset(0, 12))]
               : const <BoxShadow>[]);
-      switch (frame) {
-        case PrintFrame.classic:
-          return DecoratedBox(
-            decoration: BoxDecoration(color: paper, boxShadow: shadows),
-            child: Padding(padding: EdgeInsets.all(s * 0.035), child: photo),
-          );
-        case PrintFrame.borderless:
-          return DecoratedBox(
-            decoration: BoxDecoration(color: paper, boxShadow: shadows),
-            child: photo,
-          );
-        case PrintFrame.deckle:
-          return DecoratedBox(
-            // (the shadow of the rectangle: the scallops are too small for
-            // their own to show)
-            decoration: BoxDecoration(boxShadow: shadows),
-            child: ClipPath(
-              clipper: _Clip((size) => deckleEdge(size, s * 0.018)),
-              child: ColoredBox(
-                color: decklePaper,
-                child: Padding(padding: EdgeInsets.all(s * 0.075), child: photo),
-              ),
-            ),
-          );
-        case PrintFrame.darkroom:
-          final border = s * 0.07;
-          return DecoratedBox(
-            decoration: BoxDecoration(color: paper, boxShadow: shadows),
-            child: Padding(
-              padding: EdgeInsets.all(s * 0.03),
-              child: ColoredBox(
-                color: film,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(border),
-                      child: ClipPath(
-                        clipper: _Clip((size) => filedEdge(size, s * 0.006, seed)),
-                        child: photo,
-                      ),
-                    ),
-                    if (number != null && s > 120)
-                      Positioned(
-                        left: border,
-                        bottom: border * 0.18,
-                        child: Text('▸ $number', style: numberStyle(border)),
-                      ),
-                  ],
+      final Widget sheet = switch (frame) {
+        PrintFrame.classic => ColoredBox(
+          color: paper,
+          child: Padding(padding: EdgeInsets.all(s * 0.035), child: photo),
+        ),
+        PrintFrame.borderless => ColoredBox(color: paper, child: photo),
+        PrintFrame.deckle => ClipPath(
+          clipper: _Clip((size) => deckleEdge(size, s * 0.018)),
+          child: ColoredBox(
+            color: decklePaper,
+            child: Padding(padding: EdgeInsets.all(s * 0.075), child: photo),
+          ),
+        ),
+        PrintFrame.darkroom => _darkroom(s),
+        PrintFrame.mat => ColoredBox(
+          color: board,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(s * matSide, s * matSide, s * matSide, s * matBottom),
+            child: DecoratedBox(
+              // the bevel: the board's white core where the window was cut
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: bevelTop, width: s * matBevel),
+                  left: BorderSide(color: bevelLeft, width: s * matBevel),
+                  right: BorderSide(color: bevelRight, width: s * matBevel),
+                  bottom: BorderSide(color: bevelBottom, width: s * matBevel),
                 ),
               ),
+              child: Padding(padding: EdgeInsets.all(s * matBevel), child: photo),
             ),
-          );
+          ),
+        ),
+        PrintFrame.snapshot => ClipRRect(
+          borderRadius: BorderRadius.circular(s * snapshotCorner),
+          child: ColoredBox(
+            color: paper,
+            child: Padding(
+              padding: EdgeInsets.all(s * 0.045),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  photo,
+                  // glossy: a soft sheen across the picture
+                  const DecoratedBox(decoration: BoxDecoration(gradient: snapshotSheen)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      };
+      final wear = this.wear;
+      if (wear != null && wear.on) {
+        return WornSheet(
+          wear: wear,
+          shadow: shadow,
+          corner: frame == PrintFrame.snapshot ? snapshotCorner : 0,
+          child: sheet,
+        );
       }
+      return DecoratedBox(
+        // (the deckle's: the rectangle's, the scallops too small for their own)
+        decoration: BoxDecoration(
+          boxShadow: shadows,
+          borderRadius: frame == PrintFrame.snapshot ? BorderRadius.circular(s * snapshotCorner) : null,
+        ),
+        child: sheet,
+      );
     },
   );
+
+  /// A snapshot's gloss.
+  static const snapshotSheen = LinearGradient(
+    begin: Alignment(-1, -0.6),
+    end: Alignment(1, 0.6),
+    colors: [Color(0x00FFFFFF), Color(0x1CFFFFFF), Color(0x00FFFFFF)],
+    stops: [0.3, 0.45, 0.6],
+  );
+
+  Widget _darkroom(double s) {
+    final border = s * 0.07;
+    return ColoredBox(
+      color: paper,
+      child: Padding(
+        padding: EdgeInsets.all(s * 0.03),
+        child: ColoredBox(
+          color: film,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Padding(
+                padding: EdgeInsets.all(border),
+                child: ClipPath(clipper: _Clip((size) => filedEdge(size, s * 0.006, seed)), child: photo),
+              ),
+              if (number != null && s > 120)
+                Positioned(
+                  left: border,
+                  bottom: border * 0.18,
+                  child: Text('▸ $number', style: numberStyle(border)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// A scalloped edge all round a print [size]: small arcs [r] wide.

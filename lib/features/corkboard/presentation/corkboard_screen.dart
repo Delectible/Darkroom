@@ -33,6 +33,7 @@ import '../../../core/device/haptics.dart';
 import '../../../core/device/shake.dart';
 import '../../../core/diagnostics/perf_recorder.dart';
 import '../../../core/device/upright.dart';
+import '../../../core/processing/paper_wear.dart';
 
 /// Film gallery: developed prints and Super 8 reels pinned to a cork board,
 /// with the darkroom (still developing) in a red safelight strip on top.
@@ -1137,21 +1138,13 @@ class PinnedPrint extends StatelessWidget {
                               );
                               final frame = ref.watch(printFramesProvider.select((m) => m[item.id]));
                               final chosen = PrintFrame.values.asNameMap()[frame];
-                              if (chosen != null && chosen != PrintFrame.classic) {
-                                return FramedPrint(
-                                  frame: chosen,
-                                  photo: photo,
-                                  seed: item.id.hashCode,
-                                  shadows: _boardShadow,
-                                );
-                              }
-                              return Container(
-                                padding: const EdgeInsets.all(7),
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFFBF8F1),
-                                  boxShadow: _boardShadow,
-                                ),
-                                child: photo,
+                              // (none chosen: the lab's white border)
+                              return FramedPrint(
+                                frame: chosen ?? PrintFrame.classic,
+                                photo: photo,
+                                seed: item.id.hashCode,
+                                shadows: _boardShadow,
+                                wear: PaperWear.of(item.id, item.readyAt),
                               );
                             },
                           ),
@@ -1247,6 +1240,7 @@ class PinnedInstant extends StatelessWidget {
                       front: Consumer(
                         builder: (context, ref, child) => InstantPrint(
                           note: item.note,
+                          wear: PaperWear.of(item.id, item.readyAt),
                           style:
                               InstantStyle.named(ref.watch(printFramesProvider.select((m) => m[item.id]))) ??
                               InstantStyle.classic,
@@ -1703,8 +1697,12 @@ class _Tray extends ConsumerWidget {
                   child: TweenAnimationBuilder<double>(
                     tween: Tween(end: _instantDevelop(item, progress)),
                     duration: const Duration(seconds: 1),
-                    builder: (context, p, _) =>
-                        InstantPrint(develop: p, shadow: false, picture: _instantPicture(item, 160)),
+                    builder: (context, p, _) => InstantPrint(
+                      develop: p,
+                      shadow: false,
+                      picture: _instantPicture(item, 160),
+                      wear: PaperWear(seed: item.id.hashCode),
+                    ),
                   ),
                 ),
               ),
@@ -1882,7 +1880,11 @@ class _DarkroomCloseUp extends ConsumerWidget {
           child: TweenAnimationBuilder<double>(
             tween: Tween(end: _instantDevelop(item, (1 - left.inMilliseconds / total).clamp(0.0, 1.0))),
             duration: const Duration(seconds: 1),
-            builder: (context, p, _) => InstantPrint(develop: p, picture: _instantPicture(item, 720)),
+            builder: (context, p, _) => InstantPrint(
+              develop: p,
+              picture: _instantPicture(item, 720),
+              wear: PaperWear(seed: item.id.hashCode),
+            ),
           ),
         );
       } else {

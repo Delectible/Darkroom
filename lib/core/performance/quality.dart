@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as dart_ui;
 
@@ -18,11 +19,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// Judged only on frames drawn while something moves (PerfRecorder tags
 /// them), in windows of [window] frames: how many of the screen's refreshes
-/// got no new frame, and which side (UI or GPU) took the time. Two bad
+/// got no new frame, and which side (UI or GPU) took the time. Three bad
 /// windows in a row take a step down the ladder of whichever side is the
 /// bottleneck; six clean ones in a row take the last step back up (once a
-/// step back up goes wrong, no more tries this run). A phone held to a lower
-/// rate by Android (a Pixel while its camera runs) isn't blamed for it: if
+/// step back up goes wrong, no more tries this run). A steady 60 frames a
+/// second is good enough on any screen: a 120 Hz phone held to 60 by Android
+/// (a Pixel while its camera runs) isn't blamed for it (2.1.10: it was, when
+/// its frames weren't very cheap, and stepped all the way down). Below 60, if
 /// frames are cheap, the rate they come at is the one judged against.
 /// Steps are saved, so the next launch starts where this one ended; a new
 /// phone starts by its memory (low RAM: the first two steps taken).
@@ -88,7 +91,9 @@ class Quality {
 
   // ---- start ------------------------------------------------------------
 
-  static const _gpuKey = 'quality.gpu', _uiKey = 'quality.ui';
+  // (v2, 2.1.10: steps saved under the old, too touchy judging are dropped)
+  static const _gpuKey = 'quality.v2.gpu', _uiKey = 'quality.v2.ui';
+  static const _oldKeys = ['quality.gpu', 'quality.ui'];
   static const keys = {_gpuKey, _uiKey};
   static SharedPreferencesWithCache? _prefs;
   static bool _saved = false;
@@ -98,6 +103,9 @@ class Quality {
   static void start(SharedPreferencesWithCache prefs) {
     _prefs = prefs;
     _clock.start();
+    for (final k in _oldKeys) {
+      if (prefs.containsKey(k)) unawaited(prefs.remove(k));
+    }
     final g = prefs.getInt(_gpuKey), u = prefs.getInt(_uiKey);
     _saved = g != null || u != null;
     _gpu = (g ?? 0).clamp(0, gpuSteps.length);
@@ -152,7 +160,7 @@ class Quality {
     }
     if (v.bad) {
       _good = 0;
-      if (++_bad < 2) return;
+      if (++_bad < 3) return;
       _bad = 0;
       // A step back up that went wrong: down again, and no more tries.
       if (_probe > 0) _ceiling = true;
@@ -190,7 +198,8 @@ class Quality {
     // against the rate they can come at.
     final sorted = [...gaps]..sort();
     final quick = sorted[(sorted.length * 0.1).floor()];
-    final period = work < nominal * 0.75 ? math.max(nominal, quick) : nominal;
+    // (never judged against more than 60 a second: a steady 60 is fine)
+    final period = math.max(1000 / 60, work < nominal * 0.75 ? math.max(nominal, quick) : nominal);
     var slots = 0, dropped = 0;
     for (final g in gaps) {
       final n = math.max(1, (g / period).round());
@@ -206,7 +215,7 @@ class Quality {
       // Missed a fifth of the refreshes, and our own work is a real part of
       // a frame (not a phone idling between camera frames).
       bad: drop > 0.2 && work > period * 0.6,
-      clean: drop < 0.05 && work < nominal * 0.6,
+      clean: drop < 0.05 && work < period * 0.6,
       hz: 1000 / period,
     );
   }

@@ -773,10 +773,17 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   its lamp) were still fading out. The offset is now per face inside the
   button (ShutterButton.hubOf), so the face going out stays put. Seen and
   checked in the desktop 3D preview (SWITCH=, frame by frame).
-- [ ] **64.50** RUN button less cartoonish without a re-render: the press
-  mesh gets its own copy of the parts material with a tint and roughness
-  (set before the scene takes the model). Options shown: B satin, C deep
-  gloss, D faded.
+- [x] **64.50** → 2.1.10 · RUN button less like a toy, no re-render: the
+  press mesh gets its own copy of the parts material (before the scene takes
+  the model), x(0.86, 0.80, 0.72) and roughness x3.2: satin, a warmer red,
+  cream lettering (option D of four shown).
+- [x] **64.51** → 2.1.10 · 3D quality: the body drawn at full size on all
+  but low-RAM phones (was 90% on big screens). The quality manager stepped
+  the Pixel all the way down: a 120 Hz screen held to 60 by Android with the
+  camera on was judged against 120 unless frames were under ~6 ms. Now
+  never judged against more than 60 a second; three bad windows in a row
+  to step down (was two); steps saved under the old judging dropped (new
+  keys).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

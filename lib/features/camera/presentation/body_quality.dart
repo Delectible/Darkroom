@@ -51,11 +51,9 @@ class BodyQuality {
     screenPx = px;
     _clock.start();
     _levelFrom = 0;
-    if (low) {
-      base = px > 1080 ? 1080 / px : 1;
-    } else {
-      base = px >= 1100 ? 0.9 : 1;
-    }
+    // (full size on all but low-RAM phones, 2.1.10: it was 90% on big
+    // screens; the quality manager still draws it smaller if it struggles)
+    base = low && px > 1080 ? 1080 / px : 1;
     floor = math.min(1, math.max(0.6, minWidth / (px * base)));
     // The quality manager steers it now, on every phone (2.0.15): from how
     // all moving frames run, not only swaps on low-RAM phones.

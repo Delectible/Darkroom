@@ -9,7 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Turning the phone on a digital camera: the lens and effect keys no longer jump into place after they turn.';
+      'Sharper 3D cameras: drawn at full quality again, stepping down only when a phone really struggles. '
+      'A smarter-looking Super 8 RUN button, and smoother turning on the digital keys.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

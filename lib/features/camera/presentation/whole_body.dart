@@ -448,6 +448,7 @@ class LiveBody extends ChangeNotifier {
       steer();
       _changed();
     });
+    if (body.alt == 'run') _restyleRun(node);
     scene.add(node);
     void index(fs.Node n) {
       _nodes[n.name] = n;
@@ -479,6 +480,42 @@ class LiveBody extends ChangeNotifier {
     }
     showShutter(false);
     _finish = _defaultFinish;
+  }
+
+  /// Super 8's RUN button, less like a toy (2.1.10): its own copy of the
+  /// parts material, a touch darker and warmer (the white RUN goes cream)
+  /// and satin rather than a candy gloss. Before the scene takes the model:
+  /// it doesn't pick up a material swapped in after.
+  static void _restyleRun(fs.Node root) {
+    fs.Node? find(fs.Node n) {
+      if (n.name == 'mv.shutteralt.press') return n;
+      for (final c in n.children) {
+        if (find(c) case final f?) return f;
+      }
+      return null;
+    }
+
+    void restyle(fs.Node n) {
+      for (final p in n.mesh?.primitives ?? const <fs.MeshPrimitive>[]) {
+        if (p.material case final fs.PhysicallyBasedMaterial m) {
+          p.material =
+              fs.PhysicallyBasedMaterial(
+                  baseColorTexture: m.baseColorTexture,
+                  metallicRoughnessTexture: m.metallicRoughnessTexture,
+                  normalTexture: m.normalTexture,
+                  emissiveTexture: m.emissiveTexture,
+                  occlusionTexture: m.occlusionTexture,
+                  environment: m.environment,
+                )
+                ..baseColorFactor = vm.Vector4(0.86, 0.8, 0.72, 1)
+                ..metallicFactor = m.metallicFactor
+                ..roughnessFactor = m.roughnessFactor * 3.2;
+        }
+      }
+      n.children.forEach(restyle);
+    }
+
+    if (find(root) case final press?) restyle(press);
   }
 
   /// Where this body's files are: `<prefix>.glb` and

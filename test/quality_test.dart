@@ -16,6 +16,21 @@ void main() {
     expect(v.drop, lessThan(0.05));
   });
 
+  test('a steady 60 on a 120 Hz screen is fine, even when frames are not cheap', () {
+    // The Pixel with its camera on: 60 a second, 9 ms of work each. It was
+    // judged against 120 Hz and stepped all the way down.
+    final v = Quality.verdict(frames(48, 16.67, 9, 9), 120)!;
+    expect(v.bad, isFalse);
+    expect(v.drop, lessThan(0.05));
+  });
+
+  test('stuttering below 60 with real work is bad', () {
+    // 120 Hz screen, frames 25 ms apart (40 a second), 14 ms of GPU work each.
+    final fs = [for (var i = 0; i < 48; i++) (ui: 6.0, gpu: 14.0, vsync: (i * 25.0 * 1000).round())];
+    final v = Quality.verdict(fs, 120)!;
+    expect(v.bad, isTrue);
+  });
+
   test('a phone whose graphics chip is the limit steps the GPU ladder', () {
     // 90 Hz screen, frames 33 ms apart, the GPU taking 30 ms each.
     final v = Quality.verdict(frames(48, 33.3, 2, 30), 90)!;

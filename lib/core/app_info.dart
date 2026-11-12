@@ -9,8 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The viewfinder now shuts as you swipe between cameras with 2D graphics, the film viewfinder sits '
-      'neatly in its frame as the 3D camera turns, and the rabbit on the start screen is centred.';
+      'The digital cameras shoot the moment you press, like a real 2000s digicam: on Android the flash fires '
+      'straight away, and on iPhone the photo is taken from the live picture.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

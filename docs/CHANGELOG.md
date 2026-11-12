@@ -957,6 +957,18 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   Log): phone flash ~2.1 s press to capture, lock first 1.8-2.7 s (no
   help), torch pulse 1.2-1.3 s (and much dimmer). The test switches are
   gone; the press-to-capture time stays in the Camera Log.
-- [ ] **67.17** Fast real flash: Android, our own still capture (flash
-  fired at once, no pre-flash metering, exposure from the preview);
-  iPhone, the picture taken from the live preview. Discussed, not decided.
+- [x] **67.17** → 2.2.8 · Digital photos at once, like a 2000s digicam:
+  - Android, flash On (back camera): our copy of the camera plugin
+    (packages/camera_android_camerax, DARKROOM.md) builds the photo capture
+    with the flash fired on the still frame itself (Camera2Interop
+    FLASH_MODE_SINGLE, AE on), CameraX's flash and its pre-flash off, the
+    lowest-latency capture mode (FastFlash arms it, rebuilds the capture
+    through setJpegImageQuality; disarmed before every camera opens).
+    Auto keeps the phone's flash.
+  - iPhone, back camera: the photo is the live picture's next frame
+    (PreviewSnap), lit by the torch for a flash, where the frame holds the
+    camera's real resolution (lowResLongEdge ?? maxLongEdge after the crop;
+    the 2008 DSLR keeps the photo capture). Front camera unchanged.
+  - Camera Log says which: "fast flash", "preview frame[, torch]".
+  - Not done (owner): saving the low-res cameras at their real size
+    (phone galleries smooth small images).

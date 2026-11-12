@@ -33,6 +33,24 @@ class FastFlash {
   /// The capture's JPEG quality (the pipeline re-encodes it anyway).
   static const _quality = 95;
 
+  /// How long the flash takes to charge after a burst.
+  static const chargeTime = Duration(seconds: 3);
+
+  static DateTime? _lastFired;
+
+  /// Since the last burst (null: none yet).
+  static Duration? get sinceLast => _lastFired == null ? null : DateTime.now().difference(_lastFired!);
+
+  /// How long until it's charged again (zero: ready).
+  static Duration get charging {
+    final since = sinceLast;
+    if (since == null || since >= chargeTime) return Duration.zero;
+    return chargeTime - since;
+  }
+
+  /// A photo was just taken with it.
+  static void fired() => _lastFired = DateTime.now();
+
   /// Whether [spec]'s flash, set to [flash], fires this way on [lens].
   static bool applies(CameraSpec spec, CameraLensDirection lens, FlashSetting flash) =>
       Platform.isAndroid &&

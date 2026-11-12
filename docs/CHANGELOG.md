@@ -972,3 +972,8 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - Camera Log says which: "fast flash", "preview frame[, torch]".
   - Not done (owner): saving the low-res cameras at their real size
     (phone galleries smooth small images).
+- [x] **67.18** → 2.2.9 · Fast flash on the Pixel: 450-650 ms press to
+  capture (was ~2.1 s), but shots about a second apart went off without
+  the flash. Guess: the flash needs to recharge between full bursts. Like a
+  digicam it now charges for 3 s (FastFlash.chargeTime): a press sooner
+  waits for it. The Camera Log says the gap and any wait, to confirm.

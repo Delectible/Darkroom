@@ -9,7 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The viewfinder shuts properly when you flip between the front and back cameras, in 2D too.';
+      'The viewfinder shuts properly when you flip between the front and back cameras, in 2D too. When the '
+      'lab needs more time on your photos, tap the i to see why, or play a game in Darkroom 98 while you wait.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

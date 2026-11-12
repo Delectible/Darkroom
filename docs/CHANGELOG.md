@@ -916,3 +916,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   picture at once, preview exposure held). Camera Log: "photo: N ms press
   to capture (…)" for every photo. Next: pick one from the numbers; a
   digicam flash look in processing could go with the torch.
+- [x] **67.8** → 2.2.5 · Late prints: the darkroom note is just "The lab has
+  requested more time on these N photos." with an ⓘ: why (Darkroom only
+  develops while it's open), and "Play a game", which slides Darkroom 98 in
+  over the board and opens a random game (ExplorerScreen.slideIn(playGame)).

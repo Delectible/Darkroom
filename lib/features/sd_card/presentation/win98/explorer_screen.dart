@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -42,18 +43,24 @@ import '../../../../core/device/upright.dart';
 ///    library). These open in the viewer.
 ///  * My Computer — the drives.
 class ExplorerScreen extends ConsumerStatefulWidget {
-  const ExplorerScreen({super.key});
+  const ExplorerScreen({super.key, this.playGame = false});
+
+  /// Opened to pass the wait for prints (the corkboard's "Play a game"):
+  /// a random game starts once the monitor has slid in.
+  final bool playGame;
 
   /// The explorer arrives on its monitor: an off-white plastic set slides
   /// in from the right (the way the swipe went) and comes to rest against
   /// the left edge; however the explorer is closed, it slides back out.
-  static PageRouteBuilder<void> slideIn() => PageRouteBuilder<void>(
+  static PageRouteBuilder<void> slideIn({bool playGame = false}) => PageRouteBuilder<void>(
     settings: UprightApp.landscape,
     transitionDuration: slideDuration,
     reverseTransitionDuration: const Duration(milliseconds: 460),
-    pageBuilder: (context, _, _) => const UprightPage(
+    pageBuilder: (context, _, _) => UprightPage(
       child: _SwipeToClose(
-        child: ExplorerMonitor(child: Win98SaverWatch(child: ExplorerScreen())),
+        child: ExplorerMonitor(
+          child: Win98SaverWatch(child: ExplorerScreen(playGame: playGame)),
+        ),
       ),
     ),
     transitionsBuilder: (context, a, _, child) => SlideTransition(
@@ -136,6 +143,15 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
       unawaited(s.preload());
     }
     Sfx.w98Login.play();
+    if (widget.playGame) {
+      // (no gallery check: its message would land on the game)
+      _galleryTimer = Timer(ExplorerScreen.slideDuration + const Duration(milliseconds: 250), () {
+        if (!mounted) return;
+        final games = [showSolitaire, showBricks, showPinball, showMinesweeper];
+        unawaited(games[math.Random().nextInt(games.length)](context));
+      });
+      return;
+    }
     // After the login chime: any C: file deleted from the phone's photos?
     _galleryTimer = Timer(const Duration(milliseconds: 1600), () async {
       try {

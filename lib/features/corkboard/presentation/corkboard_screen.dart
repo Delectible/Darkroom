@@ -6,6 +6,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
+
+import '../../sd_card/presentation/win98/explorer_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1566,16 +1568,62 @@ class _DarkroomStrip extends ConsumerWidget {
           ),
           if (items.where((m) => _Tray.overdue(m, now)).length case final late when late > 0) ...[
             const SizedBox(height: 8),
-            Text(
-              'The lab has asked for extra time on ${late == 1 ? 'this one' : 'these $late'}. '
-              "${late == 1 ? "It'll" : "They'll"} be out shortly, sooner with Darkroom open.",
-              style: const TextStyle(color: Color(0xCCFF8A80), fontSize: 12, height: 1.3),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    'The lab has requested more time on ${late == 1 ? 'this photo' : 'these $late photos'}.',
+                    style: const TextStyle(color: Color(0xCCFF8A80), fontSize: 12, height: 1.3),
+                  ),
+                ),
+                // Why, and something to do meanwhile.
+                Semantics(
+                  button: true,
+                  label: 'Why it takes longer',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => unawaited(_explainLate(context)),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Icon(Icons.info_outline, size: 16, color: Color(0xCCFF8A80)),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ],
       ),
     );
   }
+}
+
+/// Prints past their time: the app only develops while it's open. Offers a
+/// game in Darkroom 98 to pass the wait (it slides in over the board).
+Future<void> _explainLate(BuildContext context) async {
+  final play = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      icon: const Icon(Icons.light, color: Color(0xFFE57373)),
+      title: const Text('Still in the darkroom'),
+      content: const Text(
+        "Darkroom can't develop photos while the app is closed. It does its best to get them done "
+        "quickly, but now and then they won't be ready in time. Leave the app open for a little while "
+        'and your photos will develop.\n\nHow about a game in Darkroom 98 while you wait?',
+      ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('OK')),
+        FilledButton.icon(
+          icon: const Icon(Icons.videogame_asset_outlined, size: 18),
+          label: const Text('Play a game'),
+          onPressed: () => Navigator.pop(context, true),
+        ),
+      ],
+    ),
+  );
+  if (play != true || !context.mounted) return;
+  await Navigator.of(context).push(ExplorerScreen.slideIn(playGame: true));
 }
 
 class _Tray extends ConsumerWidget {

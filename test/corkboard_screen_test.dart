@@ -119,7 +119,14 @@ void main() {
       }
       expect(tester.takeException(), isNull);
       expect(find.text('extra time'), findsOneWidget);
-      expect(find.textContaining('The lab has asked for extra time on this one'), findsOneWidget);
+      expect(find.text('The lab has requested more time on this photo.'), findsOneWidget);
+      // The i: why, and a game to pass the wait.
+      await tester.tap(find.byIcon(Icons.info_outline));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Play a game'), findsOneWidget);
+      await tester.tap(find.text('OK'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Play a game'), findsNothing);
 
       if (shots != null) {
         await tester.runAsync(() async {

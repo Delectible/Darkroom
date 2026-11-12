@@ -827,8 +827,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     final settings = ref.read(cameraSettingsProvider);
     final prevLocal = settings[prev.id] ?? CameraLocalSettings.defaultsFor(prev);
     // Only the frame's shape differs: no restart, the frame glides to it as a ratio change does.
+    final lenses = ref.read(filmLensProvider.notifier);
     final differs =
         presetFor(prev) != presetFor(next) ||
+        // (a wide or fish-eye lens on one and not the other: the phone
+        // changes camera, the ultra-wide to the main one or back)
+        takesWidest(lenses.lensFor(prev)) != takesWidest(lenses.lensFor(next)) ||
         (prev.film?.gate ?? 0) != (next.film?.gate ?? 0) ||
         prev.landscapeOnly != next.landscapeOnly;
     if (!differs || !_canHoldForChange) return;

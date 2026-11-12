@@ -39,6 +39,9 @@ class FilmLensController extends Notifier<LensKind> {
     state = _for(ref.read(activeSpecProvider));
   }
 
+  /// The lens [spec] goes on with (its own last one, else its first).
+  LensKind lensFor(CameraSpec spec) => _for(spec);
+
   LensKind _for(CameraSpec spec) {
     final l = _byCamera[spec.id];
     return l != null && lensesFor(spec, ref.read(ultraWideProvider)).contains(l) ? l : spec.lenses.first;
@@ -52,6 +55,10 @@ class FilmLensController extends Notifier<LensKind> {
     Remembered.write(ref, Remembered.lensKey, {for (final e in _byCamera.entries) e.key: e.value.name});
   }
 }
+
+/// The lenses that take the phone's widest camera (its ultra-wide, where
+/// it has one): changing to or from one is a camera change.
+bool takesWidest(LensKind lens) => lens == LensKind.wide || lens == LensKind.fisheye;
 
 /// The lenses [spec] offers on this phone: the wide adapter only where it
 /// has an ultra-wide camera to open (it's the one way to reach it); the

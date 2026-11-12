@@ -477,7 +477,7 @@ class StockLabel extends ConsumerWidget {
     final spec = ref.watch(activeSpecProvider);
     // On the 3D body it fills the memo holder's / LCD's window exactly.
     final fills = ref.watch(wholeBodyProvider(spec.mode)) != null;
-    return Semantics(
+    final label = Semantics(
       button: true,
       label: spec.isFilm ? 'Film: ${spec.name}' : 'Camera: ${spec.name}',
       hint: 'Tap to choose, swipe sideways for the next one',
@@ -513,6 +513,10 @@ class StockLabel extends ConsumerWidget {
         ),
       ),
     );
+    // In the 2D layout it's given the row's width but is drawn narrower, at
+    // its left: only the label itself takes the tap and the swipe (the
+    // space beside it changed the stock too).
+    return fills ? label : Align(alignment: Alignment.centerLeft, child: label);
   }
 }
 

@@ -7,15 +7,48 @@ section here. Keep adding detail here, not to CLAUDE.md.
 (How we work, the push/notify routine and the never-do rules are in
 CLAUDE.md.)
 
-## Where things stand (hand-off, 2026-11-04)
+## Where things stand (hand-off, 2026-11-12)
 
-- **Shipped:** 2.0.7 (build 108, CI run ~166) pushed to `main` 2026-11-04: the
-  big speed/memory update (skins on demand, slim 3D files, screen-size
-  print decoding, low-RAM tuning + `BodyQuality`, faster launch, Debug >
-  Memory Report / Launch Timing / 3D Quality Stats, all in one Performance
-  Report since 2.0.8). Before it: 2.0.6
-  (FLIP caption, Start menu in the CRT, projector deck stays, six How it
-  works demos, Epic 70 "MOVIE · 24 FPS").
+- **Shipped to `main`:** 2.2.3 (build 134), the bug batch: the "frozen
+  viewfinder" (the digital screen's waking still left over the live
+  picture: ViewfinderShutter.waking, dropped on complete or cancel; Camera
+  Log says "unstuck: a waking still left up" if the safety net ever has to),
+  flip shuts the viewfinder (CameraFlip), Win98 windows close by shrinking a
+  snapshot, the rotate fade covers the whole app (UprightApp), a stock change
+  to/from the ultra-wide fades (takesWidest), 2D stock label swipe area,
+  quality manager (refresh missed past 30% late, severe window = 2 steps),
+  corkboard notes go with their screen (Notes.show context, swipe / ×).
+  Before it: 2.2.2 prints as real ageing paper (PaperWear,
+  lib/core/processing/paper_wear.dart) + Mat / Snapshot frames; 2.2.1 videos
+  stop 200 ms short of their end (StopShort: a clip running out froze the
+  app); 2.2.0 the big 2.1.x feature set. CHANGELOG 64.x has every item.
+- **Waiting on the owner:**
+  - "release to iPhone" for 2.2.3 (App Store is on 2.2.0).
+  - App Store search wording (name `Darkroom: Film & Retro Camera`,
+    subtitle `Disposable, 35mm & instant cam`, keywords
+    `analog,vintage,camcorder,super8,8mm,grain,y2k,ccd,digicam,old,photo,filter,effect,aesthetic,90s,cine`):
+    on yes, add name.txt / subtitle.txt / keywords.txt to the meta dir in
+    appstore-release.yml (fastlane deliver uploads them with the version).
+  - Instagram kit offer (4:5 framed-print post template, film carousels,
+    highlight covers); profile picture is docs/brand/instagram_profile.png
+    (tool/brand/make_instagram.py). Owner's handle: @dark.roomphotos.
+  - Saved prints' round corners sit on a dark "scanner bed": keep or square.
+- **Ideas / checklist:** the Release Sweep artifact (CLAUDE.md) was updated
+  2026-11-12 (v2.2.3); CHANGELOG 65.x (Toned ideas).
+- **Tools found useful this session:**
+  - Film looks on any photo, no phone: a tiny Dart main using
+    FilmRenderer(FilmProfile.forStock(id)).render(...) (as
+    tool/film_preview.dart does), `dart run` from the repo. Use the app's
+    stock names in anything public (Vivid 100, Portrait 400, Golden 200,
+    Night 800T, Chrome 50, Single-Use 27, Instant 600), never the real films'.
+  - Live 3D preview on Linux (tool/live3d/preview.dart): needs
+    `apt-get install libgtk-3-dev libjson-glib-dev`, a copy of the repo
+    with shaders/ and flutter_scene_generated/ too, `flutter create
+    --platforms linux --project-name darkroom .`, Flutter GPU on in
+    my_application.cc; `cmake --install` puts the binary at
+    /usr/local/darkroom. The scene loads after ~12-15 s (add a WAIT). Model
+    materials must be changed before `scene.add(node)` (LiveBody), or they
+    don't take.
 - **App Store:** 2.2.0 (build 191) live since 2026-11-08 (apps.apple.com
   id6826318702, "Darkroom: A Film Camera"); 2.0.3 before it. Newer builds
   only on TestFlight until the owner says "release to iPhone".

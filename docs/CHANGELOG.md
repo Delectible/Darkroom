@@ -876,3 +876,11 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [ ] **65.6** Hold a print to compare with the phone's original (where kept).
 - [ ] **65.7** More formats: half frame, medium format 6x6 / 6x7.
 - [ ] **65.8** Pro price vs theirs; translated store listings.
+
+## 66. Tooling (2026-11-12)
+
+- [x] **66.1** → 2.2.3 · CI pinned to Flutter 3.47.9: stable 3.50 broke the
+  build (material.dart deprecated, analyze failed; test_api moved, the
+  locked pub get failed).
+- [ ] **66.2** Move up to Flutter 3.50: `material_ui` imports, refresh
+  `pubspec.lock`, drop the pin (on the checklist under Speed).

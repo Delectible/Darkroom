@@ -953,3 +953,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   unseen under it. The viewfinder's shutter is drawn over the picture now
   (_pictureShutting, at the viewfinder's place in it), and stays shut on
   the leaving body after the commit.
+- [x] **67.16** → 2.2.8 · Flash test done (Pixel 9 Pro, digital, Camera
+  Log): phone flash ~2.1 s press to capture, lock first 1.8-2.7 s (no
+  help), torch pulse 1.2-1.3 s (and much dimmer). The test switches are
+  gone; the press-to-capture time stays in the Camera Log.
+- [ ] **67.17** Fast real flash: Android, our own still capture (flash
+  fired at once, no pre-flash metering, exposure from the preview);
+  iPhone, the picture taken from the live preview. Discussed, not decided.

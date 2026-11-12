@@ -157,26 +157,6 @@ void main() {
     expect(find.text('Turn Off'), findsOneWidget);
     await tester.tap(find.text('Turn Off'));
     await tester.pump();
-    // The flash test: two switches, one on at a time.
-    await tester.tap(find.text('Pro & Unlocks'));
-    await tester.tap(find.text('Speed Test Switches'));
-    await tester.pump();
-    await tester.ensureVisible(find.text('Camera', skipOffstage: false));
-    await tester.pump();
-    await tester.tap(find.text('Camera'));
-    await tester.pump();
-    await tester.tap(find.text('Flash: Lock First'));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.text('Turn On'));
-    await tester.pump();
-    expect(find.text('Turn Off'), findsOneWidget);
-    await tester.tap(find.text('Flash: Torch Pulse'));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.text('Turn On'));
-    await tester.pump();
-    await tester.tap(find.text('Flash: Lock First'));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Turn On'), findsOneWidget);
     await shoot(tester, 'win98_debug');
     await tester.tap(find.text('Close'));
     await tester.pumpAndSettle();

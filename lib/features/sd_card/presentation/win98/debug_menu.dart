@@ -37,7 +37,6 @@ import '../../../camera/presentation/whole_body.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../onboarding/onboarding_screen.dart';
 import '../../application/sd_card_controller.dart';
-import '../../../camera/application/digital_flash.dart';
 import 'explorer_dialogs.dart';
 import 'pixel_icons.dart';
 import 'win98_widgets.dart';
@@ -52,15 +51,6 @@ class _Tool {
   final Future<void> Function(BuildContext context, WidgetRef ref) run;
   final bool Function(WidgetRef ref)? on;
 }
-
-/// A Digital Flash mode as a switch (turning one on turns the other off).
-_Tool _flashTool(DigitalFlash mode, String name, String about) => _Tool(
-  PixelIcon.views,
-  name,
-  about,
-  (_, _) async => DigitalFlash.current = DigitalFlash.current == mode ? DigitalFlash.phone : mode,
-  on: (_) => DigitalFlash.current == mode,
-);
 
 /// Reads a provider (a widget's ref, or the app's container once the Debug
 /// window has closed).
@@ -138,22 +128,6 @@ final _tools = <_Tool>[
         'the graphics and processor sides, recent verdicts and every step. Step it by hand, turn it '
         'off, or reset it to full quality.',
     (context, _) => _qualityWindow(context),
-  ),
-  // Digital cameras' back flash, as a test (both off: the phone's own
-  // flash). Camera Log notes each photo's time from press to capture.
-  _flashTool(
-    DigitalFlash.locked,
-    'Flash: Lock First',
-    "On: the digital cameras' flash locks focus and exposure the moment you press, then fires (the phone "
-        'still fires its pre-flash). Off: the phone\'s own flash. Camera Log shows each photo\'s time '
-        'from press to capture.',
-  ),
-  _flashTool(
-    DigitalFlash.torch,
-    'Flash: Torch Pulse',
-    "On: the digital cameras' flash turns the light on as a torch and takes the photo at once, at the "
-        "preview's exposure (near-instant, weaker light). Off: the phone's own flash. Camera Log shows "
-        "each photo's time from press to capture.",
   ),
   _Tool(
     PixelIcon.rabbit,
@@ -643,7 +617,6 @@ final _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
   ('Speed Test Switches', [for (final (name, _, _) in _speedTests) name]),
-  ('Camera', ['Flash: Lock First', 'Flash: Torch Pulse']),
   ('Diagnostics', ['Camera Log', 'Crash Reports', 'Test Crash']),
   ('First Run & Prompts', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt', 'Lag Prompt']),
 ];

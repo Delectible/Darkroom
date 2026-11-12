@@ -29,8 +29,12 @@ final class DarkroomFastFlash {
 
   /** A still captured with the fast flash: what the camera says it did, to the app's log. */
   static void report(@NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+    final Integer intent = request.get(CaptureRequest.CONTROL_CAPTURE_INTENT);
+    // (the preview's frames: only the photo itself is worth a line)
+    if (intent != null && intent == CaptureRequest.CONTROL_CAPTURE_INTENT_PREVIEW) return;
     final String line =
-        "asked "
+        name(intent, "CUSTOM", "PREVIEW", "STILL", "RECORD", "SNAPSHOT", "ZSL", "MANUAL", "MOTION")
+            + ": asked "
             + name(request.get(CaptureRequest.FLASH_MODE), "OFF", "SINGLE", "TORCH")
             + " (AE "
             + name(request.get(CaptureRequest.CONTROL_AE_MODE), "OFF", "ON", "AUTO_FLASH", "ALWAYS_FLASH", "REDEYE", "EXTERNAL")

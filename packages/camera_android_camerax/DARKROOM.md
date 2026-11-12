@@ -16,10 +16,12 @@ digicam just fired. Marked `DARKROOM PATCH`:
   (`arm`: bool), set up in `CameraAndroidCameraxPlugin.onAttachedToEngine`.
 - `ImageCaptureProxyApi.pigeon_defaultConstructor`: an ImageCapture built
   while armed has CameraX's flash off (no pre-flash), the lowest-latency
-  capture mode, and through Camera2Interop the still request itself carries
-  `FLASH_MODE_SINGLE` with AE on: the flash fires on that frame, at the
-  exposure the preview already had. Its session capture callback reports
-  each still's flash mode, FLASH_STATE and AE state back over the channel
+  capture mode, and through Camera2Interop AE mode `ON_ALWAYS_FLASH`: the
+  camera fires the flash for still captures only, at the exposure the
+  preview already had. (Interop options on the ImageCapture reach the
+  preview's repeating requests too: `FLASH_MODE_SINGLE` there fired the
+  flash on a preview frame just after arming, and never on the photo.) Its session capture callback reports
+  each still's (not the preview's) flash mode, FLASH_STATE and AE state back over the channel
   (`log`), into the app's Camera Log.
 
 The app (`FastFlash` in lib/features/camera/application/) arms it for a

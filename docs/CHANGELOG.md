@@ -972,9 +972,14 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - Camera Log says which: "fast flash", "preview frame[, torch]".
   - Not done (owner): saving the low-res cameras at their real size
     (phone galleries smooth small images).
-- [ ] **67.18** → 2.2.9 · Fast flash on the Pixel: 450-650 ms press to
+- [x] **67.18** → 2.2.9 · Fast flash on the Pixel: 450-650 ms press to
   capture (was ~2.1 s), but shots about a second apart went off without
   the flash. Not the charge (the phone's own flash fires once a second, the
   owner checked): each fast-flash still now logs what the camera says it
   did (DarkroomFastFlash.report: flash mode asked, FLASH_STATE, AE state,
   "fast flash: …" in the Camera Log) and the gap since the last.
+- [x] **67.19** → 2.2.10 · The log (2.2.9) showed why: the interop options
+  reached every preview frame (a line every ~40 ms), so FLASH_MODE_SINGLE
+  fired the flash on the preview just after arming and the photos showed
+  READY (not fired). Now AE ON_ALWAYS_FLASH (the camera fires it for still
+  captures only), and only the still's line is logged.

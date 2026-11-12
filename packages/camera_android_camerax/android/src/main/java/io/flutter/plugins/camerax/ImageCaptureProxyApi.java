@@ -76,12 +76,16 @@ class ImageCaptureProxyApi extends PigeonApiImageCapture {
     }
     if (DarkroomFastFlash.armed) {
       // DARKROOM PATCH: the flash fires on the still frame itself, at the
-      // exposure the preview has (no pre-flash, no settling).
+      // exposure the preview has (CameraX's flash off: no pre-flash, no
+      // settling).
       builder.setFlashMode(ImageCapture.FLASH_MODE_OFF);
       builder.setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY);
+      // (These options reach the preview's repeating requests too: a
+      // FLASH_MODE_SINGLE there fired the flash on a preview frame, not the
+      // photo. ON_ALWAYS_FLASH fires it only for still captures.)
       new Camera2Interop.Extender<>(builder)
-          .setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-          .setCaptureRequestOption(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
+          .setCaptureRequestOption(
+              CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH)
           .setSessionCaptureCallback(
               new CameraCaptureSession.CaptureCallback() {
                 @Override

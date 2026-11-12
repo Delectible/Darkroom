@@ -112,6 +112,7 @@ class WholeFace extends ConsumerWidget {
                         rect: screen,
                         child: _RimClip(
                           rim: film ? _filmRim : _digitalRim,
+                          radius: film ? 6 : 3,
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(film ? 6 : 3),
                             child: const CameraViewport(),
@@ -255,9 +256,12 @@ const _digitalRim = 2.4 * 2.6;
 /// stays inside the rendered frame (the far side then shows a sliver of the
 /// recess, as a real window would).
 class _RimClip extends StatelessWidget {
-  const _RimClip({required this.rim, required this.child});
+  const _RimClip({required this.rim, required this.radius, required this.child});
 
   final double rim;
+
+  /// The picture's corner radius at rest.
+  final double radius;
   final Widget child;
 
   @override
@@ -266,18 +270,27 @@ class _RimClip extends StatelessWidget {
     if (yaw.abs() < 1e-3) return child;
     // A point [rim] out of the face lands this far across it.
     final inset = rim * math.tan(yaw.abs());
-    return ClipRect(clipper: _SideClip(inset), child: child);
+    // The clipped edges keep round corners, rounder and a touch further in
+    // as it turns: the flat picture and the rendered window part ways a
+    // little in the turn, and square corners poked out past the model's
+    // round ones (most of the way round).
+    final t = math.min(1.0, yaw.abs() / 0.6);
+    return ClipRRect(clipper: _SideClip(inset + 2 * t, 1.5 * t, radius + 8 * t), child: child);
   }
 }
 
-class _SideClip extends CustomClipper<Rect> {
-  const _SideClip(this.inset);
+class _SideClip extends CustomClipper<RRect> {
+  const _SideClip(this.inset, this.top, this.radius);
 
+  /// In from the sides, and from the top and bottom.
   final double inset;
+  final double top;
+  final double radius;
 
   @override
-  Rect getClip(Size size) => Rect.fromLTRB(inset, 0, size.width - inset, size.height);
+  RRect getClip(Size size) =>
+      RRect.fromLTRBR(inset, top, size.width - inset, size.height - top, Radius.circular(radius));
 
   @override
-  bool shouldReclip(_SideClip old) => old.inset != inset;
+  bool shouldReclip(_SideClip old) => old.inset != inset || old.top != top || old.radius != radius;
 }

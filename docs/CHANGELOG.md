@@ -932,3 +932,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   Flash: Lock First and Flash: Torch Pulse (one on at a time; both off =
   the phone's flash), showing Turn On / Turn Off like the others. Kept
   until the app restarts.
+- [x] **67.12** → 2.2.6 · 3D swap: the flat viewfinder's square corners poked
+  past the model's round window most of the way round. The rim clip
+  (_RimClip) is a rounded rect now, rounder and a touch further in as the
+  body turns (the model is drawn under the face, so it can't mask it).
+- [ ] **67.13** 2D flip still doesn't shut (2.2.5): waiting on the Camera
+  Log lines after a 2D flip ("flip…").

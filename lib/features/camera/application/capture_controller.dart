@@ -245,15 +245,8 @@ class CaptureController extends Notifier<CaptureState> {
         );
         if (file != null) how = 'preview frame${torch ? ', torch' : ''}';
       } else if (FastFlash.armedFor(c) && ctx.flash == FlashSetting.on) {
-        // The flash charges between bursts, like a digicam's: a press too
-        // soon after the last waits for it (shots close together went off
-        // without the flash at all, 2.2.8).
         final since = FastFlash.sinceLast;
-        final wait = FastFlash.charging;
-        if (wait > Duration.zero) await Future<void>.delayed(wait);
-        how =
-            'fast flash, ${since == null ? 'first' : '${since.inMilliseconds} ms after the last'}'
-            '${wait > Duration.zero ? ', waited ${wait.inMilliseconds} ms to charge' : ''}';
+        how = 'fast flash, ${since == null ? 'first' : '${since.inMilliseconds} ms after the last'}';
         file = await c.takePicture();
         FastFlash.fired();
       }

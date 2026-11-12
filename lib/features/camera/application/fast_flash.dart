@@ -33,20 +33,10 @@ class FastFlash {
   /// The capture's JPEG quality (the pipeline re-encodes it anyway).
   static const _quality = 95;
 
-  /// How long the flash takes to charge after a burst.
-  static const chargeTime = Duration(seconds: 3);
-
   static DateTime? _lastFired;
 
   /// Since the last burst (null: none yet).
   static Duration? get sinceLast => _lastFired == null ? null : DateTime.now().difference(_lastFired!);
-
-  /// How long until it's charged again (zero: ready).
-  static Duration get charging {
-    final since = sinceLast;
-    if (since == null || since >= chargeTime) return Duration.zero;
-    return chargeTime - since;
-  }
 
   /// A photo was just taken with it.
   static void fired() => _lastFired = DateTime.now();
@@ -87,8 +77,18 @@ class FastFlash {
     }
   }
 
+  static bool _listening = false;
+
   static Future<bool> _arm(bool on) async {
     if (!Platform.isAndroid || !_available) return false;
+    if (!_listening) {
+      _listening = true;
+      // The camera's own word on each photo: was the flash asked for, did it
+      // fire (shots close together went off without it, 2.2.8).
+      _channel.setMethodCallHandler((call) async {
+        if (call.method == 'log') CameraLog.add('fast flash: ${call.arguments}');
+      });
+    }
     try {
       await _channel.invokeMethod<void>('arm', on);
       return true;

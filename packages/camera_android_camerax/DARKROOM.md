@@ -18,7 +18,9 @@ digicam just fired. Marked `DARKROOM PATCH`:
   while armed has CameraX's flash off (no pre-flash), the lowest-latency
   capture mode, and through Camera2Interop the still request itself carries
   `FLASH_MODE_SINGLE` with AE on: the flash fires on that frame, at the
-  exposure the preview already had.
+  exposure the preview already had. Its session capture callback reports
+  each still's flash mode, FLASH_STATE and AE state back over the channel
+  (`log`), into the app's Camera Log.
 
 The app (`FastFlash` in lib/features/camera/application/) arms it for a
 digital camera's back flash set to On, recreates the ImageCapture through

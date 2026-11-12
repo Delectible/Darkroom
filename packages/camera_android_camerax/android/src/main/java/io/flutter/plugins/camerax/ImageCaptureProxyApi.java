@@ -4,7 +4,9 @@
 
 package io.flutter.plugins.camerax;
 
+import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.TotalCaptureResult;
 import androidx.annotation.OptIn;
 import androidx.camera.camera2.interop.Camera2Interop;
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
@@ -79,7 +81,17 @@ class ImageCaptureProxyApi extends PigeonApiImageCapture {
       builder.setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY);
       new Camera2Interop.Extender<>(builder)
           .setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-          .setCaptureRequestOption(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE);
+          .setCaptureRequestOption(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
+          .setSessionCaptureCallback(
+              new CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureCompleted(
+                    @NonNull CameraCaptureSession session,
+                    @NonNull CaptureRequest request,
+                    @NonNull TotalCaptureResult result) {
+                  DarkroomFastFlash.report(request, result);
+                }
+              });
     }
     return builder.build();
   }

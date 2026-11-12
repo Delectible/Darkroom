@@ -939,11 +939,17 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   and the turn's side clip (_RimClip, rim height x tan yaw, both sides:
   near rim edge and far wall) keeps the window's round corners. A first
   try in 2.2.6 rounded and inset it by eye; replaced.
-- [ ] **67.13** 2D flip still doesn't shut (2.2.5): waiting on the Camera
-  Log lines after a 2D flip ("flip…").
+- [x] **67.13** 2D flip still doesn't shut (2.2.5): see 67.15.
 - [x] **67.14** → 2.2.7 · Launch splash: the rabbit was centred on its
   picture (the ears lean right), so its face sat left. Face centred
   (LaunchCurtain.faceShift = 27.5/384 of its width) on the curtain and
   Android's splash images; iOS's launch image is now the same rabbit (it
   was the bust with shoulders), face centred. The line below was centred
   already.
+- [x] **67.15** → 2.2.7 · 67.13's real cause (the owner's "camera flip" is
+  the swipe to the other body, not front/back; the Camera Log had no
+  flips): in 2D the dragged body is one picture (_dragFace) taken as the
+  drag starts, before the viewfinder begins to shut, so the shut ran
+  unseen under it. The viewfinder's shutter is drawn over the picture now
+  (_pictureShutting, at the viewfinder's place in it), and stays shut on
+  the leaving body after the commit.

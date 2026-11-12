@@ -349,13 +349,48 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   /// under a 3D transform redraws every shadow and control each frame).
   ui.Image? _dragFace;
 
+  /// Where the viewfinder is in [_dragFace] (and in [_outgoing], made from
+  /// it): its shutter is drawn there over the picture, so it still shuts as
+  /// the body moves (the picture was taken before it began to, 2D only).
+  Rect? _dragShut;
+
   void _snapBody() {
     if (_dragFace != null || !ref.read(globalSettingsProvider).performance) return;
     try {
       final boundary = _bodyKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null || boundary.debugNeedsPaint) return;
       _dragFace = boundary.toImageSync(pixelRatio: _stillRatio(context));
+      final vf = CameraViewport.shutKey.currentContext?.findRenderObject() as RenderBox?;
+      _dragShut = vf == null || !vf.hasSize
+          ? null
+          : MatrixUtils.transformRect(vf.getTransformTo(boundary), Offset.zero & vf.size);
     } catch (_) {}
+  }
+
+  /// The body's picture with its viewfinder shutting over it ([shut] fixed,
+  /// or following the camera's shutter).
+  Widget _pictureShutting(ui.Image image, AppMode m, {double? shut}) {
+    final rect = _dragShut;
+    final picture = RawImage(image: image, fit: BoxFit.fill);
+    if (rect == null) return picture;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        picture,
+        Positioned.fromRect(
+          rect: rect,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(m == AppMode.film ? 6 : 3),
+            child: shut != null
+                ? ViewfinderShut(mode: m, still: _lastFrame[m], progress: shut)
+                : ValueListenableBuilder<ui.Image?>(
+                    valueListenable: CameraViewport.freeze,
+                    builder: (context, still, _) => ViewfinderShut(mode: m, still: still ?? _lastFrame[m]),
+                  ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _dropBody() {
@@ -1484,7 +1519,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
                                         ? SwapStage(
                                             progress: _swap.value,
                                             dir: _dirFor(other),
-                                            leaving: picture(_outgoing, other),
+                                            // (shut by now: it stays so as it goes)
+                                            leaving: _outgoing != null && rendered == null
+                                                ? _pictureShutting(_outgoing!, other, shut: 1)
+                                                : picture(_outgoing, other),
                                             leavingMode: other,
                                             arriving: child,
                                             arrivingMode: mode,
@@ -1501,7 +1539,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
                                                     children: [
                                                       // Kept alive (camera, state), not drawn.
                                                       Visibility.maintain(visible: false, child: child!),
-                                                      RawImage(image: _dragFace, fit: BoxFit.fill),
+                                                      _pictureShutting(_dragFace!, mode),
                                                     ],
                                                   ),
                                             leavingMode: mode,

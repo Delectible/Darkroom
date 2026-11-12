@@ -330,7 +330,19 @@ class _UprightAppState extends ConsumerState<UprightApp> with WidgetsBindingObse
   @override
   Widget build(BuildContext context) {
     ref.listen(physicalOrientationProvider, (_, _) => _apply(turned: true));
-    return widget.child;
+    // The fade while the app turns covers everything on screen: on each
+    // landscape page alone, a window open over it (a message box, a file's
+    // properties) stayed up while the page faded out under it.
+    return ValueListenableBuilder<double>(
+      valueListenable: UprightApp.veil,
+      builder: (context, veil, child) => AnimatedOpacity(
+        opacity: veil,
+        duration: veil == 0 ? UprightPage.fade : UprightPage.fade * 1.6,
+        curve: Curves.easeOut,
+        child: child,
+      ),
+      child: widget.child,
+    );
   }
 }
 
@@ -376,57 +388,49 @@ class UprightPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final physical = ref.watch(physicalOrientationProvider);
-    return ValueListenableBuilder<double>(
-      valueListenable: UprightApp.veil,
-      builder: (context, veil, child) => AnimatedOpacity(
-        opacity: veil,
-        duration: veil == 0 ? fade : fade * 1.6,
-        curve: Curves.easeOut,
-        child: child,
-      ),
-      child: ListenableBuilder(
-        listenable: Listenable.merge([AutoRotate.value, UprightApp.held]),
-        builder: (context, _) {
-          final o = UprightApp.held.value ?? physical;
-          final mq = MediaQuery.of(context);
-          final portraitNow = mq.size.height >= mq.size.width;
-          final q = AutoRotate.value.value == true && portraitNow && isLandscape(o)
-              ? uprightQuarterTurns(o)
-              : 0;
-          EdgeInsets turn(EdgeInsets e) => switch (q) {
-            1 => EdgeInsets.fromLTRB(e.top, e.right, e.bottom, e.left),
-            3 => EdgeInsets.fromLTRB(e.bottom, e.left, e.top, e.right),
-            _ => e,
-          };
-          var cutTop = 0.0, cutBottom = 0.0;
-          for (final f in mq.displayFeatures) {
-            if (f.type != DisplayFeatureType.cutout) continue;
-            if (f.bounds.center.dy < mq.size.height / 2) {
-              cutTop = math.max(cutTop, f.bounds.bottom);
-            } else {
-              cutBottom = math.max(cutBottom, mq.size.height - f.bounds.top);
-            }
+    // (faded while the app turns by UprightApp, over everything)
+    return ListenableBuilder(
+      listenable: Listenable.merge([AutoRotate.value, UprightApp.held]),
+      builder: (context, _) {
+        final o = UprightApp.held.value ?? physical;
+        final mq = MediaQuery.of(context);
+        final portraitNow = mq.size.height >= mq.size.width;
+        final q = AutoRotate.value.value == true && portraitNow && isLandscape(o)
+            ? uprightQuarterTurns(o)
+            : 0;
+        EdgeInsets turn(EdgeInsets e) => switch (q) {
+          1 => EdgeInsets.fromLTRB(e.top, e.right, e.bottom, e.left),
+          3 => EdgeInsets.fromLTRB(e.bottom, e.left, e.top, e.right),
+          _ => e,
+        };
+        var cutTop = 0.0, cutBottom = 0.0;
+        for (final f in mq.displayFeatures) {
+          if (f.type != DisplayFeatureType.cutout) continue;
+          if (f.bounds.center.dy < mq.size.height / 2) {
+            cutTop = math.max(cutTop, f.bounds.bottom);
+          } else {
+            cutBottom = math.max(cutBottom, mq.size.height - f.bounds.top);
           }
-          final cutout = EdgeInsets.only(top: cutTop, bottom: cutBottom);
-          return RotatedBox(
-            quarterTurns: q,
-            child: MediaQuery(
-              data: q == 0
-                  ? mq
-                  : mq.copyWith(
-                      size: mq.size.flipped,
-                      // as it will be, turned: no status / nav bars, only the
-                      // camera cutout (or the layout shifts once it really turns)
-                      padding: turn(cutout),
-                      viewPadding: turn(cutout),
-                      viewInsets: turn(mq.viewInsets),
-                      systemGestureInsets: turn(mq.systemGestureInsets),
-                    ),
-              child: child,
-            ),
-          );
-        },
-      ),
+        }
+        final cutout = EdgeInsets.only(top: cutTop, bottom: cutBottom);
+        return RotatedBox(
+          quarterTurns: q,
+          child: MediaQuery(
+            data: q == 0
+                ? mq
+                : mq.copyWith(
+                    size: mq.size.flipped,
+                    // as it will be, turned: no status / nav bars, only the
+                    // camera cutout (or the layout shifts once it really turns)
+                    padding: turn(cutout),
+                    viewPadding: turn(cutout),
+                    viewInsets: turn(mq.viewInsets),
+                    systemGestureInsets: turn(mq.systemGestureInsets),
+                  ),
+            child: child,
+          ),
+        );
+      },
     );
   }
 }

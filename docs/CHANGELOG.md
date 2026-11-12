@@ -920,3 +920,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   requested more time on these N photos." with an ⓘ: why (Darkroom only
   develops while it's open), and "Play a game", which slides Darkroom 98 in
   over the board and opens a random game (ExplorerScreen.slideIn(playGame)).
+- [x] **67.9** → 2.2.5 · Developing prints sometimes showed no picture: the
+  tray waited for the finished thumbnail, so a print still being made (big
+  frame, slow phone) stayed blank. It shows the photo as taken meanwhile
+  (monochrome under the safelight, as instant prints already did).
+- [x] **67.10** → 2.2.5 · Debug > Darkroom Development off: the trays count
+  up (how long each print takes to process), show the picture in full from
+  the start, and never say "extra time".

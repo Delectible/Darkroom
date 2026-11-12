@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 
 import '../../sd_card/presentation/win98/explorer_screen.dart';
+import '../../settings/application/settings_controllers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -1529,6 +1530,10 @@ class _DarkroomStrip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // (none with Debug > Darkroom Development off: there's no time to run over)
+    final late = ref.watch(globalSettingsProvider.select((s) => s.darkroomEnabled))
+        ? items.where((m) => _Tray.overdue(m, now)).length
+        : 0;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 8, 12, 6),
       padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
@@ -1566,7 +1571,7 @@ class _DarkroomStrip extends ConsumerWidget {
               itemBuilder: (context, i) => _Tray(item: items[i], now: now),
             ),
           ),
-          if (items.where((m) => _Tray.overdue(m, now)).length case final late when late > 0) ...[
+          if (late > 0) ...[
             const SizedBox(height: 8),
             Row(
               children: [
@@ -1691,13 +1696,17 @@ class _Tray extends ConsumerWidget {
     final spec = CameraCatalog.byId(item.cameraId);
     final total = item.readyAt.difference(item.capturedAt).inMilliseconds.clamp(1, 1 << 31);
     final left = item.readyAt.difference(now);
-    final progress = (1 - left.inMilliseconds / total).clamp(0.0, 1.0);
+    // Debug > Darkroom Development off: no wait, so the picture shows from
+    // the start and the clock counts up (how long the processing takes).
+    final instantDev = !ref.watch(globalSettingsProvider.select((s) => s.darkroomEnabled));
+    final progress = instantDev ? 1.0 : (1 - left.inMilliseconds / total).clamp(0.0, 1.0);
     final failed = item.status == MediaStatus.failed;
     final processing = item.status == MediaStatus.processing;
-    final late = _Tray.overdue(item, now);
+    final late = !instantDev && _Tray.overdue(item, now);
     final mm = left.inMinutes.clamp(0, 99).toString();
     final ss = (left.inSeconds % 60).clamp(0, 59).toString().padLeft(2, '0');
-    final thumb = item.thumbPath;
+    final taking = _clock(now.difference(item.capturedAt));
+    final thumb = _trayPicture(item);
 
     // Tap a print, Polaroid or reel for a close look at it developing.
     Widget closeUp(Widget tray) => GestureDetector(
@@ -1714,12 +1723,17 @@ class _Tray extends ConsumerWidget {
             children: [
               Expanded(
                 child: Center(
-                  child: AspectRatio(aspectRatio: 1, child: _TankTray(progress: processing ? 0 : progress)),
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: _TankTray(progress: processing && !instantDev ? 0 : progress),
+                  ),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                late
+                instantDev
+                    ? taking
+                    : late
                     ? 'extra time'
                     : processing && left.isNegative
                     ? 'fixing…'
@@ -1745,7 +1759,7 @@ class _Tray extends ConsumerWidget {
               Expanded(
                 child: Center(
                   child: TweenAnimationBuilder<double>(
-                    tween: Tween(end: _instantDevelop(item, progress)),
+                    tween: Tween(end: instantDev ? 1.0 : _instantDevelop(item, progress)),
                     duration: const Duration(seconds: 1),
                     builder: (context, p, _) => InstantPrint(
                       develop: p,
@@ -1758,7 +1772,11 @@ class _Tray extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                late ? 'extra time' : '0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}',
+                instantDev
+                    ? taking
+                    : late
+                    ? 'extra time'
+                    : '0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}',
                 style: const TextStyle(color: Color(0xFFFF8A80), fontSize: 11, fontWeight: FontWeight.w700),
               ),
             ],
@@ -1768,18 +1786,22 @@ class _Tray extends ConsumerWidget {
     }
 
     if (!item.isVideo && !failed) {
-      final stage = PrintTrayPainter.stageFor(processing ? 0 : progress);
+      final stage = PrintTrayPainter.stageFor(progress);
       return closeUp(
         SizedBox(
           width: 84,
           child: Column(
             children: [
               Expanded(
-                child: _PrintTray(progress: processing ? 0 : progress, thumb: processing ? null : thumb),
+                // (the photo as taken while the print is still being made:
+                // monochrome under the safelight, the two look alike)
+                child: _PrintTray(progress: progress, thumb: thumb, still: instantDev),
               ),
               const SizedBox(height: 4),
               Text(
-                late
+                instantDev
+                    ? taking
+                    : late
                     ? 'extra time'
                     : processing && left.isNegative
                     ? 'fixing…'
@@ -1907,28 +1929,40 @@ class _DarkroomCloseUp extends ConsumerWidget {
       final total = item.readyAt.difference(item.capturedAt).inMilliseconds.clamp(1, 1 << 31);
       final left = item.readyAt.difference(now);
       final processing = item.status == MediaStatus.processing;
-      final progress = processing ? 0.0 : (1 - left.inMilliseconds / total).clamp(0.0, 1.0);
-      final thumb = processing ? null : item.thumbPath;
+      final instantDev = !ref.watch(globalSettingsProvider.select((s) => s.darkroomEnabled));
+      final progress = instantDev ? 1.0 : (1 - left.inMilliseconds / total).clamp(0.0, 1.0);
+      final thumb = _trayPicture(item);
       final mm = left.inMinutes.clamp(0, 99).toString();
       final ss = (left.inSeconds % 60).clamp(0, 59).toString().padLeft(2, '0');
-      final done = !left.isNegative ? false : !processing;
+      final done = instantDev ? !processing : (!left.isNegative ? false : !processing);
+      final taking = 'Developing  ${_clock(now.difference(item.capturedAt))}';
       // Landscape is short: keep the close-up within the height too.
       final screen = MediaQuery.sizeOf(context);
       final width = math.min(math.min(screen.width * 0.82, screen.height * 0.62), 420.0);
       if (item.isVideo) {
-        label = done ? 'Developed' : '${DevelopingTankPainter.nameFor(progress)}  $mm:$ss';
+        label = done
+            ? 'Developed'
+            : instantDev
+            ? taking
+            : '${DevelopingTankPainter.nameFor(progress)}  $mm:$ss';
         body = SizedBox.square(
           dimension: width * 0.8,
-          child: _TankTray(progress: progress),
+          child: _TankTray(progress: processing && !instantDev ? 0 : progress),
         );
       } else if (spec.isInstant) {
         label = done
             ? 'Developed'
+            : instantDev
+            ? taking
             : 'Developing  0:${left.inSeconds.clamp(0, 59).toString().padLeft(2, '0')}';
         body = SizedBox(
           width: width * 0.8,
           child: TweenAnimationBuilder<double>(
-            tween: Tween(end: _instantDevelop(item, (1 - left.inMilliseconds / total).clamp(0.0, 1.0))),
+            tween: Tween(
+              end: instantDev
+                  ? 1.0
+                  : _instantDevelop(item, (1 - left.inMilliseconds / total).clamp(0.0, 1.0)),
+            ),
             duration: const Duration(seconds: 1),
             builder: (context, p, _) => InstantPrint(
               develop: p,
@@ -1939,11 +1973,21 @@ class _DarkroomCloseUp extends ConsumerWidget {
         );
       } else {
         final stage = PrintTrayPainter.stageFor(progress);
-        label = done ? 'Developed' : (processing && left.isNegative ? 'Fixing…' : '${stage.name}  $mm:$ss');
+        label = done
+            ? 'Developed'
+            : instantDev
+            ? taking
+            : (processing && left.isNegative ? 'Fixing…' : '${stage.name}  $mm:$ss');
         body = SizedBox(
           width: width,
           height: width * 1.25,
-          child: _PrintTray(progress: progress, thumb: thumb, cacheWidth: 900, large: true),
+          child: _PrintTray(
+            progress: progress,
+            thumb: thumb,
+            cacheWidth: 900,
+            large: true,
+            still: instantDev,
+          ),
         );
       }
     }
@@ -2525,9 +2569,18 @@ class _WaterOverPaper extends CustomPainter {
 /// The print in its tray: paper floating in the chemistry, the latent image
 /// surfacing during the developer stage, all seen by red safelight.
 class _PrintTray extends StatefulWidget {
-  const _PrintTray({required this.progress, required this.thumb, this.cacheWidth = 160, this.large = false});
+  const _PrintTray({
+    required this.progress,
+    required this.thumb,
+    this.cacheWidth = 160,
+    this.large = false,
+    this.still = false,
+  });
 
   final double progress;
+
+  /// The picture shown at once, not coming up (no wait in the darkroom).
+  final bool still;
   final String? thumb;
   final int cacheWidth;
 
@@ -2563,7 +2616,9 @@ class _PrintTrayState extends State<_PrintTray> {
       builder: (context, p, _) {
         final stage = PrintTrayPainter.stageFor(p);
         // The image comes up during the developer and is fixed after that.
-        final dev = Curves.easeIn.transform((p / PrintTrayPainter.stages.first.until).clamp(0.0, 1.0));
+        final dev = widget.still
+            ? 1.0
+            : Curves.easeIn.transform((p / PrintTrayPainter.stages.first.until).clamp(0.0, 1.0));
         return AnimatedBuilder(
           animation: _rock,
           builder: (context, child) => Container(
@@ -2611,6 +2666,7 @@ class _PrintTrayState extends State<_PrintTray> {
                             fit: BoxFit.cover,
                             cacheWidth: widget.cacheWidth,
                             gaplessPlayback: true,
+                            errorBuilder: (_, _, _) => const SizedBox.shrink(),
                           ),
                         ),
                       ),
@@ -2655,6 +2711,15 @@ class _ShakeNote extends StatelessWidget {
     );
   }
 }
+
+/// The picture in a developing print: the finished one, or the photo as
+/// taken while it's still being made (a big frame on a slow phone could
+/// leave the tray blank for most of its time).
+String? _trayPicture(MediaItem item) =>
+    item.thumbPath ?? (item.status == MediaStatus.processing ? item.rawPath : null);
+
+/// m:ss.
+String _clock(Duration d) => '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
 /// How far an instant print has come up. While its grain is still being
 /// formed it keeps developing on the original photo, short of the end.

@@ -901,3 +901,8 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   the flip doesn't happen). Not found by reading: 2.2.4 logs why in
   Debug > Camera Log ("flip, not shut: …" / "flip: no still to shut
   over"); waiting on that line from the phone.
+- [x] **67.5** → 2.2.4 · The viewfinder's dark screen fills its whole space
+  all the time; the camera's picture is scaled so the frame is as big as
+  the space allows, centred (it was boxed to the stream's shape, which
+  jumped between stocks and wasted room). A ratio change glides the frame;
+  the screen's edges never move.

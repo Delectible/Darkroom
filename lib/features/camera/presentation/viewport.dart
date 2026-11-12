@@ -173,62 +173,82 @@ class CameraViewport extends ConsumerWidget {
         // The focusing screen's marks: one size whatever the stream's shape
         // (the 16:9 video picture's short side, the smaller of the two).
         ViewfinderShutter.markSide = math.min(box.maxWidth, box.maxHeight * 9 / 16);
+        // The dark screen fills the whole space; the camera's picture is
+        // scaled so the frame (what's seen) is as big as the space allows,
+        // centred. A new ratio or stock only moves the picture (the frame
+        // glides), never the screen's own edges.
+        final bw = box.maxWidth, bh = box.maxHeight;
         final portrait = 1 / previewAspect; // width / height of the preview box
-        var w = box.maxWidth, h = w / portrait;
-        if (h > box.maxHeight) {
-          h = box.maxHeight;
+        var w = bw, h = w / portrait;
+        if (h > bh) {
+          h = bh;
           w = h * portrait;
         }
-        final maskRect = Rect.fromLTWH(shown.left * w, shown.top * h, shown.width * w, shown.height * h);
+        final fit = math.min(bw / math.max(1.0, shown.width * w), bh / math.max(1.0, shown.height * h));
+        w *= fit;
+        h *= fit;
+        final stream = Rect.fromLTWH(
+          bw / 2 - (shown.left + shown.width / 2) * w,
+          bh / 2 - (shown.top + shown.height / 2) * h,
+          w,
+          h,
+        );
+        final maskRect = Rect.fromLTWH(
+          stream.left + shown.left * w,
+          stream.top + shown.top * h,
+          shown.width * w,
+          shown.height * h,
+        );
 
         final radius = BorderRadius.circular(spec.mode == AppMode.film ? 6 : 3);
-        return Center(
-          child: SizedBox(
-            width: w,
-            height: h,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                RepaintBoundary(
-                  key: snapKey,
-                  child: ClipRRect(
-                    borderRadius: radius,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        ColoredBox(color: palette.screen),
-                        // Super 8: when the phone turns, the strip swings round into
-                        // its new place instead of jumping.
-                        _StripTurn(
-                          // (the frame keeps its shape now: only the holes
-                          // move, no swing)
-                          turns: 0,
-                          cameraId: spec.id,
-                          strip: maskRect.size,
-                          builder: (spin, spinScale) {
-                            // The live picture turns inside the shader (strip, hole
-                            // and image together); the mask with a matching matrix.
-                            final Widget maskLayer = IgnorePointer(
-                              child: CustomPaint(
-                                painter: _AspectMaskPainter(
-                                  hole: maskRect,
-                                  shade: palette.screen.withValues(
-                                    alpha: spec.mode == AppMode.film ? 0.93 : 0.86,
-                                  ),
-                                  frame: spec.mode == AppMode.film
-                                      ? palette.screenInk.withValues(alpha: 0.55)
-                                      : palette.screenInk.withValues(alpha: 0.8),
-                                  brackets: spec.mode == AppMode.digital,
+        return SizedBox(
+          width: bw,
+          height: bh,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              RepaintBoundary(
+                key: snapKey,
+                child: ClipRRect(
+                  borderRadius: radius,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ColoredBox(color: palette.screen),
+                      // Super 8: when the phone turns, the strip swings round into
+                      // its new place instead of jumping.
+                      _StripTurn(
+                        // (the frame keeps its shape now: only the holes
+                        // move, no swing)
+                        turns: 0,
+                        cameraId: spec.id,
+                        strip: maskRect.size,
+                        builder: (spin, spinScale) {
+                          // The live picture turns inside the shader (strip, hole
+                          // and image together); the mask with a matching matrix.
+                          final Widget maskLayer = IgnorePointer(
+                            child: CustomPaint(
+                              painter: _AspectMaskPainter(
+                                hole: maskRect,
+                                shade: palette.screen.withValues(
+                                  alpha: spec.mode == AppMode.film ? 0.93 : 0.86,
                                 ),
+                                frame: spec.mode == AppMode.film
+                                    ? palette.screenInk.withValues(alpha: 0.55)
+                                    : palette.screenInk.withValues(alpha: 0.8),
+                                brackets: spec.mode == AppMode.digital,
                               ),
-                            );
-                            return Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                // Under a held still (swap, panel, picker) the live
-                                // picture isn't drawn at all: its look shader is the
-                                // most expensive thing on screen.
-                                ListenableBuilder(
+                            ),
+                          );
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              // Under a held still (swap, panel, picker) the live
+                              // picture isn't drawn at all: its look shader is the
+                              // most expensive thing on screen.
+                              Positioned.fromRect(
+                                rect: stream,
+                                child: ListenableBuilder(
                                   listenable: Listenable.merge([freeze, liveUnder]),
                                   builder: (context, _) => freeze.value != null && !liveUnder.value
                                       ? const SizedBox.expand()
@@ -254,87 +274,87 @@ class CameraViewport extends ConsumerWidget {
                                         )
                                       : _Standby(session: session),
                                 ),
-                                if (spin == 0 && spinScale == 1)
-                                  maskLayer
-                                else
-                                  Transform(
-                                    alignment: Alignment.center,
-                                    transform: Matrix4.rotationZ(spin)
-                                      ..scaleByDouble(spinScale, spinScale, 1, 1),
-                                    child: maskLayer,
-                                  ),
-                              ],
-                            );
-                          },
+                              ),
+                              if (spin == 0 && spinScale == 1)
+                                maskLayer
+                              else
+                                Transform(
+                                  alignment: Alignment.center,
+                                  transform: Matrix4.rotationZ(spin)
+                                    ..scaleByDouble(spinScale, spinScale, 1, 1),
+                                  child: maskLayer,
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                      Positioned.fromRect(
+                        rect: maskRect,
+                        // In the user's frame: held sideways, the readouts (and the
+                        // date, which is burned into the upright photo) follow.
+                        child: IgnorePointer(
+                          // (each readout stays where it is and turns to
+                          // face the viewer: see _HudOverlay)
+                          child: _HudOverlay(spec: spec, timestamp: local.timestamp),
                         ),
-                        Positioned.fromRect(
-                          rect: maskRect,
-                          // In the user's frame: held sideways, the readouts (and the
-                          // date, which is burned into the upright photo) follow.
-                          child: IgnorePointer(
-                            // (each readout stays where it is and turns to
-                            // face the viewer: see _HudOverlay)
-                            child: _HudOverlay(spec: spec, timestamp: local.timestamp),
-                          ),
-                        ),
-                        const IgnorePointer(child: _ShutterBlink()),
-                      ],
-                    ),
+                      ),
+                      const IgnorePointer(child: _ShutterBlink()),
+                    ],
                   ),
                 ),
-                // Mic / photos still off after the tour: a small note at the
-                // foot of the frame (outside the snapshot), one tap to fix.
-                Positioned(
-                  left: maskRect.left,
-                  width: maskRect.width,
-                  bottom: h - maskRect.bottom + 34,
-                  child: const Center(child: _PermissionNote()),
-                ),
-                // While the camera is stopped (a toss, Settings, the picker) the
-                // viewfinder shuts over the still it stopped on (see [freeze],
-                // viewfinder_shut.dart), and opens again over the live picture.
-                ClipRRect(
-                  key: shutKey,
-                  borderRadius: radius,
-                  child: ListenableBuilder(
-                    listenable: Listenable.merge([freeze, ViewfinderShutter.waking, ViewfinderShutter.shut]),
-                    builder: (context, _) => ViewfinderShut(
-                      mode: spec.mode,
-                      // (the waking still only while the screen is still
-                      // waking: open, it's the live picture's place)
-                      still:
-                          freeze.value ??
-                          (ViewfinderShutter.shut.value > 0 && spec.mode == AppMode.digital
-                              ? ViewfinderShutter.waking.value
-                              : null),
-                    ),
+              ),
+              // Mic / photos still off after the tour: a small note at the
+              // foot of the frame (outside the snapshot), one tap to fix.
+              Positioned(
+                left: maskRect.left,
+                width: maskRect.width,
+                bottom: bh - maskRect.bottom + 34,
+                child: const Center(child: _PermissionNote()),
+              ),
+              // While the camera is stopped (a toss, Settings, the picker) the
+              // viewfinder shuts over the still it stopped on (see [freeze],
+              // viewfinder_shut.dart), and opens again over the live picture.
+              ClipRRect(
+                key: shutKey,
+                borderRadius: radius,
+                child: ListenableBuilder(
+                  listenable: Listenable.merge([freeze, ViewfinderShutter.waking, ViewfinderShutter.shut]),
+                  builder: (context, _) => ViewfinderShut(
+                    mode: spec.mode,
+                    // (the waking still only while the screen is still
+                    // waking: open, it's the live picture's place)
+                    still:
+                        freeze.value ??
+                        (ViewfinderShutter.shut.value > 0 && spec.mode == AppMode.digital
+                            ? ViewfinderShutter.waking.value
+                            : null),
                   ),
                 ),
-                // Film: the zoom ring and exposure scale, in the viewfinder
-                // (outside the snapshot, over the shutter).
-                if (spec.mode == AppMode.film &&
-                    (spec.zoom != null ||
-                        spec.exposure != null ||
-                        spec.special != null ||
-                        spec.lenses.length > 1))
-                  Positioned.fromRect(
-                    rect: maskRect,
-                    child: FilmDials(key: ValueKey(spec.id), spec: spec),
-                  ),
-                // Digital: the OSD's lens and FX keys.
-                if (spec.mode == AppMode.digital && (spec.special != null || spec.lenses.length > 1))
-                  Positioned.fromRect(
-                    rect: maskRect,
-                    child: DigitalKeys(key: ValueKey(spec.id), spec: spec),
-                  ),
-                // "Loading film…": over the frame (outside the snapshot), only
-                // when you try to use a camera that's still loading.
+              ),
+              // Film: the zoom ring and exposure scale, in the viewfinder
+              // (outside the snapshot, over the shutter).
+              if (spec.mode == AppMode.film &&
+                  (spec.zoom != null ||
+                      spec.exposure != null ||
+                      spec.special != null ||
+                      spec.lenses.length > 1))
                 Positioned.fromRect(
                   rect: maskRect,
-                  child: const IgnorePointer(child: _CameraNoteView()),
+                  child: FilmDials(key: ValueKey(spec.id), spec: spec),
                 ),
-              ],
-            ),
+              // Digital: the OSD's lens and FX keys.
+              if (spec.mode == AppMode.digital && (spec.special != null || spec.lenses.length > 1))
+                Positioned.fromRect(
+                  rect: maskRect,
+                  child: DigitalKeys(key: ValueKey(spec.id), spec: spec),
+                ),
+              // "Loading film…": over the frame (outside the snapshot), only
+              // when you try to use a camera that's still loading.
+              Positioned.fromRect(
+                rect: maskRect,
+                child: const IgnorePointer(child: _CameraNoteView()),
+              ),
+            ],
           ),
         );
       },

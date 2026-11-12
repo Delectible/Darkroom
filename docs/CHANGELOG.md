@@ -910,3 +910,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   Log. A rebuilt camera screen set CameraFlip.handler, then the old one's
   dispose cleared it, so flips fell back to a plain toggle. Cleared only if
   still its own (as LensChange already was).
+- [x] **67.7** → 2.2.5 · Digital flash feel (a digicam's bang-and-done):
+  Debug > Digital Flash picks Phone (the phone's pre-flash sequence),
+  Locked (focus and exposure locked first) or Torch (the light on, the
+  picture at once, preview exposure held). Camera Log: "photo: N ms press
+  to capture (…)" for every photo. Next: pick one from the numbers; a
+  digicam flash look in processing could go with the torch.

@@ -37,6 +37,7 @@ import '../../../camera/presentation/whole_body.dart';
 import '../../../settings/application/settings_controllers.dart';
 import '../../../onboarding/onboarding_screen.dart';
 import '../../application/sd_card_controller.dart';
+import '../../../camera/application/digital_flash.dart';
 import 'explorer_dialogs.dart';
 import 'pixel_icons.dart';
 import 'win98_widgets.dart';
@@ -128,6 +129,27 @@ final _tools = <_Tool>[
         'the graphics and processor sides, recent verdicts and every step. Step it by hand, turn it '
         'off, or reset it to full quality.',
     (context, _) => _qualityWindow(context),
+  ),
+  _Tool(
+    PixelIcon.views,
+    'Digital Flash',
+    "How the digital cameras' back flash takes the picture. Phone: the phone's own flash (pre-flash, "
+        'then settles, then fires). Locked: the same with focus and exposure locked first. Torch: the light '
+        'on and the picture taken at once (near-instant, weaker light). Camera Log notes each photo\'s '
+        'time from press to capture.',
+    (context, ref) async {
+      final prefs = ref.read(sharedPrefsProvider);
+      final now = DigitalFlash.read(prefs);
+      final pick = await showWin98MessageBox(
+        context,
+        title: 'Digital Flash',
+        message: 'Now: ${now.name}. Which one?',
+        icon: Win98MessageIcon.question,
+        buttons: const ['Phone', 'Locked', 'Torch', 'Cancel'],
+      );
+      if (pick == null || pick > 2) return;
+      await DigitalFlash.write(prefs, DigitalFlash.values[pick]);
+    },
   ),
   _Tool(
     PixelIcon.rabbit,

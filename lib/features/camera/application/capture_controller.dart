@@ -26,6 +26,8 @@ import 'zoom_controller.dart';
 import '../../../core/device/battery.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/device/screen_flash.dart';
+import 'camera_log.dart';
+import 'digital_flash.dart';
 import 'preview_probe.dart';
 
 @immutable
@@ -208,6 +210,7 @@ class CaptureController extends Notifier<CaptureState> {
     if (ref.read(activeSpecProvider).recordsVideo) return;
     if (ref.read(allowanceProvider.notifier).check(ref.read(activeSpecProvider)) != null) return;
     final ctx = _context(c);
+    final pressed = Stopwatch()..start();
     unawaited(Haptics.mediumImpact());
     state = state.copyWith(
       busy: true,
@@ -222,7 +225,29 @@ class CaptureController extends Notifier<CaptureState> {
           front &&
           (ctx.flash == FlashSetting.on ||
               ctx.flash == FlashSetting.auto && ((await PreviewProbe.brightness()) ?? 1) < _darkPreview);
-      final file = screenFlash ? await ScreenFlash.during(c.takePicture) : await c.takePicture();
+      // Digital, back camera, flash firing: Debug > Digital Flash says how.
+      var how = ctx.flash == FlashSetting.off ? 'no flash' : 'flash ${ctx.flash.name}';
+      XFile file;
+      if (screenFlash) {
+        how = 'screen flash';
+        file = await ScreenFlash.during(c.takePicture);
+      } else if (!front && ctx.spec.mode == AppMode.digital && ctx.flash != FlashSetting.off) {
+        final mode = DigitalFlash.read(ref.read(sharedPrefsProvider));
+        final fires = ctx.flash == FlashSetting.on || ((await PreviewProbe.brightness()) ?? 1) < _darkPreview;
+        if (mode == DigitalFlash.torch && fires) {
+          how = 'torch pulse';
+          file = await _torchSnap(c, ctx.flash);
+        } else if (mode == DigitalFlash.locked) {
+          how = '$how, locked';
+          file = await _lockedSnap(c);
+        } else {
+          how = '$how, phone';
+          file = await c.takePicture();
+        }
+      } else {
+        file = await c.takePicture();
+      }
+      CameraLog.add('photo: ${pressed.elapsedMilliseconds} ms press to capture ($how)');
       // Multiple exposure: the first is held (no frame used), the second
       // lands on it and the two go on as one capture.
       final path = file.path;
@@ -267,6 +292,48 @@ class CaptureController extends Notifier<CaptureState> {
       state = state.copyWith(busy: false, message: 'Capture failed: ${e.description ?? e.code}');
     } catch (e) {
       state = state.copyWith(busy: false, message: 'Capture failed: $e');
+    }
+  }
+
+  /// The light on as a torch, the picture taken at once with the preview's
+  /// exposure held (no pre-flash, no settling), then the flash as it was.
+  Future<XFile> _torchSnap(CameraController c, FlashSetting flash) async {
+    try {
+      await c.setExposureMode(ExposureMode.locked);
+    } on CameraException {
+      // (not on every phone)
+    }
+    try {
+      await c.setFlashMode(FlashMode.torch);
+      return await c.takePicture();
+    } finally {
+      try {
+        await c.setFlashMode(FlashMode.off);
+        await c.setFlashMode(flash == FlashSetting.on ? FlashMode.always : FlashMode.auto);
+        await c.setExposureMode(ExposureMode.auto);
+      } on CameraException {
+        // ignore
+      }
+    }
+  }
+
+  /// The phone's flash with focus and exposure locked first.
+  Future<XFile> _lockedSnap(CameraController c) async {
+    try {
+      await c.setFocusMode(FocusMode.locked);
+      await c.setExposureMode(ExposureMode.locked);
+    } on CameraException {
+      // (not on every phone)
+    }
+    try {
+      return await c.takePicture();
+    } finally {
+      try {
+        await c.setFocusMode(FocusMode.auto);
+        await c.setExposureMode(ExposureMode.auto);
+      } on CameraException {
+        // ignore
+      }
     }
   }
 

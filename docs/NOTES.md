@@ -214,6 +214,9 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
 
 ## Things that bite
 
+- **promote-closed.yml: leave the build number empty.** With a
+  version_code fastlane said "Track 'internal' doesn't have any releases"
+  (2026-11-12, build 136); empty (the newest internal build) worked.
 - **The CRT bulge freezes route animations.** CrtWarp draws a still of
   the screen over everything while its route goes back (the filter doesn't
   move with a sliding page). A route whose screen stays put (a window

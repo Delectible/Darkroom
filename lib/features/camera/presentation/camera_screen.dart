@@ -406,7 +406,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     );
     ViewfinderShutter.noteOff = _noteCamera;
     LensChange.handler = _changeLens;
-    CameraFlip.handler = () => unawaited(_flipCamera());
+    CameraFlip.handler = _flipHandler;
     // Launch: shut until the camera is live (see _live).
     _shutter.value = 1;
     _watchLive();
@@ -458,7 +458,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     _earlyCamera?.cancel();
     _stuckTimer?.cancel();
     if (LensChange.handler == _changeLens) LensChange.handler = null;
-    CameraFlip.handler = null;
+    // (only if still ours: a camera screen built anew sets its own before
+    // this one goes, and clearing it left flips without the shut, 2.2.4)
+    if (CameraFlip.handler == _flipHandler) CameraFlip.handler = null;
     CameraViewport.freeze.removeListener(_syncShutter);
     CameraViewport.liveUnder.removeListener(_syncShutter);
     if (ViewfinderShutter.shut == _shutter) {
@@ -830,6 +832,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     if (!mounted || run != _changeRun) return;
     _dropWhenLive();
   }
+
+  void _flipHandler() => unawaited(_flipCamera());
 
   /// Front to back or back: the viewfinder shuts, the camera turns round
   /// (restarting), and it opens on the new side's picture.

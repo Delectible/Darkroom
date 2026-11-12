@@ -3,15 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.2.4';
+  static const version = '2.2.5';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'A bigger viewfinder: the picture now fills the screen, and only the frame moves when you change ratio or '
-      'film. Win98 windows shrink away when closed, closing the explorer leaves you on the desktop, and the '
-      'photo viewer has a Close button.';
+      'The viewfinder shuts properly when you flip between the front and back cameras, in 2D too.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

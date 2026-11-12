@@ -906,3 +906,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   the space allows, centred (it was boxed to the stream's shape, which
   jumped between stocks and wasted room). A ratio change glides the frame;
   the screen's edges never move.
+- [x] **67.6** → 2.2.5 · 67.4's cause: no "flip" line at all in the Camera
+  Log. A rebuilt camera screen set CameraFlip.handler, then the old one's
+  dispose cleared it, so flips fell back to a plain toggle. Cleared only if
+  still its own (as LensChange already was).

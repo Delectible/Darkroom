@@ -53,6 +53,15 @@ class _Tool {
   final bool Function(WidgetRef ref)? on;
 }
 
+/// A Digital Flash mode as a switch (turning one on turns the other off).
+_Tool _flashTool(DigitalFlash mode, String name, String about) => _Tool(
+  PixelIcon.views,
+  name,
+  about,
+  (_, _) async => DigitalFlash.current = DigitalFlash.current == mode ? DigitalFlash.phone : mode,
+  on: (_) => DigitalFlash.current == mode,
+);
+
 /// Reads a provider (a widget's ref, or the app's container once the Debug
 /// window has closed).
 typedef _Read = T Function<T>(ProviderListenable<T> provider);
@@ -130,26 +139,21 @@ final _tools = <_Tool>[
         'off, or reset it to full quality.',
     (context, _) => _qualityWindow(context),
   ),
-  _Tool(
-    PixelIcon.views,
-    'Digital Flash',
-    "How the digital cameras' back flash takes the picture. Phone: the phone's own flash (pre-flash, "
-        'then settles, then fires). Locked: the same with focus and exposure locked first. Torch: the light '
-        'on and the picture taken at once (near-instant, weaker light). Camera Log notes each photo\'s '
-        'time from press to capture.',
-    (context, ref) async {
-      final prefs = ref.read(sharedPrefsProvider);
-      final now = DigitalFlash.read(prefs);
-      final pick = await showWin98MessageBox(
-        context,
-        title: 'Digital Flash',
-        message: 'Now: ${now.name}. Which one?',
-        icon: Win98MessageIcon.question,
-        buttons: const ['Phone', 'Locked', 'Torch', 'Cancel'],
-      );
-      if (pick == null || pick > 2) return;
-      await DigitalFlash.write(prefs, DigitalFlash.values[pick]);
-    },
+  // Digital cameras' back flash, as a test (both off: the phone's own
+  // flash). Camera Log notes each photo's time from press to capture.
+  _flashTool(
+    DigitalFlash.locked,
+    'Flash: Lock First',
+    "On: the digital cameras' flash locks focus and exposure the moment you press, then fires (the phone "
+        'still fires its pre-flash). Off: the phone\'s own flash. Camera Log shows each photo\'s time '
+        'from press to capture.',
+  ),
+  _flashTool(
+    DigitalFlash.torch,
+    'Flash: Torch Pulse',
+    "On: the digital cameras' flash turns the light on as a torch and takes the photo at once, at the "
+        "preview's exposure (near-instant, weaker light). Off: the phone's own flash. Camera Log shows "
+        "each photo's time from press to capture.",
   ),
   _Tool(
     PixelIcon.rabbit,
@@ -639,6 +643,7 @@ final _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
   ('Speed Test Switches', [for (final (name, _, _) in _speedTests) name]),
+  ('Camera', ['Flash: Lock First', 'Flash: Torch Pulse']),
   ('Diagnostics', ['Camera Log', 'Crash Reports', 'Test Crash']),
   ('First Run & Prompts', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt', 'Lag Prompt']),
 ];

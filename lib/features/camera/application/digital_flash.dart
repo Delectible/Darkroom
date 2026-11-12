@@ -1,7 +1,6 @@
-import 'package:shared_preferences/shared_preferences.dart';
-
-/// Debug > Digital Flash: how the digital cameras' back flash takes the
-/// picture (a test of what feels most like a 2000s digicam's flash).
+/// Debug > Camera > Flash: how the digital cameras' back flash takes the
+/// picture (a test of what feels most like a 2000s digicam's flash). Kept
+/// until the app restarts.
 ///
 /// * phone: the phone's own flash sequence (pre-flash, exposure and focus
 ///   settling, then the flash): slowest, best exposed.
@@ -16,10 +15,5 @@ enum DigitalFlash {
   locked,
   torch;
 
-  static const _key = 'debug.digitalFlash';
-
-  static DigitalFlash read(SharedPreferencesWithCache prefs) =>
-      values.asNameMap()[prefs.getString(_key)] ?? DigitalFlash.phone;
-
-  static Future<void> write(SharedPreferencesWithCache prefs, DigitalFlash mode) => prefs.setString(_key, mode.name);
+  static DigitalFlash current = DigitalFlash.phone;
 }

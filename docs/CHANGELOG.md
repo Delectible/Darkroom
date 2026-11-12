@@ -927,3 +927,8 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] **67.10** → 2.2.5 · Debug > Darkroom Development off: the trays count
   up (how long each print takes to process), show the picture in full from
   the start, and never say "extra time".
+- [x] **67.11** → 2.2.6 · Debug > Digital Flash showed nothing on the phone
+  (its pick-one box never came up). Now two switches in a Camera folder,
+  Flash: Lock First and Flash: Torch Pulse (one on at a time; both off =
+  the phone's flash), showing Turn On / Turn Off like the others. Kept
+  until the app restarts.

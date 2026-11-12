@@ -232,7 +232,7 @@ class CaptureController extends Notifier<CaptureState> {
         how = 'screen flash';
         file = await ScreenFlash.during(c.takePicture);
       } else if (!front && ctx.spec.mode == AppMode.digital && ctx.flash != FlashSetting.off) {
-        final mode = DigitalFlash.read(ref.read(sharedPrefsProvider));
+        final mode = DigitalFlash.current;
         final fires = ctx.flash == FlashSetting.on || ((await PreviewProbe.brightness()) ?? 1) < _darkPreview;
         if (mode == DigitalFlash.torch && fires) {
           how = 'torch pulse';

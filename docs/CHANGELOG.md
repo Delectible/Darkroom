@@ -932,9 +932,12 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   Flash: Lock First and Flash: Torch Pulse (one on at a time; both off =
   the phone's flash), showing Turn On / Turn Off like the others. Kept
   until the app restarts.
-- [x] **67.12** → 2.2.6 · 3D swap: the flat viewfinder's square corners poked
-  past the model's round window most of the way round. The rim clip
-  (_RimClip) is a rounded rect now, rounder and a touch further in as the
-  body turns (the model is drawn under the face, so it can't mask it).
+- [x] **67.12** → 2.2.7 · 3D swap, film: the live picture overlapped the
+  polished ring (it filled the screen box, a hair bigger than the ring's
+  opening, with tighter corners: whole_body.py), seen as the body turned.
+  The film picture now fills the opening exactly (0.65 in, corner 7.35),
+  and the turn's side clip (_RimClip, rim height x tan yaw, both sides:
+  near rim edge and far wall) keeps the window's round corners. A first
+  try in 2.2.6 rounded and inset it by eye; replaced.
 - [ ] **67.13** 2D flip still doesn't shut (2.2.5): waiting on the Camera
   Log lines after a 2D flip ("flip…").

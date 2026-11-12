@@ -79,7 +79,12 @@ class WholeFace extends ConsumerWidget {
           child: child,
         );
         Offset part(String name) => lay.parts[name]!;
-        final screen = fit.rect(lay.screen);
+        // The live picture fills the frame's window exactly: film's polished
+        // ring is a little inside the screen box, with rounder corners (it
+        // overlapped the ring, seen most as the body turned).
+        final k = fit.rect(lay.screen).width / lay.screen.width;
+        final screen = fit.rect(lay.screen).deflate((film ? _filmWindowIn : 0) * k);
+        final windowRadius = (film ? _filmWindowRadius : 3.0) * k;
         // the memo holder's opening / the LCD's window
         final label = fit.rect(lay.label).deflate(film ? 0 : 8);
         final card = film
@@ -111,10 +116,10 @@ class WholeFace extends ConsumerWidget {
                       Positioned.fromRect(
                         rect: screen,
                         child: _RimClip(
-                          rim: film ? _filmRim : _digitalRim,
-                          radius: film ? 6 : 3,
+                          rim: (film ? _filmRim : _digitalRim) * k,
+                          radius: windowRadius,
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(film ? 6 : 3),
+                            borderRadius: BorderRadius.circular(windowRadius),
                             child: const CameraViewport(),
                           ),
                         ),
@@ -248,6 +253,12 @@ class ProcessingSpinner extends ConsumerWidget {
 /// rendered frame's inner ring (film: the polished ring, 3.2 x HEIGHTS;
 /// digital: the gloss bezel, 2.4 x HEIGHTS; tool/render/blender/whole_body.py).
 const _filmRim = 3.2 * 2.6;
+
+/// Film's window (the polished ring's opening, whole_body.py: w - 20 plus
+/// its 0.35 bevel each side, corner 7 + 0.35) against the screen box
+/// (frame less screenInset 9): this far in, this round.
+const _filmWindowIn = 0.65;
+const _filmWindowRadius = 7.35;
 const _digitalRim = 2.4 * 2.6;
 
 /// The live picture is drawn flat on the face, but the rim round it stands
@@ -268,29 +279,24 @@ class _RimClip extends StatelessWidget {
   Widget build(BuildContext context) {
     final yaw = BodyYaw.of(context);
     if (yaw.abs() < 1e-3) return child;
-    // A point [rim] out of the face lands this far across it.
+    // A point [rim] out of the face lands this far across it. The clipped
+    // edges keep the window's round corners (a square cut left sharp
+    // corners poking past the model's round ones).
     final inset = rim * math.tan(yaw.abs());
-    // The clipped edges keep round corners, rounder and a touch further in
-    // as it turns: the flat picture and the rendered window part ways a
-    // little in the turn, and square corners poked out past the model's
-    // round ones (most of the way round).
-    final t = math.min(1.0, yaw.abs() / 0.6);
-    return ClipRRect(clipper: _SideClip(inset + 2 * t, 1.5 * t, radius + 8 * t), child: child);
+    return ClipRRect(clipper: _SideClip(inset, radius), child: child);
   }
 }
 
 class _SideClip extends CustomClipper<RRect> {
-  const _SideClip(this.inset, this.top, this.radius);
+  const _SideClip(this.inset, this.radius);
 
-  /// In from the sides, and from the top and bottom.
   final double inset;
-  final double top;
   final double radius;
 
   @override
   RRect getClip(Size size) =>
-      RRect.fromLTRBR(inset, top, size.width - inset, size.height - top, Radius.circular(radius));
+      RRect.fromLTRBR(inset, 0, size.width - inset, size.height, Radius.circular(radius));
 
   @override
-  bool shouldReclip(_SideClip old) => old.inset != inset || old.top != top || old.radius != radius;
+  bool shouldReclip(_SideClip old) => old.inset != inset || old.radius != radius;
 }

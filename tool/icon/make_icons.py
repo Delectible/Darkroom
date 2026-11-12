@@ -169,6 +169,10 @@ def intro_mark(px):
     return _out(px, rgb, a)
 
 
+# rabbit_mark's face centre, right of the picture's (share of its width)
+FACE_SHIFT = 27.5 / 384
+
+
 def splash_rabbit(k):
     """The launch screen's rabbit at density [k]: the curtain's 96 dp rabbit
     (rabbit_mark) centred on the 288 dp canvas Android 12+ gives a splash
@@ -176,7 +180,11 @@ def splash_rabbit(k):
     the same thing in the same place (no jump at the hand-over)."""
     canvas = Image.new('RGBA', (round(288 * k),) * 2, (0, 0, 0, 0))
     rabbit = intro_mark(round(96 * k))
-    canvas.paste(rabbit, ((canvas.width - rabbit.width) // 2, (canvas.height - rabbit.height) // 2), rabbit)
+    # (its face centred, not the picture: the ears lean right; the app's
+    # LaunchCurtain.faceShift. iOS's LaunchImage is this rabbit too, at
+    # 96 pt, shifted as much.)
+    dx = round(FACE_SHIFT * rabbit.width)
+    canvas.paste(rabbit, ((canvas.width - rabbit.width) // 2 + dx, (canvas.height - rabbit.height) // 2), rabbit)
     return canvas
 
 

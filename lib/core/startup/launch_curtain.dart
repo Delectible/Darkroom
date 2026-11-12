@@ -10,6 +10,11 @@ import '../diagnostics/launch_timer.dart';
 /// held over the app while the camera opens and its look loads, then
 /// faded away so the camera is simply there, live, with nothing popping in.
 class LaunchCurtain extends StatefulWidget {
+  /// rabbit_mark's face is this far left of the picture's centre (a share
+  /// of its width): the launch screens are shifted right by as much
+  /// (tool/icon/make_icons.py), and so is the curtain's rabbit.
+  static const faceShift = 27.5 / 384;
+
   const LaunchCurtain({
     super.key,
     required this.child,
@@ -140,12 +145,17 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Where the launch screen had it (96 dp, centred).
-                    Image.asset(
-                      'assets/artwork/rabbit_mark.png',
-                      width: 96,
-                      height: 96,
-                      filterQuality: FilterQuality.medium,
+                    // Where the launch screen had it (96 dp), its face
+                    // centred (the ears lean right, so the picture's own
+                    // centre left the face off to the left).
+                    Transform.translate(
+                      offset: const Offset(96 * LaunchCurtain.faceShift, 0),
+                      child: Image.asset(
+                        'assets/artwork/rabbit_mark.png',
+                        width: 96,
+                        height: 96,
+                        filterQuality: FilterQuality.medium,
+                      ),
                     ),
                     Transform.translate(
                       offset: const Offset(0, 86),

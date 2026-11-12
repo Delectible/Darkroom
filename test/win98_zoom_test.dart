@@ -25,12 +25,15 @@ void main() {
     a.reverse();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
-    // still there, smaller and moving to the file
-    expect(find.text('window'), findsOneWidget);
-    final mid = tester.getRect(find.text('window'));
-    expect(mid.width, lessThan(open.width));
+    // still there (as a picture of itself: cheap to shrink, so the close
+    // isn't lost to a slow first frame), smaller and moving to the file
+    final shot = find.byType(RawImage);
+    expect(shot, findsOneWidget);
+    final mid = tester.getRect(shot);
+    expect(mid.width, lessThan(tester.view.physicalSize.width / tester.view.devicePixelRatio));
     expect(mid.center.dx, lessThan(open.center.dx));
     await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(RawImage), findsNothing);
     expect(find.text('window'), findsNothing);
   });
 }

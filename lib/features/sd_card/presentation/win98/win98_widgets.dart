@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../../../core/audio/sfx.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
@@ -1491,10 +1492,57 @@ class Win98ZoomTransition extends StatefulWidget {
 class _Win98ZoomTransitionState extends State<Win98ZoomTransition> {
   /// Keeps the window's state as it moves between the animation's layers.
   final _key = GlobalKey();
+  final _shotKey = GlobalKey();
+
+  /// Closing: a picture of the window as it was, shrunk instead of the live
+  /// window. Moving the live viewer (a full photo, the CRT over it) into a
+  /// scaled, faded layer cost the first frames of the close, and on a phone
+  /// the whole 220 ms went by in them: the window just vanished.
+  ui.Image? _shot;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.animation.addStatusListener(_status);
+  }
+
+  @override
+  void didUpdateWidget(Win98ZoomTransition old) {
+    super.didUpdateWidget(old);
+    if (old.animation != widget.animation) {
+      old.animation.removeStatusListener(_status);
+      widget.animation.addStatusListener(_status);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.animation.removeStatusListener(_status);
+    _shot?.dispose();
+    super.dispose();
+  }
+
+  void _status(AnimationStatus s) {
+    if (s == AnimationStatus.reverse && _shot == null) {
+      try {
+        final ro = _shotKey.currentContext?.findRenderObject();
+        if (ro is RenderRepaintBoundary && ro.hasSize && !ro.debugNeedsPaint) {
+          setState(() => _shot = ro.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context)));
+        }
+      } catch (_) {}
+    } else if (s != AnimationStatus.reverse && _shot != null) {
+      final old = _shot;
+      setState(() => _shot = null);
+      WidgetsBinding.instance.addPostFrameCallback((_) => old?.dispose());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final window = KeyedSubtree(key: _key, child: widget.child);
+    final window = RepaintBoundary(
+      key: _shotKey,
+      child: KeyedSubtree(key: _key, child: widget.child),
+    );
     return LayoutBuilder(
       builder: (context, box) {
         final full = (Offset.zero & box.biggest).deflate(6);
@@ -1523,7 +1571,21 @@ class _Win98ZoomTransitionState extends State<Win98ZoomTransition> {
             );
             return Stack(
               children: [
-                if (closing)
+                if (closing && _shot != null) ...[
+                  // (the live window kept, unseen, so its state survives a
+                  // close that turns back)
+                  Positioned.fill(child: Offstage(child: window)),
+                  Positioned.fromRect(
+                    rect: Rect.lerp(from, Offset.zero & box.biggest, e)!,
+                    child: IgnorePointer(
+                      child: RawImage(
+                        image: _shot,
+                        fit: BoxFit.fill,
+                        opacity: AlwaysStoppedAnimation((t * 1.6).clamp(0.0, 1.0)),
+                      ),
+                    ),
+                  ),
+                ] else if (closing)
                   Positioned.fromRect(
                     rect: Rect.lerp(from, Offset.zero & box.biggest, e)!,
                     child: IgnorePointer(

@@ -297,10 +297,16 @@ class CameraViewport extends ConsumerWidget {
                   key: shutKey,
                   borderRadius: radius,
                   child: ListenableBuilder(
-                    listenable: Listenable.merge([freeze, ViewfinderShutter.waking]),
+                    listenable: Listenable.merge([freeze, ViewfinderShutter.waking, ViewfinderShutter.shut]),
                     builder: (context, _) => ViewfinderShut(
                       mode: spec.mode,
-                      still: freeze.value ?? ViewfinderShutter.waking.value,
+                      // (the waking still only while the screen is still
+                      // waking: open, it's the live picture's place)
+                      still:
+                          freeze.value ??
+                          (ViewfinderShutter.shut.value > 0 && spec.mode == AppMode.digital
+                              ? ViewfinderShutter.waking.value
+                              : null),
                     ),
                   ),
                 ),

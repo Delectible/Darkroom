@@ -128,6 +128,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     ViewfinderShutter.cameraOff = !_live;
     if (shut) {
       if (_shutter.status != AnimationStatus.forward && _shutter.status != AnimationStatus.completed) {
+        _dropWaking();
         _shutter.forward();
       }
     } else if (_shutter.value > 0 && _shutter.status != AnimationStatus.reverse && !_waking) {
@@ -148,12 +149,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
           final b = CameraViewport.snapKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
           if (b != null && b.hasSize) still = b.toImageSync(pixelRatio: _stillRatio(context) * 0.5);
         } catch (_) {}
-        ViewfinderShutter.waking.value?.dispose();
+        _dropWaking();
         ViewfinderShutter.waking.value = still;
-        _shutter.reverse().whenComplete(() {
-          if (ViewfinderShutter.waking.value == still) ViewfinderShutter.waking.value = null;
-          // (after the frame that stopped drawing it)
-          SchedulerBinding.instance.addPostFrameCallback((_) => still?.dispose());
+        // (completed or cut short, e.g. by a toss to film or a flip: a
+        // waking still left up stayed over the live picture for good, the
+        // digital screen over a film camera, 2.2.2)
+        _shutter.reverse().whenCompleteOrCancel(() {
+          if (ViewfinderShutter.waking.value == still) _dropWaking();
         });
       });
       SchedulerBinding.instance.scheduleFrame();
@@ -161,6 +163,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   }
 
   bool _waking = false;
+
+  /// Lets go of the digital screen's waking still (after the frame that
+  /// stopped drawing it).
+  void _dropWaking() {
+    final still = ViewfinderShutter.waking.value;
+    if (still == null) return;
+    ViewfinderShutter.waking.value = null;
+    SchedulerBinding.instance.addPostFrameCallback((_) => still.dispose());
+  }
 
   /// The camera's picture is live with its look loaded, so the viewfinder
   /// may open. False at launch (the curtain lifts onto the viewfinder shut,
@@ -726,6 +737,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
       // The arriving body's viewfinder: as it was last time, until it lands
       // (its camera restarts for the new body).
       _stopMirror();
+      _dropWaking(); // (the leaving screen's)
       CameraViewport.freeze.value = _lastFrame[from == AppMode.film ? AppMode.digital : AppMode.film];
       // (it came in shut: it stays shut until its camera is live)
       _shutter.value = 1;
@@ -844,6 +856,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
 
   void _checkStuck() {
     if (!mounted) return;
+    // A waking still with the viewfinder open and still: nothing should be
+    // drawing it, so it's left over (it covered the live picture).
+    if (ViewfinderShutter.waking.value != null && _shutter.value == 0 && !_shutter.isAnimating) {
+      CameraLog.add('unstuck: a waking still left up');
+      _dropWaking();
+    }
     final session = ref.read(cameraSessionProvider.notifier);
     final atRest =
         LaunchCurtain.isGone &&

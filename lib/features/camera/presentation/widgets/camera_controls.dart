@@ -23,6 +23,7 @@ import '../../../cameras/domain/camera_spec.dart';
 import '../body_quality.dart';
 import '../photo_body.dart';
 import '../whole_body.dart';
+import '../../application/lens_controller.dart' show CameraFlip;
 import '../../application/camera_ui_state.dart';
 import '../../../cameras/presentation/artwork/camera_artwork.dart';
 import '../../application/capture_controller.dart';
@@ -1530,7 +1531,7 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
   void _flip() {
     unawaited(Haptics.mediumImpact());
     setState(() => _turns += 0.5);
-    ref.read(lensProvider.notifier).toggle();
+    CameraFlip.request(ref);
   }
 
   @override

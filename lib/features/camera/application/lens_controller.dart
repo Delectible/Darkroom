@@ -83,6 +83,24 @@ class UltraWide extends Notifier<bool?> {
   }
 }
 
+/// Front / back: the camera screen shuts the viewfinder over the flip (the
+/// camera restarts: the last picture sat there until the new one came);
+/// without one, straight away.
+class CameraFlip {
+  CameraFlip._();
+
+  static void Function()? handler;
+
+  static void request(WidgetRef ref) {
+    final h = handler;
+    if (h != null) {
+      h();
+    } else {
+      ref.read(lensProvider.notifier).toggle();
+    }
+  }
+}
+
 /// A lens chosen from the tray goes on with the viewfinder shut over the
 /// change (and the camera switching to its ultra-wide and back), set by the
 /// camera screen; without one, straight away.

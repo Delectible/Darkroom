@@ -406,6 +406,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     );
     ViewfinderShutter.noteOff = _noteCamera;
     LensChange.handler = _changeLens;
+    CameraFlip.handler = () => unawaited(_flipCamera());
     // Launch: shut until the camera is live (see _live).
     _shutter.value = 1;
     _watchLive();
@@ -457,6 +458,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     _earlyCamera?.cancel();
     _stuckTimer?.cancel();
     if (LensChange.handler == _changeLens) LensChange.handler = null;
+    CameraFlip.handler = null;
     CameraViewport.freeze.removeListener(_syncShutter);
     CameraViewport.liveUnder.removeListener(_syncShutter);
     if (ViewfinderShutter.shut == _shutter) {
@@ -813,6 +815,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     if (move != null) {
       await move.timeout(const Duration(milliseconds: 1500), onTimeout: () {});
       await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+    if (!mounted || run != _changeRun) return;
+    _dropWhenLive();
+  }
+
+  /// Front to back or back: the viewfinder shuts, the camera turns round
+  /// (restarting), and it opens on the new side's picture.
+  Future<void> _flipCamera() async {
+    final lens = ref.read(lensProvider.notifier);
+    if (!_canShutForChange) return lens.toggle();
+    final run = ++_changeRun;
+    CameraLog.add('flip');
+    if (!await _shutThen(run)) return lens.toggle();
+    lens.toggle();
+    // (the restart: the camera stops, then comes back)
+    for (var i = 0; i < 20 && mounted && ref.read(cameraSessionProvider).isReady; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 50));
     }
     if (!mounted || run != _changeRun) return;
     _dropWhenLive();

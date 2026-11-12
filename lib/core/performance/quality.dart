@@ -19,9 +19,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// Judged only on frames drawn while something moves (PerfRecorder tags
 /// them), in windows of [window] frames: how many of the screen's refreshes
-/// got no new frame, and which side (UI or GPU) took the time. Three bad
+/// got no new frame, and which side (UI or GPU) took the time. Two bad
 /// windows in a row take a step down the ladder of whichever side is the
-/// bottleneck; six clean ones in a row take the last step back up (once a
+/// bottleneck (a very bad one, two steps at once); six clean ones in a row take the last step back up (once a
 /// step back up goes wrong, no more tries this run). A steady 60 frames a
 /// second is good enough on any screen: a 120 Hz phone held to 60 by Android
 /// (a Pixel while its camera runs) isn't blamed for it (2.1.10: it was, when
@@ -160,11 +160,15 @@ class Quality {
     }
     if (v.bad) {
       _good = 0;
-      if (++_bad < 3) return;
+      // (two bad windows in a row; a very bad one, a third of the
+      // refreshes or more missed, steps down at once, two steps)
+      final severe = v.drop >= 0.33;
+      if (++_bad < (severe ? 1 : 2)) return;
       _bad = 0;
       // A step back up that went wrong: down again, and no more tries.
       if (_probe > 0) _ceiling = true;
       stepDown(gpuSide: v.gpuBound, why: v.text);
+      if (severe) stepDown(gpuSide: v.gpuBound, why: 'and again: ${v.text}');
     } else if (v.clean) {
       _bad = 0;
       if (++_good < 6 || _ceiling || _taken.isEmpty && _gpu == 0 && _ui == 0) return;
@@ -202,7 +206,10 @@ class Quality {
     final period = math.max(1000 / 60, work < nominal * 0.75 ? math.max(nominal, quick) : nominal);
     var slots = 0, dropped = 0;
     for (final g in gaps) {
-      final n = math.max(1, (g / period).round());
+      // (a frame up to 30% late still counts as on time, past that as a
+      // refresh missed: rounding let a jittery 40-45 fps pass as none
+      // missed, so a slow tablet barely stepped down, 2.2.3)
+      final n = math.max(1, (g / period - 0.3).ceil());
       slots += n;
       dropped += n - 1;
     }

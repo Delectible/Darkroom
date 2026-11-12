@@ -31,6 +31,23 @@ void main() {
     expect(v.bad, isTrue);
   });
 
+  test('a slow tablet at a jittery 40-45 fps is bad, and badly so', () {
+    // Alternating 20 and 25 ms: under 60 a second. Rounded, every gap read
+    // as one refresh and nothing counted as missed.
+    final fs = [
+      for (var i = 0; i < 48; i++)
+        (ui: 7.0, gpu: 19.0, vsync: (i * 22.5 * 1000 + (i.isOdd ? 2500 : 0)).round()),
+    ];
+    final v = Quality.verdict(fs, 60)!;
+    expect(v.bad, isTrue);
+    expect(v.drop, greaterThanOrEqualTo(0.33));
+  });
+
+  test('55 fps with a little jitter is not bad', () {
+    final v = Quality.verdict(frames(48, 18, 6, 9), 60)!;
+    expect(v.bad, isFalse);
+  });
+
   test('a phone whose graphics chip is the limit steps the GPU ladder', () {
     // 90 Hz screen, frames 33 ms apart, the GPU taking 30 ms each.
     final v = Quality.verdict(frames(48, 33.3, 2, 30), 90)!;

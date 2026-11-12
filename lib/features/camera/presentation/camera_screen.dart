@@ -787,6 +787,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
       !ref.read(captureControllerProvider).isRecording &&
       ModalRoute.of(context)?.isCurrent == true;
 
+  /// Which of [_canShutForChange]'s conditions failed (for the Camera Log).
+  String _whyNoShut() => [
+    if (!_live) 'not live',
+    if (CameraViewport.freeze.value != null) 'still up',
+    if (_dragging) 'dragging',
+    if (_committing) 'tossing',
+    if (_swap.value != 0) 'swap ${_swap.value.toStringAsFixed(2)}',
+    if (ref.read(captureControllerProvider).isRecording) 'recording',
+    if (ModalRoute.of(context)?.isCurrent != true) 'covered',
+  ].join(', ');
+
   /// Shut (a still of the viewfinder as it is, darkening), then [change].
   Future<bool> _shutThen(int run) async {
     _snapMoving();
@@ -824,10 +835,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
   /// (restarting), and it opens on the new side's picture.
   Future<void> _flipCamera() async {
     final lens = ref.read(lensProvider.notifier);
-    if (!_canShutForChange) return lens.toggle();
+    if (!_canShutForChange) {
+      // (2D still held its last picture on a flip, 2.2.3: says why)
+      CameraLog.add('flip, not shut: ${_whyNoShut()}');
+      return lens.toggle();
+    }
     final run = ++_changeRun;
     CameraLog.add('flip');
-    if (!await _shutThen(run)) return lens.toggle();
+    if (!await _shutThen(run)) {
+      CameraLog.add('flip: no still to shut over');
+      return lens.toggle();
+    }
     lens.toggle();
     // (the restart: the camera stops, then comes back)
     for (var i = 0; i < 20 && mounted && ref.read(cameraSessionProvider).isReady; i++) {

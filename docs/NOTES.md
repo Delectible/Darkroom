@@ -214,6 +214,12 @@ Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
 
 ## Things that bite
 
+- **The CRT bulge freezes route animations.** CrtWarp draws a still of
+  the screen over everything while its route goes back (the filter doesn't
+  move with a sliding page). A route whose screen stays put (a window
+  zooming on the monitor) needs `ExplorerMonitor(inPlace: true)`, or its
+  close animation is hidden under the still. Tests have no shader filters,
+  so only a phone shows it.
 - **FFmpegKit "min" is the LGPL build.** GPL filters (`boxblur`, `eq`,
   `hqdn3d`, `drawtext`, …) don't exist and make the whole filtergraph fail
   with "Error initializing complex filters". `test/look_and_shader_contract_test.dart`

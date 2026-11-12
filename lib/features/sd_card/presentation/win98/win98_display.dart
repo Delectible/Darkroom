@@ -441,9 +441,14 @@ class CrtGlassPainter extends CustomPainter {
 /// through the same shader as a paint instead, and the live filter takes
 /// over when it lands.
 class CrtWarp extends StatefulWidget {
-  const CrtWarp({super.key, required this.on, required this.child});
+  const CrtWarp({super.key, required this.on, required this.child, this.inPlace = false});
 
   final bool on;
+
+  /// The screen stays where it is while its route animates (a window
+  /// zooming on it), so the live filter can stay on. A still drawn over it
+  /// froze the window as it was: its close went unseen, then it vanished.
+  final bool inPlace;
   final Widget child;
 
   /// How far it bulges: the centre is magnified by this fraction, the
@@ -520,6 +525,11 @@ class _CrtWarpState extends State<CrtWarp> {
   }
 
   void _settle(AnimationStatus s) {
+    if (widget.inPlace) {
+      _live = true;
+      _drop();
+      return;
+    }
     switch (s) {
       case AnimationStatus.completed:
         // Arrived: the live bulge takes over where the still left off (at

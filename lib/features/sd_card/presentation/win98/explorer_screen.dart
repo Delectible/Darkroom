@@ -94,7 +94,30 @@ class ExplorerScreen extends ConsumerStatefulWidget {
   ConsumerState<ExplorerScreen> createState() => _ExplorerScreenState();
 }
 
-class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
+class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTickerProviderStateMixin {
+  /// The explorer's window: its × shuts it (shrinking to the taskbar) and
+  /// leaves the desktop; Start > My Pictures opens it again. Leaving
+  /// Darkroom 98 and coming back opens it as usual.
+  late final _window =
+      AnimationController(
+        vsync: this,
+        value: 1,
+        duration: const Duration(milliseconds: 160),
+        reverseDuration: const Duration(milliseconds: 220),
+      )..addStatusListener((s) {
+        if (mounted && (s == AnimationStatus.dismissed || s == AnimationStatus.forward)) setState(() {});
+      });
+
+  void _closeWindow() {
+    _closeStart();
+    unawaited(_window.reverse());
+  }
+
+  void _openWindow() {
+    if (_window.status == AnimationStatus.forward || _window.isCompleted) return;
+    unawaited(_window.forward());
+  }
+
   final _sdScroll = ScrollController();
   final _cScroll = ScrollController();
   final _aScroll = ScrollController();
@@ -209,6 +232,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
   @override
   void dispose() {
     _galleryTimer?.cancel();
+    _window.dispose();
     if (!_shutDown) Sfx.w98Exit.play();
     _sdScroll.dispose();
     _cScroll.dispose();
@@ -324,6 +348,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
       // the file, the bezel stays where it is.
       pageBuilder: (_, a, _) => UprightPage(
         child: ExplorerMonitor(
+          inPlace: true,
           child: Win98ZoomTransition(
             animation: a,
             origin: origin,
@@ -527,6 +552,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
         Navigator.of(context).pop();
       case StartAction.pictures:
         _go(ExplorerPlace.c);
+        _openWindow();
       case StartAction.options:
         await showExplorerOptions(context);
       case StartAction.help:
@@ -685,384 +711,389 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> {
                           padding: land
                               ? const EdgeInsets.fromLTRB(5, 4, 5, 3)
                               : const EdgeInsets.fromLTRB(6, 6, 6, 4),
-                          child: Win98Window(
-                            title: title,
-                            icon: PixelIconView(pathIcon),
-                            onClose: () => Navigator.of(context).pop(),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Win98MenuBar(
-                                  menus: {
-                                    'File': () => [
-                                      Win98MenuItem(
-                                        'Open',
-                                        onSelected: _selected.length == 1
-                                            ? () => _open(visible.firstWhere((m) => m.id == _selected.first))
-                                            : null,
-                                      ),
-                                      Win98MenuItem(
-                                        'Move to C:',
-                                        onSelected: selectedSdReady.isEmpty ? null : moveSelected,
-                                      ),
-                                      Win98MenuItem(
-                                        'Transfer All to C:',
-                                        onSelected: readyHere == 0 ? null : transferAll,
-                                      ),
-                                      Win98MenuItem(
-                                        'Copy to Photos',
-                                        onSelected: () {
-                                          // (saved ones too: a copy that left the phone
-                                          // can be put back by hand)
-                                          final todo = _selectedItems().where((m) => !m.onSdCard).toList();
-                                          return todo.isEmpty ? null : () => unawaited(_copyToPhotos(todo));
-                                        }(),
-                                      ),
-                                      Win98MenuItem(
-                                        'Delete',
-                                        onSelected: _selected.isEmpty ? null : _deleteSelected,
-                                      ),
-                                      Win98MenuItem(
-                                        'Rename',
-                                        onSelected: _selected.length == 1
-                                            ? () => unawaited(
-                                                renameWithDialog(
+                          child: _ShuttableWindow(
+                            animation: _window,
+                            child: Win98Window(
+                              title: title,
+                              icon: PixelIconView(pathIcon),
+                              onClose: _closeWindow,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Win98MenuBar(
+                                    menus: {
+                                      'File': () => [
+                                        Win98MenuItem(
+                                          'Open',
+                                          onSelected: _selected.length == 1
+                                              ? () =>
+                                                    _open(visible.firstWhere((m) => m.id == _selected.first))
+                                              : null,
+                                        ),
+                                        Win98MenuItem(
+                                          'Move to C:',
+                                          onSelected: selectedSdReady.isEmpty ? null : moveSelected,
+                                        ),
+                                        Win98MenuItem(
+                                          'Transfer All to C:',
+                                          onSelected: readyHere == 0 ? null : transferAll,
+                                        ),
+                                        Win98MenuItem(
+                                          'Copy to Photos',
+                                          onSelected: () {
+                                            // (saved ones too: a copy that left the phone
+                                            // can be put back by hand)
+                                            final todo = _selectedItems().where((m) => !m.onSdCard).toList();
+                                            return todo.isEmpty ? null : () => unawaited(_copyToPhotos(todo));
+                                          }(),
+                                        ),
+                                        Win98MenuItem(
+                                          'Delete',
+                                          onSelected: _selected.isEmpty ? null : _deleteSelected,
+                                        ),
+                                        Win98MenuItem(
+                                          'Rename',
+                                          onSelected: _selected.length == 1
+                                              ? () => unawaited(
+                                                  renameWithDialog(
+                                                    context,
+                                                    ref,
+                                                    visible.firstWhere((m) => m.id == _selected.first),
+                                                  ),
+                                                )
+                                              : null,
+                                        ),
+                                        const Win98MenuItem.separator(),
+                                        Win98MenuItem(
+                                          'Properties',
+                                          onSelected: place == ExplorerPlace.myComputer
+                                              ? null
+                                              : () => showDriveProperties(
                                                   context,
-                                                  ref,
-                                                  visible.firstWhere((m) => m.id == _selected.first),
+                                                  label: switch (place) {
+                                                    ExplorerPlace.sd => 'SD Card (E:)',
+                                                    ExplorerPlace.floppy => '3½ Floppy (A:)',
+                                                    _ => 'Local Disk (C:)',
+                                                  },
+                                                  used: switch (place) {
+                                                    ExplorerPlace.sd => sdBytes,
+                                                    ExplorerPlace.floppy => floppyBytes,
+                                                    _ => cBytes,
+                                                  },
+                                                  capacity: switch (place) {
+                                                    ExplorerPlace.sd => sdCardCapacityBytes,
+                                                    // Spanned: as many disks as it takes.
+                                                    ExplorerPlace.floppy =>
+                                                      floppyCapacityBytes *
+                                                          floppyFiles.fold<int>(
+                                                            0,
+                                                            (s, m) => s + floppiesFor(m.bytes),
+                                                          ),
+                                                    _ => 0,
+                                                  },
                                                 ),
-                                              )
-                                            : null,
-                                      ),
-                                      const Win98MenuItem.separator(),
-                                      Win98MenuItem(
-                                        'Properties',
-                                        onSelected: place == ExplorerPlace.myComputer
-                                            ? null
-                                            : () => showDriveProperties(
-                                                context,
-                                                label: switch (place) {
-                                                  ExplorerPlace.sd => 'SD Card (E:)',
-                                                  ExplorerPlace.floppy => '3½ Floppy (A:)',
-                                                  _ => 'Local Disk (C:)',
-                                                },
-                                                used: switch (place) {
-                                                  ExplorerPlace.sd => sdBytes,
-                                                  ExplorerPlace.floppy => floppyBytes,
-                                                  _ => cBytes,
-                                                },
-                                                capacity: switch (place) {
-                                                  ExplorerPlace.sd => sdCardCapacityBytes,
-                                                  // Spanned: as many disks as it takes.
-                                                  ExplorerPlace.floppy =>
-                                                    floppyCapacityBytes *
-                                                        floppyFiles.fold<int>(
-                                                          0,
-                                                          (s, m) => s + floppiesFor(m.bytes),
-                                                        ),
-                                                  _ => 0,
-                                                },
-                                              ),
-                                      ),
-                                      const Win98MenuItem.separator(),
-                                      Win98MenuItem('Close', onSelected: () => Navigator.of(context).pop()),
-                                    ],
-                                    'Edit': () => [
-                                      Win98MenuItem(
-                                        'Select All',
-                                        onSelected: visible.isEmpty
-                                            ? null
-                                            : () =>
-                                                  setState(() => _selected.addAll(visible.map((m) => m.id))),
-                                      ),
-                                      Win98MenuItem(
-                                        'Invert Selection',
-                                        onSelected: visible.isEmpty
-                                            ? null
-                                            : () => setState(() {
-                                                for (final m in visible) {
-                                                  if (!_selected.remove(m.id)) _selected.add(m.id);
-                                                }
-                                              }),
-                                      ),
-                                    ],
-                                    'View': () => [
-                                      for (final v in ExplorerView.values)
+                                        ),
+                                        const Win98MenuItem.separator(),
+                                        Win98MenuItem('Close', onSelected: () => Navigator.of(context).pop()),
+                                      ],
+                                      'Edit': () => [
                                         Win98MenuItem(
-                                          _viewLabel(v),
-                                          radio: true,
-                                          checked: prefs.view == v,
-                                          onSelected: () => prefsN.setView(v),
+                                          'Select All',
+                                          onSelected: visible.isEmpty
+                                              ? null
+                                              : () => setState(
+                                                  () => _selected.addAll(visible.map((m) => m.id)),
+                                                ),
                                         ),
-                                      const Win98MenuItem.separator(),
-                                      for (final s in ExplorerSort.values)
                                         Win98MenuItem(
-                                          'Arrange by ${_sortLabel(s)}',
-                                          radio: true,
-                                          checked: prefs.sort == s,
-                                          onSelected: () => prefsN.sortBy(s),
+                                          'Invert Selection',
+                                          onSelected: visible.isEmpty
+                                              ? null
+                                              : () => setState(() {
+                                                  for (final m in visible) {
+                                                    if (!_selected.remove(m.id)) _selected.add(m.id);
+                                                  }
+                                                }),
                                         ),
-                                      const Win98MenuItem.separator(),
-                                      for (final f in ExplorerFilter.values)
+                                      ],
+                                      'View': () => [
+                                        for (final v in ExplorerView.values)
+                                          Win98MenuItem(
+                                            _viewLabel(v),
+                                            radio: true,
+                                            checked: prefs.view == v,
+                                            onSelected: () => prefsN.setView(v),
+                                          ),
+                                        const Win98MenuItem.separator(),
+                                        for (final s in ExplorerSort.values)
+                                          Win98MenuItem(
+                                            'Arrange by ${_sortLabel(s)}',
+                                            radio: true,
+                                            checked: prefs.sort == s,
+                                            onSelected: () => prefsN.sortBy(s),
+                                          ),
+                                        const Win98MenuItem.separator(),
+                                        for (final f in ExplorerFilter.values)
+                                          Win98MenuItem(
+                                            _filterLabel(f),
+                                            radio: true,
+                                            checked: prefs.filter == f,
+                                            onSelected: () => prefsN.setFilter(f),
+                                          ),
+                                        const Win98MenuItem.separator(),
                                         Win98MenuItem(
-                                          _filterLabel(f),
-                                          radio: true,
-                                          checked: prefs.filter == f,
-                                          onSelected: () => prefsN.setFilter(f),
+                                          'Folders',
+                                          checked: prefs.showTree,
+                                          onSelected: prefsN.toggleTree,
                                         ),
-                                      const Win98MenuItem.separator(),
-                                      Win98MenuItem(
-                                        'Folders',
-                                        checked: prefs.showTree,
-                                        onSelected: prefsN.toggleTree,
-                                      ),
-                                    ],
-                                    'Tools': () => [
-                                      Win98MenuItem(
-                                        'Options...',
-                                        onSelected: () => showExplorerOptions(context),
-                                      ),
-                                      const Win98MenuItem.separator(),
-                                      // (only a hard disk gets defragmented)
-                                      Win98MenuItem(
-                                        'Defragment Local Disk (C:)...',
-                                        onSelected: () => showDefragmenter(
-                                          context,
-                                          files: ref.read(cDriveFilesProvider).length,
+                                      ],
+                                      'Tools': () => [
+                                        Win98MenuItem(
+                                          'Options...',
+                                          onSelected: () => showExplorerOptions(context),
                                         ),
-                                      ),
-                                      Win98MenuItem('Format SD Card...', onSelected: _formatCard),
-                                      Win98MenuItem('Format 3½ Floppy (A:)...', onSelected: _formatFloppy),
-                                      const Win98MenuItem.separator(),
-                                      Win98MenuItem('Run...', onSelected: _run),
-                                    ],
-                                    'Help': () => [
-                                      Win98MenuItem(
-                                        'Tip of the Day...',
-                                        onSelected: () => showTipOfTheDay(context),
-                                      ),
-                                      Win98MenuItem(
-                                        'How It Works...',
-                                        onSelected: () =>
-                                            Navigator.of(context).push(HowItWorksScreen.route()),
-                                      ),
-                                      Win98MenuItem(
-                                        'Welcome Tour...',
-                                        onSelected: () => Navigator.of(context).push(
-                                          MaterialPageRoute<void>(
-                                            builder: (context) =>
-                                                OnboardingScreen(onDone: () => Navigator.of(context).pop()),
+                                        const Win98MenuItem.separator(),
+                                        // (only a hard disk gets defragmented)
+                                        Win98MenuItem(
+                                          'Defragment Local Disk (C:)...',
+                                          onSelected: () => showDefragmenter(
+                                            context,
+                                            files: ref.read(cDriveFilesProvider).length,
                                           ),
                                         ),
-                                      ),
-                                      Win98MenuItem(
-                                        'How Do I...',
-                                        onSelected: () => _box(
-                                          'Darkroom Help',
-                                          'New pictures are saved to the SD Card (E:).\n\n'
-                                              'Files on the card are locked: open one, or press Transfer, to move it to '
-                                              "Local Disk (C:). Moving also copies it to your phone's photo library.\n\n"
-                                              'On C:, tap a file twice to open it, hold it to send it, and use the arrows in '
-                                              'the viewer to flip through your pictures. File > Rename renames a file (and '
-                                              "its copy in your phone's photos).\n\n"
-                                              'A red dot on a drive: files still to transfer. A blue dot on C:: new pictures '
-                                              "you haven't opened yet.",
+                                        Win98MenuItem('Format SD Card...', onSelected: _formatCard),
+                                        Win98MenuItem('Format 3½ Floppy (A:)...', onSelected: _formatFloppy),
+                                        const Win98MenuItem.separator(),
+                                        Win98MenuItem('Run...', onSelected: _run),
+                                      ],
+                                      'Help': () => [
+                                        Win98MenuItem(
+                                          'Tip of the Day...',
+                                          onSelected: () => showTipOfTheDay(context),
                                         ),
-                                      ),
-                                      Win98MenuItem(
-                                        'Send Feedback...',
-                                        onSelected: () async {
-                                          if (!await Support.sendFeedback() && mounted) {
-                                            await _box(
-                                              'Send Feedback',
-                                              'No mail program was found.\n\nWrite to ${Support.email} (the address '
-                                                  'is on the clipboard).',
-                                            );
-                                          }
-                                        },
-                                      ),
-                                      Win98MenuItem(
-                                        'Privacy Policy',
-                                        onSelected: () => Support.openPrivacy(),
-                                      ),
-                                      Win98MenuItem('Debug...', onSelected: () => showDebugMenu(context)),
-                                      const Win98MenuItem.separator(),
-                                      Win98MenuItem(
-                                        'About Darkroom',
-                                        onSelected: () => showAboutDarkroom(context),
-                                      ),
-                                    ],
-                                  },
-                                ),
-                                _Toolbar(
-                                  canMove: selectedSdReady.isNotEmpty,
-                                  canDelete: _selected.isNotEmpty,
-                                  canTransfer: readyHere > 0,
-                                  onUp: () => _go(ExplorerPlace.myComputer),
-                                  onMove: moveSelected,
-                                  onTransfer: transferAll,
-                                  onDelete: _deleteSelected,
-                                  onFolders: prefsN.toggleTree,
-                                  foldersOn: prefs.showTree,
-                                ),
-                                ExplorerAddressBar(path: path, icon: pathIcon),
-                                const SizedBox(height: 4),
-                                Win98TabStrip(
-                                  tabs: [
-                                    // Red: files still to transfer. Blue: new on C:, not opened yet.
-                                    Win98Tab(
-                                      'SD Card (E:)',
-                                      icon: const PixelIconView(PixelIcon.removableDrive),
-                                      dot: ref.watch(sdCardFilesProvider).isEmpty ? null : _waitingDot,
-                                    ),
-                                    Win98Tab(
-                                      'A:',
-                                      icon: const PixelIconView(PixelIcon.floppy),
-                                      dot: ref.watch(floppyFilesProvider).isEmpty ? null : _waitingDot,
-                                    ),
-                                    Win98Tab(
-                                      'C:',
-                                      icon: const PixelIconView(PixelIcon.hardDrive),
-                                      dot: ref.watch(cHasNewProvider) ? _newDot : null,
-                                    ),
-                                    const Win98Tab('My Computer', icon: PixelIconView(PixelIcon.computer)),
-                                  ],
-                                  selected: place.index,
-                                  onSelect: (i) => _go(ExplorerPlace.values[i]),
-                                ),
-                                Expanded(
-                                  child: Win98Bevel(
-                                    style: BevelStyle.window,
-                                    padding: const EdgeInsets.all(4),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        if (prefs.showTree) ...[
-                                          SizedBox(
-                                            width: 132,
-                                            child: ExplorerFolderTree(place: place, onSelect: _go),
+                                        Win98MenuItem(
+                                          'How It Works...',
+                                          onSelected: () =>
+                                              Navigator.of(context).push(HowItWorksScreen.route()),
+                                        ),
+                                        Win98MenuItem(
+                                          'Welcome Tour...',
+                                          onSelected: () => Navigator.of(context).push(
+                                            MaterialPageRoute<void>(
+                                              builder: (context) =>
+                                                  OnboardingScreen(onDone: () => Navigator.of(context).pop()),
+                                            ),
                                           ),
-                                          const SizedBox(width: 3),
-                                        ],
-                                        Expanded(
-                                          child: Win98Bevel(
-                                            style: BevelStyle.sunken,
-                                            color: W98.window,
-                                            padding: const EdgeInsets.all(2),
-                                            child: AnimatedSwitcher(
-                                              duration: const Duration(milliseconds: 120),
-                                              child: KeyedSubtree(
-                                                key: ValueKey(place),
-                                                child: place == ExplorerPlace.myComputer
-                                                    ? ExplorerMyComputerPane(
-                                                        sdBytes: sdBytes,
-                                                        cBytes: cBytes,
-                                                        sdCount: sdFiles.length,
-                                                        floppyCount: floppyFiles.length,
-                                                        onOpenSd: () => _go(ExplorerPlace.sd),
-                                                        onOpenC: () => _go(ExplorerPlace.c),
-                                                        onOpenFloppy: () => _go(ExplorerPlace.floppy),
-                                                      )
-                                                    : Win98Scrollbar(
-                                                        controller: switch (place) {
-                                                          ExplorerPlace.sd => _sdScroll,
-                                                          ExplorerPlace.floppy => _aScroll,
-                                                          _ => _cScroll,
-                                                        },
-                                                        child: ExplorerFilePane(
-                                                          items: visible,
-                                                          view: prefs.view,
-                                                          prefs: prefs,
+                                        ),
+                                        Win98MenuItem(
+                                          'How Do I...',
+                                          onSelected: () => _box(
+                                            'Darkroom Help',
+                                            'New pictures are saved to the SD Card (E:).\n\n'
+                                                'Files on the card are locked: open one, or press Transfer, to move it to '
+                                                "Local Disk (C:). Moving also copies it to your phone's photo library.\n\n"
+                                                'On C:, tap a file twice to open it, hold it to send it, and use the arrows in '
+                                                'the viewer to flip through your pictures. File > Rename renames a file (and '
+                                                "its copy in your phone's photos).\n\n"
+                                                'A red dot on a drive: files still to transfer. A blue dot on C:: new pictures '
+                                                "you haven't opened yet.",
+                                          ),
+                                        ),
+                                        Win98MenuItem(
+                                          'Send Feedback...',
+                                          onSelected: () async {
+                                            if (!await Support.sendFeedback() && mounted) {
+                                              await _box(
+                                                'Send Feedback',
+                                                'No mail program was found.\n\nWrite to ${Support.email} (the address '
+                                                    'is on the clipboard).',
+                                              );
+                                            }
+                                          },
+                                        ),
+                                        Win98MenuItem(
+                                          'Privacy Policy',
+                                          onSelected: () => Support.openPrivacy(),
+                                        ),
+                                        Win98MenuItem('Debug...', onSelected: () => showDebugMenu(context)),
+                                        const Win98MenuItem.separator(),
+                                        Win98MenuItem(
+                                          'About Darkroom',
+                                          onSelected: () => showAboutDarkroom(context),
+                                        ),
+                                      ],
+                                    },
+                                  ),
+                                  _Toolbar(
+                                    canMove: selectedSdReady.isNotEmpty,
+                                    canDelete: _selected.isNotEmpty,
+                                    canTransfer: readyHere > 0,
+                                    onUp: () => _go(ExplorerPlace.myComputer),
+                                    onMove: moveSelected,
+                                    onTransfer: transferAll,
+                                    onDelete: _deleteSelected,
+                                    onFolders: prefsN.toggleTree,
+                                    foldersOn: prefs.showTree,
+                                  ),
+                                  ExplorerAddressBar(path: path, icon: pathIcon),
+                                  const SizedBox(height: 4),
+                                  Win98TabStrip(
+                                    tabs: [
+                                      // Red: files still to transfer. Blue: new on C:, not opened yet.
+                                      Win98Tab(
+                                        'SD Card (E:)',
+                                        icon: const PixelIconView(PixelIcon.removableDrive),
+                                        dot: ref.watch(sdCardFilesProvider).isEmpty ? null : _waitingDot,
+                                      ),
+                                      Win98Tab(
+                                        'A:',
+                                        icon: const PixelIconView(PixelIcon.floppy),
+                                        dot: ref.watch(floppyFilesProvider).isEmpty ? null : _waitingDot,
+                                      ),
+                                      Win98Tab(
+                                        'C:',
+                                        icon: const PixelIconView(PixelIcon.hardDrive),
+                                        dot: ref.watch(cHasNewProvider) ? _newDot : null,
+                                      ),
+                                      const Win98Tab('My Computer', icon: PixelIconView(PixelIcon.computer)),
+                                    ],
+                                    selected: place.index,
+                                    onSelect: (i) => _go(ExplorerPlace.values[i]),
+                                  ),
+                                  Expanded(
+                                    child: Win98Bevel(
+                                      style: BevelStyle.window,
+                                      padding: const EdgeInsets.all(4),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          if (prefs.showTree) ...[
+                                            SizedBox(
+                                              width: 132,
+                                              child: ExplorerFolderTree(place: place, onSelect: _go),
+                                            ),
+                                            const SizedBox(width: 3),
+                                          ],
+                                          Expanded(
+                                            child: Win98Bevel(
+                                              style: BevelStyle.sunken,
+                                              color: W98.window,
+                                              padding: const EdgeInsets.all(2),
+                                              child: AnimatedSwitcher(
+                                                duration: const Duration(milliseconds: 120),
+                                                child: KeyedSubtree(
+                                                  key: ValueKey(place),
+                                                  child: place == ExplorerPlace.myComputer
+                                                      ? ExplorerMyComputerPane(
+                                                          sdBytes: sdBytes,
+                                                          cBytes: cBytes,
+                                                          sdCount: sdFiles.length,
+                                                          floppyCount: floppyFiles.length,
+                                                          onOpenSd: () => _go(ExplorerPlace.sd),
+                                                          onOpenC: () => _go(ExplorerPlace.c),
+                                                          onOpenFloppy: () => _go(ExplorerPlace.floppy),
+                                                        )
+                                                      : Win98Scrollbar(
                                                           controller: switch (place) {
                                                             ExplorerPlace.sd => _sdScroll,
                                                             ExplorerPlace.floppy => _aScroll,
                                                             _ => _cScroll,
                                                           },
-                                                          selected: _selected,
-                                                          locked: place == ExplorerPlace.sd || onFloppy,
-                                                          emptyText: onFloppy
-                                                              ? 'There are no files on the floppy disk.'
-                                                              : null,
-                                                          onSelect: (m) => setState(() {
-                                                            _selected
-                                                              ..clear()
-                                                              ..add(m.id);
-                                                          }),
-                                                          onOpen: _open,
-                                                          onClearSelection: () => setState(_selected.clear),
-                                                          onSort: prefsN.sortBy,
+                                                          child: ExplorerFilePane(
+                                                            items: visible,
+                                                            view: prefs.view,
+                                                            prefs: prefs,
+                                                            controller: switch (place) {
+                                                              ExplorerPlace.sd => _sdScroll,
+                                                              ExplorerPlace.floppy => _aScroll,
+                                                              _ => _cScroll,
+                                                            },
+                                                            selected: _selected,
+                                                            locked: place == ExplorerPlace.sd || onFloppy,
+                                                            emptyText: onFloppy
+                                                                ? 'There are no files on the floppy disk.'
+                                                                : null,
+                                                            onSelect: (m) => setState(() {
+                                                              _selected
+                                                                ..clear()
+                                                                ..add(m.id);
+                                                            }),
+                                                            onOpen: _open,
+                                                            onClearSelection: () => setState(_selected.clear),
+                                                            onSort: prefsN.sortBy,
+                                                          ),
                                                         ),
-                                                      ),
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                // Landscape is short: the toolbar's Transfer does the job.
-                                if (!land) const SizedBox(height: 4),
-                                if (!land)
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 2),
-                                    child: SizedBox(
-                                      height: 30,
-                                      child: Win98Button(
-                                        onPressed: readyHere == 0 ? null : transferAll,
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            PixelIconView(onFloppy ? PixelIcon.floppy : PixelIcon.transfer),
-                                            const SizedBox(width: 6),
-                                            Flexible(
-                                              child: Text(
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                onFloppy
-                                                    ? (readyHere == 0
-                                                          ? 'No Disk in Drive A:'
-                                                          : 'Copy $readyHere Clip(s) to Local Disk (C:)')
-                                                    : (readyHere == 0
-                                                          ? 'SD Card Empty'
-                                                          : 'Transfer $readyHere File(s) to Local Disk (C:)'),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
+                                        ],
                                       ),
                                     ),
                                   ),
-                                const SizedBox(height: 3),
-                                ExplorerStatusBar(
-                                  cells: [
-                                    _selected.isEmpty
-                                        ? '${place == ExplorerPlace.myComputer ? 3 : visible.length} object(s)'
-                                        : '${_selected.length} object(s) selected',
-                                    formatBytes(
-                                      _selected.isEmpty
-                                          ? switch (place) {
-                                              ExplorerPlace.c => cBytes,
-                                              ExplorerPlace.floppy => floppyBytes,
-                                              _ => sdBytes,
-                                            }
-                                          : selectedBytes,
+                                  // Landscape is short: the toolbar's Transfer does the job.
+                                  if (!land) const SizedBox(height: 4),
+                                  if (!land)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 2),
+                                      child: SizedBox(
+                                        height: 30,
+                                        child: Win98Button(
+                                          onPressed: readyHere == 0 ? null : transferAll,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              PixelIconView(onFloppy ? PixelIcon.floppy : PixelIcon.transfer),
+                                              const SizedBox(width: 6),
+                                              Flexible(
+                                                child: Text(
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  onFloppy
+                                                      ? (readyHere == 0
+                                                            ? 'No Disk in Drive A:'
+                                                            : 'Copy $readyHere Clip(s) to Local Disk (C:)')
+                                                      : (readyHere == 0
+                                                            ? 'SD Card Empty'
+                                                            : 'Transfer $readyHere File(s) to Local Disk (C:)'),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    switch (place) {
-                                      ExplorerPlace.sd => 'SD Card',
-                                      ExplorerPlace.floppy => '3½ Floppy',
-                                      ExplorerPlace.c => 'Local Disk',
-                                      ExplorerPlace.myComputer => 'My Computer',
-                                    },
-                                  ],
-                                ),
-                              ],
+                                  const SizedBox(height: 3),
+                                  ExplorerStatusBar(
+                                    cells: [
+                                      _selected.isEmpty
+                                          ? '${place == ExplorerPlace.myComputer ? 3 : visible.length} object(s)'
+                                          : '${_selected.length} object(s) selected',
+                                      formatBytes(
+                                        _selected.isEmpty
+                                            ? switch (place) {
+                                                ExplorerPlace.c => cBytes,
+                                                ExplorerPlace.floppy => floppyBytes,
+                                                _ => sdBytes,
+                                              }
+                                            : selectedBytes,
+                                      ),
+                                      switch (place) {
+                                        ExplorerPlace.sd => 'SD Card',
+                                        ExplorerPlace.floppy => '3½ Floppy',
+                                        ExplorerPlace.c => 'Local Disk',
+                                        ExplorerPlace.myComputer => 'My Computer',
+                                      },
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
                       _Taskbar(
-                        title: title,
+                        title: _window.isDismissed ? null : title,
                         icon: pathIcon,
                         onStart: _start,
                         onClockHold: () => showBlueScreen(context),
@@ -1206,7 +1237,8 @@ class _Toolbar extends ConsumerWidget {
 class _Taskbar extends StatefulWidget {
   const _Taskbar({required this.title, required this.icon, required this.onStart, required this.onClockHold});
 
-  final String title;
+  /// The open window's task button (null: no window open).
+  final String? title;
   final PixelIcon icon;
   final VoidCallback onStart;
   final VoidCallback onClockHold;
@@ -1256,19 +1288,21 @@ class _TaskbarState extends State<_Taskbar> {
             Expanded(
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Win98Button(
-                  toggled: true,
-                  onPressed: () {},
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      PixelIconView(widget.icon),
-                      const SizedBox(width: 4),
-                      Flexible(child: Text(widget.title, overflow: TextOverflow.ellipsis)),
-                    ],
-                  ),
-                ),
+                child: widget.title == null
+                    ? null
+                    : Win98Button(
+                        toggled: true,
+                        onPressed: () {},
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            PixelIconView(widget.icon),
+                            const SizedBox(width: 4),
+                            Flexible(child: Text(widget.title!, overflow: TextOverflow.ellipsis)),
+                          ],
+                        ),
+                      ),
               ),
             ),
             GestureDetector(
@@ -1284,6 +1318,25 @@ class _TaskbarState extends State<_Taskbar> {
       ),
     );
   }
+}
+
+/// The explorer's window, zooming shut to the taskbar's corner (and open
+/// from it); shut, the desktop shows.
+class _ShuttableWindow extends StatelessWidget {
+  const _ShuttableWindow({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) => AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) => animation.isDismissed
+          ? const SizedBox.expand()
+          : Win98ZoomTransition(animation: animation, origin: Offset(60, box.maxHeight), child: child),
+    ),
+  );
 }
 
 /// Swipe right to put the explorer away (it slides back out to the right),

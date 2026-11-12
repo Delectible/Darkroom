@@ -884,3 +884,20 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   locked pub get failed).
 - [ ] **66.2** Move up to Flutter 3.50: `material_ui` imports, refresh
   `pubspec.lock`, drop the pin (on the checklist under Speed).
+
+## 67. After 2.2.3 (2026-11-12)
+
+- [x] **67.1** → 2.2.4 · Win98 × still closed suddenly (video): the CRT
+  bulge (CrtWarp) put a still of the screen over everything while its
+  route went back, so the window sat frozen for the 220 ms, then vanished.
+  The viewer's monitor stays put (ExplorerMonitor inPlace): the live bulge
+  stays on and the shrink shows. Tests have no shader filter, so missed it.
+- [x] **67.2** → 2.2.4 · Photo viewer: "Send To" is "Send", room round
+  "13 of 53", a Close button at the bottom right.
+- [x] **67.3** → 2.2.4 · The explorer's × shuts its window (shrinking to the
+  taskbar) and leaves the desktop; Start > My Pictures opens it again;
+  leaving Darkroom 98 and coming back opens it as before.
+- [ ] **67.4** 2D: a flip still holds the last picture (2.2.3's shut over
+  the flip doesn't happen). Not found by reading: 2.2.4 logs why in
+  Debug > Camera Log ("flip, not shut: …" / "flip: no still to shut
+  over"); waiting on that line from the phone.

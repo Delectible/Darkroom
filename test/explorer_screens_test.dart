@@ -8,6 +8,7 @@ import 'package:darkroom/features/sd_card/application/sd_card_controller.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_screen.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/win98_display.dart';
+import 'package:darkroom/features/sd_card/presentation/win98/win98_widgets.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart'
     show UserNameNotifier, Win98ThemeNotifier, userNameProvider, win98ThemeProvider;
 import 'package:flutter/material.dart';
@@ -186,6 +187,20 @@ void main() {
         await settle(tester);
         await future;
       }
+
+      // The window's ×: it shuts, the desktop and taskbar stay (still in
+      // Darkroom 98); Start > My Pictures opens it again.
+      await tester.tap(find.byWidgetPredicate((w) => w is Win98CaptionButton && w.glyph == '×').first);
+      await settle(tester);
+      expect(find.byType(ExplorerScreen), findsOneWidget);
+      expect(find.textContaining('Exploring'), findsNothing);
+      expect(find.text('Start'), findsOneWidget);
+      await shoot(tester, 'closed');
+      await tester.tap(find.text('Start'));
+      await settle(tester);
+      await tester.tap(find.text('My Pictures'));
+      await settle(tester);
+      expect(find.textContaining('Exploring - Local Disk'), findsWidgets);
     });
   }
 }

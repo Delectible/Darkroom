@@ -154,7 +154,7 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                           glyph: Win98Glyph.right,
                           onPressed: _index < _items.length - 1 ? () => _go(1) : null,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
                             '${_index + 1} of ${_items.length}',
@@ -163,11 +163,12 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                             style: W98.text,
                           ),
                         ),
+                        const SizedBox(width: 8),
                         Builder(
                           builder: (anchor) => Win98Button(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                             onPressed: () => unawaited(shareMedia(anchor, item)),
-                            child: const Text('Send To'),
+                            child: const Text('Send'),
                           ),
                         ),
                         const SizedBox(width: 3),
@@ -229,18 +230,28 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                     const SizedBox(height: 4),
                     // Full-width trackbar: the long throw makes fine zooming easy.
                     Win98Slider(value: _sliderValue, onChanged: (v) => _zoomTo(_scaleFor(v))),
-                    Row(
-                      children: [
-                        Text('Zoom: ${(_scale * 100).round()}%'),
-                        const Spacer(),
+                  ] else
+                    const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (!item.isVideo) Text('Zoom: ${(_scale * 100).round()}%'),
+                      const Spacer(),
+                      if (!item.isVideo) ...[
                         Win98Button(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           onPressed: _scale > 1.01 ? () => _zoom.value = Matrix4.identity() : null,
                           child: const Text('Reset Zoom'),
                         ),
+                        const SizedBox(width: 6),
                       ],
-                    ),
-                  ],
+                      // (as well as the title bar's ×: in easy reach of a thumb)
+                      Win98Button(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 3),
                   _StatusBar(item: item),
                 ],

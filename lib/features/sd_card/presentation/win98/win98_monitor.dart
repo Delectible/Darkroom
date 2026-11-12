@@ -26,7 +26,7 @@ import '../../../../core/diagnostics/speed_test_run.dart';
 /// and on a CRT a degauss button: the picture wobbles and swims with
 /// colour, with a thunk.
 class ExplorerMonitor extends ConsumerStatefulWidget {
-  const ExplorerMonitor({super.key, required this.child});
+  const ExplorerMonitor({super.key, required this.child, this.inPlace = false});
 
   static const bezel = 12.0;
 
@@ -54,6 +54,10 @@ class ExplorerMonitor extends ConsumerStatefulWidget {
   }
 
   final Widget child;
+
+  /// The screen doesn't move as its route comes and goes (a window zooming
+  /// open and shut on it): the CRT bulge stays live throughout.
+  final bool inPlace;
 
   @override
   ConsumerState<ExplorerMonitor> createState() => _ExplorerMonitorState();
@@ -150,6 +154,7 @@ class _ExplorerMonitorState extends ConsumerState<ExplorerMonitor> with SingleTi
                               // A CRT's picture bulges (the scan lines with it).
                               child: CrtWarp(
                                 on: d.crt,
+                                inPlace: widget.inPlace,
                                 child: Win98Glass(
                                   child: Stack(
                                     fit: StackFit.expand,

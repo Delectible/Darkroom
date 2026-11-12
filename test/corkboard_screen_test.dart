@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/providers.dart';
+import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/corkboard/presentation/corkboard_screen.dart';
 import 'package:darkroom/features/corkboard/presentation/print_viewer.dart';
@@ -106,6 +107,7 @@ void main() {
             filmItemsProvider.overrideWith((ref) => Stream.value(items)),
             secondTickerProvider.overrideWith((ref) => Stream.value(now)),
             darkroomEngineProvider.overrideWithValue(_Engine()),
+            initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
             userNameProvider.overrideWith(_Name.new),
           ],
           child: RepaintBoundary(
@@ -194,6 +196,7 @@ void main() {
           filmItemsProvider.overrideWith((ref) => items.stream),
           secondTickerProvider.overrideWith((ref) => Stream.value(now)),
           darkroomEngineProvider.overrideWithValue(_Engine()),
+          initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
           userNameProvider.overrideWith(_Name.new),
         ],
         child: const MaterialApp(home: CorkboardScreen()),

@@ -56,13 +56,13 @@ class FastFlash {
   /// Before a camera opens: its capture is built unarmed.
   static Future<void> beforeOpen() async {
     _armedFor = null;
-    await _arm(false);
+    await _release();
   }
 
   /// Arms or disarms [c]'s capture (rebuilding it if that changes).
   static Future<void> set(CameraController c, bool on) async {
     if (!Platform.isAndroid || on == armedFor(c)) return;
-    if (!await _arm(on)) return;
+    if (!await (on ? _arm(true) : _release())) return;
     try {
       await CameraPlatform.instance.setJpegImageQuality(c.cameraId, _quality);
       _armedFor = on ? c.cameraId : null;
@@ -70,16 +70,22 @@ class FastFlash {
     } catch (e) {
       CameraLog.add('fast flash: $e');
       _armedFor = null;
-      await _arm(false);
+      await _release();
     } finally {
-      // (only builds made just now are armed)
+      // (only the build made just now is armed; it stays in use)
       if (on) await _arm(false);
     }
   }
 
   static bool _listening = false;
 
-  static Future<bool> _arm(bool on) async {
+  /// Off for good (or a camera opening): the preview's frames back as the
+  /// camera makes them.
+  static Future<bool> _release() => _call('release');
+
+  static Future<bool> _arm(bool on) => _call('arm', on);
+
+  static Future<bool> _call(String method, [Object? argument]) async {
     if (!Platform.isAndroid || !_available) return false;
     if (!_listening) {
       _listening = true;
@@ -90,7 +96,7 @@ class FastFlash {
       });
     }
     try {
-      await _channel.invokeMethod<void>('arm', on);
+      await _channel.invokeMethod<void>(method, argument);
       return true;
     } on MissingPluginException {
       _available = false;

@@ -7,6 +7,7 @@ package io.flutter.plugins.camerax;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
+import com.google.common.util.concurrent.ListenableFuture;
 import androidx.annotation.OptIn;
 import androidx.camera.camera2.interop.Camera2Interop;
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
@@ -80,12 +81,14 @@ class ImageCaptureProxyApi extends PigeonApiImageCapture {
       // settling).
       builder.setFlashMode(ImageCapture.FLASH_MODE_OFF);
       builder.setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY);
-      // (These options reach the preview's repeating requests too: a
-      // FLASH_MODE_SINGLE there fired the flash on a preview frame, not the
-      // photo. ON_ALWAYS_FLASH fires it only for still captures.)
+      // These options go on the still request (where they win) and on the
+      // preview's repeating requests too, where FLASH_MODE_SINGLE fired the
+      // flash on a preview frame: takePicture quiets those first
+      // (DarkroomFastFlash.quietPreview). ON_ALWAYS_FLASH without a
+      // pre-flash didn't fire at all on a Pixel.
       new Camera2Interop.Extender<>(builder)
-          .setCaptureRequestOption(
-              CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH)
+          .setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+          .setCaptureRequestOption(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
           .setSessionCaptureCallback(
               new CameraCaptureSession.CaptureCallback() {
                 @Override
@@ -97,7 +100,9 @@ class ImageCaptureProxyApi extends PigeonApiImageCapture {
                 }
               });
     }
-    return builder.build();
+    final ImageCapture capture = builder.build();
+    if (DarkroomFastFlash.armed) DarkroomFastFlash.mark(capture);
+    return capture;
   }
 
   @Override
@@ -136,10 +141,19 @@ class ImageCaptureProxyApi extends PigeonApiImageCapture {
     final ImageCapture.OnImageSavedCallback onImageSavedCallback =
         createOnImageSavedCallback(temporaryCaptureFile, systemServicesManager, callback);
 
-    pigeonInstance.takePicture(
-        outputFileOptions,
-        ContextCompat.getMainExecutor(getPigeonRegistrar().getContext()),
-        onImageSavedCallback);
+    final Runnable take =
+        () ->
+            pigeonInstance.takePicture(
+                outputFileOptions,
+                ContextCompat.getMainExecutor(getPigeonRegistrar().getContext()),
+                onImageSavedCallback);
+    // DARKROOM PATCH: the preview's frames without the flash first.
+    final ListenableFuture<Void> quiet = DarkroomFastFlash.quietPreview(pigeonInstance);
+    if (quiet != null) {
+      quiet.addListener(take, ContextCompat.getMainExecutor(getPigeonRegistrar().getContext()));
+    } else {
+      take.run();
+    }
   }
 
   @Override

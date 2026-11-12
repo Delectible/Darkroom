@@ -983,3 +983,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   fired the flash on the preview just after arming and the photos showed
   READY (not fired). Now AE ON_ALWAYS_FLASH (the camera fires it for still
   captures only), and only the still's line is logged.
+- [x] **67.20** → 2.2.11 · ON_ALWAYS_FLASH without a pre-flash: the Pixel
+  never fired (flash READY on every still). Back to FLASH_MODE_SINGLE on
+  the still, with the preview's repeating requests set to FLASH_MODE_OFF
+  through Camera2CameraControl before the first photo (it overrides the
+  session's options for repeating requests, not the still's own: checked
+  in CameraX 1.6.2's CaptureConfigAdapter / UseCaseCameraRequestControl).
+  Cleared again when the fast flash goes off or a camera opens.

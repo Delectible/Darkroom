@@ -16,13 +16,21 @@ digicam just fired. Marked `DARKROOM PATCH`:
   (`arm`: bool), set up in `CameraAndroidCameraxPlugin.onAttachedToEngine`.
 - `ImageCaptureProxyApi.pigeon_defaultConstructor`: an ImageCapture built
   while armed has CameraX's flash off (no pre-flash), the lowest-latency
-  capture mode, and through Camera2Interop AE mode `ON_ALWAYS_FLASH`: the
-  camera fires the flash for still captures only, at the exposure the
-  preview already had. (Interop options on the ImageCapture reach the
-  preview's repeating requests too: `FLASH_MODE_SINGLE` there fired the
-  flash on a preview frame just after arming, and never on the photo.) Its session capture callback reports
-  each still's (not the preview's) flash mode, FLASH_STATE and AE state back over the channel
-  (`log`), into the app's Camera Log.
+  capture mode, and through Camera2Interop `FLASH_MODE_SINGLE` with AE on.
+  Those options land on the still request, where they win (single capture
+  options over session options, CameraX's CaptureConfigAdapter), and on the
+  preview's repeating requests too, where SINGLE fired the flash on a
+  preview frame (2.2.9).
+- `ImageCaptureProxyApi.takePicture` / `DarkroomFastFlash.quietPreview`:
+  before an armed capture's first photo, `FLASH_MODE_OFF` through the
+  camera's Camera2CameraControl, which overrides the session's options for
+  the repeating requests (merged last) but not the still's own. So the
+  flash fires on the photo's frame only. `release` (the app, when off or a
+  camera opens) clears it again, so CameraX's torch etc. work as before.
+- AE `ON_ALWAYS_FLASH` without a pre-flash was tried (2.2.10): a Pixel
+  never fired it.
+- Each still's (not the preview's) flash mode, FLASH_STATE and AE state go
+  back over the channel (`log`) into the app's Camera Log.
 
 The app (`FastFlash` in lib/features/camera/application/) arms it for a
 digital camera's back flash set to On, recreates the ImageCapture through

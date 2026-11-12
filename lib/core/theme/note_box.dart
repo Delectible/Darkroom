@@ -7,7 +7,7 @@ import '../navigation.dart';
 /// The app's one look for a passing message: a dark box with light text
 /// (as the camera's "Loading film…"), and at most one action in it.
 class NoteBox extends StatelessWidget {
-  const NoteBox({super.key, required this.text, this.action, this.onAction, this.onTap});
+  const NoteBox({super.key, required this.text, this.action, this.onAction, this.onTap, this.onClose});
 
   final String text;
   final String? action;
@@ -15,6 +15,10 @@ class NoteBox extends StatelessWidget {
 
   /// A tap on the message itself (Notes: closes it).
   final VoidCallback? onTap;
+
+  /// A small × after the action, to wave it off (a note that waits for an
+  /// answer: it needn't be waited out).
+  final VoidCallback? onClose;
 
   static const fill = Color(0xE6121214);
   static const edge = Color(0x38FFFFFF);
@@ -75,6 +79,24 @@ class NoteBox extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (onClose != null)
+                    Semantics(
+                      button: true,
+                      label: 'Close',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onClose,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(4, 0, 12, 0),
+                          child: Center(
+                            child: Text(
+                              '×',
+                              style: style.copyWith(color: ink.withValues(alpha: 0.6), fontSize: 20),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -95,41 +117,66 @@ class Notes {
   /// Shows [text] (with [action], it stays longer and the action closes
   /// it). A tap on it closes it; [onClosed] hears how it went (true: the
   /// user closed it; false: timed out, its action, or another came).
-  static void show(
+  ///
+  /// [context]: the screen it's about. It goes when that screen does (slid
+  /// away back to the camera, say), not left over whatever comes next.
+  static int show(
     String text, {
     String? action,
     VoidCallback? onAction,
     Duration? duration,
     void Function(bool byUser)? onClosed,
+    BuildContext? context,
   }) {
     final overlay = appNavigatorKey.currentState?.overlay;
-    if (overlay == null) return;
+    if (overlay == null) return -1;
     if (_entry == null || !_entry!.mounted) {
       _entry = OverlayEntry(builder: (_) => const _NotesView());
       overlay.insert(_entry!);
     }
     final me = ++_serial;
-    _now.value?.onClosed?.call(false);
-    _now.value = _Note(text, action, onAction, me, onClosed);
+    final was = _now.value;
+    was?.onClosed?.call(false);
+    was?.release?.call();
+    VoidCallback? release;
+    final route = context == null ? null : ModalRoute.of(context);
+    final leaving = route?.animation;
+    if (leaving != null) {
+      void watch(AnimationStatus s) {
+        if (s == AnimationStatus.reverse || s == AnimationStatus.dismissed) hide(me);
+      }
+
+      leaving.addStatusListener(watch);
+      release = () => leaving.removeStatusListener(watch);
+    }
+    _now.value = _Note(text, action, onAction, me, onClosed, release);
     final shown =
         duration ??
         (action != null
             ? const Duration(seconds: 6)
             : Duration(milliseconds: (1800 + text.length * 45).clamp(1800, 5000)));
     Timer(shown, () => hide(me));
+    return me;
   }
+
+  /// A message is up (not fading out).
+  static bool get showing => _now.value != null;
 
   /// Hides the message showing (only if it's still [serial], when given).
   static void hide([int? serial, bool byUser = false]) {
     final n = _now.value;
     if (n == null || (serial != null && n.serial != serial)) return;
     _now.value = null;
+    n.release?.call();
     n.onClosed?.call(byUser);
   }
 }
 
 class _Note {
-  const _Note(this.text, this.action, this.onAction, this.serial, this.onClosed);
+  const _Note(this.text, this.action, this.onAction, this.serial, this.onClosed, this.release);
+
+  /// Stops watching the screen it belongs to.
+  final VoidCallback? release;
 
   final String text;
   final String? action;
@@ -149,6 +196,9 @@ class _NotesViewState extends State<_NotesView> {
   /// Kept while it fades out.
   _Note? _last;
 
+  /// The one swiped away (gone at once: no fade to keep it for).
+  int? _swiped;
+
   @override
   Widget build(BuildContext context) {
     // (low on the screen, clear of the buttons most screens keep at the foot)
@@ -159,7 +209,7 @@ class _NotesViewState extends State<_NotesView> {
       builder: (context, note, _) {
         if (note != null) _last = note;
         final last = _last;
-        if (last == null) return const SizedBox.shrink();
+        if (last == null || last.serial == _swiped) return const SizedBox.shrink();
         final on = note != null;
         return Positioned(
           // (well inside the viewfinder's width, clear of the tabs at the
@@ -181,14 +231,24 @@ class _NotesViewState extends State<_NotesView> {
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 340),
                     // (over any screen: the app's own text style under it)
-                    child: NoteBox(
-                      text: last.text,
-                      action: last.action,
-                      onAction: () {
-                        Notes.hide(last.serial);
-                        last.onAction?.call();
+                    // (swiped away, sideways or down: closed by the user)
+                    child: Dismissible(
+                      key: ValueKey(last.serial),
+                      direction: DismissDirection.horizontal,
+                      onDismissed: (_) {
+                        setState(() => _swiped = last.serial);
+                        Notes.hide(last.serial, true);
                       },
-                      onTap: () => Notes.hide(last.serial, true),
+                      child: NoteBox(
+                        text: last.text,
+                        action: last.action,
+                        onAction: () {
+                          Notes.hide(last.serial);
+                          last.onAction?.call();
+                        },
+                        onTap: () => Notes.hide(last.serial, true),
+                        onClose: last.action == null ? null : () => Notes.hide(last.serial, true),
+                      ),
                     ),
                   ),
                 ),

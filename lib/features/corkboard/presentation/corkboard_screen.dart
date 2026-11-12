@@ -254,6 +254,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
       onClosed: (byUser) {
         if (!closed.isCompleted) closed.complete(byUser);
       },
+      // (left behind when the board slides away)
+      context: context,
     );
     // Closed by a tap on it: don't bring these up again (a time-out or
     // Save again doesn't count).

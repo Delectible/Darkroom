@@ -828,6 +828,37 @@ size, BodyQuality, AAC sounds), 60.x (full refresh rate, no 3D pacing).
   faint thumbprint). Board, viewer and saved files alike (a saved copy is
   remade as it ages). New frames: Mat (cream board, bevel-cut window) and
   Snapshot (round corners, glossy). Taped not taken.
+- [x] **64.60** → 2.2.3 · The "frozen viewfinder" (Pixel, the digital OSD
+  stuck over a film camera, a flip or new stock didn't clear it): the
+  digital screen's waking still (ViewfinderShutter.waking) was dropped only
+  when the opening finished (`whenComplete`); cut short (a toss, a flip,
+  `_shutter.value = 1`) it stayed, and the film branch of the shutter draws
+  its still even open. Dropped on complete or cancel, on every toss and
+  every close, drawn only while the digital screen wakes, and _checkStuck
+  drops one left up ("unstuck: a waking still left up").
+- [x] **64.61** → 2.2.3 · 2D: the stock label's swipe took the whole row
+  (the label is drawn at its left, narrower): only the label now.
+- [x] **64.62** → 2.2.3 · Quality manager too lenient (a tablet only a few
+  steps down): a refresh counted missed past 30% late (rounding let a
+  jittery 40-45 fps pass as none missed); a very bad window (a third
+  missed) steps down twice; two bad windows a step, as before 2.1.10.
+- [x] **64.63** → 2.2.3 · A stock change that moves to or from the
+  ultra-wide (wide, fish-eye on one and not the other) shuts the
+  viewfinder over the camera change (takesWidest).
+- [x] **64.64** → 2.2.3 · Win98 × closed suddenly: the close moved the live
+  viewer into a scaled, faded layer, whose first frames ate the 220 ms on
+  a phone. It shrinks a picture of the window now (toImageSync at the
+  start of the close).
+- [x] **64.65** → 2.2.3 · Turning the phone with a window open over a Win98
+  page: the fade was per page, the window stayed up. The fade covers the
+  whole app (UprightApp) while it turns.
+- [x] **64.66** → 2.2.3 · Flipping front/back held the last picture: the
+  flip shuts the viewfinder over the restart (CameraFlip, like a lens).
+- [x] **64.67** → 2.2.3 · The corkboard's "no longer on your phone" note
+  lingered over the camera after sliding back: notes can belong to a
+  screen (Notes.show context) and go with it; swiped away or closed with
+  their × (notes with an action). Win98's is a message box (closes with its
+  buttons, can't be slid away).
 
 ## 65. App inspiration: Toned (2026-11-06)
 

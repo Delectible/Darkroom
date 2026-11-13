@@ -218,6 +218,9 @@ migrates itself). `shared_preferences_android` is held at 2.4.28
 
 ## Things that bite
 
+- **Android builds need Java 21** since Flutter 3.50 (AGP 9.3.1's lint
+  crashes on 17 with NoSuchMethodError List.removeLast). The app's own
+  jvmTarget is 17; only the build JDK moved.
 - **promote-closed.yml: leave the build number empty.** With a
   version_code fastlane said "Track 'internal' doesn't have any releases"
   (2026-11-12, build 136); empty (the newest internal build) worked.

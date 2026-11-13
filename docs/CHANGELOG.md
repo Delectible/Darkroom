@@ -1024,3 +1024,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   own windows). High Scores (HighScores, in shared prefs): Solitaire's
   fastest win and wins, Minefield's best times, Bricks' and Pinball's high
   scores, Pinball's best rank; kept from now on.
+- [x] **67.25** → 2.2.13 · First 3.50 build: Android failed in lint
+  (AGP 9.3.1's lint calls List.removeLast, Java 21; CI ran Java 17). CI
+  builds Android with Java 21 now (the app's jvmTarget stays 17). iOS built
+  and went to TestFlight.

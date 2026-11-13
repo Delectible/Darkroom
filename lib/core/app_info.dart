@@ -3,18 +3,21 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.0';
+  static const version = '2.4.0';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98 has a desktop with My Pictures, Camera, Games and Settings, a Games folder and High '
-      'Scores. Photos without flash are taken the instant you press, the screen responds faster to touch on '
-      'iPhone, and the viewfinder fills its window. Many fixes.';
+      'New: the Studio. Send prints from the corkboard to make photo booth strips, collages, scrapbook '
+      'pages and flip book videos, all kept in a book and ready to save or share.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
+    (
+      '2.4',
+      ['The Studio: strips, collages, scrapbook pages and flip books', 'A book of everything you make'],
+    ),
     (
       '2.3',
       [

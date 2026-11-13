@@ -1034,3 +1034,31 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   reads and writes made safe. Desktop and Games folder icons: a tap selects
   (the 9x highlight), a second tap or a double tap opens (IconGroup).
 - 2.3.0 released to main, Play closed testing and the App Store.
+
+## 68. The Studio (2026-11-13)
+
+- [x] **68.1** → 2.4.0 · The Studio, off the corkboard (lib/features/studio):
+  - The way in: a Studio button in the board's header, badged with the prints
+    waiting there (mockups: artifact Darkroom Studio Mockups, option A).
+  - Prints go in from the print viewer (Add to Studio); their spot on the
+    board keeps its pin, a dashed outline and an "In studio" note; a tap
+    asks to bring it back (StudioSpot). Kept in prefs (PrefKeys.studioItems).
+    Photos only, no reels.
+  - Inside, on a wooden work table: the prints in a tray (tap: back to the
+    board), "Return all to the board", and four cards that say how many
+    prints each takes: Photo Strip 3-4, Collage 2/4/6/9, Scrapbook 1-8,
+    Flip Book 4-24 (StudioNeeds); too many or a collage's count off: pick
+    which (PickPrints). After making one: "Send the photos back to the
+    corkboard? Send them / Keep them".
+  - Photo Strip: booth paper (black, white, cream), date stamp, slightly
+    uneven gaps. Collage: Grid, Edge to edge, Loose (turned bordered prints,
+    a little overlap), on white, black, cream or kraft. Every photo cropped
+    to the piece's own shape (4:3 windows, squares), so formats mix. Strips
+    and collages drop the prints' frames; the scrapbook keeps them.
+  - Scrapbook: drag, pinch to size and turn each print, writing (double-tap
+    to change it), a title, a page colour; saved 2400 px across.
+  - Flip Book: snap cuts, a white flash and a small handheld shake each
+    page (~0.4 s), a 4:5 MP4 (the app's MPEG-4 encoder), for Instagram.
+  - The book (studio/book.json in app support): strips and collages share
+    pages, a scrapbook fills one; tap one for Save to Photos (album
+    "Darkroom Studio"), Share, Remove. All free for now.

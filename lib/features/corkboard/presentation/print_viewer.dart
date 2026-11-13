@@ -18,6 +18,7 @@ import '../../viewer/presentation/zoomable.dart';
 import '../../../core/processing/instant_frame.dart';
 import 'instant_print.dart';
 import 'print_frames.dart';
+import '../../studio/studio_store.dart';
 import '../application/sample_prints.dart';
 import '../../camera/application/camera_ui_state.dart';
 import '../../../core/device/haptics.dart';
@@ -159,9 +160,8 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
             style: InstantFrame.noteStyle(260).copyWith(fontSize: 26),
             decoration: InputDecoration(
               hintText: 'summer \'26, the lake…',
-              hintStyle: InstantFrame.noteStyle(
-                260,
-              ).copyWith(fontSize: 26, color: ink.withValues(alpha: 0.3)),
+              hintStyle: InstantFrame.noteStyle(260)
+                  .copyWith(fontSize: 26, color: ink.withValues(alpha: 0.3)),
               counterStyle: TextStyle(color: ink.withValues(alpha: 0.6)),
               enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: ink.withValues(alpha: 0.4))),
               focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: ink, width: 1.6)),
@@ -299,6 +299,11 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
       onShare: (anchor) => shareMedia(anchor, item),
       framing: _framing,
       onFrame: () => setState(() => _framing = !_framing),
+      onStudio: () {
+        // (off the board to the Studio: its spot shows "In studio")
+        unawaited(ref.read(studioProvider.notifier).add(item.id));
+        Navigator.of(context).pop();
+      },
     );
     final frames = ref.watch(printFramesProvider);
 
@@ -538,7 +543,11 @@ class _ActionBar extends StatelessWidget {
     this.onFrame,
     this.gone = false,
     this.sample = false,
+    this.onStudio,
   });
+
+  /// Off the board to the Studio.
+  final VoidCallback? onStudio;
 
   /// A sample print: never leaves the app (no Share, no Save).
   final bool sample;
@@ -601,6 +610,8 @@ class _ActionBar extends StatelessWidget {
             ),
           ],
           if (onWrite != null) _RoundAction(icon: Icons.edit_outlined, label: 'Write', onTap: onWrite),
+          if (onStudio != null)
+            _RoundAction(icon: Icons.collections_outlined, label: 'Add to Studio', onTap: onStudio),
           if (onFrame != null)
             _RoundAction(
               icon: Icons.filter_frames_outlined,

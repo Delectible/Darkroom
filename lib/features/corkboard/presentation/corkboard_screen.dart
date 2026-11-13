@@ -8,7 +8,10 @@ import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:material_ui/material_ui.dart';
 
 import '../../sd_card/presentation/win98/explorer_screen.dart';
+import '../../studio/studio_screen.dart';
+import '../../studio/studio_store.dart';
 import '../../settings/application/settings_controllers.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -462,6 +465,22 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     return (rect: rect, angle: angle);
   }
 
+  /// A print in the Studio, its empty spot tapped: bring it back?
+  Future<void> _bringBack(MediaItem m) async {
+    final back = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Bring it back?'),
+        content: const Text('This print is in the Studio. Bring it back to its spot on the board?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Leave it')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Bring back')),
+        ],
+      ),
+    );
+    if (back == true) await ref.read(studioProvider.notifier).remove([m.id]);
+  }
+
   void _open(BuildContext context, List<MediaItem> developed, MediaItem item) {
     final reels = developed.where((m) => m.isVideo).toList();
     final prints = developed.where((m) => !m.isVideo).toList();
@@ -480,6 +499,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     final inDarkroom = items.where((m) => !m.isDevelopedAt(now)).toList()
       ..sort((a, b) => a.readyAt.compareTo(b.readyAt));
     final unsaved = developed.where((m) => !m.isSaved).length;
+    // (prints in the Studio: their spot shows the pin and a note)
+    final inStudio = ref.watch(studioProvider).toSet();
     _developed = developed;
     // (an empty board just fills: on opening, the prints load in)
     if (_shown == null || _shown!.isEmpty || _sameIds(_shown!, developed)) {
@@ -561,6 +582,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                 SliverToBoxAdapter(
                                   child: _Header(
                                     onBack: () => Navigator.of(context).pop(),
+                                    inStudio: inStudio.length,
+                                    onStudio: () => Navigator.of(context).push(StudioScreen.route()),
                                     unsaved: unsaved,
                                     total: developed.length,
                                     saving: _saving,
@@ -593,7 +616,14 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                           void open() => _open(context, shown, m);
                                           void unpin() => _unpin(m);
                                           final falling = _falling.contains(m.id);
-                                          final pinned = m.isVideo
+                                          final pinned = inStudio.contains(m.id) && !m.isVideo
+                                              ? StudioSpot(
+                                                  pin:
+                                                      _pinColors[math.Random(m.id.hashCode)
+                                                          .nextInt(_pinColors.length)],
+                                                  onTap: () => _bringBack(m),
+                                                )
+                                              : m.isVideo
                                               ? PinnedReel(
                                                   item: m,
                                                   onOpen: open,
@@ -618,9 +648,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                           final child = _Falling(
                                             falling: falling,
                                             pinColor:
-                                                _pinColors[math.Random(
-                                                  m.id.hashCode,
-                                                ).nextInt(_pinColors.length)],
+                                                _pinColors[math.Random(m.id.hashCode)
+                                                    .nextInt(_pinColors.length)],
                                             pinAt: m.isVideo
                                                 ? const Alignment(-0.5, 0.72)
                                                 : Alignment.topCenter,
@@ -812,6 +841,8 @@ class _PinInState extends State<_PinIn> with SingleTickerProviderStateMixin {
 class _Header extends StatelessWidget {
   const _Header({
     required this.onBack,
+    required this.inStudio,
+    required this.onStudio,
     required this.unsaved,
     required this.total,
     required this.saving,
@@ -819,6 +850,10 @@ class _Header extends StatelessWidget {
   });
 
   final VoidCallback onBack;
+
+  /// Prints in the Studio (the badge on its door).
+  final int inStudio;
+  final VoidCallback onStudio;
   final int unsaved;
   final int total;
   final bool saving;
@@ -846,15 +881,34 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'THE CORKBOARD',
-                  style: TextStyle(color: ink, fontWeight: FontWeight.w900, letterSpacing: 3, fontSize: 16),
+                // (one line, shrunk to fit beside the Studio door and Save all)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'THE CORKBOARD',
+                    maxLines: 1,
+                    style: TextStyle(color: ink, fontWeight: FontWeight.w900, letterSpacing: 3, fontSize: 16),
+                  ),
                 ),
                 Text(
                   'tap to inspect · hold to share',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: Color(0xFFD8C3A0), fontSize: 11),
                 ),
               ],
+            ),
+          ),
+          // The Studio's door (a badge: prints waiting there).
+          Badge(
+            isLabelVisible: inStudio > 0,
+            label: Text('$inStudio'),
+            backgroundColor: const Color(0xFFC0281C),
+            child: IconButton(
+              onPressed: onStudio,
+              tooltip: 'Studio',
+              icon: const Icon(Icons.collections_outlined, color: ink),
             ),
           ),
           AnimatedSwitcher(
@@ -1037,6 +1091,81 @@ class _CorkWallPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CorkWallPainter old) => old.tileH != tileH || old.scroll != scroll;
+}
+
+/// A print's spot while it's in the Studio: its pin, a dashed outline and
+/// a note saying where it went. A tap asks to bring it back.
+class StudioSpot extends StatelessWidget {
+  const StudioSpot({super.key, required this.pin, required this.onTap});
+
+  final Color pin;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'In studio. Bring it back',
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Positioned.fill(top: 14, child: CustomPaint(painter: _DashedSpot())),
+          Align(alignment: Alignment.topCenter, child: PinImage(pin)),
+          Center(
+            child: Transform.rotate(
+              angle: -0.06,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF6C8),
+                  boxShadow: [BoxShadow(color: Color(0x44000000), blurRadius: 4, offset: Offset(1, 2))],
+                ),
+                child: const Text(
+                  'In studio',
+                  style: TextStyle(
+                    fontFamily: 'Caveat',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                    color: Color(0xFF3A2A1A),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _DashedSpot extends CustomPainter {
+  const _DashedSpot();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = (Offset.zero & size).deflate(4);
+    canvas.drawRect(r, Paint()..color = const Color(0x1F3C230F));
+    final dash = Paint()
+      ..color = const Color(0x734A2814)
+      ..strokeWidth = 2;
+    void line(Offset a, Offset b) {
+      final d = b - a;
+      final n = (d.distance / 12).floor();
+      for (var i = 0; i < n; i++) {
+        canvas.drawLine(a + d * (i / n), a + d * ((i + 0.55) / n), dash);
+      }
+    }
+
+    line(r.topLeft, r.topRight);
+    line(r.topRight, r.bottomRight);
+    line(r.bottomRight, r.bottomLeft);
+    line(r.bottomLeft, r.topLeft);
+  }
+
+  @override
+  bool shouldRepaint(_DashedSpot old) => false;
 }
 
 const _pinColors = [

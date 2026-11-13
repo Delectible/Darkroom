@@ -159,7 +159,11 @@ class PrefKeys {
     cSeen,
     cSeenSince,
     ...highScores,
+    studioItems,
   };
+
+  /// The prints sent to the Studio (their ids), in the order they went.
+  static const studioItems = 'studio.items';
 
   /// Darkroom 98's high scores (HighScores, games/high_scores.dart). Every
   /// key the app reads or writes must be in [all] (the cache refuses the

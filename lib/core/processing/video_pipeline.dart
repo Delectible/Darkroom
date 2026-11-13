@@ -119,6 +119,13 @@ class VideoPipeline {
   /// blocks Flutter's threads and we don't depend on the asynchronous
   /// completion event (which never arrived on some devices, leaving clips
   /// stuck in "processing"). A timeout cancels a hung session.
+  /// Runs FFmpeg with [args] (the Studio's flip book uses it too).
+  static Future<bool> ffmpeg(List<String> args, {Duration timeout = const Duration(minutes: 2)}) =>
+      _ffmpeg(args, timeout: timeout);
+
+  /// The app's video encoder settings (MPEG-4 Part 2, see [_encoder]).
+  static List<String> encoder(int kbps) => _encoder(kbps);
+
   static Future<bool> _ffmpeg(
     List<String> args, {
     bool throwOnError = true,

@@ -9,8 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'New: the Studio. Send prints from the corkboard to make photo booth strips, collages, scrapbook '
-      'pages and flip book videos, all kept in a book and ready to save or share.';
+      'The Studio book is now a leather photo album you turn page by page, with your pieces stuck down by '
+      'hand and flip books you can riffle and speed up. Easier scrapbook editing, text size and colour, '
+      'and a clearer Studio button on the corkboard.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

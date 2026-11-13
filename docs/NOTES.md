@@ -208,9 +208,13 @@ How it works = "First run"; art = "Art"; backlog at the end.
 
 ## Stack
 
-Flutter stable (≥ 3.47, Dart ≥ 3.12), Riverpod 3, `camera` (CameraX),
-`ffmpeg_kit_flutter_new_min`, `sensors_plus`, `gal`, `workmanager`,
-`flutter_local_notifications`, sqflite (schema v2, migrates itself).
+Flutter 3.50 (Dart 3.14; CI pins the exact version in build-apk.yml),
+Material from the `material_ui` package (out of the SDK since 3.50:
+`package:material_ui/material_ui.dart`, never `package:flutter/material.dart`),
+Riverpod 3, `camera` (CameraX; zero shutter lag on where supported), `ffmpeg_kit_flutter_new_min`, `sensors_plus`,
+`gal` 3, `workmanager`, `flutter_local_notifications`, sqflite (schema v2,
+migrates itself). `shared_preferences_android` is held at 2.4.28
+(dependency_overrides: 2.5.0 hung release builds at launch).
 
 ## Things that bite
 

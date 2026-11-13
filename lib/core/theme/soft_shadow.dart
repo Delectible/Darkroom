@@ -1,6 +1,6 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A blurred rounded-rect shadow drawn from a small baked image: the blur is
 /// rendered once, at a quarter of the size, and stretched (a shadow has no

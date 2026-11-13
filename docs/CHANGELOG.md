@@ -998,3 +998,18 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   capture on both. The press-to-capture time stays in the Camera Log.
   (Android 15's flash strength level was the one middle way left: one
   fixed strength, not tried.)
+- [x] **67.22** → 2.2.13 · Flutter 3.50.0 (Dart 3.14): Material from
+  `material_ui` 1.11 (`dart fix --code=migrate_design_widgets`, 100 files),
+  SDK constraints 3.14 / 3.50, CI pinned to 3.50.0 (AGP 9.3.1, Gradle 9.5
+  from flutter create; our build.gradle.kts already matches the template).
+  Packages up: camera 0.12.2 (CameraX 0.7.6+1: video length fix;
+  avfoundation 0.11.1: crash switching camera while recording fixed), gal
+  3.0 (renames via dart fix), flutter_local_notifications 22.3.3 (iOS 27
+  permission errors), Riverpod 3.5, image 4.12, sqflite 2.4.6 and the rest.
+  Held: shared_preferences_android 2.4.28 (dependency_overrides), and
+  flutter_local_notifications 23 (needs compileSdk 37; later). flutter_scene
+  0.24.3 is still the newest (our copy stays).
+  Taken up: zero shutter lag (camera 0.12.2; Android, iOS 17+), on for every
+  camera except phones low on RAM: a no-flash photo is the frame at the
+  press (the phone turns it off for a flash). Free with 3.50: a frame less
+  touch latency on iPhone, a quicker first frame on Android with OpenGL.

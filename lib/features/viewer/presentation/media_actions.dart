@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:gal/gal.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -116,7 +116,7 @@ Future<String?> saveToGallery(MediaItem item, {required String album}) async {
   try {
     final path = await exportPathFor(item);
     if (path == null) return 'File is missing';
-    final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+    final ok = await Gal.hasPermission(toAlbum: true) || await Gal.requestPermission(toAlbum: true);
     if (!ok) return 'Photo library access was denied';
     if (item.isVideo) {
       await Gal.putVideo(path, album: album);

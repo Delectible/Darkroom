@@ -409,7 +409,7 @@ class CaptureProcessor {
 
   Future<void> _saveOriginalToGallery(String path) async {
     try {
-      final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+      final ok = await Gal.hasPermission(toAlbum: true) || await Gal.requestPermission(toAlbum: true);
       if (ok) await Gal.putImage(path, album: 'Darkroom Originals');
     } catch (e) {
       debugPrint('Could not save original: $e');

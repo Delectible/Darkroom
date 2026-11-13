@@ -9,7 +9,7 @@ import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/corkboard/presentation/corkboard_screen.dart';
 import 'package:darkroom/features/corkboard/presentation/print_viewer.dart';
 import 'package:darkroom/features/darkroom/application/darkroom_engine.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

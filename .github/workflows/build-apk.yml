@@ -20,15 +20,15 @@ env:
   APP: darkroom
 
 jobs:
-  # Flutter is pinned: 3.50 deprecated material.dart and moved test_api,
-  # which broke analyze and the locked pub get. Move up on purpose.
+  # Flutter is pinned (a new stable once broke the build unannounced: 3.50
+  # moved Material out of the SDK). Move up on purpose, with pubspec.lock.
   # flutter analyze + flutter test. A build is only published when these pass.
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        with: { channel: stable, flutter-version: 3.47.9, cache: true }
+        with: { channel: stable, flutter-version: 3.50.0, cache: true }
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
@@ -40,7 +40,7 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: '17' }
       - uses: subosito/flutter-action@v2
-        with: { channel: stable, flutter-version: 3.47.9, cache: true }
+        with: { channel: stable, flutter-version: 3.50.0, cache: true }
       # flutter create re-resolves dependencies and ignores pubspec.lock (it
       # pulled in shared_preferences_android 2.5.0, whose JNI calls R8 strips:
       # the app hung at launch). Put the locked versions back.
@@ -89,7 +89,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
-        with: { channel: stable, flutter-version: 3.47.9, cache: true }
+        with: { channel: stable, flutter-version: 3.50.0, cache: true }
       - name: Fill in the Xcode project
         run: |
           flutter create --org $ORG --project-name $APP --platforms ios .

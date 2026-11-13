@@ -1,6 +1,6 @@
 import 'package:darkroom/core/navigation.dart';
 import 'package:darkroom/core/theme/note_box.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// A note a screen raises goes with that screen (not left over the camera

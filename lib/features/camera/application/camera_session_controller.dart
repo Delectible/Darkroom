@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/processing/photo_pipeline.dart';
+import '../../../core/device/device_memory.dart';
 import '../../../core/device/permissions.dart';
 import '../../../core/providers.dart';
 import 'camera_log.dart';
@@ -328,6 +329,20 @@ class CameraSessionController extends Notifier<CameraSessionState> {
         await c.lockCaptureOrientation(DeviceOrientation.portraitUp);
       } on CameraException {
         // Not fatal: the processing pipeline also handles landscape buffers.
+      }
+      // Zero shutter lag (camera 0.12.2: Android, iOS 17+): the photo is a
+      // frame the camera already holds from the moment you press, not a
+      // fresh capture after it (the phone turns it off itself for a flash).
+      // It keeps a few full frames in memory: not on phones low on RAM.
+      if (!DeviceMemory.low) {
+        try {
+          if (await c.isZeroShutterLagSupported()) {
+            await c.setZeroShutterLagEnabled(true);
+            CameraLog.add('zero shutter lag');
+          }
+        } on CameraException {
+          // (not on this camera)
+        }
       }
       _controller = c;
       _controllerConfig = cfg;

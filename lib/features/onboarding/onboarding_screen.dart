@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 
@@ -131,7 +131,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       notify = await ref.read(notificationServiceProvider).requestPermission();
     } catch (_) {}
     try {
-      photos = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+      photos = await Gal.hasPermission(toAlbum: true) || await Gal.requestPermission(toAlbum: true);
     } catch (_) {}
     if (!mounted) return;
     setState(() {

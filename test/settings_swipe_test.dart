@@ -6,7 +6,7 @@ import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:darkroom/features/settings/presentation/settings_sheet.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

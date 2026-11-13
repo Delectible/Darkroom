@@ -34,7 +34,7 @@ Every update builds a new release automatically. Open **[Releases](../../release
 
 ## Building from source
 
-Needs Flutter (stable, 3.47 or newer).
+Needs Flutter (stable, 3.50 or newer).
 
 ```bash
 flutter create --org com.dingo --project-name darkroom --platforms android,ios .

@@ -10,7 +10,7 @@ import 'package:darkroom/features/camera/presentation/photo_body.dart';
 import 'package:darkroom/features/camera/presentation/widgets/camera_controls.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/win98_shutdown.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

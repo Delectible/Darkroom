@@ -4,11 +4,11 @@ description: >-
   darkroom and pins them to a corkboard; Digital Mode buffers shots on a
   virtual SD card browsed through a Windows 98 explorer.
 publish_to: none
-version: 2.2.12+143
+version: 2.2.13+144
 
 environment:
-  sdk: ^3.12.0
-  flutter: ">=3.47.0"
+  sdk: ^3.14.0
+  flutter: ">=3.50.0"
 
 dependencies:
   flutter:
@@ -38,7 +38,7 @@ dependencies:
   # (core FFmpeg + MediaCodec/VideoToolbox, no GPL libs).
   ffmpeg_kit_flutter_new_min: ^3.6.4
   video_player: ^2.14.1
-  gal: ^2.3.3
+  gal: ^3.0.0
 
   # Sharing
   share_plus: ^13.3.1
@@ -61,6 +61,13 @@ dependencies:
   crypto: ^3.0.7
   quick_actions: ^1.1.1
   in_app_review: ^2.0.12
+  # Material widgets, out of the SDK since Flutter 3.50
+  material_ui: ^1.11.0
+
+# Held: shared_preferences_android 2.5.0 hung the app at launch in release
+# builds (its JNI calls stripped by R8). Move up only after a phone test.
+dependency_overrides:
+  shared_preferences_android: 2.4.28
 
 dev_dependencies:
   flutter_test:

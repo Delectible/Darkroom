@@ -9,7 +9,7 @@ import 'package:darkroom/features/camera/application/capture_controller.dart';
 import 'package:darkroom/features/camera/presentation/widgets/camera_controls.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:darkroom/features/camera/presentation/body_swap.dart' show BodyYaw;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

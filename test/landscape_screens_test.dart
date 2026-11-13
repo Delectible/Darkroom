@@ -12,7 +12,7 @@ import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:darkroom/features/cameras/presentation/stock_selector_screen.dart';
 import 'package:darkroom/features/settings/presentation/settings_sheet.dart';
 import 'package:darkroom/core/theme/retro_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

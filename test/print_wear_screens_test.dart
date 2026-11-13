@@ -5,7 +5,7 @@ import 'package:darkroom/core/processing/instant_frame.dart';
 import 'package:darkroom/features/corkboard/presentation/instant_print.dart';
 import 'package:darkroom/core/processing/paper_wear.dart';
 import 'package:darkroom/features/corkboard/presentation/print_frames.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 

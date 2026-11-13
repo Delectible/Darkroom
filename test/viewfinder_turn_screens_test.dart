@@ -15,7 +15,7 @@ import 'package:darkroom/features/camera/application/capture_controller.dart';
 import 'package:darkroom/features/camera/application/zoom_controller.dart';
 import 'package:darkroom/features/camera/presentation/viewport.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -5,7 +5,7 @@ import 'package:darkroom/features/sd_card/presentation/win98/games/bricks.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/games/minesweeper.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/games/pinball.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/games/solitaire.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 

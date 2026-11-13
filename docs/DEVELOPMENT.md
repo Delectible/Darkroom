@@ -8,7 +8,7 @@ your photo library until you press Save. **Digital Mode** writes to a virtual SD
 card browsed in a 9x‑style Explorer; files on the card are locked until you move
 them to "Local Disk (C:)", which also copies them to your photo library.
 
-Verified against **Flutter 3.47 stable / Dart 3.13** (`dart analyze`: 0 issues;
+Verified against **Flutter 3.50 stable / Dart 3.14** (`dart analyze`: 0 issues;
 pure‑Dart tests pass; every shader compiles for Impeller, Impeller‑GLES and
 SkSL; every video look was rendered end‑to‑end through an **LGPL‑only FFmpeg
 build**, i.e. the same filter set as the app's FFmpegKit "min"). Device runs:

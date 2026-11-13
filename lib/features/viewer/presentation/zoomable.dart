@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Swipe-between-photos viewer with its own touch handling, so zooming
 /// always wins over paging (a pinch whose first finger slid sideways used

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The room the reels are shown in: a dark wood-panelled wall, the picture
 /// on a matte screen (thin black border) lit by the projector behind you

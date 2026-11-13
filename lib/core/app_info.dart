@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.2.12';
+  static const version = '2.2.13';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The digital cameras\' flash meters the scene again, so close-up flash photos are no longer blown out. '
-      'The viewfinder shuts as you swipe between cameras with 2D graphics.';
+      'Snappier shutter: photos without flash are taken the instant you press, and the screen responds '
+      'faster to touch on iPhone. Built on the newest Flutter, with camera fixes.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

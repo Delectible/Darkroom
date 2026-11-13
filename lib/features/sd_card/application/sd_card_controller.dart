@@ -266,7 +266,7 @@ class SdTransferNotifier extends Notifier<TransferState?> {
         .toList();
     if (ready.isEmpty) return TransferOutcome.nothingToDo;
 
-    final access = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+    final access = await Gal.hasPermission(toAlbum: true) || await Gal.requestPermission(toAlbum: true);
     if (!access) return TransferOutcome.accessDenied;
 
     _cancel = false;

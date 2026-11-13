@@ -21,7 +21,7 @@ class Permissions {
 
   static Future<bool> granted(Perm p) async {
     try {
-      if (p == Perm.photos) return await Gal.hasAccess(toAlbum: true);
+      if (p == Perm.photos) return await Gal.hasPermission(toAlbum: true);
       return await _channel.invokeMethod<bool>('granted', {'kind': p.name}) ?? true;
     } catch (_) {
       return true; // can't tell (no channel): don't nag
@@ -31,7 +31,7 @@ class Permissions {
   /// Asks for [p] (only while the phone still shows its prompt).
   static Future<bool> request(Perm p) async {
     try {
-      if (p == Perm.photos) return await Gal.requestAccess(toAlbum: true);
+      if (p == Perm.photos) return await Gal.requestPermission(toAlbum: true);
       return await _channel.invokeMethod<bool>('request', {'kind': p.name}) ?? false;
     } catch (_) {
       return false;

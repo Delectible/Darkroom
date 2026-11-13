@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// A small Super 8 projection reel: pressed-metal flange with three windows
 /// showing the wound film, a hub, and a strip of label tape.

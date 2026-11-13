@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The app's main moves, shown on a little phone: a fingertip does the
 /// gesture and the screen answers, on a loop. Drawn, not video, so it costs

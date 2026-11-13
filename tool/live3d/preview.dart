@@ -28,7 +28,7 @@ import 'package:darkroom/features/camera/presentation/whole_body.dart';
 import 'package:darkroom/features/camera/presentation/whole_face.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
 import 'package:darkroom/features/settings/application/settings_controllers.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/scheduler.dart' show timeDilation;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// 16x16 pixel-art icons drawn from character maps (no bitmap assets).
 enum PixelIcon {

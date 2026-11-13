@@ -152,7 +152,7 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
   /// themselves (asks for the gallery first). Off: none do.
   Future<bool> setAutoSave(bool on) async {
     if (on) {
-      final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+      final ok = await Gal.hasPermission(toAlbum: true) || await Gal.requestPermission(toAlbum: true);
       if (!ok) return false;
     }
     state = on ? state.copyWith(autoSaveSince: DateTime.now()) : state.copyWith(clearAutoSave: true);
@@ -162,7 +162,7 @@ class GlobalSettingsNotifier extends Notifier<GlobalSettings> {
 
   Future<void> setSaveOriginalCopy(bool enabled) async {
     if (enabled) {
-      final ok = await Gal.hasAccess(toAlbum: true) || await Gal.requestAccess(toAlbum: true);
+      final ok = await Gal.hasPermission(toAlbum: true) || await Gal.requestPermission(toAlbum: true);
       if (!ok) return;
     }
     state = state.copyWith(saveOriginalCopy: enabled);

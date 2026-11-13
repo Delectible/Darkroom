@@ -6,6 +6,7 @@ import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'high_scores.dart';
 import 'skin_awards.dart';
 
 /// SOL.EXE: Klondike, draw one, made for a phone: tap a card and it goes
@@ -15,7 +16,7 @@ Future<void> showSolitaire(BuildContext context) => showWin98Window<void>(
   context,
   title: 'Solitaire',
   width: 300,
-  icon: const PixelIconView(PixelIcon.rabbit),
+  icon: const PixelIconView(PixelIcon.cards),
   builder: (context) => Padding(
     padding: const EdgeInsets.all(4),
     child: Column(
@@ -200,6 +201,13 @@ class _SolitaireGameState extends State<SolitaireGame> {
         _counted = true;
         Sfx.gameWin.play();
         awardSkins(context, SkinStats.solWins);
+        HighScores.count(context, HighScores.solitaireWins);
+        HighScores.best(
+          context,
+          HighScores.solitaireTime,
+          math.max(1, DateTime.now().difference(_dealt).inSeconds),
+          lower: true,
+        );
         if (DateTime.now().difference(_dealt) < const Duration(minutes: 5)) {
           awardSkins(context, SkinStats.solFast);
         }

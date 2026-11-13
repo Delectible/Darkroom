@@ -9,8 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Snappier shutter: photos without flash are taken the instant you press, and the screen responds '
-      'faster to touch on iPhone. Built on the newest Flutter, with camera fixes.';
+      'Darkroom 98 has a desktop with My Pictures, Camera, Games and Settings, a Games folder and High '
+      'Scores. Photos without flash are taken the instant you press, and the screen responds faster to touch '
+      'on iPhone. Built on the newest Flutter.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

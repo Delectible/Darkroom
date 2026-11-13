@@ -8,6 +8,7 @@ import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'high_scores.dart';
 import 'skin_awards.dart';
 import '../../../../../core/device/haptics.dart';
 
@@ -17,7 +18,7 @@ Future<void> showBricks(BuildContext context) => showWin98Window<void>(
   context,
   title: 'Bricks',
   width: 300,
-  icon: const PixelIconView(PixelIcon.rabbit),
+  icon: const PixelIconView(PixelIcon.bricks),
   builder: (context) => Padding(
     padding: const EdgeInsets.all(6),
     child: Column(
@@ -193,6 +194,7 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
       if (_bricks.every((b) => !b.alive)) {
         _served = false;
         _banner = 'You win! $_score points. Tap to play again';
+        HighScores.best(context, HighScores.bricks, _score);
         Sfx.gameWin.play();
         awardSkins(context, SkinStats.bricksWalls);
         unawaited(Haptics.mediumImpact());
@@ -204,6 +206,7 @@ class _BricksGameState extends State<BricksGame> with SingleTickerProviderStateM
       _served = false;
       Sfx.gameLose.play();
       _banner = _lives > 0 ? '$_lives left. Tap to serve' : 'Game over: $_score points. Tap to play again';
+      if (_lives <= 0) HighScores.best(context, HighScores.bricks, _score);
       return;
     }
     _ball = p;

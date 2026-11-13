@@ -195,10 +195,28 @@ void main() {
       expect(find.byType(ExplorerScreen), findsOneWidget);
       expect(find.textContaining('Exploring'), findsNothing);
       expect(find.text('Start'), findsOneWidget);
+      // The desktop: its icons; Games opens the folder, High Scores in it.
+      for (final name in ['My Pictures', 'Camera', 'Games', 'Settings']) {
+        expect(find.text(name), findsOneWidget);
+      }
       await shoot(tester, 'closed');
+      if (tag == '') {
+        await tester.tap(find.text('Games'));
+        await settle(tester);
+        expect(find.text('Pinball'), findsOneWidget);
+        await shoot(tester, 'games');
+        await tester.tap(find.text('High Scores'));
+        await settle(tester);
+        expect(find.text('Fastest win'), findsOneWidget);
+        await shoot(tester, 'high_scores');
+        await tester.tap(find.text('OK'));
+        await settle(tester);
+        Navigator.of(tester.element(find.text('Pinball'))).pop();
+        await settle(tester);
+      }
       await tester.tap(find.text('Start'));
       await settle(tester);
-      await tester.tap(find.text('My Pictures'));
+      await tester.tap(find.text('My Pictures').last); // (the Start menu's, over the desktop's)
       await settle(tester);
       expect(find.textContaining('Exploring - Local Disk'), findsWidgets);
     });

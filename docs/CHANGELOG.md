@@ -1013,3 +1013,14 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   camera except phones low on RAM: a no-flash photo is the frame at the
   press (the phone turns it off for a flash). Free with 3.50: a frame less
   touch latency on iPhone, a quicker first frame on Android with OpenGL.
+- [x] **67.23** → 2.2.13 · Save to Photos automatically on: the SD card and
+  floppy say "Auto Transfer is Enabled" under their "no files" line
+  (ExplorerFilePane.emptyNote).
+- [x] **67.24** → 2.2.13 · Darkroom 98's desktop (seen with the explorer
+  window shut): My Pictures (opens the window on C:), Camera (back out),
+  Games, Settings (Options). Games is a folder window with each game and
+  High Scores as big icons (games_folder.dart; new pixel icons: cards,
+  mine, bricks, pinball, trophy, joystick, settings, also on the games'
+  own windows). High Scores (HighScores, in shared prefs): Solitaire's
+  fastest win and wins, Minefield's best times, Bricks' and Pinball's high
+  scores, Pinball's best rank; kept from now on.

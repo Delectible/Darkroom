@@ -8,6 +8,7 @@ import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'high_scores.dart';
 import 'skin_awards.dart';
 import '../../../../../core/device/haptics.dart';
 
@@ -23,7 +24,7 @@ Future<void> showPinball(BuildContext context) => showWin98Window<void>(
   context,
   title: '3D Pinball for Darkroom - Space Rabbit',
   width: 300,
-  icon: const PixelIconView(PixelIcon.rabbit),
+  icon: const PixelIconView(PixelIcon.pinball),
   builder: (context) => Padding(
     padding: const EdgeInsets.all(6),
     child: Column(
@@ -250,6 +251,7 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     unawaited(Haptics.mediumImpact());
     _say('Mission complete! Promoted to ${_ranks[_rank]}', 3);
     awardSkins(context, SkinStats.pinballRank, atLeast: _rank);
+    HighScores.bestRank(context, HighScores.pinballRank, _rank, _ranks[_rank]);
   }
 
   // ---- input -----------------------------------------------------------------
@@ -455,6 +457,7 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
         _newBall();
       } else {
         _over = true;
+        HighScores.best(context, HighScores.pinball, _score);
         _ball = const Offset(-50, -50);
         _vel = Offset.zero;
         _say('Game over: $_score. Tap to play again', 999);
@@ -566,9 +569,8 @@ class _TablePainter extends CustomPainter {
         c,
         r,
         Paint()
-          ..shader = RadialGradient(
-            colors: [col, col.withValues(alpha: 0)],
-          ).createShader(Rect.fromCircle(center: c, radius: r)),
+          ..shader = RadialGradient(colors: [col, col.withValues(alpha: 0)])
+              .createShader(Rect.fromCircle(center: c, radius: r)),
       );
     }
     for (final (s, b) in _stars) {

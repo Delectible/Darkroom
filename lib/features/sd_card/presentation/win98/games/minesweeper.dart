@@ -7,6 +7,7 @@ import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'high_scores.dart';
 import 'skin_awards.dart';
 import '../../../../../core/device/haptics.dart';
 
@@ -17,7 +18,7 @@ Future<void> showMinesweeper(BuildContext context) => showWin98Window<void>(
   context,
   title: 'Minefield',
   width: 300,
-  icon: const PixelIconView(PixelIcon.rabbit),
+  icon: const PixelIconView(PixelIcon.mine),
   builder: (context) => const Padding(padding: EdgeInsets.all(6), child: MinesweeperGame()),
 );
 
@@ -160,6 +161,12 @@ class _MinesweeperGameState extends State<MinesweeperGame> {
       Sfx.gameWin.play();
       awardSkins(context, SkinStats.minesWins);
       if (_level == MineLevel.intermediate) awardSkins(context, SkinStats.minesHard);
+      HighScores.best(
+        context,
+        _level == MineLevel.beginner ? HighScores.minesBeginner : HighScores.minesIntermediate,
+        math.max(1, _seconds),
+        lower: true,
+      );
     } else {
       Sfx.w98Click.play();
     }

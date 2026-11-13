@@ -1037,7 +1037,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 
 ## 68. The Studio (2026-11-13)
 
-- [x] **68.1** → 2.4.0 · The Studio, off the corkboard (lib/features/studio):
+- [x] **68.1** → 2.4.0 (renamed 2.3.2: the owner wanted no minor bump) · The Studio, off the corkboard (lib/features/studio):
   - The way in: a Studio button in the board's header, badged with the prints
     waiting there (mockups: artifact Darkroom Studio Mockups, option A).
   - Prints go in from the print viewer (Add to Studio); their spot on the

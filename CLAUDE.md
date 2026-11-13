@@ -19,7 +19,8 @@ matching section of **`docs/NOTES.md`** before changing an area
   the failure).
 - User-visible change: bump `pubspec.yaml` version+build and
   `AppInfo.version`; set `AppInfo.latest` (Play's "What's new", plain
-  words). Unpushed changes share one version.
+  words). Unpushed changes share one version. Only ever bump the last
+  number (2.3.x); a bigger jump only when he says so.
 - Commit messages plain: no session links, no Co-Authored-By.
 - Log requests in `docs/CHANGELOG.md` by number; new ideas go there and on
   "the checklist": artifact **Darkroom Release Sweep**,

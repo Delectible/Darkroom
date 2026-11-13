@@ -1073,3 +1073,22 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     StudioPaperView), in the previews and the saved pieces.
   - Flip Book: speed slider (0.15-0.9 s a page); the white flash covers
     only the print, not the paper round it, in the preview and the video.
+- 68.2 The book as an album, the page turn, flip books as booklets (2026-11-13)
+  - Style A (approved from mockups): cream grained pages in a stitched
+    leather cover, page edges beneath, the spine's shadow, "— n —" in serif.
+  - Page turn (studio_page_turn.dart): drag anywhere, the page folds along
+    the line under the finger (the corner reflected across it), its back
+    showing, shadows in the fold and beneath; past halfway or a flick goes
+    over; ‹ › turn it for you. Save page to Photos.
+  - Packing (studio_layout.dart): pages are 3:4; for each page every split
+    of the next pieces (up to 6) into rows or columns is tried, scored on
+    paper covered and pieces placed, none under a third or over two thirds
+    of the page; then each is turned and nudged a little by its id. Strips
+    are taped, collages held by photo corners.
+  - A scrapbook is its page: the picture edge to edge.
+  - Flip books keep their photos (flipbook_<id>/) with paper and speed; on
+    the page a clipped booklet that riffles now and then; tapped, it's held
+    big, flicking through at a speed slider, Replay, Share / Save video
+    (made again at the new speed). Older ones show their video.
+  - Corkboard: dog-ear cut out so the cork shows under the fold, no tick;
+    Studio house icon; Save all and Return all without underlines.

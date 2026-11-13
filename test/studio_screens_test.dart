@@ -6,6 +6,7 @@ import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/studio/studio_book_screen.dart';
 import 'package:darkroom/features/studio/studio_makers.dart';
+import 'package:darkroom/features/studio/studio_page_turn.dart';
 import 'package:darkroom/features/studio/studio_render.dart';
 import 'package:darkroom/features/studio/studio_screen.dart';
 import 'package:darkroom/features/studio/studio_store.dart';
@@ -73,7 +74,7 @@ void main() {
       initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
       filmItemsProvider.overrideWith((ref) => Stream.value(prints)),
       studioProvider.overrideWith(() => _Studio([for (final m in prints.take(inStudio)) m.id])),
-      studioBookProvider.overrideWith(_Book.new),
+      studioBookProvider.overrideWith(() => _Book()),
     ],
     child: RepaintBoundary(
       key: boundary,
@@ -134,17 +135,101 @@ void main() {
     });
   }
 
-  test('book pages: a scrapbook alone, strips and collages share', () {
-    StudioWork w(StudioKind k, int i) =>
-        StudioWork(id: '$i', kind: k, path: '/x$i', createdAt: DateTime(2026));
-    final pages = studioPages([
-      w(StudioKind.strip, 1),
-      w(StudioKind.strip, 2),
-      w(StudioKind.collage, 3), // 1 + 1 + 2 > 3: new page
-      w(StudioKind.scrapbook, 4),
-      w(StudioKind.strip, 5),
-    ]);
-    expect([for (final p in pages) p.map((x) => x.id).join(',')], ['1,2', '3', '4', '5']);
+  testWidgets('the book: an album page packed by hand, the page turn, a flip book', (tester) async {
+    await phone(tester);
+    final dir = Directory.systemTemp.createTempSync('book');
+    String pic(String name, int w, int h, int tone) {
+      final im = img.Image(width: w, height: h);
+      for (final p in im) {
+        p
+          ..r = 30 + (p.x * 2 + tone) % 200
+          ..g = 50 + (p.y + tone) % 150
+          ..b = 80 + tone % 120;
+      }
+      final path = '${dir.path}/$name.jpg';
+      File(path).writeAsBytesSync(img.encodeJpg(im));
+      return path;
+    }
+
+    StudioWork w(String id, StudioKind k, String path, {List<String> pages = const []}) => StudioWork(
+      id: id,
+      kind: k,
+      path: path,
+      cover: k == StudioKind.flipbook ? pages.first : null,
+      pages: pages,
+      paper: 'cream',
+      pageMs: 360,
+      createdAt: DateTime(2026, 11, 13),
+    );
+    final works = [
+      w('s1', StudioKind.strip, pic('s1', 240, 800, 10)),
+      w('c1', StudioKind.collage, pic('c1', 800, 800, 60)),
+      w('s2', StudioKind.strip, pic('s2', 260, 700, 120)),
+      w('c2', StudioKind.collage, pic('c2', 900, 640, 170)),
+      w('f1', StudioKind.flipbook, '/none.mp4', pages: [for (final m in prints) m.outputPath!]),
+      w('sb', StudioKind.scrapbook, pic('sb', 900, 1200, 90)),
+    ];
+    await tester.runAsync(() async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+            studioBookProvider.overrideWith(() => _Book(works)),
+          ],
+          child: RepaintBoundary(
+            key: boundary,
+            child: const MaterialApp(debugShowCheckedModeBanner: false, home: StudioBookScreen()),
+          ),
+        ),
+      );
+      for (var i = 0; i < 20; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+    });
+    expect(find.text('page 1 of 2'), findsOneWidget);
+    await shoot(tester, 'book');
+    // drag the page part way over
+    final page = tester.getRect(find.byType(PageTurn));
+    final g = await tester.startGesture(page.bottomRight - const Offset(20, 60));
+    await g.moveBy(const Offset(-40, 0));
+    await tester.pump();
+    await g.moveBy(Offset(-page.width * 0.45, -30));
+    await tester.pump();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+    await tester.pump();
+    await shoot(tester, 'book_turn');
+    await g.moveBy(Offset(-page.width * 0.4, 0));
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(find.text('page 2 of 2'), findsOneWidget);
+    for (var i = 0; i < 8; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump();
+    }
+    await shoot(tester, 'book_scrapbook');
+    // the flip book, held big
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+          studioBookProvider.overrideWith(() => _Book(works)),
+        ],
+        child: RepaintBoundary(
+          key: boundary,
+          child: MaterialApp(debugShowCheckedModeBanner: false, home: FlipBookViewer(work: works[4])),
+        ),
+      ),
+    );
+    for (var i = 0; i < 8; i++) {
+      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+      await tester.pump();
+    }
+    // (into the second page, the first swinging away)
+    await tester.pump(const Duration(milliseconds: 360 + 90));
+    expect(find.text('Save video'), findsOneWidget);
+    await shoot(tester, 'flipbook_viewer');
+    await tester.pumpWidget(const SizedBox());
   });
 
   test('how many each takes', () {
@@ -166,6 +251,10 @@ class _Studio extends StudioNotifier {
 }
 
 class _Book extends StudioBook {
+  _Book([this.works = const []]);
+
+  final List<StudioWork> works;
+
   @override
-  Future<List<StudioWork>> build() async => const [];
+  Future<List<StudioWork>> build() async => works;
 }

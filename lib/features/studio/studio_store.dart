@@ -70,6 +70,9 @@ class StudioWork {
     required this.path,
     required this.createdAt,
     this.cover,
+    this.pages = const [],
+    this.paper,
+    this.pageMs,
   });
 
   final String id;
@@ -82,6 +85,25 @@ class StudioWork {
   final String? cover;
   final DateTime createdAt;
 
+  /// A flip book's photos, one a page (the book riffles through them, and
+  /// a new speed is made from them); empty for flip books from before.
+  final List<String> pages;
+
+  /// A flip book's paper (a [StudioPaper] name) and time a page.
+  final String? paper;
+  final int? pageMs;
+
+  StudioWork copyWith({String? path, String? cover, int? pageMs}) => StudioWork(
+    id: id,
+    kind: kind,
+    path: path ?? this.path,
+    createdAt: createdAt,
+    cover: cover ?? this.cover,
+    pages: pages,
+    paper: paper,
+    pageMs: pageMs ?? this.pageMs,
+  );
+
   bool get isVideo => kind == StudioKind.flipbook;
 
   Map<String, Object?> toJson() => {
@@ -90,6 +112,9 @@ class StudioWork {
     'path': path,
     'cover': cover,
     'at': createdAt.millisecondsSinceEpoch,
+    if (pages.isNotEmpty) 'pages': pages,
+    'paper': ?paper,
+    'pageMs': ?pageMs,
   };
 
   static StudioWork? fromJson(Object? j) {
@@ -103,6 +128,13 @@ class StudioWork {
       path: path,
       cover: j['cover'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(at),
+      pages: [
+        if (j['pages'] case final List<Object?> l)
+          for (final x in l)
+            if (x is String) x,
+      ],
+      paper: j['paper'] as String?,
+      pageMs: j['pageMs'] as int?,
     );
   }
 }
@@ -143,6 +175,13 @@ class StudioBook extends AsyncNotifier<List<StudioWork>> {
     await _save(now);
   }
 
+  /// [w] in place of the piece with its id (a flip book at a new speed).
+  Future<void> replace(StudioWork w) async {
+    final now = [for (final x in state.value ?? await future) x.id == w.id ? w : x];
+    state = AsyncData(now);
+    await _save(now);
+  }
+
   Future<void> delete(StudioWork w) async {
     final now = [
       for (final x in state.value ?? const <StudioWork>[])
@@ -150,10 +189,15 @@ class StudioBook extends AsyncNotifier<List<StudioWork>> {
     ];
     state = AsyncData(now);
     await _save(now);
-    for (final p in [w.path, w.cover]) {
+    for (final p in [w.path, w.cover, ...w.pages]) {
       if (p == null) continue;
       try {
         await File(p).delete();
+      } catch (_) {}
+    }
+    if (w.pages.isNotEmpty) {
+      try {
+        await File(w.pages.first).parent.delete(recursive: true);
       } catch (_) {}
     }
   }

@@ -23,7 +23,6 @@ CLAUDE.md.)
   stop 200 ms short of their end (StopShort: a clip running out froze the
   app); 2.2.0 the big 2.1.x feature set. CHANGELOG 64.x has every item.
 - **Waiting on the owner:**
-  - "release to iPhone" for 2.2.3 (App Store is on 2.2.0).
   - App Store search wording (name `Darkroom: Film & Retro Camera`,
     subtitle `Disposable, 35mm & instant cam`, keywords
     `analog,vintage,camcorder,super8,8mm,grain,y2k,ccd,digicam,old,photo,filter,effect,aesthetic,90s,cine`):
@@ -49,12 +48,13 @@ CLAUDE.md.)
     /usr/local/darkroom. The scene loads after ~12-15 s (add a WAIT). Model
     materials must be changed before `scene.add(node)` (LiveBody), or they
     don't take.
-- **App Store:** 2.2.0 (build 191) live since 2026-11-08 (apps.apple.com
-  id6826318702, "Darkroom: A Film Camera"); 2.0.3 before it. Newer builds
-  only on TestFlight until the owner says "release to iPhone".
+- **App Store:** 2.3.0 sent to App Review on 2026-11-13 (appstore-release.yml,
+  run 208's build; releases itself once approved). Before it: 2.2.0 (build
+  191, live 2026-11-08), 2.0.3. Newer builds only on TestFlight until the
+  owner says "release to iPhone".
 - **Google Play:** production access was refused on 2026-11-01 ("needs more
   testing"). Plan: keep promoting a stable build to closed testing about
-  weekly (last: 2.0.4, build 163), then reapply. Internal testing gets every
+  weekly (last: 2.3.0, 2026-11-13), then reapply. Internal testing gets every
   `main` build.
 - **To verify on the owner's phones (not possible in the cloud):** digital
   3D skins swapping in (grip has its own normal map: the desktop preview

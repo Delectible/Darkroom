@@ -18,6 +18,7 @@ import '../../viewer/presentation/zoomable.dart';
 import '../../../core/processing/instant_frame.dart';
 import 'instant_print.dart';
 import 'print_frames.dart';
+import '../../studio/studio_screen.dart';
 import '../../studio/studio_store.dart';
 import '../application/sample_prints.dart';
 import '../../camera/application/camera_ui_state.dart';
@@ -611,7 +612,7 @@ class _ActionBar extends StatelessWidget {
           ],
           if (onWrite != null) _RoundAction(icon: Icons.edit_outlined, label: 'Write', onTap: onWrite),
           if (onStudio != null)
-            _RoundAction(icon: Icons.collections_outlined, label: 'Add to Studio', onTap: onStudio),
+            _RoundAction(glyph: const StudioHouseIcon(size: 22), label: 'Add to Studio', onTap: onStudio),
           if (onFrame != null)
             _RoundAction(
               icon: Icons.filter_frames_outlined,
@@ -629,14 +630,18 @@ class _ActionBar extends StatelessWidget {
 class _RoundAction extends StatelessWidget {
   const _RoundAction({
     super.key,
-    required this.icon,
+    this.icon,
+    this.glyph,
     required this.label,
     this.onTap,
     this.primary = false,
     this.highlighted = false,
   });
 
-  final IconData icon;
+  final IconData? icon;
+
+  /// Drawn instead of [icon] (the Studio's house).
+  final Widget? glyph;
   final String label;
   final VoidCallback? onTap;
   final bool primary;
@@ -658,7 +663,10 @@ class _RoundAction extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-            child: Icon(icon, color: fg),
+            child: IconTheme(
+              data: IconThemeData(color: fg, size: 24),
+              child: Center(child: glyph ?? Icon(icon)),
+            ),
           ),
           const SizedBox(height: 6),
           Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),

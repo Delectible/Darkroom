@@ -940,8 +940,6 @@ class _Header extends StatelessWidget {
                                       color: ink,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
-                                      decoration: TextDecoration.underline,
-                                      decorationColor: Color(0x99F3E3C8),
                                     ),
                                   ),
                                 ),
@@ -967,7 +965,7 @@ class _Header extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
               ),
-              icon: const Icon(Icons.collections_outlined, size: 18),
+              icon: const StudioHouseIcon(),
               label: const Text('Studio'),
             ),
           ),
@@ -1308,20 +1306,6 @@ class PinnedPrint extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // Pencilled tick on the border once it's in the library.
-                      if (item.isSaved && !SamplePrints.isSample(item))
-                        const Positioned(
-                          right: 3,
-                          bottom: -1,
-                          child: Text(
-                            '✓',
-                            style: TextStyle(
-                              color: Color(0xFF6D6D6D),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
                       // The pin: head centred in the top border of the print.
                       Positioned(
                         top: -7,
@@ -2386,7 +2370,10 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                 maintainSize: true,
                 maintainAnimation: true,
                 maintainState: true,
-                child: widget.front,
+                // (the folded corner cut away, so the cork shows under the fold)
+                child: showBack
+                    ? widget.front
+                    : ClipPath(clipper: const _CornerCut(_earSize), child: widget.front),
               ),
               if (!showBack) ...[
                 // The folded corner: the tap target for the easter egg.
@@ -2403,7 +2390,7 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                       height: 46,
                       child: Align(
                         alignment: Alignment.bottomRight,
-                        child: CustomPaint(size: Size(12, 12), painter: _DogEar()),
+                        child: CustomPaint(size: Size(_earSize, _earSize), painter: _DogEar()),
                       ),
                     ),
                   ),
@@ -2429,35 +2416,74 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
   }
 }
 
-/// A turned-up paper corner.
+const double _earSize = 12;
+
+/// Everything round a print (its shadow too) but the bottom-right corner
+/// that's folded over.
+class _CornerCut extends CustomClipper<Path> {
+  const _CornerCut(this.ear);
+
+  final double ear;
+
+  @override
+  Path getClip(Size size) {
+    final w = size.width, h = size.height;
+    return Path.combine(
+      PathOperation.difference,
+      Path()..addRect((Offset.zero & size).inflate(40)),
+      Path()
+        ..moveTo(w, h - ear)
+        ..lineTo(w + 40, h - ear)
+        ..lineTo(w + 40, h + 40)
+        ..lineTo(w - ear, h + 40)
+        ..lineTo(w - ear, h)
+        ..close(),
+    );
+  }
+
+  @override
+  bool shouldReclip(_CornerCut old) => old.ear != ear;
+}
+
+/// A turned-up paper corner: the flap folded over onto the print, its soft
+/// shadow on the cork where the corner was.
 class _DogEar extends CustomPainter {
   const _DogEar();
 
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width, h = size.height;
+    // the flap's shadow, falling on the cork
     canvas.drawPath(
       Path()
         ..moveTo(w, 0)
-        ..lineTo(w, h)
+        ..lineTo(w * 0.55, h * 0.75)
         ..lineTo(0, h)
         ..close(),
-      Paint()..color = const Color(0x55000000),
+      Paint()
+        ..color = const Color(0x44000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
     );
+    // the flap: the back of the paper, a touch darker towards the crease
     canvas.drawPath(
       Path()
         ..moveTo(w, 0)
         ..lineTo(0, h)
         ..lineTo(0, 0)
         ..close(),
-      Paint()..color = const Color(0xFFE9E3D6),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF1ECE1), Color(0xFFD9D2C3)],
+        ).createShader(Offset.zero & size),
     );
     canvas.drawLine(
       Offset(w, 0),
       Offset(0, h),
       Paint()
-        ..color = const Color(0x33000000)
-        ..strokeWidth = 0.8,
+        ..color = const Color(0x40000000)
+        ..strokeWidth = 0.7,
     );
   }
 

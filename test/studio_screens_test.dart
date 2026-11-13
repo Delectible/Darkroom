@@ -102,7 +102,7 @@ void main() {
     expect(find.textContaining('3 or 4 prints · ready'), findsOneWidget);
     expect(find.textContaining('1 more needed'), findsOneWidget); // flip book: 4 to 24
     expect(find.textContaining('pick which'), findsOneWidget); // collage: 2, 4, 6 or 9
-    expect(find.text('Return all to the board'), findsOneWidget);
+    expect(find.text('RETURN ALL TO THE BOARD'), findsOneWidget);
     await shoot(tester, 'table');
   });
 

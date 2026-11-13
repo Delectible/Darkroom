@@ -26,6 +26,60 @@ class StudioInk {
   static const card = Color(0xFF4A3324);
 }
 
+/// The Studio's sign: a little house with a door.
+class StudioHouseIcon extends StatelessWidget {
+  const StudioHouseIcon({super.key, this.size = 18, this.color});
+
+  final double size;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+    size: Size.square(size),
+    painter: _HousePainter(color ?? IconTheme.of(context).color ?? StudioInk.ink),
+  );
+}
+
+class _HousePainter extends CustomPainter {
+  const _HousePainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // (drawn on a 24-unit grid, like an icon)
+    final k = size.width / 24;
+    canvas.scale(k);
+    final pen = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.1
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.drawPath(
+      Path()
+        ..moveTo(4, 21)
+        ..lineTo(4, 9)
+        ..lineTo(12, 3)
+        ..lineTo(20, 9)
+        ..lineTo(20, 21)
+        ..close(),
+      pen,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(9.5, 21)
+        ..lineTo(9.5, 15)
+        ..lineTo(14.5, 15)
+        ..lineTo(14.5, 21),
+      pen,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_HousePainter old) => old.color != color;
+}
+
 /// The table's wood: a warm grain and the lamp's pool of light.
 class StudioTable extends StatelessWidget {
   const StudioTable({super.key, required this.child});
@@ -247,13 +301,18 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
               if (prints.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Center(
-                    child: TextButton(
+                    child: TextButton.icon(
                       onPressed: () => _returnAll(prints),
-                      style: TextButton.styleFrom(foregroundColor: StudioInk.brass),
-                      child: const Text(
-                        'Return all to the board',
-                        style: TextStyle(decoration: TextDecoration.underline),
+                      style: TextButton.styleFrom(
+                        foregroundColor: StudioInk.label,
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                          fontSize: 12,
+                        ),
                       ),
+                      icon: const Icon(Icons.push_pin_outlined, size: 15),
+                      label: const Text('RETURN ALL TO THE BOARD'),
                     ),
                   ),
                 ),

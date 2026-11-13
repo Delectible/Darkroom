@@ -1062,3 +1062,14 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - The book (studio/book.json in app support): strips and collages share
     pages, a scrapbook fills one; tap one for Save to Photos (album
     "Darkroom Studio"), Share, Remove. All free for now.
+- 68.1 Studio feedback (2026-11-13)
+  - Corkboard header: a labelled "Studio" button (icon, badge of prints
+    waiting); Save all moved under the title as a tappable line.
+  - Scrapbook: pieces keyed (lifting one reordered the pile and the
+    gestures went to the wrong print); one page gesture picks the piece on
+    top under your finger, pinching beside the picked one still works.
+    Size slider for the picked piece; six pen colours for writing.
+  - Kraft is textured everywhere (mottling, fibres, flecks: paintPaper /
+    StudioPaperView), in the previews and the saved pieces.
+  - Flip Book: speed slider (0.15-0.9 s a page); the white flash covers
+    only the print, not the paper round it, in the preview and the video.

@@ -33,12 +33,20 @@ class StudioMake {
     return StudioWork(id: id, kind: kind, path: path, createdAt: DateTime.now());
   }
 
-  /// How long each page shows, and how often it shakes within that.
-  static const _pageMs = 360, _shakeMs = 120, _flashMs = 34;
+  /// How often a page shakes, and how long the flash between pages lasts.
+  static const _shakeMs = 120, _flashMs = 34;
 
-  /// A flip book: each photo snaps to the next with a white flash and a
-  /// handheld shake, as a 4:5 MP4 (a video, for Instagram).
-  static Future<StudioWork> flipBook(List<MediaItem> prints, StudioPaper paper) async {
+  /// A page's time: the speed slider's range and starting point.
+  static const pageMsMin = 150, pageMsMax = 900, pageMsDefault = 360;
+
+  /// A flip book: each photo snaps to the next with a flash of the print
+  /// and a handheld shake, [pageMs] a page, as a 4:5 MP4 (a video, for
+  /// Instagram).
+  static Future<StudioWork> flipBook(
+    List<MediaItem> prints,
+    StudioPaper paper, {
+    int pageMs = pageMsDefault,
+  }) async {
     final id = _id();
     final dir = await StudioBook.folder();
     final work = Directory('${Directory.systemTemp.path}/flipbook_$id');
@@ -46,15 +54,21 @@ class StudioMake {
     try {
       final images = await photos(prints, maxSide: 1200);
       final list = StringBuffer();
-      final flash = '${work.path}/flash.png';
-      await writeStudioPng(await _flat(const ui.Color(0xFFFFFFFF)), flash);
+      // (each page shakes every 120 ms; a fast page holds one pose)
+      final shakes = (pageMs / _shakeMs).round().clamp(1, 8);
+      final hold = pageMs / shakes / 1000;
       String? last;
       for (var i = 0; i < images.length; i++) {
-        if (i > 0) list.writeln("file '$flash'\nduration ${_flashMs / 1000}");
-        for (var k = 0; k < _pageMs ~/ _shakeMs; k++) {
+        if (i > 0) {
+          // the incoming print flashes white as the page turns
+          final f = '${work.path}/f$i.png';
+          await writeStudioPng(await renderFlipPage(images[i], paper, i * 9, flash: true), f);
+          list.writeln("file '$f'\nduration ${_flashMs / 1000}");
+        }
+        for (var k = 0; k < shakes; k++) {
           final f = '${work.path}/p${i}_$k.png';
-          await writeStudioPng(await renderFlipPage(images[i], paper, i * 3 + k), f);
-          list.writeln("file '$f'\nduration ${_shakeMs / 1000}");
+          await writeStudioPng(await renderFlipPage(images[i], paper, i * 9 + k), f);
+          list.writeln("file '$f'\nduration $hold");
           last = f;
         }
       }
@@ -81,11 +95,5 @@ class StudioMake {
         await work.delete(recursive: true);
       } catch (_) {}
     }
-  }
-
-  static Future<ui.Image> _flat(ui.Color color) {
-    final rec = ui.PictureRecorder();
-    ui.Canvas(rec).drawRect(const ui.Rect.fromLTWH(0, 0, 1080, 1350), ui.Paint()..color = color);
-    return rec.endRecording().toImage(1080, 1350);
   }
 }

@@ -271,15 +271,17 @@ class _FlipMaker extends ConsumerStatefulWidget {
 
 class _FlipMakerState extends ConsumerState<_FlipMaker> {
   StudioPaper _paper = StudioPaper.cream;
+  int _pageMs = StudioMake.pageMsDefault;
   late final Timer _tick;
-  int _step = 0;
+  final _clock = Stopwatch()..start();
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(milliseconds: 120), (_) {
-      if (mounted) setState(() => _step++);
+    // (a steady 25 frames a second; the page and shake follow the clock)
+    _tick = Timer.periodic(const Duration(milliseconds: 40), (_) {
+      if (mounted) setState(() {});
     });
   }
 
@@ -292,7 +294,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
   Future<void> _make() async {
     setState(() => _busy = true);
     try {
-      final work = await StudioMake.flipBook(widget.prints, _paper);
+      final work = await StudioMake.flipBook(widget.prints, _paper, pageMs: _pageMs);
       await ref.read(studioBookProvider.notifier).add(work);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -305,12 +307,15 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
 
   @override
   Widget build(BuildContext context) {
-    // 3 shakes a page (360 ms), a flash as the page changes
-    final page = (_step ~/ 3) % widget.prints.length;
-    final flash = _step % 3 == 0;
-    final rnd = math.Random(_step);
+    final ms = _clock.elapsedMilliseconds;
+    final page = (ms ~/ _pageMs) % widget.prints.length;
+    final into = ms % _pageMs;
+    // the print flashes white for a moment as each page turns
+    final flash = into < 40 && ms >= _pageMs;
+    final rnd = math.Random(page * 9 + into ~/ 120);
     final m = widget.prints[page];
     final path = m.outputPath;
+    final seconds = widget.prints.length * _pageMs / 1000;
     return _MakerScaffold(
       title: 'Flip Book',
       body: AspectRatio(
@@ -318,7 +323,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            ColoredBox(color: _paper.color),
+            StudioPaperView(paper: _paper),
             Center(
               child: Transform.translate(
                 offset: Offset((rnd.nextDouble() - 0.5) * 4, (rnd.nextDouble() - 0.5) * 4),
@@ -329,24 +334,52 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       color: const Color(0xFFF7F4EE),
-                      child: path == null
-                          ? const SizedBox(height: 120)
-                          : Image.file(File(path), cacheWidth: 700, gaplessPlayback: true),
+                      child: Stack(
+                        children: [
+                          if (path == null)
+                            const SizedBox(height: 120)
+                          else
+                            Image.file(File(path), cacheWidth: 700, gaplessPlayback: true),
+                          // (only the print flashes, not the paper round it)
+                          if (flash) const Positioned.fill(child: ColoredBox(color: Color(0xFFFFFFFF))),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            if (flash) const ColoredBox(color: Color(0x99FFFFFF)),
           ],
         ),
       ),
       options: [
         Text(
-          '${widget.prints.length} pages, about ${(widget.prints.length * 0.4).toStringAsFixed(1)} s. '
+          '${widget.prints.length} pages, about ${seconds.toStringAsFixed(1)} s. '
           'Saved as a video, ready for Instagram.',
           textAlign: TextAlign.center,
           style: const TextStyle(color: StudioInk.muted, fontSize: 12),
+        ),
+        Row(
+          children: [
+            const SizedBox(
+              width: 58,
+              child: Text('Speed', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
+            ),
+            const Text('Slow', style: TextStyle(color: StudioInk.muted, fontSize: 11)),
+            Expanded(
+              child: Slider(
+                // (right = faster: the slider runs from the longest page to the shortest)
+                value: (StudioMake.pageMsMax + StudioMake.pageMsMin - _pageMs).toDouble(),
+                min: StudioMake.pageMsMin.toDouble(),
+                max: StudioMake.pageMsMax.toDouble(),
+                activeColor: StudioInk.brass,
+                inactiveColor: StudioInk.card,
+                onChanged: (v) =>
+                    setState(() => _pageMs = StudioMake.pageMsMax + StudioMake.pageMsMin - v.round()),
+              ),
+            ),
+            const Text('Fast', style: TextStyle(color: StudioInk.muted, fontSize: 11)),
+          ],
         ),
         _Choices<StudioPaper>(
           label: 'Paper',
@@ -371,6 +404,9 @@ class _Piece {
   final String? path;
   String? text;
   final bool title;
+  // (the writing's colour; null follows the page)
+  Color? color;
+  final key = GlobalKey();
   Offset at;
   double scale = 1;
   double turn = 0;
@@ -400,6 +436,16 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
   double _startScale = 1, _startTurn = 0;
 
   Color get _ink => _paper == StudioPaper.black ? const Color(0xFFF1E9DA) : const Color(0xFF2A1A10);
+
+  // the pens: brown-black, chalk white, red, navy, green, gold
+  static const _inks = [
+    Color(0xFF2A1A10),
+    Color(0xFFF1E9DA),
+    Color(0xFFB3261E),
+    Color(0xFF1F3A68),
+    Color(0xFF2E6B3A),
+    Color(0xFFC8962E),
+  ];
 
   Future<void> _lay(Size size) async {
     _size = size;
@@ -480,6 +526,58 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
     }
   }
 
+  /// The piece on top under [global], or null: each piece checked in its
+  /// own turned and sized frame, so the one you touch is the one you get.
+  _Piece? _pieceAt(Offset global) {
+    for (final p in _pieces.reversed) {
+      final box = p.key.currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) continue;
+      // (a little slack round small pieces and writing)
+      if ((Offset.zero & box.size).inflate(8).contains(box.globalToLocal(global))) return p;
+    }
+    return null;
+  }
+
+  void _lift(_Piece p) {
+    _selected = p;
+    _pieces
+      ..remove(p)
+      ..add(p);
+  }
+
+  // One gesture for the whole page: it picks the piece under the first
+  // finger (or keeps the picked one when you pinch beside it).
+  _Piece? _moving;
+
+  void _scaleStart(ScaleStartDetails d) {
+    final p = _pieceAt(d.focalPoint) ?? (d.pointerCount > 1 ? _selected : null);
+    _moving = p;
+    if (p == null) return;
+    _startScale = p.scale;
+    _startTurn = p.turn;
+    setState(() => _lift(p));
+  }
+
+  void _scaleUpdate(ScaleUpdateDetails d) {
+    final p = _moving;
+    if (p == null) {
+      // (a second finger joined a drag that started on bare page)
+      if (d.pointerCount > 1 && _selected != null) {
+        _moving = _selected;
+        _startScale = _selected!.scale / d.scale;
+        _startTurn = _selected!.turn - d.rotation;
+      }
+      return;
+    }
+    setState(() {
+      p.at += d.focalPointDelta;
+      p.scale = (_startScale * d.scale).clamp(0.3, 3.0);
+      p.turn = _startTurn + d.rotation;
+    });
+  }
+
+  Offset? _tapAt;
+
   Widget _pieceView(_Piece p, double width) {
     final picked = identical(p, _selected);
     final Widget look = p.path != null
@@ -491,44 +589,19 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
               fontFamily: 'Caveat',
               fontWeight: FontWeight.w600,
               fontSize: width * (p.title ? 0.1 : 0.065),
-              color: _ink,
+              color: p.color ?? _ink,
               height: 1.05,
             ),
           );
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => setState(() {
-        _selected = p;
-        // (to the top of the pile)
-        _pieces
-          ..remove(p)
-          ..add(p);
-      }),
-      onDoubleTap: p.text != null ? () => _edit(p) : null,
-      onScaleStart: (_) {
-        _startScale = p.scale;
-        _startTurn = p.turn;
-        setState(() {
-          _selected = p;
-          _pieces
-            ..remove(p)
-            ..add(p);
-        });
-      },
-      onScaleUpdate: (d) => setState(() {
-        p.at += d.focalPointDelta;
-        p.scale = (_startScale * d.scale).clamp(0.3, 3.0);
-        p.turn = _startTurn + d.rotation;
-      }),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: picked ? Border.all(color: StudioInk.brass, width: 1.5) : null,
-          boxShadow: p.path != null
-              ? const [BoxShadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(2, 4))]
-              : null,
-        ),
-        child: look,
+    return DecoratedBox(
+      key: p.key,
+      decoration: BoxDecoration(
+        border: picked ? Border.all(color: StudioInk.brass, width: 1.5) : null,
+        boxShadow: p.path != null
+            ? const [BoxShadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(2, 4))]
+            : null,
       ),
+      child: look,
     );
   }
 
@@ -545,16 +618,35 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
               WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_lay(box.biggest)));
             }
             return GestureDetector(
-              onTap: () => setState(() => _selected = null),
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (d) => setState(() {
+                final p = _pieceAt(d.globalPosition);
+                if (p == null) {
+                  _selected = null;
+                } else {
+                  _lift(p);
+                }
+              }),
+              onDoubleTapDown: (d) => _tapAt = d.globalPosition,
+              onDoubleTap: () {
+                final at = _tapAt;
+                final p = at == null ? null : _pieceAt(at);
+                if (p?.text != null) unawaited(_edit(p!));
+              },
+              onScaleStart: _scaleStart,
+              onScaleUpdate: _scaleUpdate,
+              onScaleEnd: (_) => _moving = null,
               child: RepaintBoundary(
                 key: _page,
                 child: ClipRect(
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      Positioned.fill(child: ColoredBox(color: _paper.color)),
+                      Positioned.fill(child: StudioPaperView(paper: _paper)),
                       for (final p in _pieces)
                         Positioned(
+                          // (keyed: lifting a piece to the top reorders the pile)
+                          key: ObjectKey(p),
                           left: p.at.dx,
                           top: p.at.dy,
                           child: FractionalTranslation(
@@ -595,6 +687,53 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
             ),
           ],
         ),
+        if (picked != null)
+          Row(
+            children: [
+              const SizedBox(
+                width: 58,
+                child: Text('Size', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
+              ),
+              Expanded(
+                child: Slider(
+                  value: picked.scale.clamp(0.3, 3.0),
+                  min: 0.3,
+                  max: 3,
+                  activeColor: StudioInk.brass,
+                  inactiveColor: StudioInk.card,
+                  onChanged: (v) => setState(() => picked.scale = v),
+                ),
+              ),
+            ],
+          ),
+        if (picked?.text != null)
+          Row(
+            children: [
+              const SizedBox(
+                width: 58,
+                child: Text('Colour', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
+              ),
+              for (final c in _inks)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => picked.color = c),
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: c,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: (picked!.color ?? _ink) == c ? StudioInk.brass : StudioInk.card,
+                          width: (picked.color ?? _ink) == c ? 3 : 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         const Text(
           'Drag to move · pinch to size and turn · double-tap writing to change it',
           textAlign: TextAlign.center,

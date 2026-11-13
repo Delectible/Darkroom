@@ -877,12 +877,12 @@ class _Header extends StatelessWidget {
             icon: const Icon(Icons.arrow_back, color: ink),
             tooltip: 'Back to camera',
           ),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // (one line, shrunk to fit beside the Studio door and Save all)
-                FittedBox(
+                // (one line, shrunk to fit beside the Studio door)
+                const FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -891,60 +891,85 @@ class _Header extends StatelessWidget {
                     style: TextStyle(color: ink, fontWeight: FontWeight.w900, letterSpacing: 3, fontSize: 16),
                   ),
                 ),
-                Text(
-                  'tap to inspect · hold to share',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Color(0xFFD8C3A0), fontSize: 11),
+                // Save all lives here now, under the title.
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  layoutBuilder: (current, previous) =>
+                      Stack(alignment: Alignment.centerLeft, children: [...previous, ?current]),
+                  child: total == 0 || (unsaved == 0 && !saving)
+                      ? Row(
+                          key: const ValueKey('saved'),
+                          children: [
+                            if (total > 0) ...[
+                              const Icon(Icons.check_circle, size: 13, color: Color(0xFFB9E3A0)),
+                              const SizedBox(width: 4),
+                            ],
+                            Flexible(
+                              child: Text(
+                                total > 0 ? 'all saved · hold to share' : 'tap to inspect · hold to share',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Color(0xFFD8C3A0), fontSize: 11),
+                              ),
+                            ),
+                          ],
+                        )
+                      : GestureDetector(
+                          key: const ValueKey('save'),
+                          behavior: HitTestBehavior.opaque,
+                          onTap: saving ? null : onSaveAll,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 3),
+                            child: Row(
+                              children: [
+                                if (saving)
+                                  const SizedBox(
+                                    width: 11,
+                                    height: 11,
+                                    child: CircularProgressIndicator(strokeWidth: 1.5, color: ink),
+                                  )
+                                else
+                                  const Icon(Icons.download, size: 14, color: ink),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    saving ? 'Saving…' : 'Save all ($unsaved) to Photos',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: ink,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      decoration: TextDecoration.underline,
+                                      decorationColor: Color(0x99F3E3C8),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 6),
           // The Studio's door (a badge: prints waiting there).
           Badge(
             isLabelVisible: inStudio > 0,
             label: Text('$inStudio'),
             backgroundColor: const Color(0xFFC0281C),
-            child: IconButton(
+            child: FilledButton.icon(
               onPressed: onStudio,
-              tooltip: 'Studio',
-              icon: const Icon(Icons.collections_outlined, color: ink),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFF3E3C8),
+                foregroundColor: const Color(0xFF4A3220),
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+              ),
+              icon: const Icon(Icons.collections_outlined, size: 18),
+              label: const Text('Studio'),
             ),
-          ),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 220),
-            child: total == 0
-                ? const SizedBox.shrink()
-                : unsaved == 0
-                ? const Row(
-                    key: ValueKey('saved'),
-                    children: [
-                      Icon(Icons.check_circle, size: 16, color: Color(0xFFB9E3A0)),
-                      SizedBox(width: 4),
-                      Text(
-                        'All saved',
-                        style: TextStyle(color: ink, fontSize: 12, fontWeight: FontWeight.w700),
-                      ),
-                    ],
-                  )
-                : FilledButton.tonalIcon(
-                    key: const ValueKey('save'),
-                    onPressed: saving ? null : onSaveAll,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFF3E3C8),
-                      foregroundColor: const Color(0xFF4A3220),
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    icon: saving
-                        ? const SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.download, size: 16),
-                    label: Text('Save all ($unsaved)'),
-                  ),
           ),
         ],
       ),

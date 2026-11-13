@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
 import 'package:image/image.dart' as img;
 
 /// The Studio's pictures, drawn with Flutter's canvas: photo strips,
@@ -35,6 +35,73 @@ enum CollageStyle {
 
   const CollageStyle(this.label);
   final String label;
+}
+
+/// [paper] over [r]: a flat colour, and kraft's rough grain (fibres,
+/// flecks and a mottled tone, the same every time for the same size).
+void paintPaper(Canvas c, Rect r, StudioPaper paper) {
+  c.drawRect(r, Paint()..color = paper.color);
+  if (paper != StudioPaper.kraft) return;
+  final rnd = math.Random(r.width.round() * 31 + r.height.round());
+  final scale = r.shortestSide / 400;
+  // mottling: soft darker and lighter patches
+  for (var i = 0; i < 40; i++) {
+    final o = Offset(r.left + rnd.nextDouble() * r.width, r.top + rnd.nextDouble() * r.height);
+    final rad = (40 + rnd.nextDouble() * 90) * scale;
+    final dark = rnd.nextBool();
+    c.drawCircle(
+      o,
+      rad,
+      Paint()
+        ..color = (dark ? const Color(0xFF5A3A1C) : const Color(0xFFE2C08E)).withValues(alpha: 0.13)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, rad * 0.6),
+    );
+  }
+  // fibres: short pale and dark strands every which way
+  final fibre = Paint()
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = math.max(0.6, 0.9 * scale);
+  final n = (r.width * r.height / 60 / (scale * scale)).clamp(300, 8000).round();
+  for (var i = 0; i < n; i++) {
+    final o = Offset(r.left + rnd.nextDouble() * r.width, r.top + rnd.nextDouble() * r.height);
+    final a = rnd.nextDouble() * math.pi;
+    final len = (2 + rnd.nextDouble() * 7) * scale;
+    fibre.color = rnd.nextDouble() < 0.55
+        ? const Color(0xFF4A2E14).withValues(alpha: 0.14 + rnd.nextDouble() * 0.16)
+        : const Color(0xFFF2D9AE).withValues(alpha: 0.14 + rnd.nextDouble() * 0.18);
+    c.drawLine(o, o + Offset(math.cos(a), math.sin(a)) * len, fibre);
+  }
+  // flecks: the odd dark speck of pulp
+  final fleck = Paint()..color = const Color(0x553A2210);
+  for (var i = 0; i < n ~/ 12; i++) {
+    c.drawCircle(
+      Offset(r.left + rnd.nextDouble() * r.width, r.top + rnd.nextDouble() * r.height),
+      (0.4 + rnd.nextDouble() * 0.9) * scale,
+      fleck,
+    );
+  }
+}
+
+/// [paintPaper] as a widget background.
+class StudioPaperView extends StatelessWidget {
+  const StudioPaperView({super.key, required this.paper});
+
+  final StudioPaper paper;
+
+  @override
+  Widget build(BuildContext context) => RepaintBoundary(child: CustomPaint(painter: _PaperPainter(paper)));
+}
+
+class _PaperPainter extends CustomPainter {
+  const _PaperPainter(this.paper);
+
+  final StudioPaper paper;
+
+  @override
+  void paint(Canvas canvas, Size size) => paintPaper(canvas, Offset.zero & size, paper);
+
+  @override
+  bool shouldRepaint(_PaperPainter old) => old.paper != paper;
 }
 
 /// A photo, decoded no bigger than [maxSide] on its long edge.
@@ -95,7 +162,7 @@ Future<ui.Image> renderStrip(List<ui.Image> photos, StudioPaper paper, DateTime 
   final h = top + photos.length * cellH + (photos.length - 1) * gap + foot;
   final rnd = math.Random(photos.length * 31 + date.day);
   return _record(Size(w, h), (c) {
-    c.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = paper.color);
+    paintPaper(c, Rect.fromLTWH(0, 0, w, h), paper);
     var y = top;
     for (final p in photos) {
       final jitter = (rnd.nextDouble() - 0.5) * 6;
@@ -128,7 +195,7 @@ Future<ui.Image> renderCollage(List<ui.Image> photos, CollageStyle style, Studio
   final w = cols * cell + (cols + 1) * g, h = rows * cell + (rows + 1) * g;
   final rnd = math.Random(photos.length * 7 + style.index);
   return _record(Size(w, h), (c) {
-    c.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = paper.color);
+    paintPaper(c, Rect.fromLTWH(0, 0, w, h), paper);
     for (var i = 0; i < photos.length; i++) {
       final col = i % cols, row = i ~/ cols;
       final r = Rect.fromLTWH(g + col * (cell + g), g + row * (cell + g), cell, cell);
@@ -160,13 +227,14 @@ Future<ui.Image> renderCollage(List<ui.Image> photos, CollageStyle style, Studio
 }
 
 /// A flip book page (4:5, Instagram's tall post): the photo as a bordered
-/// print on [paper], shaken by [shake] (0..1 picks the wobble) for the
-/// handheld snap from page to page.
-Future<ui.Image> renderFlipPage(ui.Image photo, StudioPaper paper, int shake) {
+/// print on [paper], shaken by [shake] (picks the wobble) for the handheld
+/// snap from page to page. [flash]: the print white, as the page turns
+/// (only the print flashes, not the paper round it).
+Future<ui.Image> renderFlipPage(ui.Image photo, StudioPaper paper, int shake, {bool flash = false}) {
   const w = 1080.0, h = 1350.0;
   final rnd = math.Random(shake * 977 + photo.width);
   return _record(const Size(w, h), (c) {
-    c.drawRect(const Rect.fromLTWH(0, 0, w, h), Paint()..color = paper.color);
+    paintPaper(c, const Rect.fromLTWH(0, 0, w, h), paper);
     final aspect = photo.width / photo.height;
     var pw = 920.0, ph = pw / aspect;
     if (ph > 1120) {
@@ -184,6 +252,11 @@ Future<ui.Image> renderFlipPage(ui.Image photo, StudioPaper paper, int shake) {
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
     );
     c.drawRect(card, Paint()..color = const Color(0xFFF7F4EE));
+    if (flash) {
+      c.drawRect(card, Paint()..color = const Color(0xFFFFFFFF));
+      c.restore();
+      return;
+    }
     c.drawImageRect(
       photo,
       Rect.fromLTWH(0, 0, photo.width.toDouble(), photo.height.toDouble()),

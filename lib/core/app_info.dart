@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.2.11';
+  static const version = '2.2.12';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The digital cameras shoot the moment you press, like a real 2000s digicam: on Android the flash fires '
-      'straight away, and on iPhone the photo is taken from the live picture.';
+      'The digital cameras\' flash meters the scene again, so close-up flash photos are no longer blown out. '
+      'The viewfinder shuts as you swipe between cameras with 2D graphics.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

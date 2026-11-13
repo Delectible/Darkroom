@@ -10,7 +10,6 @@ import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/device/permissions.dart';
 import '../../../core/providers.dart';
 import 'camera_log.dart';
-import 'fast_flash.dart';
 import 'camera_ui_state.dart';
 import 'lens_controller.dart';
 import 'preview_probe.dart';
@@ -126,8 +125,6 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     // (iPhone: the wide lenses open its ultra-wide camera)
     ref.listen(filmLensProvider, (_, _) => _kick());
     ref.listen(activeFlashProvider, (_, next) => _applyFlash(_controller, next));
-    // (another camera: digital's flash fires differently, FastFlash)
-    ref.listen(activeSpecProvider, (_, _) => _applyFlash(_controller, ref.read(activeFlashProvider)));
     // The microphone allowed again (the viewfinder's note, or Settings):
     // reopen with sound, so videos aren't silent until the next launch.
     ref.listen<Set<Perm>>(missingPermissionsProvider, (prev, next) {
@@ -288,8 +285,6 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     const maxAttempts = 4;
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       if (!ref.mounted || _dirty || !_wantActive) return;
-      // (a camera opening builds its photo capture: never armed then)
-      await FastFlash.beforeOpen();
       final c = CameraController(desc, cfg.preset, enableAudio: !_audioDenied);
       try {
         await c.initialize();
@@ -452,12 +447,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
   Future<void> _applyFlash(CameraController? c, FlashSetting flash) async {
     if (c == null || !c.value.isInitialized || c.value.isRecordingVideo) return;
     try {
-      // Android, digital, flash on: fired at once on the photo's own frame
-      // (FastFlash), the plugin's own flash (and its pre-flash) off.
-      final fast = FastFlash.applies(ref.read(activeSpecProvider), c.description.lensDirection, flash);
-      await FastFlash.set(c, fast);
       await c.setFlashMode(switch (flash) {
-        _ when fast && FastFlash.armedFor(c) => FlashMode.off,
         FlashSetting.auto => FlashMode.auto,
         FlashSetting.on => FlashMode.always,
         FlashSetting.off => FlashMode.off,

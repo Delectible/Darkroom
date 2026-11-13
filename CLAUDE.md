@@ -56,13 +56,6 @@ textures where the GPU can't compress them; `packages/flutter_scene/
 DARKROOM.md`). Now and then check pub.dev for a newer version: if it handles
 this itself, go back to the hosted package; else move the patch over.
 
-## Our copy of camera_android_camerax
-
-`packages/camera_android_camerax` is the camera plugin's Android side
-(0.7.5+1) with one patch: the digital cameras' fast flash
-(`packages/camera_android_camerax/DARKROOM.md`, `FastFlash`). On a camera
-update, move the patch over (search `DARKROOM PATCH`).
-
 ## Checks
 
 `flutter analyze lib test`, `flutter test` (SDK may be at

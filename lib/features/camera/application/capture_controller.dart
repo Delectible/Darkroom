@@ -27,8 +27,6 @@ import '../../../core/device/battery.dart';
 import '../../../core/device/haptics.dart';
 import '../../../core/device/screen_flash.dart';
 import 'camera_log.dart';
-import 'fast_flash.dart';
-import 'preview_snap.dart';
 import 'preview_probe.dart';
 
 @immutable
@@ -226,31 +224,10 @@ class CaptureController extends Notifier<CaptureState> {
           front &&
           (ctx.flash == FlashSetting.on ||
               ctx.flash == FlashSetting.auto && ((await PreviewProbe.brightness()) ?? 1) < _darkPreview);
-      XFile? file;
-      var how = screenFlash
+      final how = screenFlash
           ? 'screen flash'
           : (ctx.flash == FlashSetting.off ? 'no flash' : 'flash ${ctx.flash.name}');
-      if (screenFlash) {
-        file = await ScreenFlash.during(c.takePicture);
-      } else if (PreviewSnap.applies(ctx, c)) {
-        // iPhone, digital: the live picture's next frame, at once (the torch
-        // for a flash)
-        final torch =
-            ctx.flash == FlashSetting.on ||
-            (ctx.flash == FlashSetting.auto && ((await PreviewProbe.brightness()) ?? 1) < _darkPreview);
-        file = await PreviewSnap.take(
-          c,
-          torch: torch,
-          flashAfter: ctx.flash == FlashSetting.on ? FlashMode.always : FlashMode.auto,
-        );
-        if (file != null) how = 'preview frame${torch ? ', torch' : ''}';
-      } else if (FastFlash.armedFor(c) && ctx.flash == FlashSetting.on) {
-        final since = FastFlash.sinceLast;
-        how = 'fast flash, ${since == null ? 'first' : '${since.inMilliseconds} ms after the last'}';
-        file = await c.takePicture();
-        FastFlash.fired();
-      }
-      file ??= await c.takePicture();
+      final file = screenFlash ? await ScreenFlash.during(c.takePicture) : await c.takePicture();
       CameraLog.add('photo: ${pressed.elapsedMilliseconds} ms press to capture ($how)');
       // Multiple exposure: the first is held (no frame used), the second
       // lands on it and the two go on as one capture.

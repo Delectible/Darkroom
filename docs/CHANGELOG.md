@@ -990,3 +990,11 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   session's options for repeating requests, not the still's own: checked
   in CameraX 1.6.2's CaptureConfigAdapter / UseCaseCameraRequestControl).
   Cleared again when the fast flash goes off or a camera opens.
+- [x] **67.21** → 2.2.12 · Fast flash worked (2.2.11: lit, ~0.5 s) but
+  without metering close scenes came out far too bright. The owner chose
+  the phone's metered flash and its ~2 s again: our copy of
+  camera_android_camerax, FastFlash and the iPhone's preview-frame shot
+  (PreviewSnap) are removed; back to the hosted plugin and the normal photo
+  capture on both. The press-to-capture time stays in the Camera Log.
+  (Android 15's flash strength level was the one middle way left: one
+  fixed strength, not tried.)

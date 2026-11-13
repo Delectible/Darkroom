@@ -3,18 +3,28 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.2.13';
+  static const version = '2.3.0';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'Darkroom 98 has a desktop with My Pictures, Camera, Games and Settings, a Games folder and High '
-      'Scores. Photos without flash are taken the instant you press, and the screen responds faster to touch '
-      'on iPhone. Built on the newest Flutter.';
+      'Scores. Photos without flash are taken the instant you press, the screen responds faster to touch on '
+      'iPhone, and the viewfinder fills its window. Many fixes.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
+    (
+      '2.3',
+      [
+        'A desktop in Darkroom 98',
+        'Games folder and High Scores',
+        'Instant shutter without flash',
+        'Faster touch on iPhone',
+        'The viewfinder fills its window',
+      ],
+    ),
     (
       '2.2',
       [

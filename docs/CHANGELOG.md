@@ -1028,3 +1028,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   (AGP 9.3.1's lint calls List.removeLast, Java 21; CI ran Java 17). CI
   builds Android with Java 21 now (the app's jvmTarget stays 17). iOS built
   and went to TestFlight.
+- [x] **67.26** → 2.3.0 · High Scores came up as a blank box: the prefs
+  cache only allows keys in PrefKeys.all, and the hs.* keys weren't there
+  (reads threw; no score was ever kept). Keys added (PrefKeys.highScores),
+  reads and writes made safe. Desktop and Games folder icons: a tap selects
+  (the 9x highlight), a second tap or a double tap opens (IconGroup).
+- 2.3.0 released to main, Play closed testing and the App Store.

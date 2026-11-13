@@ -728,10 +728,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                           fit: StackFit.expand,
                           children: [
                             // The desktop's icons (seen when the window's shut).
-                            Positioned(
-                              left: 4,
-                              top: 6,
-                              bottom: 0,
+                            // (all of the desktop: a tap on its empty space
+                            // clears the selection)
+                            Positioned.fill(
                               child: _DesktopIcons(
                                 onPictures: () {
                                   _go(ExplorerPlace.c);
@@ -1406,16 +1405,20 @@ class _DesktopIcons extends StatelessWidget {
   final VoidCallback onSettings;
 
   @override
-  Widget build(BuildContext context) => Wrap(
-    direction: Axis.vertical,
-    spacing: 14,
-    runSpacing: 6,
-    children: [
-      DesktopIcon(icon: PixelIcon.folder, label: 'My Pictures', onOpen: onPictures),
-      DesktopIcon(icon: PixelIcon.camera, label: 'Camera', onOpen: onCamera),
-      DesktopIcon(icon: PixelIcon.joystick, label: 'Games', onOpen: onGames),
-      DesktopIcon(icon: PixelIcon.settings, label: 'Settings', onOpen: onSettings),
+  Widget build(BuildContext context) => IconGroup(
+    items: [
+      (PixelIcon.folder, 'My Pictures', onPictures),
+      (PixelIcon.camera, 'Camera', onCamera),
+      (PixelIcon.joystick, 'Games', onGames),
+      (PixelIcon.settings, 'Settings', onSettings),
     ],
+    builder: (icons) => Align(
+      alignment: Alignment.topLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 6, 0, 0),
+        child: Wrap(direction: Axis.vertical, spacing: 14, runSpacing: 6, children: icons),
+      ),
+    ),
   );
 }
 

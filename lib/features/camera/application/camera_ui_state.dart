@@ -158,6 +158,29 @@ class PrefKeys {
     galleryLinks,
     cSeen,
     cSeenSince,
+    ...highScores,
+  };
+
+  /// Darkroom 98's high scores (HighScores, games/high_scores.dart). Every
+  /// key the app reads or writes must be in [all] (the cache refuses the
+  /// rest: High Scores came up blank, 2.2.13).
+  static const hsSolitaireTime = 'hs.solitaire.time';
+  static const hsSolitaireWins = 'hs.solitaire.wins';
+  static const hsMinesBeginner = 'hs.mines.beginner';
+  static const hsMinesIntermediate = 'hs.mines.intermediate';
+  static const hsBricks = 'hs.bricks';
+  static const hsPinball = 'hs.pinball';
+  static const hsPinballRank = 'hs.pinball.rank';
+  static const hsPinballRankN = 'hs.pinball.rank.n';
+  static const highScores = <String>{
+    hsSolitaireTime,
+    hsSolitaireWins,
+    hsMinesBeginner,
+    hsMinesIntermediate,
+    hsBricks,
+    hsPinball,
+    hsPinballRank,
+    hsPinballRankN,
   };
 }
 

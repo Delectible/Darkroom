@@ -201,10 +201,16 @@ void main() {
       }
       await shoot(tester, 'closed');
       if (tag == '') {
+        // A tap selects, another opens (the 9x way).
+        await tester.tap(find.text('Games'));
+        await settle(tester);
+        expect(find.text('Pinball'), findsNothing);
         await tester.tap(find.text('Games'));
         await settle(tester);
         expect(find.text('Pinball'), findsOneWidget);
         await shoot(tester, 'games');
+        await tester.tap(find.text('High Scores'));
+        await settle(tester);
         await tester.tap(find.text('High Scores'));
         await settle(tester);
         expect(find.text('Fastest win'), findsOneWidget);

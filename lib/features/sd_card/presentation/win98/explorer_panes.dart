@@ -12,7 +12,7 @@ import 'win98_widgets.dart';
 
 /// The three places the explorer can show.
 /// Tab order in the explorer.
-enum ExplorerPlace { sd, floppy, c, myComputer }
+enum ExplorerPlace { sd, floppy, c, photoRoom, myComputer }
 
 /// Files on the card are listed but locked; files on C: open normally.
 class ExplorerFilePane extends StatelessWidget {
@@ -409,6 +409,13 @@ class ExplorerFolderTree extends StatelessWidget {
             'Darkroom',
             selected: place == ExplorerPlace.c,
             onTap: () => onSelect(ExplorerPlace.c),
+          ),
+          node(
+            3,
+            place == ExplorerPlace.photoRoom ? PixelIcon.folderOpen : PixelIcon.folder,
+            'Photo Room',
+            selected: place == ExplorerPlace.photoRoom,
+            onTap: () => onSelect(ExplorerPlace.photoRoom),
           ),
           node(1, PixelIcon.removableDrive, 'SD Card (E:)', onTap: () => onSelect(ExplorerPlace.sd)),
           node(2, PixelIcon.folder, 'DCIM', onTap: () => onSelect(ExplorerPlace.sd)),

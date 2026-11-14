@@ -140,7 +140,7 @@ void main() {
         await tester.tap(find.text(menu).first);
         await settle(tester);
         await shoot(tester, 'menu_$menu');
-        await tester.tapAt(Offset(5, land ? 380 : 900)); // dismiss
+        await tester.tapAt(Offset(land ? 5 : 405, land ? 380 : 900)); // dismiss (off the folder tree)
         await settle(tester);
       }
       await tester.tap(find.text('Start'));

@@ -19,6 +19,7 @@ import '../../../settings/application/settings_controllers.dart' show globalSett
 import 'debug_menu.dart';
 import 'explorer_dialogs.dart';
 import 'explorer_panes.dart';
+import 'photo_room/photo_room.dart';
 import 'pixel_icons.dart';
 import 'win98_viewer.dart';
 import 'games/bricks.dart';
@@ -571,6 +572,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
       case StartAction.pictures:
         _go(ExplorerPlace.c);
         _openWindow();
+      case StartAction.photoRoom:
+        await _photoRoom();
       case StartAction.options:
         await showExplorerOptions(context);
       case StartAction.help:
@@ -583,6 +586,18 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
         _shutDown = true;
         await showShutDownSequence(context);
         if (mounted) Navigator.of(context).pop();
+    }
+  }
+
+  /// The tabs along the top, in order.
+  static const _tabs = [ExplorerPlace.sd, ExplorerPlace.floppy, ExplorerPlace.c, ExplorerPlace.myComputer];
+
+  /// Photo Room's wizard; afterwards, its folder if asked.
+  Future<void> _photoRoom() async {
+    final open = await showPhotoRoom(context);
+    if (open == true && mounted) {
+      _go(ExplorerPlace.photoRoom);
+      _openWindow();
     }
   }
 
@@ -654,6 +669,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
       ExplorerPlace.sd => Drive.sd,
       ExplorerPlace.floppy => Drive.floppy,
       ExplorerPlace.c || ExplorerPlace.myComputer => Drive.c,
+      ExplorerPlace.photoRoom => Drive.photoRoom,
     };
     final onFloppy = place == ExplorerPlace.floppy;
     final visible = place == ExplorerPlace.myComputer
@@ -685,6 +701,11 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
       ExplorerPlace.sd => ('Exploring - SD Card (E:)', PixelIcon.removableDrive, r'E:\DCIM\100DRKRM'),
       ExplorerPlace.floppy => ('Exploring - 3½ Floppy (A:)', PixelIcon.floppy, r'A:\TAPE01'),
       ExplorerPlace.c => ('Exploring - Local Disk (C:)', PixelIcon.hardDrive, r'C:\My Pictures\Darkroom'),
+      ExplorerPlace.photoRoom => (
+        'Exploring - Photo Room',
+        PixelIcon.photoRoom,
+        r'C:\My Pictures\Photo Room',
+      ),
       ExplorerPlace.myComputer => ('My Computer', PixelIcon.computer, 'My Computer'),
     };
 
@@ -738,6 +759,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                 },
                                 onCamera: () => Navigator.of(context).pop(),
                                 onGames: () => showGamesFolder(context),
+                                onPhotoRoom: _photoRoom,
                                 onSettings: () => showExplorerOptions(context),
                               ),
                             ),
@@ -891,6 +913,8 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                             ),
                                           ],
                                           'Tools': () => [
+                                            Win98MenuItem('Photo Room...', onSelected: _photoRoom),
+                                            const Win98MenuItem.separator(),
                                             Win98MenuItem(
                                               'Options...',
                                               onSelected: () => showExplorerOptions(context),
@@ -1010,8 +1034,11 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                             icon: PixelIconView(PixelIcon.computer),
                                           ),
                                         ],
-                                        selected: place.index,
-                                        onSelect: (i) => _go(ExplorerPlace.values[i]),
+                                        // (the Photo Room folder is on C:)
+                                        selected: _tabs.indexOf(
+                                          place == ExplorerPlace.photoRoom ? ExplorerPlace.c : place,
+                                        ),
+                                        onSelect: (i) => _go(_tabs[i]),
                                       ),
                                       Expanded(
                                         child: Win98Bevel(
@@ -1139,7 +1166,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                           formatBytes(
                                             _selected.isEmpty
                                                 ? switch (place) {
-                                                    ExplorerPlace.c => cBytes,
+                                                    ExplorerPlace.c || ExplorerPlace.photoRoom => cBytes,
                                                     ExplorerPlace.floppy => floppyBytes,
                                                     _ => sdBytes,
                                                   }
@@ -1148,7 +1175,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                           switch (place) {
                                             ExplorerPlace.sd => 'SD Card',
                                             ExplorerPlace.floppy => '3½ Floppy',
-                                            ExplorerPlace.c => 'Local Disk',
+                                            ExplorerPlace.c || ExplorerPlace.photoRoom => 'Local Disk',
                                             ExplorerPlace.myComputer => 'My Computer',
                                           },
                                         ],
@@ -1389,19 +1416,21 @@ class _TaskbarState extends State<_Taskbar> {
   }
 }
 
-/// Darkroom 98's desktop: My Pictures, Camera, Games and Settings, down
+/// Darkroom 98's desktop: My Pictures, Camera, Photo Room, Games and Settings, down
 /// the left like a 9x desktop.
 class _DesktopIcons extends StatelessWidget {
   const _DesktopIcons({
     required this.onPictures,
     required this.onCamera,
     required this.onGames,
+    required this.onPhotoRoom,
     required this.onSettings,
   });
 
   final VoidCallback onPictures;
   final VoidCallback onCamera;
   final VoidCallback onGames;
+  final VoidCallback onPhotoRoom;
   final VoidCallback onSettings;
 
   @override
@@ -1409,6 +1438,7 @@ class _DesktopIcons extends StatelessWidget {
     items: [
       (PixelIcon.folder, 'My Pictures', onPictures),
       (PixelIcon.camera, 'Camera', onCamera),
+      (PixelIcon.photoRoom, 'Photo Room', onPhotoRoom),
       (PixelIcon.joystick, 'Games', onGames),
       (PixelIcon.settings, 'Settings', onSettings),
     ],

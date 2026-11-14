@@ -682,4 +682,10 @@ class CameraCatalog {
   static List<CameraSpec> forMode(AppMode mode) => mode == AppMode.film ? film : digital;
 
   static CameraSpec byId(String id) => all.firstWhere((c) => c.id == id, orElse: () => ektar100);
+
+  /// Pictures made in Darkroom 98's Photo Room (collages, cards, GIFs,
+  /// strips): no camera; kept on C: in their own folder.
+  static const photoRoomId = 'photoroom';
+
+  static bool isPhotoRoom(String id) => id == photoRoomId;
 }

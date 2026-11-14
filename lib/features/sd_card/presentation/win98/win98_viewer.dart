@@ -290,7 +290,9 @@ class _StatusBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = CameraCatalog.byId(item.cameraId).name;
+    final fallback = CameraCatalog.isPhotoRoom(item.cameraId)
+        ? 'Photo Room'
+        : CameraCatalog.byId(item.cameraId).name;
     return FutureBuilder<String?>(
       key: ValueKey(item.id),
       future: _cameraFromExif(item),

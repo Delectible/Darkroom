@@ -1175,7 +1175,7 @@ class _DefragState extends State<_Defrag> {
 // Start menu, Run, Shut Down, and the blue screen
 // -----------------------------------------------------------------------------
 
-enum StartAction { camera, pictures, options, help, run, profile, shutDown }
+enum StartAction { camera, pictures, photoRoom, options, help, run, profile, shutDown }
 
 /// The Start menu: drawn on the explorer's own screen (in its Stack, so
 /// the CRT's bulge and glass take it like everything else on the screen),
@@ -1244,6 +1244,7 @@ class StartMenuPanel extends StatelessWidget {
                   children: [
                     item(PixelIcon.camera, 'Camera', StartAction.camera),
                     item(PixelIcon.folder, 'My Pictures', StartAction.pictures),
+                    item(PixelIcon.photoRoom, 'Photo Room', StartAction.photoRoom),
                     item(PixelIcon.views, 'Settings', StartAction.options),
                     item(PixelIcon.question, 'Help', StartAction.help),
                     item(PixelIcon.upFolder, 'Run...', StartAction.run),

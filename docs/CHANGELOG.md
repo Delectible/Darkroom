@@ -1113,3 +1113,20 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     held up then dropped onto the table, settles and fades (studio_snapshot).
   - Book viewer zooms over the whole screen. Corkboard Studio badge amber
     and bigger.
+
+## 69. Photo Room in Darkroom 98 (2026-11-14), 2.3.4
+- A wizard (option B, approved from mockups): welcome page with the five
+  makes (Collage, Contact sheet, Greeting card or poster, Animated GIF,
+  Photo booth strip), then Pick your photos (C:\My Pictures\Darkroom only;
+  tap to pick in order, numbered; Select All up to the make's limit,
+  Deselect All), then the look (backgrounds from the 98 palette, wide
+  border; GIF speed slider and size; the card maker), Save, and Completing
+  the wizard with "Open the Photo Room folder".
+- Card maker: WordArt in Fire, Rainbow, Chrome, Ocean, Classic; pixel clip
+  art (sun, balloon, cake, heart, star, flower, note, smiley, computer);
+  photos; paper colours; drag, pinch, tap to pick, double-tap to edit.
+- Saved to C:\My Pictures\Photo Room (its own folder in the explorer's
+  tree, camera id `photoroom` from camera_catalog.dart), named 8.3 style
+  (COLLG001.JPG, SHEET001.JPG, CARD0001.JPG, ANIM0001.GIF, STRIP001.JPG),
+  and copied to the photo library like everything on C:.
+- Opens from a desktop icon, Tools > Photo Room... and Start > Photo Room.

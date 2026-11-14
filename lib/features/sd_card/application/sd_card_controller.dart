@@ -107,7 +107,7 @@ final explorerPrefsProvider = NotifierProvider<ExplorerPrefsNotifier, ExplorerPr
 List<MediaItem> _all(Ref ref) => ref.watch(sdCardItemsProvider).value ?? const <MediaItem>[];
 
 /// The explorer's drives that hold files.
-enum Drive { sd, floppy, c }
+enum Drive { sd, floppy, c, photoRoom }
 
 bool _onFloppy(MediaItem m) => CameraCatalog.byId(m.cameraId).storage == DigitalStorage.floppy;
 
@@ -124,6 +124,16 @@ final floppyFilesProvider = Provider<List<MediaItem>>(
 
 /// Files moved to "Local Disk (C:)" (also in the phone's photo library).
 final cDriveFilesProvider = Provider<List<MediaItem>>((ref) => _all(ref).where((m) => !m.onSdCard).toList());
+
+/// C:\My Pictures\Darkroom: the camera's pictures moved off the card.
+final darkroomFolderProvider = Provider<List<MediaItem>>(
+  (ref) => ref.watch(cDriveFilesProvider).where((m) => !CameraCatalog.isPhotoRoom(m.cameraId)).toList(),
+);
+
+/// C:\My Pictures\Photo Room: what Photo Room made.
+final photoRoomFolderProvider = Provider<List<MediaItem>>(
+  (ref) => ref.watch(cDriveFilesProvider).where((m) => CameraCatalog.isPhotoRoom(m.cameraId)).toList(),
+);
 
 /// C: files the user has opened. Files moved to C: before this was tracked
 /// count as seen.
@@ -168,7 +178,7 @@ final cSeenProvider = NotifierProvider<CSeenNotifier, ({Set<String> ids, DateTim
 final cHasNewProvider = Provider<bool>((ref) {
   ref.watch(cSeenProvider);
   final seen = ref.read(cSeenProvider.notifier);
-  return ref.watch(cDriveFilesProvider).any(seen.isNew);
+  return ref.watch(darkroomFolderProvider).any(seen.isNew);
 });
 
 /// Which photo-library entry holds each saved file.
@@ -180,7 +190,8 @@ final explorerItemsProvider = Provider.family<List<MediaItem>, Drive>((ref, driv
   final source = switch (drive) {
     Drive.sd => ref.watch(sdCardFilesProvider),
     Drive.floppy => ref.watch(floppyFilesProvider),
-    Drive.c => ref.watch(cDriveFilesProvider),
+    Drive.c => ref.watch(darkroomFolderProvider),
+    Drive.photoRoom => ref.watch(photoRoomFolderProvider),
   };
   final items = source.where(
     (m) => switch (prefs.filter) {

@@ -13,6 +13,7 @@ import 'studio_screen.dart';
 import 'studio_scrapbook.dart';
 import 'studio_snapshot.dart';
 import 'studio_store.dart';
+import 'studio_ui.dart';
 
 /// Making one piece from [prints]: pops true once it's in the book.
 class StudioMaker extends StatelessWidget {
@@ -33,6 +34,7 @@ class StudioMaker extends StatelessWidget {
 class _MakerScaffold extends StatelessWidget {
   const _MakerScaffold({
     required this.title,
+    this.subtitle,
     required this.body,
     required this.options,
     required this.action,
@@ -41,6 +43,7 @@ class _MakerScaffold extends StatelessWidget {
   });
 
   final String title;
+  final String? subtitle;
   final Widget body;
   final List<Widget> options;
   final String action;
@@ -56,6 +59,7 @@ class _MakerScaffold extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: StudioInk.brass,
           foregroundColor: const Color(0xFF22150B),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.6, fontSize: 15),
         ),
         onPressed: busy ? null : onMake,
         child: busy
@@ -68,11 +72,7 @@ class _MakerScaffold extends StatelessWidget {
     final sideways = size.width > size.height * 1.2;
     return Scaffold(
       backgroundColor: StudioInk.table,
-      appBar: AppBar(
-        backgroundColor: StudioInk.tableDark,
-        foregroundColor: StudioInk.ink,
-        title: Text(title),
-      ),
+      appBar: StudioTitleBar(title: title, subtitle: subtitle),
       body: StudioTable(
         child: SafeArea(
           top: false,
@@ -146,10 +146,7 @@ class _Choices<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      SizedBox(
-        width: 58,
-        child: Text(label, style: const TextStyle(color: StudioInk.muted, fontSize: 12)),
-      ),
+      SizedBox(width: 64, child: StudioLabel(label)),
       Expanded(
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -158,15 +155,7 @@ class _Choices<T> extends StatelessWidget {
               for (final v in values)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(name(v)),
-                    selected: v == value,
-                    onSelected: (_) => onPick(v),
-                    selectedColor: StudioInk.brass,
-                    backgroundColor: StudioInk.card,
-                    labelStyle: TextStyle(color: v == value ? const Color(0xFF22150B) : StudioInk.ink),
-                    showCheckmark: false,
-                  ),
+                  child: StudioChip(label: name(v), selected: v == value, onTap: () => onPick(v)),
                 ),
             ],
           ),
@@ -246,7 +235,7 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Couldn't make it: $e")));
+        studioNote(context, "Couldn't make it: $e");
       }
     }
   }
@@ -256,6 +245,9 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
     final preview = _preview;
     return _MakerScaffold(
       title: _strip ? 'Photo Strip' : 'Collage',
+      subtitle: _strip
+          ? '${widget.prints.length} frames down a booth strip'
+          : '${widget.prints.length} prints, cropped to fit',
       body: preview == null
           ? const CircularProgressIndicator(color: StudioInk.brass)
           : DecoratedBox(
@@ -346,7 +338,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Couldn't make it: $e")));
+        studioNote(context, "Couldn't make it: $e");
       }
     }
   }
@@ -364,6 +356,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
     final seconds = widget.prints.length * _pageMs / 1000;
     return _MakerScaffold(
       title: 'Flip Book',
+      subtitle: '${widget.prints.length} pages, snap cuts',
       body: AspectRatio(
         aspectRatio: 4 / 5,
         child: Stack(
@@ -407,10 +400,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
         ),
         Row(
           children: [
-            const SizedBox(
-              width: 58,
-              child: Text('Speed', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
-            ),
+            const SizedBox(width: 64, child: StudioLabel('Speed')),
             const Text('Slow', style: TextStyle(color: StudioInk.muted, fontSize: 11)),
             Expanded(
               child: Slider(

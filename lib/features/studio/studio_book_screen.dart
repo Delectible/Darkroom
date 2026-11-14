@@ -17,6 +17,7 @@ import 'studio_page_turn.dart';
 import 'studio_render.dart';
 import 'studio_screen.dart';
 import 'studio_store.dart';
+import 'studio_ui.dart';
 
 /// The photo-library album Studio pieces are saved to.
 const studioAlbum = 'Darkroom Studio';
@@ -110,7 +111,7 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> {
     }
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error ?? 'Page saved to Photos')));
+    studioNote(context, error ?? 'Page saved to Photos');
   }
 
   @override
@@ -701,7 +702,7 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
       return w.path;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Couldn't make it: $e")));
+        studioNote(context, "Couldn't make it: $e");
       }
       return null;
     } finally {
@@ -726,7 +727,7 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
     }
     if (!mounted) return;
     setState(() => _busy = null);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error ?? 'Saved to Photos')));
+    studioNote(context, error ?? 'Saved to Photos');
   }
 
   Future<void> _share(BuildContext anchor) async {
@@ -743,16 +744,12 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
   }
 
   Future<void> _delete() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Take it out of the book?'),
-        content: const Text('A copy you saved to Photos stays there.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Take it out')),
-        ],
-      ),
+    final ok = await studioAsk(
+      context,
+      title: 'Take it out of the book?',
+      message: 'A copy you saved to Photos stays there.',
+      yes: 'Take it out',
+      no: 'Keep',
     );
     if (ok != true) return;
     await ref.read(studioBookProvider.notifier).delete(_work);
@@ -1004,7 +1001,7 @@ class _StudioWorkViewerState extends ConsumerState<StudioWorkViewer> {
     }
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error ?? 'Saved to Photos')));
+    studioNote(context, error ?? 'Saved to Photos');
   }
 
   Future<void> _share(BuildContext anchor) async {
@@ -1018,16 +1015,12 @@ class _StudioWorkViewerState extends ConsumerState<StudioWorkViewer> {
   }
 
   Future<void> _delete() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Take it out of the book?'),
-        content: const Text('A copy you saved to Photos stays there.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Take it out')),
-        ],
-      ),
+    final ok = await studioAsk(
+      context,
+      title: 'Take it out of the book?',
+      message: 'A copy you saved to Photos stays there.',
+      yes: 'Take it out',
+      no: 'Keep',
     );
     if (ok != true) return;
     await ref.read(studioBookProvider.notifier).delete(widget.work);
@@ -1040,10 +1033,10 @@ class _StudioWorkViewerState extends ConsumerState<StudioWorkViewer> {
     final (name, _) = studioKindLook(widget.work.kind);
     return Scaffold(
       backgroundColor: const Color(0xFF17120E),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF17120E),
-        foregroundColor: StudioInk.ink,
-        title: Text(name),
+      appBar: StudioTitleBar(
+        title: name,
+        subtitle: 'Made ${MaterialLocalizations.of(context).formatMediumDate(widget.work.createdAt)}',
+        background: const Color(0xFF17120E),
       ),
       body: SafeArea(
         top: false,
@@ -1080,6 +1073,11 @@ class _StudioWorkViewerState extends ConsumerState<StudioWorkViewer> {
                     style: FilledButton.styleFrom(
                       backgroundColor: StudioInk.brass,
                       foregroundColor: const Color(0xFF22150B),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        fontSize: 15,
+                      ),
                     ),
                     icon: const Icon(Icons.download),
                     label: Text(_saving ? 'Saving…' : 'Save to Photos'),

@@ -12,6 +12,7 @@ import 'studio_book_screen.dart';
 import 'studio_makers.dart';
 import 'studio_snapshot.dart';
 import 'studio_store.dart';
+import 'studio_ui.dart';
 
 /// Studio colours: a dark wooden work table under a warm lamp.
 class StudioInk {
@@ -163,16 +164,12 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
 
   Future<void> _returnAll(List<MediaItem> prints) async {
     if (prints.isEmpty) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Return all to the board?'),
-        content: Text('The ${prints.length} prints go back to their spots on the corkboard.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Return all')),
-        ],
-      ),
+    final ok = await studioAsk(
+      context,
+      title: 'Return all to the board?',
+      message: 'The ${prints.length} prints go back to their spots on the corkboard.',
+      yes: 'Return all',
+      no: 'Cancel',
     );
     if (ok == true) await ref.read(studioProvider.notifier).clear();
   }
@@ -221,18 +218,12 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
     // out of the maker's white flash: the piece lands on the table
     await showSnapshotDrop(context, made);
     if (!mounted) return;
-    final send = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Send the photos back to the corkboard?'),
-        content: const Text(
-          "It's in the book. The prints can go back to the board, or stay here for something else.",
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep them')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Send them')),
-        ],
-      ),
+    final send = await studioAsk(
+      context,
+      title: 'Send the photos back to the corkboard?',
+      message: "It's in the book. The prints can go back to the board, or stay here for something else.",
+      yes: 'Send them',
+      no: 'Keep them',
     );
     if (send == true) await ref.read(studioProvider.notifier).remove(chosen.map((m) => m.id));
   }
@@ -505,19 +496,19 @@ class _PickPrintsState extends State<PickPrints> {
     final (name, _) = studioKindLook(widget.kind);
     return Scaffold(
       backgroundColor: StudioInk.table,
-      appBar: AppBar(
-        backgroundColor: StudioInk.tableDark,
-        foregroundColor: StudioInk.ink,
-        title: Text('Prints for the $name'),
-      ),
+      appBar: StudioTitleBar(title: 'Pick prints', subtitle: 'For the $name · ${needs.label}'),
       body: StudioTable(
         child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
               child: Text(
-                'Pick ${needs.label}. ${_picked.length} picked.',
-                style: const TextStyle(color: StudioInk.ink, fontSize: 15),
+                '${_picked.length} picked',
+                style: const TextStyle(
+                  color: StudioInk.label,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
               ),
             ),
             Expanded(
@@ -551,6 +542,11 @@ class _PickPrintsState extends State<PickPrints> {
                     style: FilledButton.styleFrom(
                       backgroundColor: StudioInk.brass,
                       foregroundColor: const Color(0xFF22150B),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        fontSize: 15,
+                      ),
                     ),
                     onPressed: ok
                         ? () => Navigator.pop(context, [

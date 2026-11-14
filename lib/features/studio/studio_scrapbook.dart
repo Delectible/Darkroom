@@ -19,6 +19,7 @@ import 'studio_screen.dart';
 import 'studio_snapshot.dart';
 import 'studio_stickers.dart';
 import 'studio_store.dart';
+import 'studio_ui.dart';
 
 /// The lettering writing can take.
 enum ScrapFont {
@@ -146,20 +147,8 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
     _laid = true;
   }
 
-  Future<String?> _write(String title, String initial, {int max = 80}) => showDialog<String>(
-    context: context,
-    builder: (context) {
-      final c = TextEditingController(text: initial);
-      return AlertDialog(
-        title: Text(title),
-        content: TextField(controller: c, autofocus: true, maxLength: max, maxLines: 3, minLines: 1),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, c.text.trim()), child: const Text('OK')),
-        ],
-      );
-    },
-  );
+  Future<String?> _write(String title, String initial, {int max = 80}) =>
+      studioWrite(context, title, initial, max: max);
 
   Future<void> _addText() async {
     final t = await _write('Add writing', '');
@@ -265,7 +254,7 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Couldn't save it: $e")));
+        studioNote(context, "Couldn't save it: $e");
       }
     }
   }
@@ -435,7 +424,12 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _addText,
-                style: OutlinedButton.styleFrom(foregroundColor: StudioInk.ink),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: StudioInk.ink,
+                  side: const BorderSide(color: Color(0x66C9A57A), width: 1.2),
+                  shape: const StadiumBorder(),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                ),
                 icon: const Icon(Icons.edit_outlined, size: 18),
                 label: const Text('Writing'),
               ),
@@ -444,7 +438,12 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _addSticker,
-                style: OutlinedButton.styleFrom(foregroundColor: StudioInk.ink),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: StudioInk.ink,
+                  side: const BorderSide(color: Color(0x66C9A57A), width: 1.2),
+                  shape: const StadiumBorder(),
+                  textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.4),
+                ),
                 icon: const Icon(Icons.star_outline, size: 18),
                 label: const Text('Sticker'),
               ),
@@ -455,7 +454,7 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                const Text('Page  ', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
+                const Padding(padding: EdgeInsets.only(right: 10), child: StudioLabel('Page')),
                 for (final p in const [
                   StudioPaper.kraft,
                   StudioPaper.black,
@@ -464,10 +463,10 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
                 ])
                   Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(p.label),
+                    child: StudioChip(
+                      label: p.label,
                       selected: _paper == p,
-                      onSelected: (_) => setState(() => _paper = p),
+                      onTap: () => setState(() => _paper = p),
                     ),
                   ),
               ],
@@ -519,13 +518,16 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
                 for (final f in ScrapFont.values)
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
-                    child: ChoiceChip(
-                      label: Text(
-                        f == ScrapFont.label ? 'LABEL' : f.title,
-                        style: TextStyle(fontFamily: f.family, fontSize: f == ScrapFont.hand ? 18 : 13),
+                    // (each in its own lettering)
+                    child: StudioChip(
+                      label: f == ScrapFont.label ? 'LABEL' : f.title,
+                      style: TextStyle(
+                        fontFamily: f.family,
+                        fontSize: f == ScrapFont.hand ? 19 : 13,
+                        fontWeight: f == ScrapFont.hand ? FontWeight.w600 : FontWeight.w400,
                       ),
                       selected: b.font == f,
-                      onSelected: (_) => setState(() => b.font = f),
+                      onTap: () => setState(() => b.font = f),
                     ),
                   ),
               ],
@@ -594,10 +596,9 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: StudioInk.table,
-      appBar: AppBar(
-        backgroundColor: StudioInk.tableDark,
-        foregroundColor: StudioInk.ink,
-        title: const Text('Scrapbook'),
+      appBar: StudioTitleBar(
+        title: 'Scrapbook',
+        handwritten: true,
         actions: [
           if (_picked != null)
             TextButton(
@@ -685,6 +686,11 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
                     style: FilledButton.styleFrom(
                       backgroundColor: StudioInk.brass,
                       foregroundColor: const Color(0xFF22150B),
+                      textStyle: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        fontSize: 15,
+                      ),
                     ),
                     onPressed: _busy
                         ? null

@@ -1145,3 +1145,11 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   its controls beside it; Photo Room puts previews beside their options
   when the window is wide. Studio and Photo Room screen tests now run
   upright and sideways (no overflow either way).
+- 69.3 Studio lettering (studio_ui.dart): no stock app bars left. Makers
+  and Pick prints get the spaced-capitals title (like FLIP BOOK) with a
+  line saying what's being made; the scrapbook's title is handwritten and
+  a touch tilted; a book piece shows its name and the day it was made.
+  Option labels in small spaced capitals (STYLE, PAPER, PAGE, SPEED);
+  choices are brass pills (the scrapbook's fonts each shown in their own
+  lettering); dialogs and notes in the Studio's warm dark with brass
+  buttons; bolder button lettering.

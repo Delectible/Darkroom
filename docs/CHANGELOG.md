@@ -1130,3 +1130,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   (COLLG001.JPG, SHEET001.JPG, CARD0001.JPG, ANIM0001.GIF, STRIP001.JPG),
   and copied to the photo library like everything on C:.
 - Opens from a desktop icon, Tools > Photo Room... and Start > Photo Room.
+- 69.1 Photo Room strip, paint-program style (B, from mockups): a
+  bucket-fill background (Lemon, Mint, Sky, Bubblegum, Lilac, Paper), shots
+  outlined in black with a hard pixel shadow, doodles round the corners and
+  in the gaps (the clip art, spray paint, sparkles, squiggles; never over a
+  photo's middle), the caption in pixel letters with a shadow, the date.
+  Caption..., Shuffle doodles (a new seed), Doodles and Date checkboxes.

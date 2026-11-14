@@ -12,6 +12,7 @@ import '../../../../../core/paths/app_paths.dart';
 import '../../../../cameras/domain/camera_catalog.dart';
 import '../../../../studio/studio_render.dart';
 import '../../../../viewer/presentation/media_actions.dart';
+import '../pixel_icons.dart';
 
 /// What Photo Room makes, and how many photos each takes.
 enum PhotoRoomMake {
@@ -170,28 +171,187 @@ Future<ui.Image> renderContactSheet(List<ui.Image> photos, List<String> names, B
   });
 }
 
-/// A photo booth strip with a 98 touch: its frames down the strip, the
-/// date and DARKROOM 98 in pixel letters at the foot.
-Future<ui.Image> renderRoomStrip(List<ui.Image> photos, Backdrop back, DateTime date) {
-  const w = 600.0, cellW = 520.0, cellH = 390.0, top = 40.0, gap = 30.0, foot = 130.0;
+/// The doodled strip's paint-bucket backgrounds.
+enum StripFill {
+  lemon('Lemon', Color(0xFFFFFF80)),
+  mint('Mint', Color(0xFF9CF2C8)),
+  sky('Sky', Color(0xFF9EE6FF)),
+  bubblegum('Bubblegum', Color(0xFFFFB3DA)),
+  lilac('Lilac', Color(0xFFC9C2FF)),
+  paper('Paper', Color(0xFFFFFFFF));
+
+  const StripFill(this.label, this.color);
+  final String label;
+  final Color color;
+}
+
+/// How the doodled strip looks: its fill, caption, the doodles' shuffle
+/// ([seed]) and what's shown.
+class StripLook {
+  const StripLook({
+    this.fill = StripFill.lemon,
+    this.caption = 'best day ever!!',
+    this.seed = 1,
+    this.doodles = true,
+    this.date = true,
+  });
+
+  final StripFill fill;
+  final String caption;
+  final int seed;
+  final bool doodles;
+  final bool date;
+
+  StripLook copyWith({StripFill? fill, String? caption, int? seed, bool? doodles, bool? date}) => StripLook(
+    fill: fill ?? this.fill,
+    caption: caption ?? this.caption,
+    seed: seed ?? this.seed,
+    doodles: doodles ?? this.doodles,
+    date: date ?? this.date,
+  );
+}
+
+// The doodles' inks: strong colours off the 98 palette.
+const _inks = [
+  Color(0xFFE0001B),
+  Color(0xFF0050E0),
+  Color(0xFFD000C8),
+  Color(0xFF008A2E),
+  Color(0xFFFF7A00),
+  Color(0xFF000080),
+];
+
+const _clips = [
+  PixelIcon.clipStar,
+  PixelIcon.clipHeart,
+  PixelIcon.clipSmiley,
+  PixelIcon.clipFlower,
+  PixelIcon.clipSun,
+  PixelIcon.clipNote,
+  PixelIcon.clipBalloon,
+];
+
+/// The doodled photo strip, paint-program style: a bucket-filled
+/// background, each shot outlined in black with a hard pixel shadow, a
+/// few doodles round the corners and in the gaps (pixel clip art, spray
+/// paint, sparkles, squiggles, never over the middle of a photo), the
+/// caption in pixel letters, the date. [look.seed] reshuffles the doodles.
+Future<ui.Image> renderRoomStrip(List<ui.Image> photos, StripLook look, DateTime date) {
+  const w = 600.0, side = 44.0, top = 48.0, gap = 46.0, foot = 170.0;
+  const cellW = w - side * 2, cellH = cellW * 0.75;
   final h = top + photos.length * cellH + (photos.length - 1) * gap + foot;
   return _record(Size(w, h), (c) {
-    c.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = back.color);
+    c.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = look.fill.color);
+    final rnd = math.Random(look.seed * 7919 + photos.length);
+    final cells = [
+      for (var i = 0; i < photos.length; i++) Rect.fromLTWH(side, top + i * (cellH + gap), cellW, cellH),
+    ];
+    // the photos: a hard offset shadow, a 4 px black outline
     for (var i = 0; i < photos.length; i++) {
-      drawCover(c, photos[i], Rect.fromLTWH((w - cellW) / 2, top + i * (cellH + gap), cellW, cellH));
+      final r = cells[i];
+      c.drawRect(r.shift(const Offset(8, 8)), Paint()..color = const Color(0xFF000000));
+      c.drawRect(r.inflate(4), Paint()..color = const Color(0xFF000000));
+      drawCover(c, photos[i], r);
     }
-    final y = h - foot + 30;
-    _pixelText(c, 'DARKROOM 98', Offset(0, y), 38, back.ink, align: TextAlign.center, width: w);
-    _pixelText(
-      c,
-      studioDate(date),
-      Offset(0, y + 48),
-      30,
-      back.ink.withValues(alpha: 0.75),
-      align: TextAlign.center,
-      width: w,
-    );
+    if (look.doodles) _doodle(c, rnd, cells, Size(w, h), foot);
+    // the caption: pixel letters with a hard shadow, in one of the inks
+    final ink = _inks[rnd.nextInt(_inks.length)];
+    final capY = h - foot + 34;
+    if (look.caption.trim().isNotEmpty) {
+      _pixelText(
+        c,
+        look.caption,
+        Offset(4, capY + 4),
+        46,
+        const Color(0xFF000000),
+        align: TextAlign.center,
+        width: w,
+      );
+      _pixelText(c, look.caption, Offset(0, capY), 46, ink, align: TextAlign.center, width: w);
+    }
+    if (look.date) {
+      _pixelText(
+        c,
+        studioDate(date),
+        Offset(0, capY + 70),
+        26,
+        const Color(0xCC000000),
+        align: TextAlign.center,
+        width: w,
+      );
+    }
   });
+}
+
+void _doodle(Canvas c, math.Random rnd, List<Rect> cells, Size size, double foot) {
+  // spots for doodles: the photos' corners (half on, half off) and the gaps
+  final spots = <Offset>[
+    for (final r in cells) ...[r.topLeft, r.topRight, r.bottomLeft, r.bottomRight],
+    for (var i = 0; i < cells.length - 1; i++) ...[
+      Offset(cells[i].left + 40, (cells[i].bottom + cells[i + 1].top) / 2),
+      Offset(cells[i].right - 40, (cells[i].bottom + cells[i + 1].top) / 2),
+    ],
+    Offset(70, size.height - foot + 60),
+    Offset(size.width - 70, size.height - foot + 60),
+  ]..shuffle(rnd);
+  final count = 5 + rnd.nextInt(3) + cells.length;
+  final used = <Offset>[];
+  for (final at in spots) {
+    if (used.length >= count) break;
+    // (room round each, so they don't pile up)
+    if (used.any((u) => (u - at).distance < 110)) continue;
+    used.add(at);
+    final ink = _inks[rnd.nextInt(_inks.length)];
+    switch (rnd.nextInt(5)) {
+      case 0 || 1:
+        final s = 64.0 + rnd.nextInt(3) * 10;
+        paintPixelIcon(
+          c,
+          _clips[rnd.nextInt(_clips.length)],
+          Rect.fromCenter(center: at, width: s, height: s),
+        );
+      case 2:
+        _spray(c, rnd, at, ink);
+      case 3:
+        _sparkles(c, rnd, at, ink);
+      default:
+        _squiggle(c, rnd, at, ink);
+    }
+  }
+}
+
+/// A burst of spray-can paint: square pixel dots, thick in the middle.
+void _spray(Canvas c, math.Random rnd, Offset at, Color ink) {
+  final p = Paint()..color = ink;
+  for (var i = 0; i < 90; i++) {
+    final a = rnd.nextDouble() * math.pi * 2;
+    final d = math.pow(rnd.nextDouble(), 1.6) * 42;
+    final q = at + Offset(math.cos(a), math.sin(a)) * d.toDouble();
+    c.drawRect(Rect.fromLTWH((q.dx / 3).round() * 3, (q.dy / 3).round() * 3, 3, 3), p);
+  }
+}
+
+/// Little pixel sparkles: plus shapes of different sizes.
+void _sparkles(Canvas c, math.Random rnd, Offset at, Color ink) {
+  final p = Paint()..color = ink;
+  for (var i = 0; i < 3; i++) {
+    final q = at + Offset((rnd.nextDouble() - 0.5) * 60, (rnd.nextDouble() - 0.5) * 50);
+    final s = (5 + rnd.nextInt(4)) * 3.0;
+    final x = (q.dx / 3).round() * 3.0, y = (q.dy / 3).round() * 3.0;
+    c.drawRect(Rect.fromLTWH(x - 1.5, y - s, 3, s * 2), p);
+    c.drawRect(Rect.fromLTWH(x - s, y - 1.5, s * 2, 3), p);
+  }
+}
+
+/// A pencil squiggle: a wave drawn in chunky pixels.
+void _squiggle(Canvas c, math.Random rnd, Offset at, Color ink) {
+  final p = Paint()..color = ink;
+  final len = 70 + rnd.nextInt(40);
+  final amp = 8 + rnd.nextInt(8);
+  for (var x = -len / 2; x < len / 2; x += 3) {
+    final y = math.sin(x / 9) * amp;
+    c.drawRect(Rect.fromLTWH(((at.dx + x) / 3).round() * 3, ((at.dy + y) / 3).round() * 3, 4, 4), p);
+  }
 }
 
 /// GIF sizes: the longest side.

@@ -792,6 +792,14 @@ const Map<PixelIcon, List<String>> _sprites = {
   ],
 };
 
+/// [icon] drawn into [dst] on a canvas (renders that use the clip art).
+void paintPixelIcon(Canvas canvas, PixelIcon icon, Rect dst) {
+  canvas.save();
+  canvas.translate(dst.left, dst.top);
+  _SpritePainter(_sprites[icon]!).paint(canvas, dst.size);
+  canvas.restore();
+}
+
 /// Debug helper used by tests: every sprite is 16x16.
 bool spritesAreValid() =>
     _sprites.values.every((rows) => rows.length == 16 && rows.every((r) => r.length == 16));

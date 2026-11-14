@@ -247,12 +247,7 @@ class CardEditorState extends State<CardEditor> {
       ..add(b);
   }
 
-  Future<String?> _ask(String title, String initial) => showWin98Window<String>(
-    context,
-    title: title,
-    width: 280,
-    builder: (context) => _TextAsk(initial: initial),
-  );
+  Future<String?> _ask(String title, String initial) => askWin98Text(context, title, initial);
 
   Future<void> _addWord() async {
     final t = await _ask('WordArt', 'Happy Birthday!');
@@ -526,10 +521,20 @@ class _Tool extends StatelessWidget {
   );
 }
 
+/// A small 98 window asking for a line of text; null if cancelled.
+Future<String?> askWin98Text(BuildContext context, String title, String initial, {int max = 30}) =>
+    showWin98Window<String>(
+      context,
+      title: title,
+      width: 280,
+      builder: (context) => _TextAsk(initial: initial, max: max),
+    );
+
 class _TextAsk extends StatefulWidget {
-  const _TextAsk({required this.initial});
+  const _TextAsk({required this.initial, required this.max});
 
   final String initial;
+  final int max;
 
   @override
   State<_TextAsk> createState() => _TextAskState();
@@ -560,7 +565,7 @@ class _TextAskState extends State<_TextAsk> {
           child: TextField(
             controller: _c,
             autofocus: true,
-            maxLength: 30,
+            maxLength: widget.max,
             style: W98.text.copyWith(color: W98.windowInk),
             cursorColor: W98.windowInk,
             decoration: const InputDecoration(isDense: true, border: InputBorder.none, counterText: ''),

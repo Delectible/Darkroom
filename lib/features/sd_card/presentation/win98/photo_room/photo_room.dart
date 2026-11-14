@@ -46,6 +46,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
   // the options
   Backdrop _back = Backdrop.white;
   bool _thick = false;
+  StripLook _strip = const StripLook();
   double _speed = 0.5; // 0 slow .. 1 fast
   GifSize _gifSize = GifSize.medium;
   CardDraft? _card;
@@ -101,7 +102,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
           _back,
           DateTime.now(),
         ),
-        _ => renderRoomStrip(photos, _back, DateTime.now()),
+        _ => renderRoomStrip(photos, _strip, DateTime.now()),
       };
     } catch (e) {
       debugPrint('Photo Room: $e');
@@ -526,17 +527,13 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
               ),
             ),
             if (_error != null) Text(_error!, maxLines: 2, style: W98.text.copyWith(fontSize: 11)),
-            Win98GroupBox(
-              label: 'Background',
-              child: Padding(
-                padding: const EdgeInsets.all(6),
-                child: _backdrops(
-                  _make == PhotoRoomMake.strip
-                      ? const [Backdrop.white, Backdrop.black, Backdrop.teal, Backdrop.navy]
-                      : Backdrop.values,
-                ),
+            if (_make == PhotoRoomMake.strip)
+              ..._stripOptions()
+            else
+              Win98GroupBox(
+                label: 'Background',
+                child: Padding(padding: const EdgeInsets.all(6), child: _backdrops(Backdrop.values)),
               ),
-            ),
             if (_make == PhotoRoomMake.collage)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
@@ -553,6 +550,93 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
         );
     }
   }
+
+  void _restrip(StripLook look) {
+    setState(() => _strip = look);
+    unawaited(_render());
+  }
+
+  /// The doodled strip's options: its fill, caption, a fresh shuffle of
+  /// the doodles, and what's shown.
+  List<Widget> _stripOptions() => [
+    Win98GroupBox(
+      label: 'Background',
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: [
+            for (final f in StripFill.values)
+              GestureDetector(
+                onTap: () => _restrip(_strip.copyWith(fill: f)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Win98Bevel(
+                      style: _strip.fill == f ? BevelStyle.pressed : BevelStyle.sunken,
+                      padding: const EdgeInsets.all(2),
+                      child: Container(
+                        width: 18,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: f.color,
+                          border: _strip.fill == f ? Border.all(color: W98.windowInk) : null,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    Text(f.label, style: W98.text.copyWith(fontSize: 11)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+    const SizedBox(height: 4),
+    Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      children: [
+        Win98Button(
+          onPressed: () async {
+            final t = await askWin98Text(context, 'Caption', _strip.caption, max: 24);
+            if (t != null) _restrip(_strip.copyWith(caption: t));
+          },
+          child: const Text('Caption...'),
+        ),
+        Win98Button(
+          onPressed: _strip.doodles
+              ? () {
+                  unawaited(Haptics.selectionClick());
+                  _restrip(_strip.copyWith(seed: _strip.seed + 1));
+                }
+              : null,
+          child: const Text('Shuffle doodles'),
+        ),
+      ],
+    ),
+    const SizedBox(height: 2),
+    Row(
+      children: [
+        Expanded(
+          child: Win98Checkbox(
+            value: _strip.doodles,
+            label: 'Doodles',
+            onChanged: (v) => _restrip(_strip.copyWith(doodles: v)),
+          ),
+        ),
+        Expanded(
+          child: Win98Checkbox(
+            value: _strip.date,
+            label: 'Date',
+            onChanged: (v) => _restrip(_strip.copyWith(date: v)),
+          ),
+        ),
+      ],
+    ),
+  ];
 
   Widget _saving() => const Column(
     mainAxisAlignment: MainAxisAlignment.center,

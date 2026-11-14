@@ -128,7 +128,7 @@ void main() {
     await tester.pump();
     await tester.runAsync(() async {
       // (redrawn here, on the real clock: the photos decode off the test's)
-      await tester.tap(find.text('Black'));
+      await tester.tap(find.text('Lemon'));
       for (var i = 0; i < 30 && find.byType(RawImage).evaluate().isEmpty; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 100));
         await tester.pump();
@@ -136,7 +136,18 @@ void main() {
     });
     await tester.pump();
     expect(find.byType(RawImage), findsOneWidget);
+    expect(find.text('Shuffle doodles'), findsOneWidget);
     await shoot(tester, 'strip');
+    // a new shuffle, a new fill
+    await tester.runAsync(() async {
+      await tester.tap(find.text('Shuffle doodles'));
+      await tester.tap(find.text('Sky'));
+      for (var i = 0; i < 10; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await tester.pump();
+      }
+    });
+    await shoot(tester, 'strip_shuffled');
 
     // back to the start: a card
     await tester.tap(find.text('< Back'));

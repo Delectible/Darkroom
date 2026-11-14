@@ -17,6 +17,7 @@ import 'package:material_ui/material_ui.dart';
 void main() {
   final shots = Platform.environment['SHOTS'];
   final boundary = GlobalKey();
+  var land = false;
   late List<MediaItem> pictures;
 
   setUpAll(() {
@@ -57,7 +58,7 @@ void main() {
       final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final image = await ro.toImage(pixelRatio: 1);
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
-      await File('$shots/photoroom_$name.png').writeAsBytes(png!.buffer.asUint8List());
+      await File('$shots/photoroom_$name${land ? '_land' : ''}.png').writeAsBytes(png!.buffer.asUint8List());
     });
   }
 
@@ -68,118 +69,123 @@ void main() {
     }
   }
 
-  testWidgets('the wizard: choose, pick, arrange', (tester) async {
-    tester.view.physicalSize = const Size(1280, 2856);
-    tester.view.devicePixelRatio = 3.1;
-    addTearDown(tester.view.reset);
-    await tester.runAsync(() async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [darkroomFolderProvider.overrideWithValue(pictures)],
-          child: RepaintBoundary(
-            key: boundary,
-            child: MaterialApp(
-              debugShowCheckedModeBanner: false,
-              home: Scaffold(
-                backgroundColor: const Color(0xFF008080),
-                body: Builder(
-                  builder: (context) => Center(
-                    child: TextButton(onPressed: () => showPhotoRoom(context), child: const Text('open')),
+  for (final sideways in [false, true]) {
+    group(sideways ? 'landscape' : 'portrait', () {
+      setUp(() => land = sideways);
+      testWidgets('the wizard: choose, pick, arrange', (tester) async {
+        tester.view.physicalSize = land ? const Size(2856, 1280) : const Size(1280, 2856);
+        tester.view.devicePixelRatio = 3.1;
+        addTearDown(tester.view.reset);
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [darkroomFolderProvider.overrideWithValue(pictures)],
+              child: RepaintBoundary(
+                key: boundary,
+                child: MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  home: Scaffold(
+                    backgroundColor: const Color(0xFF008080),
+                    body: Builder(
+                      builder: (context) => Center(
+                        child: TextButton(onPressed: () => showPhotoRoom(context), child: const Text('open')),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
-      );
-    });
-    await tester.tap(find.text('open'));
-    await tester.pumpAndSettle();
-    expect(find.text('Welcome to the Photo Room Wizard'), findsOneWidget);
-    await shoot(tester, 'choose');
+          );
+        });
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        expect(find.text('Welcome to the Photo Room Wizard'), findsOneWidget);
+        await shoot(tester, 'choose');
 
-    // a booth strip: 3 or 4, in tap order
-    await tester.tap(find.text('Photo booth strip'));
-    await tester.pump();
-    await tester.tap(find.text('Next >'));
-    await tester.pumpAndSettle();
-    expect(find.text('Pick your photos'), findsOneWidget);
-    await tester.tap(find.text('IMG_0012.JPG'));
-    await tester.tap(find.text('IMG_0010.JPG'));
-    await tester.pump();
-    expect(find.textContaining('2 of 7 picked'), findsOneWidget);
-    await tester.tap(find.text('IMG_0015.JPG'));
-    await tester.pump();
-    await real(tester);
-    await shoot(tester, 'pick');
-    // Select All takes as many as a strip holds; Deselect All clears
-    await tester.tap(find.text('Select All'));
-    await tester.pump();
-    expect(find.textContaining('4 of 7 picked'), findsOneWidget);
-    await tester.tap(find.text('Deselect All'));
-    await tester.pump();
-    expect(find.textContaining('0 of 7 picked'), findsOneWidget);
-    for (final n in ['IMG_0012.JPG', 'IMG_0010.JPG', 'IMG_0015.JPG']) {
-      await tester.tap(find.text(n));
-    }
-    await tester.pump();
-    // (real time: the photos decode and the strip draws off the test clock)
-    await tester.tap(find.text('Next >'));
-    await tester.pump();
-    await tester.runAsync(() async {
-      // (redrawn here, on the real clock: the photos decode off the test's)
-      await tester.tap(find.text('Lemon'));
-      for (var i = 0; i < 30 && find.byType(RawImage).evaluate().isEmpty; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        // a booth strip: 3 or 4, in tap order
+        await tester.tap(find.text('Photo booth strip'));
         await tester.pump();
-      }
-    });
-    await tester.pump();
-    expect(find.byType(RawImage), findsOneWidget);
-    expect(find.text('Shuffle doodles'), findsOneWidget);
-    await shoot(tester, 'strip');
-    // a new shuffle, a new fill
-    await tester.runAsync(() async {
-      await tester.tap(find.text('Shuffle doodles'));
-      await tester.tap(find.text('Sky'));
-      for (var i = 0; i < 10; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await tester.tap(find.text('Next >'));
+        await tester.pumpAndSettle();
+        expect(find.text('Pick your photos'), findsOneWidget);
+        await tester.tap(find.text('IMG_0012.JPG'));
+        await tester.tap(find.text('IMG_0010.JPG'));
         await tester.pump();
-      }
+        expect(find.textContaining('2 of 7 picked'), findsOneWidget);
+        await tester.tap(find.text('IMG_0015.JPG'));
+        await tester.pump();
+        await real(tester);
+        await shoot(tester, 'pick');
+        // Select All takes as many as a strip holds; Deselect All clears
+        await tester.tap(find.text('Select All'));
+        await tester.pump();
+        expect(find.textContaining('4 of 7 picked'), findsOneWidget);
+        await tester.tap(find.text('Deselect All'));
+        await tester.pump();
+        expect(find.textContaining('0 of 7 picked'), findsOneWidget);
+        for (final n in ['IMG_0012.JPG', 'IMG_0010.JPG', 'IMG_0015.JPG']) {
+          await tester.tap(find.text(n));
+        }
+        await tester.pump();
+        // (real time: the photos decode and the strip draws off the test clock)
+        await tester.tap(find.text('Next >'));
+        await tester.pump();
+        await tester.runAsync(() async {
+          // (redrawn here, on the real clock: the photos decode off the test's)
+          await tester.tap(find.text('Lemon'));
+          for (var i = 0; i < 30 && find.byType(RawImage).evaluate().isEmpty; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+            await tester.pump();
+          }
+        });
+        await tester.pump();
+        expect(find.byType(RawImage), findsOneWidget);
+        expect(find.text('Shuffle doodles'), findsOneWidget);
+        await shoot(tester, 'strip');
+        // a new shuffle, a new fill
+        await tester.runAsync(() async {
+          await tester.tap(find.text('Shuffle doodles'));
+          await tester.tap(find.text('Sky'));
+          for (var i = 0; i < 10; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+            await tester.pump();
+          }
+        });
+        await shoot(tester, 'strip_shuffled');
+
+        // back to the start: a card
+        await tester.tap(find.text('< Back'));
+        await tester.pump();
+        await tester.tap(find.text('< Back'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Greeting card or poster'));
+        await tester.pump();
+        await tester.tap(find.text('Next >'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Next >'));
+        await tester.pump();
+        await real(tester, 8);
+        expect(find.text('Hello!'), findsWidgets);
+        await shoot(tester, 'card');
+
+        // and a GIF
+        await tester.tap(find.text('< Back'));
+        await tester.pump();
+        await tester.tap(find.text('< Back'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Animated GIF'));
+        await tester.pump();
+        await tester.tap(find.text('Next >'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Next >'));
+        await tester.pump();
+        await real(tester, 8);
+        expect(find.text('Slow'), findsOneWidget);
+        await shoot(tester, 'gif');
+        await tester.pumpWidget(const SizedBox());
+      });
     });
-    await shoot(tester, 'strip_shuffled');
-
-    // back to the start: a card
-    await tester.tap(find.text('< Back'));
-    await tester.pump();
-    await tester.tap(find.text('< Back'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Greeting card or poster'));
-    await tester.pump();
-    await tester.tap(find.text('Next >'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next >'));
-    await tester.pump();
-    await real(tester, 8);
-    expect(find.text('Hello!'), findsWidgets);
-    await shoot(tester, 'card');
-
-    // and a GIF
-    await tester.tap(find.text('< Back'));
-    await tester.pump();
-    await tester.tap(find.text('< Back'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Animated GIF'));
-    await tester.pump();
-    await tester.tap(find.text('Next >'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next >'));
-    await tester.pump();
-    await real(tester, 8);
-    expect(find.text('Slow'), findsOneWidget);
-    await shoot(tester, 'gif');
-    await tester.pumpWidget(const SizedBox());
-  });
+  }
 
   test('what each takes', () {
     expect(PhotoRoomMake.collage.fits(3), isFalse);

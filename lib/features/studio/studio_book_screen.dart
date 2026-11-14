@@ -798,82 +798,111 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
               ),
             ),
             Expanded(
-              child: Center(
-                child: FractionallySizedBox(
-                  widthFactor: 0.72,
-                  child: FlipBooklet(
-                    key: ValueKey(_replays),
-                    work: _work,
-                    riffle: Riffle.loop,
-                    pageMs: _pageMs,
-                    cacheWidth: 1000,
-                    face: _hasPages
-                        ? null
-                        : (v != null && v.value.isInitialized
-                              ? FittedBox(
-                                  fit: BoxFit.cover,
-                                  child: SizedBox(
-                                    width: v.value.size.width,
-                                    height: v.value.size.height,
-                                    child: VideoPlayer(v),
-                                  ),
-                                )
-                              : const ColoredBox(color: Color(0xFFF7F4EE))),
-                  ),
-                ),
-              ),
-            ),
-            if (_hasPages)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: [
-                    const Text('Slow', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
-                    Expanded(
-                      child: Slider(
-                        // (right = faster)
-                        value: (StudioMake.pageMsMax + StudioMake.pageMsMin - _pageMs).toDouble(),
-                        min: StudioMake.pageMsMin.toDouble(),
-                        max: StudioMake.pageMsMax.toDouble(),
-                        activeColor: StudioInk.brass,
-                        inactiveColor: StudioInk.card,
-                        onChanged: (x) =>
-                            setState(() => _pageMs = StudioMake.pageMsMax + StudioMake.pageMsMin - x.round()),
+              child: Builder(
+                builder: (context) {
+                  final size = MediaQuery.sizeOf(context);
+                  final sideways = size.width > size.height * 1.2;
+                  // the booklet as big as fits (it's 4:5, a little edge round it)
+                  final booklet = LayoutBuilder(
+                    builder: (context, box) => Center(
+                      child: SizedBox(
+                        width: math.min(box.maxWidth * (sideways ? 0.86 : 0.72), (box.maxHeight - 24) * 0.74),
+                        child: FlipBooklet(
+                          key: ValueKey(_replays),
+                          work: _work,
+                          riffle: Riffle.loop,
+                          pageMs: _pageMs,
+                          cacheWidth: 1000,
+                          face: _hasPages
+                              ? null
+                              : (v != null && v.value.isInitialized
+                                    ? FittedBox(
+                                        fit: BoxFit.cover,
+                                        child: SizedBox(
+                                          width: v.value.size.width,
+                                          height: v.value.size.height,
+                                          child: VideoPlayer(v),
+                                        ),
+                                      )
+                                    : const ColoredBox(color: Color(0xFFF7F4EE))),
+                        ),
                       ),
                     ),
-                    const Text('Fast', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
-                  ],
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _BigAction(
-                    icon: Icons.replay,
-                    label: 'Replay',
-                    onTap: () {
-                      setState(() => _replays++);
-                      unawaited(_video?.seekTo(Duration.zero));
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  Builder(
-                    builder: (anchor) => _BigAction(
-                      icon: Icons.ios_share,
-                      label: 'Share',
-                      onTap: _busy != null ? null : () => unawaited(_share(anchor)),
+                  );
+                  final controls = <Widget>[
+                    if (_hasPages)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Row(
+                          children: [
+                            const Text('Slow', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
+                            Expanded(
+                              child: Slider(
+                                // (right = faster)
+                                value: (StudioMake.pageMsMax + StudioMake.pageMsMin - _pageMs).toDouble(),
+                                min: StudioMake.pageMsMin.toDouble(),
+                                max: StudioMake.pageMsMax.toDouble(),
+                                activeColor: StudioInk.brass,
+                                inactiveColor: StudioInk.card,
+                                onChanged: (x) => setState(
+                                  () => _pageMs = StudioMake.pageMsMax + StudioMake.pageMsMin - x.round(),
+                                ),
+                              ),
+                            ),
+                            const Text('Fast', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _BigAction(
+                            icon: Icons.replay,
+                            label: 'Replay',
+                            onTap: () {
+                              setState(() => _replays++);
+                              unawaited(_video?.seekTo(Duration.zero));
+                            },
+                          ),
+                          const SizedBox(width: 12),
+                          Builder(
+                            builder: (anchor) => _BigAction(
+                              icon: Icons.ios_share,
+                              label: 'Share',
+                              onTap: _busy != null ? null : () => unawaited(_share(anchor)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          _BigAction(
+                            icon: Icons.download,
+                            label: _busy ?? 'Save video',
+                            primary: true,
+                            onTap: _busy != null ? null : _save,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  _BigAction(
-                    icon: Icons.download,
-                    label: _busy ?? 'Save video',
-                    primary: true,
-                    onTap: _busy != null ? null : _save,
-                  ),
-                ],
+                  ];
+                  if (sideways) {
+                    return Row(
+                      children: [
+                        Expanded(child: booklet),
+                        SizedBox(
+                          width: math.min(400, size.width * 0.42),
+                          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: controls),
+                        ),
+                      ],
+                    );
+                  }
+                  return Column(
+                    children: [
+                      Expanded(child: booklet),
+                      ...controls,
+                    ],
+                  );
+                },
               ),
             ),
           ],

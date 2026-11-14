@@ -463,18 +463,14 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
       case PhotoRoomMake.card:
         return CardEditor(key: _cardEditor, draft: _card!, boundary: _cardBoundary);
       case PhotoRoomMake.gif:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Win98Bevel(
-                style: BevelStyle.sunken,
-                color: W98.dark,
-                padding: const EdgeInsets.all(6),
-                child: _GifPreview(items: _chosen(), frameMs: _frameMs),
-              ),
-            ),
-            const SizedBox(height: 6),
+        return _beside(
+          Win98Bevel(
+            style: BevelStyle.sunken,
+            color: W98.dark,
+            padding: const EdgeInsets.all(6),
+            child: _GifPreview(items: _chosen(), frameMs: _frameMs),
+          ),
+          [
             Win98GroupBox(
               label: 'Speed',
               child: Padding(
@@ -513,19 +509,16 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
         );
       default:
         final p = _preview;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Win98Bevel(
-                style: BevelStyle.sunken,
-                color: W98.shadow,
-                padding: const EdgeInsets.all(6),
-                child: p == null
-                    ? const Center(child: Text('Drawing...'))
-                    : RawImage(image: p, fit: BoxFit.contain),
-              ),
-            ),
+        return _beside(
+          Win98Bevel(
+            style: BevelStyle.sunken,
+            color: W98.shadow,
+            padding: const EdgeInsets.all(6),
+            child: p == null
+                ? const Center(child: Text('Drawing...'))
+                : RawImage(image: p, fit: BoxFit.contain),
+          ),
+          [
             if (_error != null) Text(_error!, maxLines: 2, style: W98.text.copyWith(fontSize: 11)),
             if (_make == PhotoRoomMake.strip)
               ..._stripOptions()
@@ -550,6 +543,36 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
         );
     }
   }
+
+  /// The preview with its options: under it upright, beside it (scrolling
+  /// if need be) when the window is wide.
+  Widget _beside(Widget preview, List<Widget> options) => LayoutBuilder(
+    builder: (context, box) {
+      if (box.maxWidth > box.maxHeight * 1.3) {
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: preview),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: math.min(300, box.maxWidth * 0.48),
+              child: SingleChildScrollView(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: options),
+              ),
+            ),
+          ],
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: preview),
+          const SizedBox(height: 6),
+          ...options,
+        ],
+      );
+    },
+  );
 
   void _restrip(StripLook look) {
     setState(() => _strip = look);
@@ -625,6 +648,13 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
             value: _strip.doodles,
             label: 'Doodles',
             onChanged: (v) => _restrip(_strip.copyWith(doodles: v)),
+          ),
+        ),
+        Expanded(
+          child: Win98Checkbox(
+            value: _strip.crooked,
+            label: 'Crooked',
+            onChanged: (v) => _restrip(_strip.copyWith(crooked: v)),
           ),
         ),
         Expanded(

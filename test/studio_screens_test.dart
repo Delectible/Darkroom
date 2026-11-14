@@ -23,6 +23,7 @@ import 'package:material_ui/material_ui.dart';
 void main() {
   final shots = Platform.environment['SHOTS'];
   final boundary = GlobalKey();
+  var land = false;
 
   late List<MediaItem> prints;
 
@@ -66,7 +67,7 @@ void main() {
       final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final image = await ro.toImage(pixelRatio: 1);
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
-      await File('$shots/studio_$name.png').writeAsBytes(png!.buffer.asUint8List());
+      await File('$shots/studio_$name${land ? '_land' : ''}.png').writeAsBytes(png!.buffer.asUint8List());
     });
   }
 
@@ -84,7 +85,7 @@ void main() {
   );
 
   Future<void> phone(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1280, 2856);
+    tester.view.physicalSize = land ? const Size(2856, 1280) : const Size(1280, 2856);
     tester.view.devicePixelRatio = 3.1;
     addTearDown(tester.view.reset);
   }
@@ -96,186 +97,192 @@ void main() {
     }
   }
 
-  testWidgets('studio: the tray and the cards say what each takes', (tester) async {
-    await phone(tester);
-    await tester.pumpWidget(app(const StudioScreen()));
-    await settle(tester);
-    expect(find.text('3 prints on the table'), findsOneWidget);
-    expect(find.textContaining('3 or 4 prints · ready'), findsOneWidget);
-    expect(find.textContaining('1 more needed'), findsOneWidget); // flip book: 4 to 24
-    expect(find.textContaining('pick which'), findsOneWidget); // collage: 2, 4, 6 or 9
-    expect(find.text('RETURN ALL TO THE BOARD'), findsOneWidget);
-    await shoot(tester, 'table');
-  });
-
-  for (final kind in [StudioKind.strip, StudioKind.collage]) {
-    testWidgets('studio: ${kind.name} from photos of different shapes', (tester) async {
-      await phone(tester);
-      // (real time: the photos decode and the piece draws off the test clock)
-      await tester.runAsync(() async {
-        await tester.pumpWidget(app(StudioMaker(kind: kind, prints: prints)));
-        for (var i = 0; i < 20 && find.byType(RawImage).evaluate().isEmpty; i++) {
-          await Future<void>.delayed(const Duration(milliseconds: 150));
-          await tester.pump();
-        }
+  // (each screen upright and sideways: nothing may overflow or overlap)
+  for (final sideways in [false, true]) {
+    group(sideways ? 'landscape' : 'portrait', () {
+      setUp(() => land = sideways);
+      testWidgets('studio: the tray and the cards say what each takes', (tester) async {
+        await phone(tester);
+        await tester.pumpWidget(app(const StudioScreen()));
+        await settle(tester);
+        expect(find.text('3 prints on the table'), findsOneWidget);
+        expect(find.textContaining('3 or 4 prints · ready'), findsOneWidget);
+        expect(find.textContaining('1 more needed'), findsOneWidget); // flip book: 4 to 24
+        expect(find.textContaining('pick which'), findsOneWidget); // collage: 2, 4, 6 or 9
+        expect(find.text('RETURN ALL TO THE BOARD'), findsOneWidget);
+        await shoot(tester, 'table');
       });
-      await tester.pump();
-      expect(find.byType(RawImage), findsOneWidget);
-      await shoot(tester, kind.name);
-      if (kind == StudioKind.collage) {
+
+      for (final kind in [StudioKind.strip, StudioKind.collage]) {
+        testWidgets('studio: ${kind.name} from photos of different shapes', (tester) async {
+          await phone(tester);
+          // (real time: the photos decode and the piece draws off the test clock)
+          await tester.runAsync(() async {
+            await tester.pumpWidget(app(StudioMaker(kind: kind, prints: prints)));
+            for (var i = 0; i < 20 && find.byType(RawImage).evaluate().isEmpty; i++) {
+              await Future<void>.delayed(const Duration(milliseconds: 150));
+              await tester.pump();
+            }
+          });
+          await tester.pump();
+          expect(find.byType(RawImage), findsOneWidget);
+          await shoot(tester, kind.name);
+          if (kind == StudioKind.collage) {
+            await tester.runAsync(() async {
+              await tester.tap(find.text('Loose'));
+              await tester.tap(find.text('Kraft'));
+              for (var i = 0; i < 10; i++) {
+                await Future<void>.delayed(const Duration(milliseconds: 150));
+                await tester.pump();
+              }
+            });
+            await shoot(tester, 'collage_loose');
+          }
+        });
+      }
+
+      testWidgets('scrapbook: prints spread out, a photo picked shows its frames, a text its fonts', (
+        tester,
+      ) async {
+        await phone(tester);
         await tester.runAsync(() async {
-          await tester.tap(find.text('Loose'));
-          await tester.tap(find.text('Kraft'));
+          await tester.pumpWidget(app(ScrapbookEditor(prints: prints)));
           for (var i = 0; i < 10; i++) {
-            await Future<void>.delayed(const Duration(milliseconds: 150));
+            await Future<void>.delayed(const Duration(milliseconds: 100));
             await tester.pump();
           }
         });
-        await shoot(tester, 'collage_loose');
-      }
+        final title = tester.getRect(find.text('My scrapbook'));
+        await shoot(tester, 'scrapbook');
+        expect(find.text('Sticker'), findsOneWidget);
+        // tap the first print: its frames, Remove
+        final first = tester.getCenter(find.byType(Image).first);
+        await tester.tapAt(first);
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('Remove'), findsOneWidget);
+        // the page didn't move when the tools changed
+        expect(tester.getRect(find.text('My scrapbook')), title);
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+        await tester.pump();
+        await shoot(tester, 'scrapbook_photo');
+        // the title: fonts and colours
+        await tester.tapAt(tester.getCenter(find.text('My scrapbook')));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(find.text('LABEL'), findsOneWidget);
+        await tester.tap(find.text('Typewriter'));
+        await tester.pump();
+        await shoot(tester, 'scrapbook_text');
+        // the sticker sheet
+        await tester.tap(find.text('Done'));
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.tap(find.text('Sticker'));
+        await tester.pumpAndSettle();
+        expect(find.text('Sticky note'), findsOneWidget);
+        await shoot(tester, 'stickers');
+        await tester.tap(find.text('Star'));
+        await tester.pumpAndSettle();
+        expect(find.text('Remove'), findsOneWidget);
+        await tester.pumpWidget(const SizedBox());
+      });
+
+      testWidgets('the book: an album page packed by hand, the page turn, a flip book', (tester) async {
+        await phone(tester);
+        final dir = Directory.systemTemp.createTempSync('book');
+        String pic(String name, int w, int h, int tone) {
+          final im = img.Image(width: w, height: h);
+          for (final p in im) {
+            p
+              ..r = 30 + (p.x * 2 + tone) % 200
+              ..g = 50 + (p.y + tone) % 150
+              ..b = 80 + tone % 120;
+          }
+          final path = '${dir.path}/$name.jpg';
+          File(path).writeAsBytesSync(img.encodeJpg(im));
+          return path;
+        }
+
+        StudioWork w(String id, StudioKind k, String path, {List<String> pages = const []}) => StudioWork(
+          id: id,
+          kind: k,
+          path: path,
+          cover: k == StudioKind.flipbook ? pages.first : null,
+          pages: pages,
+          paper: 'cream',
+          pageMs: 360,
+          createdAt: DateTime(2026, 11, 13),
+        );
+        final works = [
+          w('s1', StudioKind.strip, pic('s1', 240, 800, 10)),
+          w('c1', StudioKind.collage, pic('c1', 800, 800, 60)),
+          w('s2', StudioKind.strip, pic('s2', 260, 700, 120)),
+          w('c2', StudioKind.collage, pic('c2', 900, 640, 170)),
+          w('f1', StudioKind.flipbook, '/none.mp4', pages: [for (final m in prints) m.outputPath!]),
+          w('sb', StudioKind.scrapbook, pic('sb', 900, 1200, 90)),
+        ];
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+                studioBookProvider.overrideWith(() => _Book(works)),
+              ],
+              child: RepaintBoundary(
+                key: boundary,
+                child: const MaterialApp(debugShowCheckedModeBanner: false, home: StudioBookScreen()),
+              ),
+            ),
+          );
+          for (var i = 0; i < 20; i++) {
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+            await tester.pump(const Duration(milliseconds: 50));
+          }
+        });
+        expect(find.text('page 1 of 2'), findsOneWidget);
+        await shoot(tester, 'book');
+        // drag the page part way over
+        final page = tester.getRect(find.byType(PageTurn));
+        final g = await tester.startGesture(page.bottomRight - const Offset(20, 60));
+        await g.moveBy(const Offset(-40, 0));
+        await tester.pump();
+        await g.moveBy(Offset(-page.width * 0.45, -30));
+        await tester.pump();
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
+        await tester.pump();
+        await shoot(tester, 'book_turn');
+        await g.moveBy(Offset(-page.width * 0.4, 0));
+        await g.up();
+        await tester.pumpAndSettle();
+        expect(find.text('page 2 of 2'), findsOneWidget);
+        for (var i = 0; i < 8; i++) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+          await tester.pump();
+        }
+        await shoot(tester, 'book_scrapbook');
+        // the flip book, held big
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+              studioBookProvider.overrideWith(() => _Book(works)),
+            ],
+            child: RepaintBoundary(
+              key: boundary,
+              child: MaterialApp(debugShowCheckedModeBanner: false, home: FlipBookViewer(work: works[4])),
+            ),
+          ),
+        );
+        for (var i = 0; i < 8; i++) {
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
+          await tester.pump();
+        }
+        // (into the second page, the first swinging away)
+        await tester.pump(const Duration(milliseconds: 360 + 90));
+        expect(find.text('Save video'), findsOneWidget);
+        await shoot(tester, 'flipbook_viewer');
+        await tester.pumpWidget(const SizedBox());
+      });
     });
   }
-
-  testWidgets('scrapbook: prints spread out, a photo picked shows its frames, a text its fonts', (
-    tester,
-  ) async {
-    await phone(tester);
-    await tester.runAsync(() async {
-      await tester.pumpWidget(app(ScrapbookEditor(prints: prints)));
-      for (var i = 0; i < 10; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        await tester.pump();
-      }
-    });
-    final title = tester.getRect(find.text('My scrapbook'));
-    await shoot(tester, 'scrapbook');
-    expect(find.text('Sticker'), findsOneWidget);
-    // tap the first print: its frames, Remove
-    final first = tester.getCenter(find.byType(Image).first);
-    await tester.tapAt(first);
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Remove'), findsOneWidget);
-    // the page didn't move when the tools changed
-    expect(tester.getRect(find.text('My scrapbook')), title);
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
-    await tester.pump();
-    await shoot(tester, 'scrapbook_photo');
-    // the title: fonts and colours
-    await tester.tapAt(tester.getCenter(find.text('My scrapbook')));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('LABEL'), findsOneWidget);
-    await tester.tap(find.text('Typewriter'));
-    await tester.pump();
-    await shoot(tester, 'scrapbook_text');
-    // the sticker sheet
-    await tester.tap(find.text('Done'));
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.text('Sticker'));
-    await tester.pumpAndSettle();
-    expect(find.text('Sticky note'), findsOneWidget);
-    await shoot(tester, 'stickers');
-    await tester.tap(find.text('Star'));
-    await tester.pumpAndSettle();
-    expect(find.text('Remove'), findsOneWidget);
-    await tester.pumpWidget(const SizedBox());
-  });
-
-  testWidgets('the book: an album page packed by hand, the page turn, a flip book', (tester) async {
-    await phone(tester);
-    final dir = Directory.systemTemp.createTempSync('book');
-    String pic(String name, int w, int h, int tone) {
-      final im = img.Image(width: w, height: h);
-      for (final p in im) {
-        p
-          ..r = 30 + (p.x * 2 + tone) % 200
-          ..g = 50 + (p.y + tone) % 150
-          ..b = 80 + tone % 120;
-      }
-      final path = '${dir.path}/$name.jpg';
-      File(path).writeAsBytesSync(img.encodeJpg(im));
-      return path;
-    }
-
-    StudioWork w(String id, StudioKind k, String path, {List<String> pages = const []}) => StudioWork(
-      id: id,
-      kind: k,
-      path: path,
-      cover: k == StudioKind.flipbook ? pages.first : null,
-      pages: pages,
-      paper: 'cream',
-      pageMs: 360,
-      createdAt: DateTime(2026, 11, 13),
-    );
-    final works = [
-      w('s1', StudioKind.strip, pic('s1', 240, 800, 10)),
-      w('c1', StudioKind.collage, pic('c1', 800, 800, 60)),
-      w('s2', StudioKind.strip, pic('s2', 260, 700, 120)),
-      w('c2', StudioKind.collage, pic('c2', 900, 640, 170)),
-      w('f1', StudioKind.flipbook, '/none.mp4', pages: [for (final m in prints) m.outputPath!]),
-      w('sb', StudioKind.scrapbook, pic('sb', 900, 1200, 90)),
-    ];
-    await tester.runAsync(() async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
-            studioBookProvider.overrideWith(() => _Book(works)),
-          ],
-          child: RepaintBoundary(
-            key: boundary,
-            child: const MaterialApp(debugShowCheckedModeBanner: false, home: StudioBookScreen()),
-          ),
-        ),
-      );
-      for (var i = 0; i < 20; i++) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 50));
-      }
-    });
-    expect(find.text('page 1 of 2'), findsOneWidget);
-    await shoot(tester, 'book');
-    // drag the page part way over
-    final page = tester.getRect(find.byType(PageTurn));
-    final g = await tester.startGesture(page.bottomRight - const Offset(20, 60));
-    await g.moveBy(const Offset(-40, 0));
-    await tester.pump();
-    await g.moveBy(Offset(-page.width * 0.45, -30));
-    await tester.pump();
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 300)));
-    await tester.pump();
-    await shoot(tester, 'book_turn');
-    await g.moveBy(Offset(-page.width * 0.4, 0));
-    await g.up();
-    await tester.pumpAndSettle();
-    expect(find.text('page 2 of 2'), findsOneWidget);
-    for (var i = 0; i < 8; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
-      await tester.pump();
-    }
-    await shoot(tester, 'book_scrapbook');
-    // the flip book, held big
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
-          studioBookProvider.overrideWith(() => _Book(works)),
-        ],
-        child: RepaintBoundary(
-          key: boundary,
-          child: MaterialApp(debugShowCheckedModeBanner: false, home: FlipBookViewer(work: works[4])),
-        ),
-      ),
-    );
-    for (var i = 0; i < 8; i++) {
-      await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
-      await tester.pump();
-    }
-    // (into the second page, the first swinging away)
-    await tester.pump(const Duration(milliseconds: 360 + 90));
-    expect(find.text('Save video'), findsOneWidget);
-    await shoot(tester, 'flipbook_viewer');
-    await tester.pumpWidget(const SizedBox());
-  });
 
   test('how many each takes', () {
     expect(StudioNeeds.of(StudioKind.collage).fits(3), isFalse);

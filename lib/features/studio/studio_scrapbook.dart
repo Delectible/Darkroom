@@ -610,9 +610,12 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
       body: StudioTable(
         child: SafeArea(
           top: false,
-          child: Column(
-            children: [
-              Expanded(
+          child: Builder(
+            builder: (context) {
+              final size = MediaQuery.sizeOf(context);
+              // sideways: the page on the left, the tools and Save beside it
+              final sideways = size.width > size.height * 1.2;
+              final page = Expanded(
                 child: LayoutBuilder(
                   builder: (context, box) {
                     // the biggest 3:4 page that fits, fixed for good
@@ -672,9 +675,8 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
                     );
                   },
                 ),
-              ),
-              _tools(),
-              Padding(
+              );
+              final save = Padding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 14),
                 child: SizedBox(
                   width: double.infinity,
@@ -698,8 +700,23 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
                         : const Text('Save scrapbook page'),
                   ),
                 ),
-              ),
-            ],
+              );
+              if (sideways) {
+                return Row(
+                  children: [
+                    page,
+                    SizedBox(
+                      width: math.min(380, size.width * 0.42),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [_tools(), const SizedBox(height: 8), save],
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return Column(children: [page, _tools(), save]);
+            },
           ),
         ),
       ),

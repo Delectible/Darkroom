@@ -1136,3 +1136,12 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   in the gaps (the clip art, spray paint, sparkles, squiggles; never over a
   photo's middle), the caption in pixel letters with a shadow, the date.
   Caption..., Shuffle doodles (a new seed), Doodles and Date checkboxes.
+- 69.2 Strip: Brown and Black fills (white outlines, bright inks, light
+  date on them), a Crooked checkbox (each shot a little off true), the date
+  as a PC writes it (11/14/26).
+- Landscape pass over everything new: Studio cards in one row and a lower
+  tray; the makers and the scrapbook put the piece on the left, options
+  and Save on the right; the flip book viewer sizes the booklet to fit with
+  its controls beside it; Photo Room puts previews beside their options
+  when the window is wide. Studio and Photo Room screen tests now run
+  upright and sideways (no overflow either way).

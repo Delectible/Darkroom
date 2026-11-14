@@ -241,6 +241,8 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
   Widget build(BuildContext context) {
     final prints = _prints();
     final works = ref.watch(studioBookProvider).value?.length ?? 0;
+    final size = MediaQuery.sizeOf(context);
+    final sideways = size.width > size.height * 1.2;
     return Scaffold(
       backgroundColor: StudioInk.table,
       body: StudioTable(
@@ -293,7 +295,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
                   padding: const EdgeInsets.fromLTRB(10, 14, 10, 4),
                   child: _FeltTray(
                     child: SizedBox(
-                      height: 176,
+                      height: sideways ? 150 : 176,
                       child: prints.isEmpty
                           ? const Center(
                               child: Padding(
@@ -359,11 +361,12 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
                 ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
+                // (sideways: the four cards in one row, under the tray)
                 sliver: SliverGrid.count(
-                  crossAxisCount: 2,
+                  crossAxisCount: sideways ? 4 : 2,
                   mainAxisSpacing: 12,
                   crossAxisSpacing: 12,
-                  childAspectRatio: 1.15,
+                  childAspectRatio: sideways ? 2.1 : 1.15,
                   children: [
                     for (final k in _kinds)
                       _MakeCard(kind: k, have: prints.length, onTap: () => _make(k, prints)),

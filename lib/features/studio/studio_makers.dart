@@ -48,46 +48,83 @@ class _MakerScaffold extends StatelessWidget {
   final bool busy;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: StudioInk.table,
-    appBar: AppBar(backgroundColor: StudioInk.tableDark, foregroundColor: StudioInk.ink, title: Text(title)),
-    body: StudioTable(
-      child: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(child: body),
-              ),
-            ),
-            for (final o in options) Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 10), child: o),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-              child: SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: StudioInk.brass,
-                    foregroundColor: const Color(0xFF22150B),
-                  ),
-                  onPressed: busy ? null : onMake,
-                  child: busy
-                      ? const SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2.4),
-                        )
-                      : Text(action),
+  Widget build(BuildContext context) {
+    final button = SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: FilledButton(
+        style: FilledButton.styleFrom(
+          backgroundColor: StudioInk.brass,
+          foregroundColor: const Color(0xFF22150B),
+        ),
+        onPressed: busy ? null : onMake,
+        child: busy
+            ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4))
+            : Text(action),
+      ),
+    );
+    final size = MediaQuery.sizeOf(context);
+    // Sideways: the piece on the left as big as fits, its options beside it.
+    final sideways = size.width > size.height * 1.2;
+    return Scaffold(
+      backgroundColor: StudioInk.table,
+      appBar: AppBar(
+        backgroundColor: StudioInk.tableDark,
+        foregroundColor: StudioInk.ink,
+        title: Text(title),
+      ),
+      body: StudioTable(
+        child: SafeArea(
+          top: false,
+          child: sideways
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Center(child: body),
+                      ),
+                    ),
+                    SizedBox(
+                      width: math.min(400, size.width * 0.42),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(0, 12, 16, 12),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  children: [
+                                    for (final o in options)
+                                      Padding(padding: const EdgeInsets.only(bottom: 10), child: o),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            button,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Center(child: body),
+                      ),
+                    ),
+                    for (final o in options)
+                      Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 10), child: o),
+                    Padding(padding: const EdgeInsets.fromLTRB(20, 4, 20, 14), child: button),
+                  ],
                 ),
-              ),
-            ),
-          ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 /// A row of choices (chips).

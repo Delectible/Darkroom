@@ -171,6 +171,10 @@ Future<ui.Image> renderContactSheet(List<ui.Image> photos, List<String> names, B
   });
 }
 
+/// A date as a PC writes it: 11/14/26.
+String pcDate(DateTime d) =>
+    '${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}/${(d.year % 100).toString().padLeft(2, '0')}';
+
 /// The doodled strip's paint-bucket backgrounds.
 enum StripFill {
   lemon('Lemon', Color(0xFFFFFF80)),
@@ -178,7 +182,12 @@ enum StripFill {
   sky('Sky', Color(0xFF9EE6FF)),
   bubblegum('Bubblegum', Color(0xFFFFB3DA)),
   lilac('Lilac', Color(0xFFC9C2FF)),
-  paper('Paper', Color(0xFFFFFFFF));
+  paper('Paper', Color(0xFFFFFFFF)),
+  brown('Brown', Color(0xFF7A4A24)),
+  black('Black', Color(0xFF000000));
+
+  /// Dark enough for white outlines and lettering.
+  bool get dark => this == brown || this == black;
 
   const StripFill(this.label, this.color);
   final String label;
@@ -194,6 +203,7 @@ class StripLook {
     this.seed = 1,
     this.doodles = true,
     this.date = true,
+    this.crooked = false,
   });
 
   final StripFill fill;
@@ -202,12 +212,23 @@ class StripLook {
   final bool doodles;
   final bool date;
 
-  StripLook copyWith({StripFill? fill, String? caption, int? seed, bool? doodles, bool? date}) => StripLook(
+  /// Each shot stuck on a little off true.
+  final bool crooked;
+
+  StripLook copyWith({
+    StripFill? fill,
+    String? caption,
+    int? seed,
+    bool? doodles,
+    bool? date,
+    bool? crooked,
+  }) => StripLook(
     fill: fill ?? this.fill,
     caption: caption ?? this.caption,
     seed: seed ?? this.seed,
     doodles: doodles ?? this.doodles,
     date: date ?? this.date,
+    crooked: crooked ?? this.crooked,
   );
 }
 
@@ -219,6 +240,15 @@ const _inks = [
   Color(0xFF008A2E),
   Color(0xFFFF7A00),
   Color(0xFF000080),
+];
+
+const _brightInks = [
+  Color(0xFFFFFF00),
+  Color(0xFF00FFFF),
+  Color(0xFFFF60FF),
+  Color(0xFF60FF60),
+  Color(0xFFFFA040),
+  Color(0xFFFFFFFF),
 ];
 
 const _clips = [
@@ -246,36 +276,42 @@ Future<ui.Image> renderRoomStrip(List<ui.Image> photos, StripLook look, DateTime
     final cells = [
       for (var i = 0; i < photos.length; i++) Rect.fromLTWH(side, top + i * (cellH + gap), cellW, cellH),
     ];
-    // the photos: a hard offset shadow, a 4 px black outline
+    // the photos: a hard offset shadow, a 4 px outline (white on the dark
+    // fills), a little crooked if asked
+    final dark = look.fill.dark;
+    final outline = dark ? const Color(0xFFFFFFFF) : const Color(0xFF000000);
+    final shadow = look.fill == StripFill.black ? const Color(0xFF4A4A4A) : const Color(0xFF000000);
+    final tilt = math.Random(look.seed * 31 + 7);
     for (var i = 0; i < photos.length; i++) {
       final r = cells[i];
-      c.drawRect(r.shift(const Offset(8, 8)), Paint()..color = const Color(0xFF000000));
-      c.drawRect(r.inflate(4), Paint()..color = const Color(0xFF000000));
+      c.save();
+      if (look.crooked) {
+        c.translate(r.center.dx, r.center.dy);
+        c.rotate((tilt.nextDouble() - 0.5) * 0.07 + (i.isEven ? -0.012 : 0.012));
+        c.translate(-r.center.dx, -r.center.dy);
+      }
+      c.drawRect(r.shift(const Offset(8, 8)), Paint()..color = shadow);
+      c.drawRect(r.inflate(4), Paint()..color = outline);
       drawCover(c, photos[i], r);
+      c.restore();
     }
-    if (look.doodles) _doodle(c, rnd, cells, Size(w, h), foot);
+    // (bright inks on the dark fills)
+    final inks = dark ? _brightInks : _inks;
+    if (look.doodles) _doodle(c, rnd, cells, Size(w, h), foot, inks);
     // the caption: pixel letters with a hard shadow, in one of the inks
-    final ink = _inks[rnd.nextInt(_inks.length)];
+    final ink = inks[rnd.nextInt(inks.length)];
     final capY = h - foot + 34;
     if (look.caption.trim().isNotEmpty) {
-      _pixelText(
-        c,
-        look.caption,
-        Offset(4, capY + 4),
-        46,
-        const Color(0xFF000000),
-        align: TextAlign.center,
-        width: w,
-      );
+      _pixelText(c, look.caption, Offset(4, capY + 4), 46, shadow, align: TextAlign.center, width: w);
       _pixelText(c, look.caption, Offset(0, capY), 46, ink, align: TextAlign.center, width: w);
     }
     if (look.date) {
       _pixelText(
         c,
-        studioDate(date),
+        pcDate(date),
         Offset(0, capY + 70),
         26,
-        const Color(0xCC000000),
+        dark ? const Color(0xDDFFFFFF) : const Color(0xCC000000),
         align: TextAlign.center,
         width: w,
       );
@@ -283,7 +319,7 @@ Future<ui.Image> renderRoomStrip(List<ui.Image> photos, StripLook look, DateTime
   });
 }
 
-void _doodle(Canvas c, math.Random rnd, List<Rect> cells, Size size, double foot) {
+void _doodle(Canvas c, math.Random rnd, List<Rect> cells, Size size, double foot, List<Color> inks) {
   // spots for doodles: the photos' corners (half on, half off) and the gaps
   final spots = <Offset>[
     for (final r in cells) ...[r.topLeft, r.topRight, r.bottomLeft, r.bottomRight],
@@ -301,7 +337,7 @@ void _doodle(Canvas c, math.Random rnd, List<Rect> cells, Size size, double foot
     // (room round each, so they don't pile up)
     if (used.any((u) => (u - at).distance < 110)) continue;
     used.add(at);
-    final ink = _inks[rnd.nextInt(_inks.length)];
+    final ink = inks[rnd.nextInt(inks.length)];
     switch (rnd.nextInt(5)) {
       case 0 || 1:
         final s = 64.0 + rnd.nextInt(3) * 10;

@@ -40,6 +40,16 @@ class StudioNotifier extends Notifier<List<String>> {
 
   Future<void> clear() => _set(const []);
 
+  /// Reordered on the table: the print at [from] put at [to] (in the list
+  /// without it).
+  Future<void> move(int from, int to) async {
+    final ids = [...state];
+    if (from < 0 || from >= ids.length) return;
+    final id = ids.removeAt(from);
+    ids.insert(to.clamp(0, ids.length), id);
+    await _set(ids);
+  }
+
   /// Prints no longer on the board (thrown away) leave the Studio too.
   Future<void> keepOnly(Set<String> existing) async {
     if (state.every(existing.contains)) return;

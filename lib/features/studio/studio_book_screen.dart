@@ -70,7 +70,16 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> {
     for (final w in works) {
       if (_aspects.containsKey(w.id) || !_asking.add(w.id)) continue;
       unawaited(
-        _aspectOf(w).then((a) {
+        _aspectOf(w).then((a) async {
+          // (decoded before the page shows it, at the size the page uses)
+          if (mounted && w.kind != StudioKind.flipbook) {
+            final size = w.kind == StudioKind.scrapbook ? 1400 : 900;
+            await precacheImage(
+              ResizeImage(FileImage(File(w.path)), width: size),
+              context,
+              onError: (_, _) {},
+            );
+          }
           if (mounted) setState(() => _aspects[w.id] = a);
         }),
       );
@@ -469,7 +478,13 @@ class _AlbumPage extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 const ColoredBox(color: _Album.page),
-                Image.file(File(w.path), fit: BoxFit.cover, cacheWidth: 1400, gaplessPlayback: true),
+                Image.file(
+                  File(w.path),
+                  fit: BoxFit.cover,
+                  cacheWidth: 1400,
+                  gaplessPlayback: true,
+                  frameBuilder: studioFadeIn,
+                ),
                 const IgnorePointer(child: CustomPaint(painter: _SpinePainter())),
               ],
             ),
@@ -550,7 +565,13 @@ class _StuckDown extends StatelessWidget {
       decoration: const BoxDecoration(
         boxShadow: [BoxShadow(color: Color(0x59000000), blurRadius: 6, offset: Offset(1.5, 3.5))],
       ),
-      child: Image.file(File(work.path), fit: BoxFit.fill, cacheWidth: 900, gaplessPlayback: true),
+      child: Image.file(
+        File(work.path),
+        fit: BoxFit.fill,
+        cacheWidth: 900,
+        gaplessPlayback: true,
+        frameBuilder: studioFadeIn,
+      ),
     );
     final c = unit * 0.045;
     return Stack(
@@ -1000,13 +1021,17 @@ class _StudioWorkViewerState extends ConsumerState<StudioWorkViewer> {
         child: Column(
           children: [
             Expanded(
-              child: Center(
-                child: widget.work.isVideo
-                    ? (v != null && v.value.isInitialized
+              child: widget.work.isVideo
+                  ? Center(
+                      child: v != null && v.value.isInitialized
                           ? AspectRatio(aspectRatio: v.value.aspectRatio, child: VideoPlayer(v))
-                          : const CircularProgressIndicator(color: StudioInk.brass))
-                    : InteractiveViewer(maxScale: 5, child: Image.file(File(widget.work.path))),
-              ),
+                          : const CircularProgressIndicator(color: StudioInk.brass),
+                    )
+                  // (the zoom works over the whole screen, not just the picture's box)
+                  : InteractiveViewer(
+                      maxScale: 6,
+                      child: SizedBox.expand(child: Image.file(File(widget.work.path), fit: BoxFit.contain)),
+                    ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),

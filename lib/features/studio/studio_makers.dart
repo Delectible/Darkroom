@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
-import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -11,6 +10,8 @@ import '../../core/db/media_repository.dart';
 import 'studio_make.dart';
 import 'studio_render.dart';
 import 'studio_screen.dart';
+import 'studio_scrapbook.dart';
+import 'studio_snapshot.dart';
 import 'studio_store.dart';
 
 /// Making one piece from [prints]: pops true once it's in the book.
@@ -204,7 +205,7 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
     try {
       final work = await StudioMake.saveImage(preview, widget.kind);
       await ref.read(studioBookProvider.notifier).add(work);
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) await popWithFlash(context, work);
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
@@ -274,6 +275,11 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
   int _pageMs = StudioMake.pageMsDefault;
   late final Timer _tick;
   final _clock = Stopwatch()..start();
+  // where the book is, in pages: moved on by the time since the last tick
+  // at the speed of the moment, so a new speed changes the pace, not the
+  // page
+  double _pos = 0;
+  int _lastMs = 0;
   bool _busy = false;
 
   @override
@@ -281,6 +287,9 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
     super.initState();
     // (a steady 25 frames a second; the page and shake follow the clock)
     _tick = Timer.periodic(const Duration(milliseconds: 40), (_) {
+      final now = _clock.elapsedMilliseconds;
+      _pos += (now - _lastMs) / _pageMs;
+      _lastMs = now;
       if (mounted) setState(() {});
     });
   }
@@ -296,7 +305,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
     try {
       final work = await StudioMake.flipBook(widget.prints, _paper, pageMs: _pageMs);
       await ref.read(studioBookProvider.notifier).add(work);
-      if (mounted) Navigator.pop(context, true);
+      if (mounted) await popWithFlash(context, work);
     } catch (e) {
       if (mounted) {
         setState(() => _busy = false);
@@ -307,11 +316,11 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
 
   @override
   Widget build(BuildContext context) {
-    final ms = _clock.elapsedMilliseconds;
-    final page = (ms ~/ _pageMs) % widget.prints.length;
-    final into = ms % _pageMs;
+    final whole = _pos.floor();
+    final page = whole % widget.prints.length;
+    final into = ((_pos - whole) * _pageMs).round();
     // the print flashes white for a moment as each page turns
-    final flash = into < 40 && ms >= _pageMs;
+    final flash = into < 40 && whole > 0;
     final rnd = math.Random(page * 9 + into ~/ 120);
     final m = widget.prints[page];
     final path = m.outputPath;
@@ -392,364 +401,6 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
       action: _busy ? 'Making…' : 'Make flip book',
       busy: _busy,
       onMake: _make,
-    );
-  }
-}
-
-/// One thing on a scrapbook page: a print (frame and all) or some writing.
-class _Piece {
-  _Piece.photo(this.path, this.at) : text = null, title = false;
-  _Piece.text(String this.text, this.at, {this.title = false}) : path = null;
-
-  final String? path;
-  String? text;
-  final bool title;
-  // (the writing's colour; null follows the page)
-  Color? color;
-  final key = GlobalKey();
-  Offset at;
-  double scale = 1;
-  double turn = 0;
-}
-
-/// The scrapbook: each print dragged, turned and sized anywhere on the
-/// page with one or two fingers, writing added, a title; saved as one
-/// large picture.
-class ScrapbookEditor extends ConsumerStatefulWidget {
-  const ScrapbookEditor({super.key, required this.prints});
-
-  final List<MediaItem> prints;
-
-  @override
-  ConsumerState<ScrapbookEditor> createState() => _ScrapbookEditorState();
-}
-
-class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
-  final _page = GlobalKey();
-  final _pieces = <_Piece>[];
-  StudioPaper _paper = StudioPaper.kraft;
-  _Piece? _selected;
-  Size? _size;
-  bool _busy = false;
-
-  // (a gesture's start, for scale and turn)
-  double _startScale = 1, _startTurn = 0;
-
-  Color get _ink => _paper == StudioPaper.black ? const Color(0xFFF1E9DA) : const Color(0xFF2A1A10);
-
-  // the pens: brown-black, chalk white, red, navy, green, gold
-  static const _inks = [
-    Color(0xFF2A1A10),
-    Color(0xFFF1E9DA),
-    Color(0xFFB3261E),
-    Color(0xFF1F3A68),
-    Color(0xFF2E6B3A),
-    Color(0xFFC8962E),
-  ];
-
-  Future<void> _lay(Size size) async {
-    _size = size;
-    final paths = await StudioMake.framedPaths(widget.prints);
-    if (!mounted) return;
-    final rnd = math.Random(paths.length);
-    setState(() {
-      _pieces.add(_Piece.text('My scrapbook', Offset(size.width / 2, size.height * 0.08), title: true));
-      for (var i = 0; i < paths.length; i++) {
-        final col = i % 2, row = i ~/ 2;
-        _pieces.add(
-          _Piece.photo(paths[i], Offset(size.width * (0.3 + col * 0.4), size.height * (0.26 + row * 0.2)))
-            ..turn = (rnd.nextDouble() - 0.5) * 0.2
-            ..scale = paths.length > 4 ? 0.8 : 1,
-        );
-      }
-    });
-  }
-
-  Future<String?> _write(String title, String initial) => showDialog<String>(
-    context: context,
-    builder: (context) {
-      final c = TextEditingController(text: initial);
-      return AlertDialog(
-        title: Text(title),
-        content: TextField(controller: c, autofocus: true, maxLength: 80, maxLines: 3, minLines: 1),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, c.text.trim()), child: const Text('OK')),
-        ],
-      );
-    },
-  );
-
-  Future<void> _addText() async {
-    final t = await _write('Add writing', '');
-    if (t == null || t.isEmpty || _size == null) return;
-    setState(() {
-      final p = _Piece.text(t, Offset(_size!.width / 2, _size!.height * 0.85));
-      _pieces.add(p);
-      _selected = p;
-    });
-  }
-
-  Future<void> _edit(_Piece p) async {
-    final t = await _write(p.title ? 'Title' : 'Writing', p.text ?? '');
-    if (t == null) return;
-    setState(() {
-      if (t.isEmpty && !p.title) {
-        _pieces.remove(p);
-        _selected = null;
-      } else {
-        p.text = t;
-      }
-    });
-  }
-
-  Future<void> _save() async {
-    final box = _page.currentContext?.findRenderObject();
-    if (box is! RenderRepaintBoundary || _size == null) return;
-    setState(() {
-      _busy = true;
-      _selected = null;
-    });
-    await WidgetsBinding.instance.endOfFrame;
-    try {
-      // a large picture: 2400 px across
-      final image = await box.toImage(pixelRatio: 2400 / _size!.width);
-      final work = await StudioMake.saveImage(image, StudioKind.scrapbook);
-      image.dispose();
-      await ref.read(studioBookProvider.notifier).add(work);
-      if (mounted) Navigator.pop(context, true);
-    } catch (e) {
-      if (mounted) {
-        setState(() => _busy = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Couldn't save it: $e")));
-      }
-    }
-  }
-
-  /// The piece on top under [global], or null: each piece checked in its
-  /// own turned and sized frame, so the one you touch is the one you get.
-  _Piece? _pieceAt(Offset global) {
-    for (final p in _pieces.reversed) {
-      final box = p.key.currentContext?.findRenderObject();
-      if (box is! RenderBox || !box.hasSize) continue;
-      // (a little slack round small pieces and writing)
-      if ((Offset.zero & box.size).inflate(8).contains(box.globalToLocal(global))) return p;
-    }
-    return null;
-  }
-
-  void _lift(_Piece p) {
-    _selected = p;
-    _pieces
-      ..remove(p)
-      ..add(p);
-  }
-
-  // One gesture for the whole page: it picks the piece under the first
-  // finger (or keeps the picked one when you pinch beside it).
-  _Piece? _moving;
-
-  void _scaleStart(ScaleStartDetails d) {
-    final p = _pieceAt(d.focalPoint) ?? (d.pointerCount > 1 ? _selected : null);
-    _moving = p;
-    if (p == null) return;
-    _startScale = p.scale;
-    _startTurn = p.turn;
-    setState(() => _lift(p));
-  }
-
-  void _scaleUpdate(ScaleUpdateDetails d) {
-    final p = _moving;
-    if (p == null) {
-      // (a second finger joined a drag that started on bare page)
-      if (d.pointerCount > 1 && _selected != null) {
-        _moving = _selected;
-        _startScale = _selected!.scale / d.scale;
-        _startTurn = _selected!.turn - d.rotation;
-      }
-      return;
-    }
-    setState(() {
-      p.at += d.focalPointDelta;
-      p.scale = (_startScale * d.scale).clamp(0.3, 3.0);
-      p.turn = _startTurn + d.rotation;
-    });
-  }
-
-  Offset? _tapAt;
-
-  Widget _pieceView(_Piece p, double width) {
-    final picked = identical(p, _selected);
-    final Widget look = p.path != null
-        ? Image.file(File(p.path!), width: width * 0.42, cacheWidth: 900, gaplessPlayback: true)
-        : Text(
-            p.text ?? '',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Caveat',
-              fontWeight: FontWeight.w600,
-              fontSize: width * (p.title ? 0.1 : 0.065),
-              color: p.color ?? _ink,
-              height: 1.05,
-            ),
-          );
-    return DecoratedBox(
-      key: p.key,
-      decoration: BoxDecoration(
-        border: picked ? Border.all(color: StudioInk.brass, width: 1.5) : null,
-        boxShadow: p.path != null
-            ? const [BoxShadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(2, 4))]
-            : null,
-      ),
-      child: look,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final picked = _selected;
-    return _MakerScaffold(
-      title: 'Scrapbook',
-      body: AspectRatio(
-        aspectRatio: 3 / 4,
-        child: LayoutBuilder(
-          builder: (context, box) {
-            if (_size == null) {
-              WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_lay(box.biggest)));
-            }
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTapUp: (d) => setState(() {
-                final p = _pieceAt(d.globalPosition);
-                if (p == null) {
-                  _selected = null;
-                } else {
-                  _lift(p);
-                }
-              }),
-              onDoubleTapDown: (d) => _tapAt = d.globalPosition,
-              onDoubleTap: () {
-                final at = _tapAt;
-                final p = at == null ? null : _pieceAt(at);
-                if (p?.text != null) unawaited(_edit(p!));
-              },
-              onScaleStart: _scaleStart,
-              onScaleUpdate: _scaleUpdate,
-              onScaleEnd: (_) => _moving = null,
-              child: RepaintBoundary(
-                key: _page,
-                child: ClipRect(
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned.fill(child: StudioPaperView(paper: _paper)),
-                      for (final p in _pieces)
-                        Positioned(
-                          // (keyed: lifting a piece to the top reorders the pile)
-                          key: ObjectKey(p),
-                          left: p.at.dx,
-                          top: p.at.dy,
-                          child: FractionalTranslation(
-                            translation: const Offset(-0.5, -0.5),
-                            child: Transform.rotate(
-                              angle: p.turn,
-                              child: Transform.scale(scale: p.scale, child: _pieceView(p, box.maxWidth)),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-      options: [
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: _addText,
-                style: OutlinedButton.styleFrom(foregroundColor: StudioInk.ink),
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Add writing'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: picked?.text == null ? null : () => _edit(picked!),
-                style: OutlinedButton.styleFrom(foregroundColor: StudioInk.ink),
-                icon: const Icon(Icons.title, size: 18),
-                label: Text(picked?.title == true ? 'Edit title' : 'Edit writing'),
-              ),
-            ),
-          ],
-        ),
-        if (picked != null)
-          Row(
-            children: [
-              const SizedBox(
-                width: 58,
-                child: Text('Size', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
-              ),
-              Expanded(
-                child: Slider(
-                  value: picked.scale.clamp(0.3, 3.0),
-                  min: 0.3,
-                  max: 3,
-                  activeColor: StudioInk.brass,
-                  inactiveColor: StudioInk.card,
-                  onChanged: (v) => setState(() => picked.scale = v),
-                ),
-              ),
-            ],
-          ),
-        if (picked?.text != null)
-          Row(
-            children: [
-              const SizedBox(
-                width: 58,
-                child: Text('Colour', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
-              ),
-              for (final c in _inks)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () => setState(() => picked.color = c),
-                    child: Container(
-                      width: 30,
-                      height: 30,
-                      decoration: BoxDecoration(
-                        color: c,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: (picked!.color ?? _ink) == c ? StudioInk.brass : StudioInk.card,
-                          width: (picked.color ?? _ink) == c ? 3 : 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        const Text(
-          'Drag to move · pinch to size and turn · double-tap writing to change it',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: StudioInk.muted, fontSize: 12),
-        ),
-        _Choices<StudioPaper>(
-          label: 'Page',
-          values: const [StudioPaper.kraft, StudioPaper.black, StudioPaper.cream, StudioPaper.white],
-          name: (p) => p.label,
-          value: _paper,
-          onPick: (p) => setState(() => _paper = p),
-        ),
-      ],
-      action: 'Save scrapbook page',
-      busy: _busy,
-      onMake: _size == null ? null : _save,
     );
   }
 }

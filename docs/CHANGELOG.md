@@ -1092,3 +1092,24 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     (made again at the new speed). Older ones show their video.
   - Corkboard: dog-ear cut out so the cork shows under the fold, no tick;
     Studio house icon; Save all and Return all without underlines.
+- 68.3 Studio round 3 (2026-11-14), 2.3.3
+  - Print viewer (option A): Share, Save, Studio, Frame; Write sits under
+    the frames for instant prints (and on the print's border); Throw away
+    is a red-ringed bin at the top right.
+  - Flip book speed: the slider changes the pace, not the page (position
+    kept in pages, moved on at the current speed), in the maker and the
+    book's viewer.
+  - Scrapbook (studio_scrapbook.dart): prints drawn live in a frame chosen
+    for the page only, instant writing editable there; writing in Hand,
+    Typewriter, Marker, Serif and Label (fonts added: Special Elite,
+    Permanent Marker, Libre Baskerville); Remove; stickers (star, heart,
+    arrow, sticky note with words, washi tape, flower: studio_stickers.dart);
+    the page is the biggest 3:4 that fits and the tools below keep one
+    height; prints laid out in an even grid to start.
+  - Studio: a green felt tray in a wooden rim, bigger prints, hold to
+    reorder; tap a print for a "Send Back" bubble under it; open-album Book
+    button; images fade in; the book decodes its pictures before showing.
+  - Making something: white flash, the maker closes under it, the piece
+    held up then dropped onto the table, settles and fades (studio_snapshot).
+  - Book viewer zooms over the whole screen. Corkboard Studio badge amber
+    and bigger.

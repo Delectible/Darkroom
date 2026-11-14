@@ -956,7 +956,13 @@ class _Header extends StatelessWidget {
           Badge(
             isLabelVisible: inStudio > 0,
             label: Text('$inStudio'),
-            backgroundColor: const Color(0xFFC0281C),
+            // (warm amber, big enough to read at a glance)
+            backgroundColor: const Color(0xFFF2A65A),
+            textColor: const Color(0xFF3A2010),
+            largeSize: 21,
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900),
+            offset: const Offset(6, -8),
             child: FilledButton.icon(
               onPressed: onStudio,
               style: FilledButton.styleFrom(

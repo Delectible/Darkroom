@@ -290,13 +290,11 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
           );
     final actions = _ActionBar(
       vertical: landscape,
-      onWrite: spec.isInstant ? () => _writeNote(item) : null,
       saved: item.isSaved,
       gone: _gone(item),
       sample: SamplePrints.isSample(item),
       saving: _saving,
       onSave: () => _save(item),
-      onDelete: () => _delete(item),
       onShare: (anchor) => shareMedia(anchor, item),
       framing: _framing,
       onFrame: () => setState(() => _framing = !_framing),
@@ -359,6 +357,24 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                                 '${_index + 1} / ${items.length}',
                                 style: const TextStyle(color: Colors.white54),
                               ),
+                              const SizedBox(width: 10),
+                              // Throw away: up here, away from the everyday buttons
+                              Tooltip(
+                                message: 'Throw away',
+                                child: Material(
+                                  color: const Color(0x33E2463A),
+                                  shape: const CircleBorder(side: BorderSide(color: Color(0x66E2463A))),
+                                  child: InkWell(
+                                    customBorder: const CircleBorder(),
+                                    onTap: () => _delete(item),
+                                    child: const SizedBox(
+                                      width: 44,
+                                      height: 44,
+                                      child: Icon(Icons.delete_outline, color: Color(0xFFFF9A8F), size: 24),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -403,7 +419,24 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                           child: _framing
                               ? Padding(
                                   padding: const EdgeInsets.only(top: 8, bottom: 6),
-                                  child: _framesFor(item, spec.isInstant, frames),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      _framesFor(item, spec.isInstant, frames),
+                                      // (writing on an instant print: here, or tap its border)
+                                      if (spec.isInstant)
+                                        TextButton.icon(
+                                          onPressed: () => _writeNote(item),
+                                          style: TextButton.styleFrom(
+                                            foregroundColor: const Color(0xFFF3E3C8),
+                                          ),
+                                          icon: const Icon(Icons.edit_outlined, size: 18),
+                                          label: Text(
+                                            item.note == null ? 'Write on it' : 'Change the writing',
+                                          ),
+                                        ),
+                                    ],
+                                  ),
                                 )
                               : const SizedBox(width: double.infinity),
                         ),
@@ -534,11 +567,9 @@ class _Print extends StatelessWidget {
 class _ActionBar extends StatelessWidget {
   const _ActionBar({
     this.vertical = false,
-    this.onWrite,
     required this.saved,
     required this.saving,
     required this.onSave,
-    required this.onDelete,
     required this.onShare,
     this.framing = false,
     this.onFrame,
@@ -562,11 +593,9 @@ class _ActionBar extends StatelessWidget {
   /// Frames (not instant prints: their frame is the film's own).
   final bool framing;
   final VoidCallback? onFrame;
-  final VoidCallback? onWrite;
   final bool saved;
   final bool saving;
   final VoidCallback onSave;
-  final VoidCallback onDelete;
   final Future<void> Function(BuildContext anchor) onShare;
 
   @override
@@ -610,9 +639,8 @@ class _ActionBar extends StatelessWidget {
                     ),
             ),
           ],
-          if (onWrite != null) _RoundAction(icon: Icons.edit_outlined, label: 'Write', onTap: onWrite),
           if (onStudio != null)
-            _RoundAction(glyph: const StudioHouseIcon(size: 22), label: 'Add to Studio', onTap: onStudio),
+            _RoundAction(glyph: const StudioHouseIcon(size: 22), label: 'Studio', onTap: onStudio),
           if (onFrame != null)
             _RoundAction(
               icon: Icons.filter_frames_outlined,
@@ -620,7 +648,6 @@ class _ActionBar extends StatelessWidget {
               onTap: onFrame,
               highlighted: framing,
             ),
-          _RoundAction(icon: Icons.delete_outline, label: 'Throw away', onTap: onDelete),
         ],
       ),
     );

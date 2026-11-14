@@ -3,25 +3,23 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.2';
+  static const version = '2.3.3';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The Studio book is now a leather photo album you turn page by page, with your pieces stuck down by '
-      'hand and flip books you can riffle and speed up. Easier scrapbook editing, text size and colour, '
-      'and a clearer Studio button on the corkboard.';
+      'Scrapbook: stickers, five letterings, frames and writing on each print just for the page, and a page '
+      'that stays put. A felt tray in the Studio you can reorder, a little celebration when you make '
+      'something, smoother flip book speeds, and a calmer photo viewer with the bin up top.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
     (
-      '2.4',
-      ['The Studio: strips, collages, scrapbook pages and flip books', 'A book of everything you make'],
-    ),
-    (
       '2.3',
       [
+        'The Studio: strips, collages, scrapbook pages and flip books',
+        'A photo album of everything you make',
         'A desktop in Darkroom 98',
         'Games folder and High Scores',
         'Instant shutter without flash',

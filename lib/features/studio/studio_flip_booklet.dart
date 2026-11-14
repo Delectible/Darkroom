@@ -67,23 +67,17 @@ class _FlipBookletState extends State<FlipBooklet> with SingleTickerProviderStat
   }
 
   @override
-  void didUpdateWidget(FlipBooklet old) {
-    super.didUpdateWidget(old);
-    if (old.pageMs != widget.pageMs && widget.riffle == Riffle.loop) {
-      // (a new speed: from the top)
-      _ticker
-        ..stop()
-        ..start();
-    }
-  }
-
-  @override
   void dispose() {
     _ticker.dispose();
     super.dispose();
   }
 
+  // (looping: where it is, in pages, moved on at the speed of the moment,
+  // so a new speed changes the pace and not the page)
+  double _pos = 0;
+
   void _tick(Duration elapsed) {
+    _pos += (elapsed - _t).inMicroseconds / 1000 / _ms;
     _t = elapsed;
     final s = _state();
     final key = (s.$1, (s.$2 * 12).floor(), s.$3 ? 1 : 0);
@@ -104,8 +98,10 @@ class _FlipBookletState extends State<FlipBooklet> with SingleTickerProviderStat
       t -= _restMs;
       page = (1 + t ~/ _ms) % n;
     } else {
-      page = (t ~/ _ms) % n;
-      if (t < _ms) return (0, 1, false);
+      final whole = _pos.floor();
+      if (whole == 0) return (0, 1, false);
+      page = whole % n;
+      t = ((_pos - whole) * _ms).round();
     }
     final into = t % _ms;
     final turnMs = math.min(_ms * 0.55, 170.0);

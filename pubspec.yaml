@@ -4,7 +4,7 @@ description: >-
   darkroom and pins them to a corkboard; Digital Mode buffers shots on a
   virtual SD card browsed through a Windows 98 explorer.
 publish_to: none
-version: 2.3.2+148
+version: 2.3.3+149
 
 environment:
   sdk: ^3.14.0
@@ -126,6 +126,17 @@ flutter:
       fonts:
         - asset: assets/fonts/BarlowSemiCondensed-Medium.ttf
           weight: 500
+    # Scrapbook writing: typewriter and marker (Apache 2.0), book serif
+    # (Libre Baskerville, SIL OFL 1.1).
+    - family: Typewriter
+      fonts:
+        - asset: assets/fonts/SpecialElite-Regular.ttf
+    - family: Marker
+      fonts:
+        - asset: assets/fonts/PermanentMarker-Regular.ttf
+    - family: BookSerif
+      fonts:
+        - asset: assets/fonts/LibreBaskerville-Regular.ttf
   shaders:
     - shaders/film.frag
     - shaders/ccd_color.frag

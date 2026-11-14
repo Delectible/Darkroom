@@ -7,6 +7,7 @@ import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/studio/studio_book_screen.dart';
 import 'package:darkroom/features/studio/studio_makers.dart';
 import 'package:darkroom/features/studio/studio_page_turn.dart';
+import 'package:darkroom/features/studio/studio_scrapbook.dart';
 import 'package:darkroom/features/studio/studio_render.dart';
 import 'package:darkroom/features/studio/studio_screen.dart';
 import 'package:darkroom/features/studio/studio_store.dart';
@@ -134,6 +135,50 @@ void main() {
       }
     });
   }
+
+  testWidgets('scrapbook: prints spread out, a photo picked shows its frames, a text its fonts', (
+    tester,
+  ) async {
+    await phone(tester);
+    await tester.runAsync(() async {
+      await tester.pumpWidget(app(ScrapbookEditor(prints: prints)));
+      for (var i = 0; i < 10; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        await tester.pump();
+      }
+    });
+    final title = tester.getRect(find.text('My scrapbook'));
+    await shoot(tester, 'scrapbook');
+    expect(find.text('Sticker'), findsOneWidget);
+    // tap the first print: its frames, Remove
+    final first = tester.getCenter(find.byType(Image).first);
+    await tester.tapAt(first);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Remove'), findsOneWidget);
+    // the page didn't move when the tools changed
+    expect(tester.getRect(find.text('My scrapbook')), title);
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 200)));
+    await tester.pump();
+    await shoot(tester, 'scrapbook_photo');
+    // the title: fonts and colours
+    await tester.tapAt(tester.getCenter(find.text('My scrapbook')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('LABEL'), findsOneWidget);
+    await tester.tap(find.text('Typewriter'));
+    await tester.pump();
+    await shoot(tester, 'scrapbook_text');
+    // the sticker sheet
+    await tester.tap(find.text('Done'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Sticker'));
+    await tester.pumpAndSettle();
+    expect(find.text('Sticky note'), findsOneWidget);
+    await shoot(tester, 'stickers');
+    await tester.tap(find.text('Star'));
+    await tester.pumpAndSettle();
+    expect(find.text('Remove'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
 
   testWidgets('the book: an album page packed by hand, the page turn, a flip book', (tester) async {
     await phone(tester);

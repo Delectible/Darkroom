@@ -10,6 +10,7 @@ import '../../core/device/haptics.dart';
 import '../../core/providers.dart';
 import 'studio_book_screen.dart';
 import 'studio_makers.dart';
+import 'studio_snapshot.dart';
 import 'studio_store.dart';
 
 /// Studio colours: a dark wooden work table under a warm lamp.
@@ -25,6 +26,17 @@ class StudioInk {
   static const muted = Color(0xFFC9A57A);
   static const card = Color(0xFF4A3324);
 }
+
+/// An image's frameBuilder: eased in as it loads, not popped in over a
+/// blank.
+Widget studioFadeIn(BuildContext context, Widget child, int? frame, bool sync) => sync
+    ? child
+    : AnimatedOpacity(
+        opacity: frame == null ? 0 : 1,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOut,
+        child: child,
+      );
 
 /// The Studio's sign: a little house with a door.
 class StudioHouseIcon extends StatelessWidget {
@@ -165,15 +177,25 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
     if (ok == true) await ref.read(studioProvider.notifier).clear();
   }
 
-  Future<void> _printMenu(MediaItem m) async {
-    final back = await showModalBottomSheet<bool>(
+  /// A little bubble just under the print, pointing up at it: Send Back.
+  Future<void> _printMenu(MediaItem m, BuildContext anchor) async {
+    final box = anchor.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final rect = box.localToGlobal(Offset.zero) & box.size;
+    unawaited(Haptics.selectionClick());
+    final back = await showGeneralDialog<bool>(
       context: context,
-      backgroundColor: StudioInk.tableDark,
-      builder: (context) => SafeArea(
-        child: ListTile(
-          leading: const Icon(Icons.push_pin_outlined, color: StudioInk.ink),
-          title: const Text('Back to the board', style: TextStyle(color: StudioInk.ink)),
-          onTap: () => Navigator.pop(context, true),
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 160),
+      pageBuilder: (context, _, _) => _SendBack(below: rect),
+      transitionBuilder: (context, a, _, child) => FadeTransition(
+        opacity: a,
+        child: ScaleTransition(
+          alignment: Alignment(((rect.center.dx / MediaQuery.sizeOf(context).width) * 2 - 1), -1),
+          scale: Tween(begin: 0.9, end: 1.0).animate(CurvedAnimation(parent: a, curve: Curves.easeOutBack)),
+          child: child,
         ),
       ),
     );
@@ -193,13 +215,12 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
       if (picked == null || !mounted) return;
       chosen = picked;
     }
-    final made = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => StudioMaker(kind: kind, prints: chosen),
-      ),
-    );
-    if (made != true || !mounted) return;
-    unawaited(Haptics.lightImpact());
+    final made = await Navigator.of(context)
+        .push<StudioWork>(makerRoute(StudioMaker(kind: kind, prints: chosen)));
+    if (made == null || !mounted) return;
+    // out of the maker's white flash: the piece lands on the table
+    await showSnapshotDrop(context, made);
+    if (!mounted) return;
     final send = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -258,44 +279,64 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
                           ],
                         ),
                       ),
-                      FilledButton.tonalIcon(
-                        onPressed: () => Navigator.of(context).push(StudioBookScreen.route()),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF5A3A24),
-                          foregroundColor: StudioInk.ink,
-                        ),
-                        icon: const Icon(Icons.menu_book_outlined, size: 18),
-                        label: Text(works == 0 ? 'Book' : 'Book ($works)'),
+                      _BookButton(
+                        works: works,
+                        onTap: () => Navigator.of(context).push(StudioBookScreen.route()),
                       ),
                     ],
                   ),
                 ),
               ),
+              // the felt tray the prints lie in (hold one to move it along)
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 150,
-                  child: prints.isEmpty
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 40),
-                            child: Text(
-                              'Open a print on the corkboard and tap Add to Studio to bring it here.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: StudioInk.muted, height: 1.4),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 14, 10, 4),
+                  child: _FeltTray(
+                    child: SizedBox(
+                      height: 176,
+                      child: prints.isEmpty
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 30),
+                                child: Text(
+                                  'Open a print on the corkboard and tap Studio to bring it here.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(color: Color(0xFFB9D0C0), height: 1.4),
+                                ),
+                              ),
+                            )
+                          : ReorderableListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              padding: const EdgeInsets.fromLTRB(12, 18, 12, 14),
+                              buildDefaultDragHandles: false,
+                              itemCount: prints.length,
+                              onReorderItem: (from, to) {
+                                unawaited(Haptics.selectionClick());
+                                unawaited(ref.read(studioProvider.notifier).move(from, to));
+                              },
+                              proxyDecorator: (child, _, a) => AnimatedBuilder(
+                                animation: a,
+                                builder: (_, child) =>
+                                    Transform.scale(scale: 1 + 0.08 * a.value, child: child),
+                                child: Material(type: MaterialType.transparency, child: child),
+                              ),
+                              itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
+                                key: ValueKey(prints[i].id),
+                                index: i,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7),
+                                  child: Builder(
+                                    builder: (anchor) => TrayPrint(
+                                      item: prints[i],
+                                      turn: ((prints[i].id.hashCode % 9) - 4) / 90,
+                                      onTap: () => _printMenu(prints[i], anchor),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        )
-                      : ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.fromLTRB(22, 26, 22, 10),
-                          itemCount: prints.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: 14),
-                          itemBuilder: (context, i) => TrayPrint(
-                            item: prints[i],
-                            turn: ((prints[i].id.hashCode % 9) - 4) / 90,
-                            onTap: () => _printMenu(prints[i]),
-                          ),
-                        ),
+                    ),
+                  ),
                 ),
               ),
               if (prints.isNotEmpty)
@@ -317,7 +358,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
                   ),
                 ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+                padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
                 sliver: SliverGrid.count(
                   crossAxisCount: 2,
                   mainAxisSpacing: 12,
@@ -354,8 +395,8 @@ class TrayPrint extends StatelessWidget {
       child: Transform.rotate(
         angle: turn,
         child: Container(
-          width: 100,
-          padding: const EdgeInsets.fromLTRB(5, 5, 5, 14),
+          width: 118,
+          padding: const EdgeInsets.fromLTRB(6, 6, 6, 16),
           decoration: BoxDecoration(
             color: StudioInk.paper,
             border: selected ? Border.all(color: StudioInk.brass, width: 3) : null,
@@ -364,8 +405,14 @@ class TrayPrint extends StatelessWidget {
           child: AspectRatio(
             aspectRatio: 4 / 3,
             child: path == null
-                ? const ColoredBox(color: Color(0xFF8A7A66))
-                : Image.file(File(path), fit: BoxFit.cover, cacheWidth: 300, gaplessPlayback: true),
+                ? const ColoredBox(color: Color(0xFFE2DACB))
+                : Image.file(
+                    File(path),
+                    fit: BoxFit.cover,
+                    cacheWidth: 300,
+                    gaplessPlayback: true,
+                    frameBuilder: studioFadeIn,
+                  ),
           ),
         ),
       ),
@@ -517,4 +564,260 @@ class _PickPrintsState extends State<PickPrints> {
       ),
     );
   }
+}
+
+/// The tray the prints lie in: green felt inside a raised wooden rim.
+class _FeltTray extends StatelessWidget {
+  const _FeltTray({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(9),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(10),
+      gradient: const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFF94623A), Color(0xFF6B4423), Color(0xFF55351B)],
+      ),
+      boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 14, offset: Offset(0, 7))],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: CustomPaint(painter: const _Felt(), child: child),
+    ),
+  );
+}
+
+class _Felt extends CustomPainter {
+  const _Felt();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = Offset.zero & size;
+    canvas.drawRect(r, Paint()..color = const Color(0xFF2E5842));
+    // the nap: fine light and dark fibres
+    final rnd = math.Random(11);
+    final dot = Paint();
+    final n = (size.width * size.height / 9).round().clamp(500, 30000);
+    for (var i = 0; i < n; i++) {
+      dot.color = rnd.nextBool() ? const Color(0x16000000) : const Color(0x0EFFFFFF);
+      canvas.drawCircle(
+        Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height),
+        0.4 + rnd.nextDouble() * 0.8,
+        dot,
+      );
+    }
+    // sunk below the rim: shadow along the top and sides
+    canvas.drawRect(
+      r,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x80000000), Color(0x00000000), Color(0x00000000), Color(0x30000000)],
+          stops: [0, 0.16, 0.85, 1],
+        ).createShader(r),
+    );
+    canvas.drawRect(
+      r,
+      Paint()
+        ..shader = const LinearGradient(
+          colors: [Color(0x40000000), Color(0x00000000), Color(0x00000000), Color(0x40000000)],
+          stops: [0, 0.05, 0.95, 1],
+        ).createShader(r),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_Felt old) => false;
+}
+
+/// The book's button: a little open album and how many pieces are in it.
+class _BookButton extends StatelessWidget {
+  const _BookButton({required this.works, required this.onTap});
+
+  final int works;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'The book, $works pieces',
+    child: Material(
+      color: const Color(0xFF5A3A24),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 7, 14, 7),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CustomPaint(size: Size(42, 34), painter: _OpenAlbum()),
+              const SizedBox(width: 8),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'BOOK',
+                    style: TextStyle(
+                      color: StudioInk.label,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 2,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    works == 1 ? '1 piece' : '$works pieces',
+                    style: const TextStyle(color: StudioInk.muted, fontSize: 11),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// An open album: leather cover, two cream pages, a photo on each.
+class _OpenAlbum extends CustomPainter {
+  const _OpenAlbum();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final cover = Path()
+      ..moveTo(w * 0.02, h * 0.2)
+      ..quadraticBezierTo(w * 0.25, h * 0.1, w * 0.5, h * 0.2)
+      ..quadraticBezierTo(w * 0.75, h * 0.1, w * 0.98, h * 0.2)
+      ..lineTo(w * 0.98, h * 0.96)
+      ..quadraticBezierTo(w * 0.75, h * 0.86, w * 0.5, h * 0.98)
+      ..quadraticBezierTo(w * 0.25, h * 0.86, w * 0.02, h * 0.96)
+      ..close();
+    canvas.drawShadow(cover, const Color(0xFF000000), 2, false);
+    canvas.drawPath(cover, Paint()..color = const Color(0xFF7A4A2A));
+    Path page(double l, double r) {
+      final m = (l + r) / 2;
+      return Path()
+        ..moveTo(w * l, h * 0.14)
+        ..quadraticBezierTo(w * m, h * 0.04, w * r, h * 0.14)
+        ..lineTo(w * r, h * 0.86)
+        ..quadraticBezierTo(w * m, h * 0.76, w * l, h * 0.86)
+        ..close();
+    }
+
+    canvas.drawPath(page(0.07, 0.5), Paint()..color = const Color(0xFFF2EADB));
+    canvas.drawPath(page(0.5, 0.93), Paint()..color = const Color(0xFFEDE3D0));
+    // the gutter
+    canvas.drawLine(
+      Offset(w * 0.5, h * 0.14),
+      Offset(w * 0.5, h * 0.9),
+      Paint()
+        ..color = const Color(0x55402510)
+        ..strokeWidth = 1.2,
+    );
+    // a photo on each page, slightly turned
+    void photo(Offset c, double turn, Color a, Color b) {
+      canvas.save();
+      canvas.translate(c.dx, c.dy);
+      canvas.rotate(turn);
+      final r = Rect.fromCenter(center: Offset.zero, width: w * 0.26, height: h * 0.36);
+      canvas.drawRect(r.inflate(1.4), Paint()..color = const Color(0xFFFFFFFF));
+      canvas.drawRect(r, Paint()..shader = LinearGradient(colors: [a, b]).createShader(r));
+      canvas.restore();
+    }
+
+    photo(Offset(w * 0.28, h * 0.46), -0.08, const Color(0xFF7AA0C4), const Color(0xFFE0B48A));
+    photo(Offset(w * 0.72, h * 0.5), 0.07, const Color(0xFFC2786A), const Color(0xFFF2C78E));
+  }
+
+  @override
+  bool shouldRepaint(_OpenAlbum old) => false;
+}
+
+/// "Send Back" in a small bubble under a print, its point aimed up at it.
+class _SendBack extends StatelessWidget {
+  const _SendBack({required this.below});
+
+  final Rect below;
+
+  @override
+  Widget build(BuildContext context) {
+    const width = 150.0, arrow = 9.0;
+    final screen = MediaQuery.sizeOf(context);
+    final left = (below.center.dx - width / 2).clamp(10.0, screen.width - width - 10);
+    return Stack(
+      children: [
+        Positioned(
+          left: left,
+          top: below.bottom + 2,
+          width: width,
+          child: CustomPaint(
+            painter: _Bubble(tip: below.center.dx - left, arrow: arrow),
+            child: Padding(
+              padding: const EdgeInsets.only(top: arrow),
+              child: Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => Navigator.of(context).pop(true),
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.push_pin_outlined, size: 17, color: Color(0xFF2A1A10)),
+                        SizedBox(width: 6),
+                        Text(
+                          'Send Back',
+                          style: TextStyle(
+                            color: Color(0xFF2A1A10),
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Bubble extends CustomPainter {
+  const _Bubble({required this.tip, required this.arrow});
+
+  final double tip, arrow;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final body = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, arrow, size.width, size.height - arrow),
+      const Radius.circular(12),
+    );
+    final t = tip.clamp(18.0, size.width - 18);
+    final path = Path()
+      ..addRRect(body)
+      ..moveTo(t - arrow, arrow + 0.5)
+      ..lineTo(t, 0)
+      ..lineTo(t + arrow, arrow + 0.5)
+      ..close();
+    canvas.drawShadow(path, const Color(0xFF000000), 6, false);
+    canvas.drawPath(path, Paint()..color = StudioInk.paper);
+  }
+
+  @override
+  bool shouldRepaint(_Bubble old) => old.tip != tip;
 }

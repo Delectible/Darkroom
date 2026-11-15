@@ -118,7 +118,10 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
     // turns a page), held to where a bound page can reach
     final cy = _bottom ? h : 0.0;
     final base = Offset(_forward! ? w : -w, cy);
-    setState(() => _at = _bind(base + Offset(move.dx * 2, move.dy * 0.8)));
+    // (up and down counts for less, and only so far: a sideways drag that
+    // wanders doesn't throw the corner across the page)
+    final lift = (move.dy * 0.45).clamp(-h * 0.28, h * 0.28);
+    setState(() => _at = _bind(base + Offset(move.dx * 2, lift)));
   }
 
   void _dragEnd(DragEndDetails d) {
@@ -132,7 +135,8 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
     _to = Offset(goLeft ? -w : w, cy);
     _arc = false;
     final dist = (_to - _from).distance / (2 * w);
-    _run(Duration(milliseconds: (140 + 300 * dist).round()));
+    // (never a snap: even a small fold is laid back down gently)
+    _run(Duration(milliseconds: (260 + 380 * dist).round()));
   }
 
   void _run(Duration time) {

@@ -1249,3 +1249,18 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   Handwritten in pen and a touch off level, None); Film holes (sprockets
   down both edges, frames a little narrower); Caption (your own words in
   place of DARKROOM, or none; bigger when there's no date).
+- 68.7 Book rebuilt as a book; landscape (2026-11-15), 2.3.9
+  - Landscape never worked on a phone: the Studio's routes weren't
+    UprightApp.landscape / UprightPage like the corkboard's. All of them
+    are now (Studio, pick prints, makers, book, viewers, the drop).
+  - _OpenBook: a back board under the pages, a rounded leather spine with
+    striped headbands, pages whose gutter corners dip (_PageShape) showing
+    the dark of the gutter, and ONE front board hinged at the spine for the
+    whole swing and after (it becomes the left board: nothing swaps as it
+    lands, so no lining before there's a board, no stitches sliding, no
+    red flash at page one). Left page and its block only once it's down.
+  - Buttons woke only after a manual turn (opened was read outside the
+    animation's builder): a status listener now.
+  - Page drag: up/down counts for less and is capped (a wandering drag
+    threw the corner across the page), and letting go lays the fold down
+    over at least 260 ms (it could take 140 ms: a snap).

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/device/upright.dart';
 import '../../core/device/haptics.dart';
 import 'studio_screen.dart';
 import 'studio_store.dart';
@@ -11,9 +12,10 @@ import 'studio_store.dart';
 /// A maker's page: slides in like any page, but closes at once (under the
 /// snapshot's white flash, see [popWithFlash]).
 Route<T> makerRoute<T>(Widget page) => PageRouteBuilder<T>(
+  settings: UprightApp.landscape,
   transitionDuration: const Duration(milliseconds: 300),
   reverseTransitionDuration: Duration.zero,
-  pageBuilder: (_, _, _) => page,
+  pageBuilder: (_, _, _) => UprightPage(child: page),
   transitionsBuilder: (_, a, _, child) => SlideTransition(
     position: Tween(
       begin: const Offset(0, 0.06),
@@ -56,10 +58,11 @@ Future<void> popWithFlash(BuildContext context, StudioWork work) async {
 /// (the Studio) fade back in round it as it goes.
 Future<void> showSnapshotDrop(BuildContext context, StudioWork work) => Navigator.of(context).push(
   PageRouteBuilder<void>(
+    settings: UprightApp.landscape,
     opaque: false,
     transitionDuration: Duration.zero,
     reverseTransitionDuration: const Duration(milliseconds: 520),
-    pageBuilder: (_, _, _) => _SnapshotDrop(work: work),
+    pageBuilder: (_, _, _) => UprightPage(child: _SnapshotDrop(work: work)),
     transitionsBuilder: (_, a, _, child) => FadeTransition(
       opacity: CurvedAnimation(parent: a, curve: Curves.easeInOut),
       child: child,

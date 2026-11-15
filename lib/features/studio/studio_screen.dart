@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/device/upright.dart';
 import '../../core/db/media_repository.dart';
 import '../../core/device/haptics.dart';
 import '../../core/providers.dart';
@@ -138,7 +139,11 @@ class _Grain extends CustomPainter {
 class StudioScreen extends ConsumerStatefulWidget {
   const StudioScreen({super.key});
 
-  static Route<void> route() => MaterialPageRoute<void>(builder: (_) => const StudioScreen());
+  // (turns with the phone, like the corkboard)
+  static Route<void> route() => MaterialPageRoute<void>(
+    settings: UprightApp.landscape,
+    builder: (_) => const UprightPage(child: StudioScreen()),
+  );
 
   @override
   ConsumerState<StudioScreen> createState() => _StudioScreenState();
@@ -206,7 +211,10 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
     if (!needs.fits(prints.length)) {
       final picked = await Navigator.of(context).push<List<MediaItem>>(
         MaterialPageRoute(
-          builder: (_) => PickPrints(prints: prints, kind: kind),
+          settings: UprightApp.landscape,
+          builder: (_) => UprightPage(
+            child: PickPrints(prints: prints, kind: kind),
+          ),
         ),
       );
       if (picked == null || !mounted) return;

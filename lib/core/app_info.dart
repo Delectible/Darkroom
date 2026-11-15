@@ -9,8 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Photo strips in the Studio: write the date by hand, print it or leave it off, punch film holes '
-      'down the edges, and put your own caption at the foot.';
+      'The Studio and its album now turn with your phone. The album is built like a real book: a spine '
+      'with headbands, pages that dip into the gutter, and one cover that swings open and stays. Photo '
+      'strips get a handwritten date, film holes and your own caption.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -1224,3 +1224,5 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     plays; reflip removed).
   - Strip and collage makers: tap a photo to move and zoom it in its frame
     (PhotoCrop; stripCells / collageCells give the frames).
+  - Corkboard sideways: a left swipe no longer puts the board away (only
+    the pull down does, as the long side runs up/down).

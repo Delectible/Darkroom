@@ -121,6 +121,9 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
   void _swipeEnd(DragEndDetails d) {
     if (_swipeFrom == null) return;
     _swipeFrom = null;
+    // (sideways the board goes away with a pull down only: see _pullToClose)
+    final size = MediaQuery.sizeOf(context);
+    if (size.width > size.height) return;
     final v = d.primaryVelocity ?? 0;
     if (v < -700 || (_swipeDx < -110 && v < 200)) Navigator.of(context).maybePop();
   }

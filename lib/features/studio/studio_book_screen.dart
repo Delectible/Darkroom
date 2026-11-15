@@ -162,161 +162,213 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
       backgroundColor: StudioInk.table,
       body: StudioTable(
         child: SafeArea(
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(6, 6, 18, 0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'Back to the Studio',
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.arrow_back, color: StudioInk.ink),
-                    ),
-                    const Expanded(
-                      child: Text(
-                        'THE BOOK',
-                        style: TextStyle(
-                          color: StudioInk.label,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 4,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    if (pages.isNotEmpty)
-                      Text(
-                        'page ${at + 1} of ${pages.length}',
-                        style: const TextStyle(color: StudioInk.muted, fontSize: 12),
-                      ),
-                  ],
+          child: Builder(
+            builder: (context) {
+              final screen = MediaQuery.sizeOf(context);
+              final sideways = screen.width > screen.height * 1.2;
+              // (sideways: the width of the heading's column and of the buttons')
+              final side = (screen.width * 0.19).clamp(120.0, 164.0);
+              final back = IconButton(
+                tooltip: 'Back to the Studio',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back, color: StudioInk.ink),
+              );
+              const title = Text(
+                'THE BOOK',
+                style: TextStyle(
+                  color: StudioInk.label,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 4,
+                  fontSize: 16,
                 ),
-              ),
-              Expanded(
-                child: works.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(40),
-                          child: Text(
-                            'The book is empty. Strips, collages, scrapbook pages and flip books you make in the '
-                            'Studio go here.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(color: StudioInk.muted, height: 1.4),
-                          ),
+              );
+              final count = pages.isEmpty
+                  ? null
+                  : Text(
+                      'page ${at + 1} of ${pages.length}',
+                      style: const TextStyle(color: StudioInk.muted, fontSize: 12),
+                    );
+              final Widget content = works.isEmpty
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40),
+                        child: Text(
+                          'The book is empty. Strips, collages, scrapbook pages and flip books you make in the '
+                          'Studio go here.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: StudioInk.muted, height: 1.4),
                         ),
-                      )
-                    : LayoutBuilder(
-                        builder: (context, box) {
-                          _openWhenReady(ready);
-                          // the open book: the right page as big as fits, a strip
-                          // of the left page beside it (all of it, sideways)
-                          final sideways = box.maxWidth > box.maxHeight * 1.2;
-                          final left = sideways ? 1.0 : 0.3;
-                          final pw = math.min(
-                            (box.maxWidth - (sideways ? 48 : 24)) / (1 + left),
-                            (box.maxHeight - (sideways ? 124 : 96)) * bookPageAspect,
-                          );
-                          final ph = pw / bookPageAspect;
-                          final opened = _open.isCompleted;
-                          return Column(
-                            children: [
-                              Expanded(
-                                // (upright the book runs off the left of the screen)
-                                child: Align(
-                                  alignment: sideways ? Alignment.center : Alignment.centerLeft,
-                                  child: AnimatedBuilder(
-                                    animation: _open,
-                                    builder: (context, _) => _OpenBook(
-                                      // (nothing's been turned over at page one)
-                                      leavesOnLeft: at > 0,
-                                      pageWidth: pw,
-                                      pageHeight: ph,
-                                      left: left,
-                                      open: Curves.easeInOutCubic.transform(_open.value),
-                                      pages: !ready || pages.isEmpty
-                                          ? const _PaperPage()
-                                          : PageTurn(
-                                              key: _turn,
-                                              count: pages.length,
-                                              page: at,
-                                              onPage: (i) => setState(() => _at = i),
-                                              back: const ClipPath(
-                                                clipper: _PageShape(),
-                                                child: _PaperPage(back: true),
+                      ),
+                    )
+                  : LayoutBuilder(
+                      builder: (context, box) {
+                        _openWhenReady(ready);
+                        // the open book: the right page as big as fits, a strip
+                        // of the left page beside it (all of it, sideways)
+                        final left = sideways ? 1.0 : 0.3;
+                        // (sideways the buttons are beside it: all the height's the book's)
+                        final pw = math.min(
+                          (box.maxWidth - (sideways ? side + 40 : 24)) / (1 + left),
+                          (box.maxHeight - (sideways ? 44 : 96)) * bookPageAspect,
+                        );
+                        final ph = pw / bookPageAspect;
+                        final opened = _open.isCompleted;
+                        final book = Expanded(
+                          // (upright the book runs off the left of the screen)
+                          child: Align(
+                            alignment: sideways ? Alignment.center : Alignment.centerLeft,
+                            child: AnimatedBuilder(
+                              animation: _open,
+                              builder: (context, _) => _OpenBook(
+                                // (nothing's been turned over at page one)
+                                leavesOnLeft: at > 0,
+                                pageWidth: pw,
+                                pageHeight: ph,
+                                left: left,
+                                open: Curves.easeInOutCubic.transform(_open.value),
+                                pages: !ready || pages.isEmpty
+                                    ? const _PaperPage()
+                                    : PageTurn(
+                                        key: _turn,
+                                        count: pages.length,
+                                        page: at,
+                                        onPage: (i) => setState(() => _at = i),
+                                        back: const ClipPath(
+                                          clipper: _PageShape(),
+                                          child: _PaperPage(back: true),
+                                        ),
+                                        // (facing page one: the front board's
+                                        // lining, already there beneath)
+                                        left: (context, i) => i == 0
+                                            ? const SizedBox.shrink()
+                                            : const ClipPath(
+                                                clipper: _PageShape(left: true),
+                                                child: _PaperPage(back: true, left: true),
                                               ),
-                                              // (facing page one: the front board's
-                                              // lining, already there beneath)
-                                              left: (context, i) => i == 0
-                                                  ? const SizedBox.shrink()
-                                                  : const ClipPath(
-                                                      clipper: _PageShape(left: true),
-                                                      child: _PaperPage(back: true, left: true),
-                                                    ),
-                                              builder: (context, i) {
-                                                final page = _AlbumPage(
-                                                  number: i + 1,
-                                                  works: [for (final k in pages[i].pieces) works[k]],
-                                                  rects: pages[i].rects,
-                                                );
-                                                return ClipPath(
-                                                  clipper: const _PageShape(),
-                                                  child: i == at
-                                                      ? RepaintBoundary(key: _shot, child: page)
-                                                      : page,
-                                                );
-                                              },
-                                            ),
-                                    ),
-                                  ),
-                                ),
+                                        builder: (context, i) {
+                                          final page = _AlbumPage(
+                                            number: i + 1,
+                                            works: [for (final k in pages[i].pieces) works[k]],
+                                            rects: pages[i].rects,
+                                          );
+                                          return ClipPath(
+                                            clipper: const _PageShape(),
+                                            child: i == at ? RepaintBoundary(key: _shot, child: page) : page,
+                                          );
+                                        },
+                                      ),
                               ),
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(0, 6, 0, 14),
-                                child: Row(
+                            ),
+                          ),
+                        );
+                        final prev = _NavButton(
+                          tooltip: 'Previous page',
+                          icon: Icons.chevron_left,
+                          onTap: !opened || at == 0 ? null : () => _turn.currentState?.previous(),
+                        );
+                        final next = _NavButton(
+                          tooltip: 'Next page',
+                          icon: Icons.chevron_right,
+                          onTap: !opened || at >= pages.length - 1 ? null : () => _turn.currentState?.next(),
+                        );
+                        final save = FilledButton(
+                          onPressed: _saving || !opened ? null : () => _savePage(pw),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: StudioInk.brass,
+                            foregroundColor: const Color(0xFF22150B),
+                            minimumSize: const Size(0, 44),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          child: Text(
+                            _saving ? 'Saving…' : (sideways ? 'Save page' : 'Save page to Photos'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                        if (sideways) {
+                          return Row(
+                            children: [
+                              book,
+                              SizedBox(
+                                width: side,
+                                child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    _NavButton(
-                                      tooltip: 'Previous page',
-                                      icon: Icons.chevron_left,
-                                      onTap: !opened || at == 0 ? null : () => _turn.currentState?.previous(),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [prev, const SizedBox(width: 12), next],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Flexible(
-                                      child: FilledButton(
-                                        onPressed: _saving || !opened ? null : () => _savePage(pw),
-                                        style: FilledButton.styleFrom(
-                                          backgroundColor: StudioInk.brass,
-                                          foregroundColor: const Color(0xFF22150B),
-                                          minimumSize: const Size(0, 44),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                                        ),
-                                        child: Text(
-                                          _saving ? 'Saving…' : 'Save page to Photos',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _NavButton(
-                                      tooltip: 'Next page',
-                                      icon: Icons.chevron_right,
-                                      onTap: !opened || at >= pages.length - 1
-                                          ? null
-                                          : () => _turn.currentState?.next(),
-                                    ),
+                                    const SizedBox(height: 12),
+                                    Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: save),
                                   ],
                                 ),
                               ),
                             ],
                           );
-                        },
+                        }
+                        return Column(
+                          children: [
+                            book,
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(0, 6, 0, 14),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  prev,
+                                  const SizedBox(width: 12),
+                                  Flexible(child: save),
+                                  const SizedBox(width: 12),
+                                  next,
+                                ],
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+              // Sideways the heading stands in a column on the left and the
+              // buttons on the right (see the book's own layout), so the
+              // book has the screen's whole height.
+              if (sideways) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: side,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 6, top: 6),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            back,
+                            const Padding(padding: EdgeInsets.only(left: 12, top: 4), child: title),
+                            if (count != null)
+                              Padding(padding: const EdgeInsets.only(left: 12, top: 4), child: count),
+                          ],
+                        ),
                       ),
-              ),
-            ],
+                    ),
+                    Expanded(child: content),
+                  ],
+                );
+              }
+              return Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(6, 6, 18, 0),
+                    child: Row(
+                      children: [
+                        back,
+                        const Expanded(child: title),
+                        ?count,
+                      ],
+                    ),
+                  ),
+                  Expanded(child: content),
+                ],
+              );
+            },
           ),
         ),
       ),

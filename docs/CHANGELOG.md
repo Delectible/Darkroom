@@ -1264,3 +1264,6 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - Page drag: up/down counts for less and is capped (a wandering drag
     threw the corner across the page), and letting go lays the fold down
     over at least 260 ms (it could take 140 ms: a snap).
+  - Book sideways: the heading stands in a column on the left, the page
+    buttons and Save in one on the right, so the book takes the screen's
+    whole height (about twice the size).

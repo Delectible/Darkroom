@@ -46,9 +46,13 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
   // the options
   Backdrop _back = Backdrop.white;
   bool _thick = false;
+  bool _sheet = false;
   StripLook _strip = const StripLook();
   double _speed = 0.5; // 0 slow .. 1 fast
   GifSize _gifSize = GifSize.medium;
+  GifTransition _transition = GifTransition.fade;
+  List<ui.Image>? _gifFrames;
+  int _gifLoads = 0;
   CardDraft? _card;
   final _cardBoundary = GlobalKey();
   final _cardEditor = GlobalKey<CardEditorState>();
@@ -70,6 +74,9 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
       p.dispose();
     }
     _preview?.dispose();
+    for (final f in _gifFrames ?? const <ui.Image>[]) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -95,13 +102,13 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
       final items = _chosen();
       final photos = await _load(items);
       image = await switch (_make) {
-        PhotoRoomMake.collage => renderRoomCollage(photos, _back, thick: _thick),
-        PhotoRoomMake.sheet => renderContactSheet(
+        PhotoRoomMake.collage when _sheet => renderContactSheet(
           photos,
           [for (final m in items) m.fileName],
           _back,
           DateTime.now(),
         ),
+        PhotoRoomMake.collage => renderRoomCollage(photos, _back, thick: _thick),
         _ => renderRoomStrip(photos, _strip, DateTime.now()),
       };
     } catch (e) {
@@ -124,8 +131,30 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
     setState(() => _step = s);
     if (s == _Step.arrange) {
       if (_make == PhotoRoomMake.card) _card ??= CardDraft(_chosen());
+      // (never the last piece's picture while this one draws)
+      _preview?.dispose();
+      _preview = null;
       unawaited(_render());
+      if (_make == PhotoRoomMake.gif) unawaited(_loadGif());
     }
+  }
+
+  /// The picked photos as GIF frames, for the preview.
+  Future<void> _loadGif() async {
+    final ticket = ++_gifLoads;
+    final frames = [for (final m in _chosen()) await gifFrameOf(m.outputPath!, 480, 360)];
+    if (!mounted || ticket != _gifLoads) {
+      for (final f in frames) {
+        f.dispose();
+      }
+      return;
+    }
+    setState(() {
+      for (final f in _gifFrames ?? const <ui.Image>[]) {
+        f.dispose();
+      }
+      _gifFrames = frames;
+    });
   }
 
   void _toggle(MediaItem m) {
@@ -147,7 +176,12 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
       switch (_make) {
         case PhotoRoomMake.gif:
           final items = _chosen();
-          final bytes = await encodeGif([for (final m in items) m.outputPath!], _frameMs, _gifSize);
+          final bytes = await encodeGif(
+            [for (final m in items) m.outputPath!],
+            _frameMs,
+            _gifSize,
+            transition: _transition,
+          );
           final thumb = await loadStudioImage(items.first.outputPath!, maxSide: 600);
           made = await keepOnC(
             repo: repo,
@@ -210,7 +244,8 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.sizeOf(context);
-    final height = math.min(mq.height - 70, 620.0);
+    // (tall: the more of the picture you see while you work on it)
+    final height = math.min(mq.height - 30, 820.0);
     final pictures = _pictures();
     _picked.removeWhere((id) => !pictures.any((m) => m.id == id));
     final fits = _make.fits(_picked.length);
@@ -468,7 +503,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
             style: BevelStyle.sunken,
             color: W98.dark,
             padding: const EdgeInsets.all(6),
-            child: _GifPreview(items: _chosen(), frameMs: _frameMs),
+            child: _GifPreview(frames: _gifFrames, frameMs: _frameMs, transition: _transition),
           ),
           [
             Win98GroupBox(
@@ -484,6 +519,23 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
                     ),
                     const SizedBox(width: 6),
                     const Text('Fast'),
+                  ],
+                ),
+              ),
+            ),
+            Win98GroupBox(
+              label: 'Change between photos',
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Wrap(
+                  spacing: 10,
+                  children: [
+                    for (final t in GifTransition.values)
+                      Win98Radio(
+                        selected: _transition == t,
+                        label: t.label,
+                        onTap: () => setState(() => _transition = t),
+                      ),
                   ],
                 ),
               ),
@@ -516,7 +568,15 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
             padding: const EdgeInsets.all(6),
             child: p == null
                 ? const Center(child: Text('Drawing...'))
-                : RawImage(image: p, fit: BoxFit.contain),
+                // (pinch to look closer)
+                : ClipRect(
+                    child: InteractiveViewer(
+                      maxScale: 6,
+                      child: SizedBox.expand(
+                        child: RawImage(image: p, fit: BoxFit.contain),
+                      ),
+                    ),
+                  ),
           ),
           [
             if (_error != null) Text(_error!, maxLines: 2, style: W98.text.copyWith(fontSize: 11)),
@@ -530,15 +590,37 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
             if (_make == PhotoRoomMake.collage)
               Padding(
                 padding: const EdgeInsets.only(top: 4),
-                child: Win98Checkbox(
-                  value: _thick,
-                  label: 'Wide border',
-                  onChanged: (v) {
-                    setState(() => _thick = v);
-                    unawaited(_render());
-                  },
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Win98Checkbox(
+                        value: _sheet,
+                        label: 'Contact sheet look',
+                        onChanged: (v) {
+                          setState(() => _sheet = v);
+                          unawaited(_render());
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: Win98Checkbox(
+                        value: _thick,
+                        label: 'Wide border',
+                        onChanged: _sheet
+                            ? null
+                            : (v) {
+                                setState(() => _thick = v);
+                                unawaited(_render());
+                              },
+                      ),
+                    ),
+                  ],
                 ),
               ),
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text('Pinch the picture to look closer.', style: W98.text.copyWith(fontSize: 10)),
+            ),
           ],
         );
     }
@@ -770,13 +852,15 @@ class _Thumb extends StatelessWidget {
   }
 }
 
-/// The GIF as it'll play: the photos one after another at [frameMs] (the
-/// pace changes with the slider, not the frame).
+/// The GIF as it'll play: the photos one after another at [frameMs], each
+/// change in [transition] (the pace changes with the slider, not the frame).
 class _GifPreview extends StatefulWidget {
-  const _GifPreview({required this.items, required this.frameMs});
+  const _GifPreview({required this.frames, required this.frameMs, required this.transition});
 
-  final List<MediaItem> items;
+  /// The photos as GIF frames (null while they load).
+  final List<ui.Image>? frames;
   final int frameMs;
+  final GifTransition transition;
 
   @override
   State<_GifPreview> createState() => _GifPreviewState();
@@ -800,14 +884,6 @@ class _GifPreviewState extends State<_GifPreview> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    for (final m in widget.items) {
-      precacheImage(ResizeImage(FileImage(File(m.outputPath!)), width: 480), context, onError: (_, _) {});
-    }
-  }
-
-  @override
   void dispose() {
     _tick.cancel();
     super.dispose();
@@ -815,15 +891,36 @@ class _GifPreviewState extends State<_GifPreview> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.items.isEmpty) return const SizedBox.shrink();
-    final m = widget.items[_pos.floor() % widget.items.length];
+    final frames = widget.frames;
+    if (frames == null || frames.isEmpty) return const Center(child: Text('Loading...'));
+    final whole = _pos.floor();
+    final into = (_pos - whole) * widget.frameMs;
+    final change = transitionMs(widget.transition, widget.frameMs);
+    final hold = widget.frameMs - change;
+    final a = frames[whole % frames.length];
+    final b = frames[(whole + 1) % frames.length];
+    final t = into <= hold || change == 0 ? 0.0 : (into - hold) / change;
     return Center(
       child: AspectRatio(
         aspectRatio: 4 / 3,
-        child: Image.file(File(m.outputPath!), fit: BoxFit.cover, cacheWidth: 480, gaplessPlayback: true),
+        child: ClipRect(child: CustomPaint(painter: _GifPainter(a, b, t, widget.transition))),
       ),
     );
   }
+}
+
+class _GifPainter extends CustomPainter {
+  _GifPainter(this.a, this.b, this.t, this.transition);
+
+  final ui.Image a, b;
+  final double t;
+  final GifTransition transition;
+
+  @override
+  void paint(Canvas canvas, Size size) => paintGifChange(canvas, size, a, b, t, transition);
+
+  @override
+  bool shouldRepaint(_GifPainter old) => true;
 }
 
 /// The 98 progress bar, filling and starting over while it works.

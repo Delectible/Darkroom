@@ -14,6 +14,9 @@ import 'win98_widgets.dart';
 /// Tab order in the explorer.
 enum ExplorerPlace { sd, floppy, c, photoRoom, myComputer }
 
+/// A folder shown before a folder's files (Photo Room, in C:).
+typedef ExplorerFolder = ({String name, int files, VoidCallback onOpen});
+
 /// Files on the card are listed but locked; files on C: open normally.
 class ExplorerFilePane extends StatelessWidget {
   const ExplorerFilePane({
@@ -30,7 +33,11 @@ class ExplorerFilePane extends StatelessWidget {
     required this.onSort,
     this.emptyText,
     this.emptyNote,
+    this.folders = const [],
   });
+
+  /// Folders listed first, always (a tap opens one).
+  final List<ExplorerFolder> folders;
 
   /// What an empty drive says (default: SD card or plain folder).
   final String? emptyText;
@@ -51,7 +58,7 @@ class ExplorerFilePane extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
+    if (items.isEmpty && folders.isEmpty) {
       return GestureDetector(
         onTap: onClearSelection,
         child: Center(
@@ -100,9 +107,13 @@ class ExplorerFilePane extends StatelessWidget {
             crossAxisSpacing: 4,
             mainAxisSpacing: 6,
           ),
-          itemCount: items.length,
-          itemBuilder: (context, i) =>
-              item(items[i], (sel) => _LargeIcon(item: items[i], selected: sel, locked: locked)),
+          itemCount: folders.length + items.length,
+          itemBuilder: (context, i) => i < folders.length
+              ? _FolderTile(folder: folders[i], view: view)
+              : item(
+                  items[i - folders.length],
+                  (sel) => _LargeIcon(item: items[i - folders.length], selected: sel, locked: locked),
+                ),
         );
       case ExplorerView.smallIcons:
         return GridView.builder(
@@ -112,19 +123,23 @@ class ExplorerFilePane extends StatelessWidget {
             maxCrossAxisExtent: 150,
             mainAxisExtent: 22,
           ),
-          itemCount: items.length,
-          itemBuilder: (context, i) => item(
-            items[i],
-            (sel) => Row(
-              children: [
-                ExplorerFileIcon(item: items[i], locked: locked),
-                const SizedBox(width: 4),
-                Flexible(
-                  child: _Label(text: items[i].fileName, selected: sel, maxLines: 1),
-                ),
-              ],
-            ),
-          ),
+          itemCount: folders.length + items.length,
+          itemBuilder: (context, i) {
+            if (i < folders.length) return _FolderTile(folder: folders[i], view: view);
+            final m = items[i - folders.length];
+            return item(
+              m,
+              (sel) => Row(
+                children: [
+                  ExplorerFileIcon(item: m, locked: locked),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: _Label(text: m.fileName, selected: sel, maxLines: 1),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       case ExplorerView.details:
         return Column(
@@ -134,10 +149,11 @@ class ExplorerFilePane extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 controller: controller,
-                itemCount: items.length,
+                itemCount: folders.length + items.length,
                 itemExtent: 22,
                 itemBuilder: (context, i) {
-                  final m = items[i];
+                  if (i < folders.length) return _FolderTile(folder: folders[i], view: view);
+                  final m = items[i - folders.length];
                   return item(
                     m,
                     (sel) => Row(
@@ -179,6 +195,55 @@ class ExplorerFilePane extends StatelessWidget {
           ],
         );
     }
+  }
+}
+
+/// A folder among the files: tap to open it.
+class _FolderTile extends StatelessWidget {
+  const _FolderTile({required this.folder, required this.view});
+
+  final ExplorerFolder folder;
+  final ExplorerView view;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget look = switch (view) {
+      ExplorerView.largeIcons => Column(
+        children: [
+          const SizedBox(
+            width: 72,
+            height: 72,
+            child: Center(child: PixelIconView(PixelIcon.folder, size: 48)),
+          ),
+          const SizedBox(height: 4),
+          _Label(text: folder.name, selected: false, maxLines: 2),
+        ],
+      ),
+      ExplorerView.smallIcons => Row(
+        children: [
+          const PixelIconView(PixelIcon.folder),
+          const SizedBox(width: 4),
+          Flexible(child: _Label(text: folder.name, selected: false, maxLines: 1)),
+        ],
+      ),
+      ExplorerView.details => Row(
+        children: [
+          const SizedBox(width: 2),
+          const PixelIconView(PixelIcon.folder),
+          const SizedBox(width: 4),
+          Expanded(flex: 5, child: _Label(text: folder.name, selected: false, maxLines: 1)),
+          Expanded(flex: 3, child: Text('${folder.files} file(s)', textAlign: TextAlign.right, maxLines: 1)),
+          const SizedBox(width: 8),
+          const Expanded(flex: 3, child: Text('File Folder', maxLines: 1, overflow: TextOverflow.clip)),
+          const Expanded(flex: 4, child: SizedBox()),
+        ],
+      ),
+    };
+    return Semantics(
+      button: true,
+      label: 'Folder ${folder.name}',
+      child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: folder.onOpen, child: look),
+    );
   }
 }
 

@@ -19,6 +19,7 @@ import '../../../settings/application/settings_controllers.dart' show globalSett
 import 'debug_menu.dart';
 import 'explorer_dialogs.dart';
 import 'explorer_panes.dart';
+import '../../../cameras/domain/camera_catalog.dart';
 import 'photo_room/photo_room.dart';
 import 'pixel_icons.dart';
 import 'win98_viewer.dart';
@@ -339,9 +340,12 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
       if (i >= 0) await _view(list, i);
       return;
     }
-    final list = ref.read(explorerItemsProvider(Drive.c));
+    // (its own folder's list: a Photo Room piece pages through Photo Room)
+    final drive = CameraCatalog.isPhotoRoom(item.cameraId) ? Drive.photoRoom : Drive.c;
+    final list = ref.read(explorerItemsProvider(drive));
     final i = list.indexWhere((m) => m.id == item.id);
-    await _view(list, i < 0 ? 0 : i);
+    if (i < 0) return;
+    await _view(list, i);
   }
 
   /// Where the last touch came down (global): opening a file zooms its
@@ -1002,7 +1006,11 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                         canMove: selectedSdReady.isNotEmpty,
                                         canDelete: _selected.isNotEmpty,
                                         canTransfer: readyHere > 0,
-                                        onUp: () => _go(ExplorerPlace.myComputer),
+                                        onUp: () => _go(
+                                          place == ExplorerPlace.photoRoom
+                                              ? ExplorerPlace.c
+                                              : ExplorerPlace.myComputer,
+                                        ),
                                         onMove: moveSelected,
                                         onTransfer: transferAll,
                                         onDelete: _deleteSelected,
@@ -1081,6 +1089,19 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                               },
                                                               child: ExplorerFilePane(
                                                                 items: visible,
+                                                                // (Photo Room's folder, always first in C:)
+                                                                folders: place == ExplorerPlace.c
+                                                                    ? [
+                                                                        (
+                                                                          name: 'Photo Room',
+                                                                          files: ref
+                                                                              .watch(photoRoomFolderProvider)
+                                                                              .length,
+                                                                          onOpen: () =>
+                                                                              _go(ExplorerPlace.photoRoom),
+                                                                        ),
+                                                                      ]
+                                                                    : const [],
                                                                 view: prefs.view,
                                                                 prefs: prefs,
                                                                 controller: switch (place) {

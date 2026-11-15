@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/animation.dart';
 import 'package:flutter/painting.dart';
 import 'package:image/image.dart' as img;
 
@@ -16,11 +17,11 @@ import '../pixel_icons.dart';
 
 /// What Photo Room makes, and how many photos each takes.
 enum PhotoRoomMake {
-  collage('Collage', 'COLLG', 'A grid of 2, 4, 6 or 9 photos with a border.', 2, 9, [2, 4, 6, 9]),
-  sheet(
-    'Contact sheet',
-    'SHEET',
-    'Every photo you pick, numbered, with its file name, like an index print.',
+  collage(
+    'Collage or contact sheet',
+    'COLLG',
+    'A grid of your photos with a border, or a contact sheet: each one numbered with its file name, '
+        'like an index print.',
     2,
     36,
   ),
@@ -28,7 +29,7 @@ enum PhotoRoomMake {
   gif('Animated GIF', 'ANIM', 'Your photos one after another, looping, at the speed you pick.', 2, 30),
   strip('Photo booth strip', 'STRIP', 'Three or four photos down a booth strip with the date.', 3, 4);
 
-  const PhotoRoomMake(this.label, this.prefix, this.blurb, this.min, this.max, [this.only = const []]);
+  const PhotoRoomMake(this.label, this.prefix, this.blurb, this.min, this.max);
   final String label;
 
   /// The start of its file names (8.3: COLLG001.JPG).
@@ -36,14 +37,10 @@ enum PhotoRoomMake {
   final String blurb;
   final int min, max;
 
-  /// Only these counts (else anything from [min] to [max]).
-  final List<int> only;
-
-  bool fits(int n) => only.isEmpty ? n >= min && n <= max : only.contains(n);
+  bool fits(int n) => n >= min && n <= max;
 
   String get needs => switch (this) {
-    PhotoRoomMake.collage => '2, 4, 6 or 9',
-    PhotoRoomMake.sheet => '2 to 36',
+    PhotoRoomMake.collage => '2 to 36',
     PhotoRoomMake.card => '1 to 4',
     PhotoRoomMake.gif => '2 to 30',
     PhotoRoomMake.strip => '3 or 4',
@@ -100,12 +97,8 @@ void _pixelText(
 /// The collage: an even grid of square-ish frames on the backdrop.
 Future<ui.Image> renderRoomCollage(List<ui.Image> photos, Backdrop back, {bool thick = false}) {
   final n = photos.length;
-  final (cols, rows) = switch (n) {
-    2 => (2, 1),
-    4 => (2, 2),
-    6 => (3, 2),
-    _ => (3, 3),
-  };
+  final cols = n <= 4 ? 2 : (n <= 9 ? 3 : (n <= 16 ? 4 : 5));
+  final rows = (n / cols).ceil();
   const w = 1800.0;
   final gap = thick ? 60.0 : 24.0;
   final cell = (w - gap * (cols + 1)) / cols;
@@ -114,7 +107,11 @@ Future<ui.Image> renderRoomCollage(List<ui.Image> photos, Backdrop back, {bool t
   return _record(Size(w, h), (c) {
     c.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = back.color);
     for (var i = 0; i < n; i++) {
-      final r = Rect.fromLTWH(gap + (i % cols) * (cell + gap), gap + (i ~/ cols) * (ch + gap), cell, ch);
+      // (a short last row sits in the middle)
+      final row = i ~/ cols;
+      final inRow = row == rows - 1 ? n - row * cols : cols;
+      final x0 = (w - (inRow * cell + (inRow - 1) * gap)) / 2;
+      final r = Rect.fromLTWH(x0 + (i % cols) * (cell + gap), gap + row * (ch + gap), cell, ch);
       drawCover(c, photos[i], r);
     }
   });
@@ -400,30 +397,144 @@ enum GifSize {
   final int side;
 }
 
-/// An animated GIF of [photos], each held [frameMs], looping; every frame
-/// cropped to 4:3 at [size]. Encoded off the UI isolate.
-Future<Uint8List> encodeGif(List<String> paths, int frameMs, GifSize size) async {
-  final w = size.side, h = (size.side * 3 / 4).round();
-  final frames = <Uint8List>[];
-  for (final p in paths) {
-    final photo = await loadStudioImage(p, maxSide: size.side * 2);
-    final frame = await _record(Size(w.toDouble(), h.toDouble()), (c) {
-      drawCover(c, photo, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
-    });
-    photo.dispose();
-    final bytes = await frame.toByteData(format: ui.ImageByteFormat.rawRgba);
-    frame.dispose();
-    frames.add(bytes!.buffer.asUint8List());
-  }
-  final delay = (frameMs / 10).round().clamp(2, 300);
-  return Isolate.run(() {
-    final enc = img.GifEncoder(repeat: 0, samplingFactor: 20);
-    for (final f in frames) {
-      final im = img.Image.fromBytes(width: w, height: h, bytes: f.buffer, numChannels: 4);
-      enc.addFrame(im, duration: delay);
-    }
-    return enc.finish()!;
+/// How one photo gives way to the next in a GIF.
+enum GifTransition {
+  cut('Cut'),
+  fade('Fade'),
+  circle('Circle'),
+  slide('Slide'),
+  dissolve('Dissolve'),
+  blinds('Blinds');
+
+  const GifTransition(this.label);
+  final String label;
+}
+
+/// How long a change takes, in a slot of [frameMs] (none for a cut).
+int transitionMs(GifTransition k, int frameMs) =>
+    k == GifTransition.cut ? 0 : math.min(frameMs * 0.5, 420).round();
+
+/// [path] cropped to a [w] x [h] frame (4:3).
+Future<ui.Image> gifFrameOf(String path, int w, int h) async {
+  final photo = await loadStudioImage(path, maxSide: math.max(w, h) * 2);
+  final frame = await _record(Size(w.toDouble(), h.toDouble()), (c) {
+    drawCover(c, photo, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
   });
+  photo.dispose();
+  return frame;
+}
+
+/// One moment of the change from [a] to [b], [t] of the way (0..1).
+void paintGifChange(Canvas c, Size size, ui.Image a, ui.Image b, double t, GifTransition k) {
+  final r = Offset.zero & size;
+  final paint = Paint()..filterQuality = FilterQuality.medium;
+  void draw(ui.Image im, [Offset at = Offset.zero, double opacity = 1]) => c.drawImageRect(
+    im,
+    Rect.fromLTWH(0, 0, im.width.toDouble(), im.height.toDouble()),
+    r.shift(at),
+    paint..color = Color.fromRGBO(0, 0, 0, opacity),
+  );
+  switch (k) {
+    case GifTransition.cut:
+      draw(t < 0.5 ? a : b);
+    case GifTransition.fade:
+      draw(a);
+      draw(b, Offset.zero, t);
+    case GifTransition.circle:
+      draw(a);
+      c.save();
+      final radius = t * math.sqrt(size.width * size.width + size.height * size.height) / 2;
+      c.clipPath(Path()..addOval(Rect.fromCircle(center: r.center, radius: radius)));
+      draw(b);
+      c.restore();
+    case GifTransition.slide:
+      final e = Curves.easeInOut.transform(t);
+      draw(a, Offset(-e * size.width, 0));
+      draw(b, Offset((1 - e) * size.width, 0));
+    case GifTransition.dissolve:
+      // square blocks flip over in a scattered order, like a 98 screen wipe
+      draw(a);
+      const n = 12;
+      final bw = size.width / n, bh = size.height / (n * 3 / 4).round();
+      final rows = (size.height / bh).ceil();
+      final path = Path();
+      final rnd = math.Random(3);
+      for (var y = 0; y < rows; y++) {
+        for (var x = 0; x < n; x++) {
+          if (rnd.nextDouble() < t) path.addRect(Rect.fromLTWH(x * bw, y * bh, bw + 0.5, bh + 0.5));
+        }
+      }
+      c.save();
+      c.clipPath(path);
+      draw(b);
+      c.restore();
+    case GifTransition.blinds:
+      draw(a);
+      const strips = 8;
+      final sh = size.height / strips;
+      final path = Path();
+      for (var i = 0; i < strips; i++) {
+        path.addRect(Rect.fromLTWH(0, i * sh, size.width, sh * t + 0.5));
+      }
+      c.save();
+      c.clipPath(path);
+      draw(b);
+      c.restore();
+  }
+}
+
+/// An animated GIF of the photos at [paths], each held [frameMs] (its
+/// change to the next, [transition], included), looping back to the
+/// first; every frame cropped to 4:3 at [size]. Encoded off the UI isolate.
+Future<Uint8List> encodeGif(
+  List<String> paths,
+  int frameMs,
+  GifSize size, {
+  GifTransition transition = GifTransition.cut,
+}) async {
+  final w = size.side, h = (size.side * 3 / 4).round();
+  final photos = [for (final p in paths) await gifFrameOf(p, w, h)];
+  final change = transitionMs(transition, frameMs);
+  // fewer in-between frames on long GIFs (the file stays a sensible size)
+  final steps = change == 0 ? 0 : (paths.length > 12 ? 3 : 5);
+  final frames = <(Uint8List, int)>[];
+  Future<void> add(ui.Image frame, int ms) async {
+    final bytes = await frame.toByteData(format: ui.ImageByteFormat.rawRgba);
+    frames.add((bytes!.buffer.asUint8List(), (ms / 10).round().clamp(2, 300)));
+  }
+
+  for (var i = 0; i < photos.length; i++) {
+    await add(photos[i], frameMs - change);
+    if (steps == 0) continue;
+    final next = photos[(i + 1) % photos.length];
+    for (var k = 1; k <= steps; k++) {
+      final f = await _record(Size(w.toDouble(), h.toDouble()), (c) {
+        paintGifChange(c, Size(w.toDouble(), h.toDouble()), photos[i], next, k / (steps + 1), transition);
+      });
+      await add(f, change ~/ steps);
+      f.dispose();
+    }
+  }
+  for (final p in photos) {
+    p.dispose();
+  }
+  return _encodeOff(frames, w, h);
+}
+
+// (its own function, so only the bytes cross to the other isolate: a
+// closure inside encodeGif would carry its dart:ui images along)
+Future<Uint8List> _encodeOff(List<(Uint8List, int)> frames, int w, int h) =>
+    Isolate.run(() => _gifBytes(frames, w, h));
+
+Uint8List _gifBytes(List<(Uint8List, int)> frames, int w, int h) {
+  final enc = img.GifEncoder(repeat: 0, samplingFactor: 20);
+  for (final (f, cs) in frames) {
+    enc.addFrame(
+      img.Image.fromBytes(width: w, height: h, bytes: f.buffer, numChannels: 4),
+      duration: cs,
+    );
+  }
+  return enc.finish()!;
 }
 
 /// Files [bytes] (a JPEG or GIF made by Photo Room) on C: in its folder:

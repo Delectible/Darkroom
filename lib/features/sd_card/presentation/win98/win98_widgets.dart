@@ -434,7 +434,13 @@ class _Win98ButtonState extends State<Win98Button> {
           constraints: BoxConstraints(minWidth: widget.minWidth),
           child: Win98Bevel(
             style: pressed ? BevelStyle.pressed : BevelStyle.raised,
-            padding: widget.padding + (pressed ? const EdgeInsets.only(left: 1, top: 1) : EdgeInsets.zero),
+            // (pressed, the face shifts a pixel; the button keeps its size, so
+            // nothing round it moves)
+            padding:
+                widget.padding +
+                (pressed
+                    ? const EdgeInsets.only(left: 1, top: 1)
+                    : const EdgeInsets.only(right: 1, bottom: 1)),
             child: DefaultTextStyle(
               style: enabled ? W98.text : W98.disabledText,
               textAlign: TextAlign.center,
@@ -1299,8 +1305,15 @@ class Win98Checkbox extends StatelessWidget {
                 style: BevelStyle.sunken,
                 color: enabled ? W98.window : W98.face,
                 padding: EdgeInsets.zero,
+                // (the window's ink: dark schemes get a light tick)
                 child: value
-                    ? const Center(child: Win98GlyphView(Win98Glyph.check, dot: 1.2))
+                    ? Center(
+                        child: Win98GlyphView(
+                          Win98Glyph.check,
+                          dot: 1.2,
+                          color: enabled ? W98.windowInk : W98.shadow,
+                        ),
+                      )
                     : const SizedBox.expand(),
               ),
             ),

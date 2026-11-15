@@ -177,9 +177,11 @@ void main() {
         await tester.pump();
         await tester.tap(find.text('Next >'));
         await tester.pumpAndSettle();
+        // (the frames' decoding and the changes are covered by 'a GIF encodes')
         await tester.tap(find.text('Next >'));
         await tester.pump();
-        await real(tester, 8);
+        await tester.tap(find.text('Circle'));
+        await tester.pump();
         expect(find.text('Slow'), findsOneWidget);
         await shoot(tester, 'gif');
         await tester.pumpWidget(const SizedBox());
@@ -188,10 +190,10 @@ void main() {
   }
 
   test('what each takes', () {
-    expect(PhotoRoomMake.collage.fits(3), isFalse);
-    expect(PhotoRoomMake.collage.fits(9), isTrue);
+    expect(PhotoRoomMake.collage.fits(1), isFalse);
+    expect(PhotoRoomMake.collage.fits(7), isTrue);
     expect(PhotoRoomMake.strip.fits(4), isTrue);
-    expect(PhotoRoomMake.sheet.fits(36), isTrue);
+    expect(PhotoRoomMake.collage.fits(36), isTrue);
     expect(spritesAreValid(), isTrue);
   });
 
@@ -211,5 +213,10 @@ void main() {
     final gif = img.decodeGif(bytes)!;
     expect(gif.numFrames, 3);
     expect(gif.width, 320);
+    // a fade: five frames between each pair (round to the first again)
+    final faded = img.decodeGif(
+      await encodeGif(paths, 600, GifSize.small, transition: GifTransition.fade),
+    )!;
+    expect(faded.numFrames, 3 * 6);
   });
 }

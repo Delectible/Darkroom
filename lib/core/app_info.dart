@@ -3,15 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.4';
+  static const version = '2.3.5';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'New in Darkroom 98: Photo Room. A wizard that turns the pictures on C: into collages, contact '
-      'sheets, greeting cards with WordArt and clip art, animated GIFs and doodled photo strips you can '
-      'recolour, caption and reshuffle, saved in their own folder. On the desktop, in Tools and Start.';
+      'Photo Room: opening a piece in its folder now shows that piece, and the folder sits first in C:. '
+      'Animated GIFs get fades, circle wipes, slides and more; collage and contact sheet are one choice; '
+      'pinch to look closer; a taller wizard; ticks you can see in dark themes.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

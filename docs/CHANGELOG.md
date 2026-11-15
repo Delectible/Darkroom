@@ -1153,3 +1153,20 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   choices are brass pills (the scrapbook's fonts each shown in their own
   lettering); dialogs and notes in the Studio's warm dark with brass
   buttons; bolder button lettering.
+- 69.4 Photo Room fixes (2026-11-15), 2.3.5
+  - Opening a Photo Room piece showed another picture: the explorer looked
+    it up in the Darkroom folder's list (not found, so the first). Now each
+    file opens in its own folder's list, and a file not found opens nothing.
+  - The Photo Room folder sits first in C:\My Pictures\Darkroom (every
+    view); Up from it goes back to C:.
+  - Checkbox ticks in the window's ink (dark schemes showed black on black).
+  - Win98Button keeps its size when pressed (the face shifts, the button
+    doesn't grow): the 1-pixel jump when tapping Shuffle doodles, and
+    anywhere else.
+  - Wizard up to 820 tall; pinch to zoom the collage / strip preview;
+    a stale preview from another make never shows while one draws.
+  - Collage and contact sheet merged: 2 to 36 photos (short last rows
+    centred), a "Contact sheet look" checkbox.
+  - GIF changes: Cut, Fade, Circle, Slide, Dissolve, Blinds, in the preview
+    and the file (5 in-between frames, 3 on long GIFs). The encoder now
+    sends only bytes to its isolate (a closure had carried dart:ui images).

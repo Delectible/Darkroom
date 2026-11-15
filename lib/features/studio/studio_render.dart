@@ -159,12 +159,29 @@ void drawCover(Canvas c, ui.Image image, Rect dst, {Paint? paint, PhotoCrop crop
   );
 }
 
-void _text(Canvas c, String s, Offset centre, double size, Color color, {double spacing = 3}) {
-  final pb = ui.ParagraphBuilder(ui.ParagraphStyle(textAlign: TextAlign.center, fontSize: size))
-    ..pushStyle(
-      ui.TextStyle(color: color, fontSize: size, letterSpacing: spacing, fontWeight: FontWeight.w700),
-    )
-    ..addText(s);
+void _text(
+  Canvas c,
+  String s,
+  Offset centre,
+  double size,
+  Color color, {
+  double spacing = 3,
+  String? family,
+}) {
+  final pb =
+      ui.ParagraphBuilder(
+          ui.ParagraphStyle(textAlign: TextAlign.center, fontSize: size, maxLines: 1, fontFamily: family),
+        )
+        ..pushStyle(
+          ui.TextStyle(
+            color: color,
+            fontSize: size,
+            letterSpacing: spacing,
+            fontWeight: family == null ? FontWeight.w700 : FontWeight.w600,
+            fontFamily: family,
+          ),
+        )
+        ..addText(s);
   final p = pb.build()..layout(const ui.ParagraphConstraints(width: 2000));
   c.drawParagraph(p, Offset(centre.dx - 1000, centre.dy - p.height / 2));
 }
@@ -180,41 +197,105 @@ Future<ui.Image> _record(Size size, void Function(Canvas c) draw) {
   return rec.endRecording().toImage(size.width.round(), size.height.round());
 }
 
-/// Where each frame of a booth strip of [n] goes, and the strip's size.
-(List<Rect>, Size) stripCells(int n, DateTime date) {
-  const w = 600.0, cellW = 520.0, cellH = 390.0, top = 40.0, gap = 26.0, foot = 120.0;
+/// How a booth strip's date is written.
+enum StripDate {
+  booth('Printed'),
+  hand('Handwritten'),
+  off('None');
+
+  const StripDate(this.label);
+  final String label;
+}
+
+/// Where each frame of a booth strip of [n] goes, and the strip's size
+/// ([sprockets]: narrower frames, room down both edges for film holes).
+(List<Rect>, Size) stripCells(int n, DateTime date, {bool sprockets = false}) {
+  const w = 600.0, cellH = 390.0, top = 40.0, gap = 26.0, foot = 120.0;
+  final cellW = sprockets ? 436.0 : 520.0;
   final h = top + n * cellH + (n - 1) * gap + foot;
   final rnd = math.Random(n * 31 + date.day);
   final cells = <Rect>[];
   var y = top;
   for (var i = 0; i < n; i++) {
-    final jitter = (rnd.nextDouble() - 0.5) * 6;
+    final jitter = (rnd.nextDouble() - 0.5) * (sprockets ? 2 : 6);
     cells.add(Rect.fromLTWH((w - cellW) / 2 + jitter, y, cellW, cellH));
     y += cellH + gap + (rnd.nextDouble() - 0.5) * 4;
   }
   return (cells, Size(w, h));
 }
 
-/// A photo booth strip: 3 or 4 frames down booth paper, the date at the
-/// foot, the gaps a touch uneven like a real booth's; each photo framed as
-/// [crops] says.
+/// A photo booth strip: 3 or 4 frames down booth paper, the gaps a touch
+/// uneven like a real booth's; each photo framed as [crops] says. At the
+/// foot the date ([dateStyle]) and [caption]; [sprockets] punches film
+/// holes down both edges.
 Future<ui.Image> renderStrip(
   List<ui.Image> photos,
   StudioPaper paper,
   DateTime date, {
   List<PhotoCrop>? crops,
+  StripDate dateStyle = StripDate.booth,
+  String caption = 'DARKROOM',
+  bool sprockets = false,
 }) {
   const foot = 120.0;
-  final (cells, size) = stripCells(photos.length, date);
+  final (cells, size) = stripCells(photos.length, date, sprockets: sprockets);
   final w = size.width, h = size.height;
   return _record(size, (c) {
     paintPaper(c, Rect.fromLTWH(0, 0, w, h), paper);
     for (var i = 0; i < photos.length; i++) {
       drawCover(c, photos[i], cells[i], crop: crops?[i] ?? PhotoCrop.middle);
     }
-    _text(c, studioDate(date), Offset(w / 2, h - foot / 2 - 12), 26, paper.ink);
-    _text(c, 'DARKROOM', Offset(w / 2, h - foot / 2 + 22), 15, paper.ink.withValues(alpha: 0.7), spacing: 6);
+    if (sprockets) {
+      // film holes: punched through (the table shows), evenly down each edge
+      final hole = Paint()
+        ..color = paper == StudioPaper.black ? const Color(0xFF5C4A3A) : const Color(0xFF2A1F17);
+      const holeW = 34.0, holeH = 46.0, pitch = 78.0;
+      final count = ((h - 30) / pitch).floor();
+      final start = (h - (count - 1) * pitch - holeH) / 2;
+      for (var i = 0; i < count; i++) {
+        for (final x in [24.0, w - 24.0 - holeW]) {
+          c.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromLTWH(x, start + i * pitch, holeW, holeH),
+              const Radius.circular(8),
+            ),
+            hole,
+          );
+        }
+      }
+    }
+    final cap = caption.trim();
+    final both = dateStyle != StripDate.off && cap.isNotEmpty;
+    final mid = h - foot / 2 + 4;
+    switch (dateStyle) {
+      case StripDate.booth:
+        _text(c, studioDate(date), Offset(w / 2, both ? mid - 16 : mid), 26, paper.ink);
+      case StripDate.hand:
+        // (in pen, a little off the level)
+        c.save();
+        c.translate(w / 2, both ? mid - 18 : mid);
+        c.rotate(-0.035);
+        _text(c, _handDate(date), Offset.zero, 46, paper.ink, spacing: 0, family: 'Caveat');
+        c.restore();
+      case StripDate.off:
+        break;
+    }
+    if (cap.isNotEmpty) {
+      _text(
+        c,
+        cap.toUpperCase(),
+        Offset(w / 2, both ? mid + 22 : mid),
+        both ? 15 : 22,
+        paper.ink.withValues(alpha: both ? 0.7 : 0.9),
+        spacing: both ? 6 : 7,
+      );
+    }
   });
+}
+
+String _handDate(DateTime d) {
+  const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'June', 'July', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+  return "${m[d.month - 1]} ${d.day}, '${(d.year % 100).toString().padLeft(2, '0')}";
 }
 
 /// Columns and rows for a collage of [n].

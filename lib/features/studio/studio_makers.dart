@@ -188,6 +188,11 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
   int _run = 0;
   final _date = DateTime.now();
 
+  // the strip's foot and edges
+  StripDate _dateStyle = StripDate.booth;
+  String _caption = 'DARKROOM';
+  bool _sprockets = false;
+
   /// How each photo sits in its frame (moved and zoomed by hand).
   late final List<PhotoCrop> _crops = List.filled(widget.prints.length, PhotoCrop.middle);
 
@@ -215,12 +220,21 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
   }
 
   Future<ui.Image> _render() => _strip
-      ? renderStrip(_photos!, _paper, _date, crops: _crops)
+      ? renderStrip(
+          _photos!,
+          _paper,
+          _date,
+          crops: _crops,
+          dateStyle: _dateStyle,
+          caption: _caption,
+          sprockets: _sprockets,
+        )
       : renderCollage(_photos!, _style, _paper, crops: _crops);
 
   /// The frames, where they are on the piece.
-  List<Rect> get _cells =>
-      _strip ? stripCells(_crops.length, _date).$1 : collageCells(_crops.length, _style).$1;
+  List<Rect> get _cells => _strip
+      ? stripCells(_crops.length, _date, sprockets: _sprockets).$1
+      : collageCells(_crops.length, _style).$1;
 
   /// A tap at [at] on the piece (in its own pixels): that photo's framing.
   Future<void> _frameAt(Offset at) async {
@@ -327,6 +341,44 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
             unawaited(_draw());
           },
         ),
+        if (_strip) ...[
+          _Choices<StripDate>(
+            label: 'Date',
+            values: StripDate.values,
+            name: (d) => d.label,
+            value: _dateStyle,
+            onPick: (d) {
+              setState(() => _dateStyle = d);
+              unawaited(_draw());
+            },
+          ),
+          Row(
+            children: [
+              const SizedBox(width: 64, child: StudioLabel('Extras')),
+              StudioChip(
+                label: 'Film holes',
+                selected: _sprockets,
+                onTap: () {
+                  setState(() => _sprockets = !_sprockets);
+                  unawaited(_draw());
+                },
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: StudioChip(
+                  label: _caption.trim().isEmpty ? 'Add a caption' : 'Caption: $_caption',
+                  selected: false,
+                  onTap: () async {
+                    final t = await studioWrite(context, 'Caption', _caption, max: 22);
+                    if (t == null || !mounted) return;
+                    setState(() => _caption = t);
+                    unawaited(_draw());
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
       action: _strip ? 'Make strip' : 'Make collage',
       busy: _busy,

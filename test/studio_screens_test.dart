@@ -137,6 +137,21 @@ void main() {
           await tester.drag(find.byType(CustomPaint).last, const Offset(-40, 0));
           await tester.tap(find.text('Done'));
           await tester.pumpAndSettle();
+          if (kind == StudioKind.strip) {
+            // the foot and the edges: a handwritten date, film holes
+            await tester.runAsync(() async {
+              await tester.ensureVisible(find.text('Handwritten'));
+              await tester.tap(find.text('Handwritten'));
+              await tester.ensureVisible(find.text('Film holes'));
+              await tester.tap(find.text('Film holes'));
+              for (var i = 0; i < 10; i++) {
+                await Future<void>.delayed(const Duration(milliseconds: 150));
+                await tester.pump();
+              }
+            });
+            expect(find.textContaining('Caption: DARKROOM'), findsOneWidget);
+            await shoot(tester, 'strip_holes');
+          }
           if (kind == StudioKind.collage) {
             await tester.runAsync(() async {
               await tester.tap(find.text('Loose'));

@@ -147,6 +147,8 @@ class StudioChip extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: selected ? const Color(0xFF22150B) : StudioInk.ink,
             fontWeight: selected ? FontWeight.w800 : FontWeight.w600,

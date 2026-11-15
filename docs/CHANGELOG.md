@@ -1245,3 +1245,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     anywhere sizes and turns the piece already held.
   - After making: no "send the photos back" question (they stay); the new
     piece drops onto the bare wooden table, then the Studio fades back in.
+- 68.6 Photo strip options (2026-11-15), 2.3.9: Date (Printed,
+  Handwritten in pen and a touch off level, None); Film holes (sprockets
+  down both edges, frames a little narrower); Caption (your own words in
+  place of DARKROOM, or none; bigger when there's no date).

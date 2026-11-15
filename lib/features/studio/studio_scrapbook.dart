@@ -473,9 +473,12 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
             ),
           ),
           const SizedBox(height: 6),
+          // (moving by touch isn't obvious; the rest is)
           const Text(
-            'Tap a piece for its options · drag · pinch to size and turn',
-            style: TextStyle(color: StudioInk.muted, fontSize: 11),
+            'Tap a piece for its options. Drag it, pinch to size and turn it.',
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            style: TextStyle(color: StudioInk.muted, fontSize: 11, height: 1.3),
           ),
         ],
       );
@@ -586,9 +589,21 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
         ],
       );
     }
+    // (a fixed height, so the page never moves; scrolls if a small screen
+    // can't fit a piece's options)
     return SizedBox(
       height: _toolsHeight,
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14), child: body),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: LayoutBuilder(
+          builder: (context, box) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: box.maxHeight),
+              child: body,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -596,6 +611,8 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: StudioInk.table,
+      // (the writing box moves out of the keyboard's way; the page stays put)
+      resizeToAvoidBottomInset: false,
       appBar: StudioTitleBar(
         title: 'Scrapbook',
         handwritten: true,

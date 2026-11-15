@@ -332,6 +332,18 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
                   ),
                 ),
               ),
+              // (reordering by holding isn't obvious)
+              if (prints.length > 1)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Text(
+                      'Hold a print to move it along',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: StudioInk.muted, fontSize: 11),
+                    ),
+                  ),
+                ),
               if (prints.isNotEmpty)
                 SliverToBoxAdapter(
                   child: Center(
@@ -353,15 +365,19 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
                 // (sideways: the four cards in one row, under the tray)
-                sliver: SliverGrid.count(
-                  crossAxisCount: sideways ? 4 : 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: sideways ? 2.1 : 1.15,
-                  children: [
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: sideways ? 4 : 2,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.15,
+                    // (sideways: a set height, so the words always fit)
+                    mainAxisExtent: sideways ? 116 : null,
+                  ),
+                  delegate: SliverChildListDelegate([
                     for (final k in _kinds)
                       _MakeCard(kind: k, have: prints.length, onTap: () => _make(k, prints)),
-                  ],
+                  ]),
                 ),
               ),
             ],

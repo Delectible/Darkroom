@@ -23,7 +23,8 @@ import 'package:material_ui/material_ui.dart';
 void main() {
   final shots = Platform.environment['SHOTS'];
   final boundary = GlobalKey();
-  var land = false;
+  // the screen it runs on: a big phone and a small one, each both ways
+  var screen = _screens.first;
 
   late List<MediaItem> prints;
 
@@ -67,7 +68,7 @@ void main() {
       final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final image = await ro.toImage(pixelRatio: 1);
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
-      await File('$shots/studio_$name${land ? '_land' : ''}.png').writeAsBytes(png!.buffer.asUint8List());
+      await File('$shots/studio_$name${screen.tag}.png').writeAsBytes(png!.buffer.asUint8List());
     });
   }
 
@@ -85,8 +86,8 @@ void main() {
   );
 
   Future<void> phone(WidgetTester tester) async {
-    tester.view.physicalSize = land ? const Size(2856, 1280) : const Size(1280, 2856);
-    tester.view.devicePixelRatio = 3.1;
+    tester.view.physicalSize = screen.size;
+    tester.view.devicePixelRatio = screen.dpr;
     addTearDown(tester.view.reset);
   }
 
@@ -98,9 +99,9 @@ void main() {
   }
 
   // (each screen upright and sideways: nothing may overflow or overlap)
-  for (final sideways in [false, true]) {
-    group(sideways ? 'landscape' : 'portrait', () {
-      setUp(() => land = sideways);
+  for (final s in _screens) {
+    group(s.name, () {
+      setUp(() => screen = s);
       testWidgets('studio: the tray and the cards say what each takes', (tester) async {
         await phone(tester);
         await tester.pumpWidget(app(const StudioScreen()));
@@ -182,6 +183,16 @@ void main() {
         await tester.tap(find.text('Star'));
         await tester.pumpAndSettle();
         expect(find.text('Remove'), findsOneWidget);
+        // writing with the keyboard up
+        await tester.tap(find.text('Done').first);
+        await tester.pumpAndSettle();
+        tester.view.viewInsets = FakeViewPadding(bottom: screen.size.height * 0.42);
+        await tester.tap(find.text('Writing'));
+        await tester.pumpAndSettle();
+        await shoot(tester, 'scrapbook_keyboard');
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        tester.view.resetViewInsets();
         await tester.pumpWidget(const SizedBox());
       });
 
@@ -310,3 +321,14 @@ class _Book extends StudioBook {
   @override
   Future<List<StudioWork>> build() async => works;
 }
+
+typedef _Screen = ({String name, String tag, Size size, double dpr});
+
+/// A big phone (the Pixel 9 Pro) and a small one (360 x 640), upright and
+/// sideways.
+const _screens = <_Screen>[
+  (name: 'portrait', tag: '', size: Size(1280, 2856), dpr: 3.1),
+  (name: 'landscape', tag: '_land', size: Size(2856, 1280), dpr: 3.1),
+  (name: 'small', tag: '_small', size: Size(720, 1280), dpr: 2.0),
+  (name: 'small landscape', tag: '_small_land', size: Size(1280, 720), dpr: 2.0),
+];

@@ -25,6 +25,7 @@ Future<bool?> showPhotoRoom(BuildContext context) => showWin98Window<bool>(
   context,
   title: 'Photo Room Wizard',
   width: 2000,
+  avoidKeyboard: false,
   icon: const PixelIconView(PixelIcon.photoRoom),
   builder: (context) => const PhotoRoomWizard(),
 );
@@ -48,7 +49,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
   bool _thick = false;
   bool _sheet = false;
   StripLook _strip = const StripLook();
-  double _speed = 0.5; // 0 slow .. 1 fast
+  double _speed = 0.77; // 0 slow (2 s a photo) .. 1 fast
   GifSize _gifSize = GifSize.medium;
   GifTransition _transition = GifTransition.fade;
   List<ui.Image>? _gifFrames;
@@ -66,7 +67,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
   String? _error;
   bool _openFolder = true;
 
-  int get _frameMs => (1000 - 880 * _speed).round();
+  int get _frameMs => (2000 - 1880 * _speed).round();
 
   @override
   void dispose() {
@@ -164,7 +165,32 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
     });
   }
 
+  bool _isSaving = false;
+
   Future<void> _save() async {
+    // (one save at a time, however fast Save is tapped)
+    if (_isSaving) return;
+    _isSaving = true;
+    try {
+      await _saveOnce();
+    } finally {
+      _isSaving = false;
+    }
+  }
+
+  Future<void> _saveOnce() async {
+    // The card is captured as it is on screen, before the page changes to
+    // Saving (and it with it); the pick's outline off.
+    ui.Image? card;
+    if (_make == PhotoRoomMake.card) {
+      _cardEditor.currentState?.unpick();
+      await WidgetsBinding.instance.endOfFrame;
+      final box = _cardBoundary.currentContext?.findRenderObject();
+      if (box is RenderRepaintBoundary && box.hasSize) {
+        card = await box.toImage(pixelRatio: 1500 / box.size.width);
+      }
+      if (!mounted) return;
+    }
     setState(() {
       _step = _Step.saving;
       _error = null;
@@ -193,12 +219,9 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
           );
           thumb.dispose();
         case PhotoRoomMake.card:
-          // the card as it looks, 1500 px across (the pick's outline off)
-          _cardEditor.currentState?.unpick();
-          await WidgetsBinding.instance.endOfFrame;
-          final box = _cardBoundary.currentContext?.findRenderObject();
-          if (box is! RenderRepaintBoundary) throw StateError('The card is not on screen');
-          final image = await box.toImage(pixelRatio: 1500 / box.size.width);
+          // (the card as it looked, 1500 px across)
+          final image = card;
+          if (image == null) throw StateError('The card could not be drawn');
           made = await keepOnC(
             repo: repo,
             existing: existing,
@@ -244,8 +267,9 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.sizeOf(context);
-    // (tall: the more of the picture you see while you work on it)
-    final height = math.min(mq.height - 30, 820.0);
+    // Sized like the explorer's window: the screen less a little desktop
+    // round it and the taskbar's height, so it reads as a window on the PC.
+    final height = math.min(mq.height - 96, 820.0);
     final pictures = _pictures();
     _picked.removeWhere((id) => !pictures.any((m) => m.id == id));
     final fits = _make.fits(_picked.length);
@@ -266,7 +290,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
               _Step.choose => _choose(),
               _Step.pick => _page(
                 'Pick your photos',
-                'Tap photos to pick them, in the order you want them. Tap again to leave one out.',
+                'Tap photos in the order you want them. Tap again to leave one out.',
                 _pick(pictures),
               ),
               _Step.arrange => _page(
@@ -468,7 +492,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
           style: BevelStyle.sunken,
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           child: Text(
-            '$n of ${pictures.length} picked  ·  ${_make.label} takes ${_make.needs}',
+            '$n of ${pictures.length} picked  ·  takes ${_make.needs}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: W98.text.copyWith(fontSize: 11),
@@ -496,7 +520,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
   Widget _arrange() {
     switch (_make) {
       case PhotoRoomMake.card:
-        return CardEditor(key: _cardEditor, draft: _card!, boundary: _cardBoundary);
+        return CardEditor(key: _cardEditor, draft: _card!, boundary: _cardBoundary, pictures: _pictures());
       case PhotoRoomMake.gif:
         return _beside(
           Win98Bevel(
@@ -647,10 +671,17 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
       }
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        // (upright: the options take what they need, up to two fifths, and
+        // scroll past that on a short screen; the picture gets the rest)
         children: [
-          Expanded(child: preview),
+          Expanded(flex: 3, child: preview),
           const SizedBox(height: 6),
-          ...options,
+          Flexible(
+            flex: 2,
+            child: SingleChildScrollView(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: options),
+            ),
+          ),
         ],
       );
     },

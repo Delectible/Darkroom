@@ -1170,3 +1170,27 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - GIF changes: Cut, Fade, Circle, Slide, Dissolve, Blinds, in the preview
     and the file (5 in-between frames, 3 on long GIFs). The encoder now
     sends only bytes to its isolate (a closure had carried dart:ui images).
+- 69.5 Photo Room and screens pass (2026-11-15), 2.3.6
+  - Card save failed ("the card is not on screen") every time: the page
+    changed to Saving before the card was captured. Captured first now;
+    one save at a time.
+  - Card maker: a paint-palette tool opens an Edit Colors panel (48 basic
+    colours, Red/Green/Blue sliders) for any card colour; an Add a photo
+    tool picks from the pictures on C:. Tools column scrolls on short
+    windows.
+  - GIF: slowest speed 2 s a photo (was 1 s; default still about 0.56 s);
+    Blinds and Dissolve drawn in whole pixels with hard clip edges (no
+    leftover lines).
+  - Wizard sized like the explorer's window (desktop round it, room for
+    the taskbar) and ignores the keyboard (showWin98Window avoidKeyboard);
+    its own small dialogs still move up. Options scroll under the picture
+    upright, so the preview keeps its room on small phones.
+  - 98 glyphs (caption buttons, arrows) in the scheme's ink, so dark
+    schemes show them; Win98Slider can have no ticks.
+  - Help text: trimmed (flip book length line, pick hint, card hint);
+    added "Hold a print to move it along" under the Studio tray.
+  - Screens pass: Studio and Photo Room tests now run on a big phone and a
+    small one (360 x 640), upright and sideways, with the keyboard up for
+    the writing and caption boxes. Fixed what that found: Studio cards
+    sideways (set height), scrapbook tools (scroll, page ignores the
+    keyboard), flip book viewer buttons (shrink to fit the side panel).

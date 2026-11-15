@@ -850,35 +850,39 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
                           ],
                         ),
                       ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _BigAction(
-                            icon: Icons.replay,
-                            label: 'Replay',
-                            onTap: () {
-                              setState(() => _replays++);
-                              unawaited(_video?.seekTo(Duration.zero));
-                            },
-                          ),
-                          const SizedBox(width: 12),
-                          Builder(
-                            builder: (anchor) => _BigAction(
-                              icon: Icons.ios_share,
-                              label: 'Share',
-                              onTap: _busy != null ? null : () => unawaited(_share(anchor)),
+                    // (shrinks to fit a narrow side panel)
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _BigAction(
+                              icon: Icons.replay,
+                              label: 'Replay',
+                              onTap: () {
+                                setState(() => _replays++);
+                                unawaited(_video?.seekTo(Duration.zero));
+                              },
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          _BigAction(
-                            icon: Icons.download,
-                            label: _busy ?? 'Save video',
-                            primary: true,
-                            onTap: _busy != null ? null : _save,
-                          ),
-                        ],
+                            const SizedBox(width: 12),
+                            Builder(
+                              builder: (anchor) => _BigAction(
+                                icon: Icons.ios_share,
+                                label: 'Share',
+                                onTap: _busy != null ? null : () => unawaited(_share(anchor)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            _BigAction(
+                              icon: Icons.download,
+                              label: _busy ?? 'Save video',
+                              primary: true,
+                              onTap: _busy != null ? null : _save,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ];

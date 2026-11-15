@@ -1429,6 +1429,7 @@ Future<T?> showWin98Window<T>(
   required Widget Function(BuildContext context) builder,
   Widget? icon,
   double width = 320,
+  bool avoidKeyboard = true,
 }) {
   PerfRecorder.mark('win98 window: $title', hold: const Duration(milliseconds: 800));
   return showGeneralDialog<T>(
@@ -1441,7 +1442,9 @@ Future<T?> showWin98Window<T>(
     pageBuilder: (context, _, _) => AnimatedPadding(
       duration: const Duration(milliseconds: 120),
       curve: Curves.easeOut,
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      // (a big window, like a wizard, stays put: only its own small
+      // dialogs move up out of the keyboard's way)
+      padding: EdgeInsets.only(bottom: avoidKeyboard ? MediaQuery.viewInsetsOf(context).bottom : 0),
       child: Win98Scale(
         child: _CentredFit(
           child: Material(
@@ -1676,13 +1679,14 @@ class Win98Slider extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Ticks.
-                for (var i = 0; i <= ticks; i++)
-                  Positioned(
-                    left: thumbW / 2 + track * i / ticks,
-                    top: 24,
-                    child: Container(width: 1, height: 4, color: W98.dark),
-                  ),
+                // Ticks (none when 0).
+                if (ticks > 0)
+                  for (var i = 0; i <= ticks; i++)
+                    Positioned(
+                      left: thumbW / 2 + track * i / ticks,
+                      top: 24,
+                      child: Container(width: 1, height: 4, color: W98.dark),
+                    ),
                 // Pointer thumb.
                 Positioned(
                   left: x,
@@ -1770,7 +1774,8 @@ class Win98GlyphView extends StatelessWidget {
   final Win98Glyph glyph;
   final double dot;
 
-  /// The scheme's dark ink by default.
+  /// The scheme's text colour on 3D objects by default (light on the dark
+  /// schemes, so caption buttons and arrows stay readable).
   final Color? color;
 
   @override
@@ -1778,7 +1783,7 @@ class Win98GlyphView extends StatelessWidget {
     final w = glyph.rows.fold<int>(0, (m, r) => math.max(m, r.length));
     return CustomPaint(
       size: Size(w * dot, glyph.rows.length * dot),
-      painter: _GlyphPainter(glyph, dot, color ?? W98.dark),
+      painter: _GlyphPainter(glyph, dot, color ?? W98.ink),
     );
   }
 }

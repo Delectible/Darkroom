@@ -17,7 +17,8 @@ import 'package:material_ui/material_ui.dart';
 void main() {
   final shots = Platform.environment['SHOTS'];
   final boundary = GlobalKey();
-  var land = false;
+  // the screen it runs on: a big phone and a small one, each both ways
+  var screen = _screens.first;
   late List<MediaItem> pictures;
 
   setUpAll(() {
@@ -58,7 +59,7 @@ void main() {
       final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
       final image = await ro.toImage(pixelRatio: 1);
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
-      await File('$shots/photoroom_$name${land ? '_land' : ''}.png').writeAsBytes(png!.buffer.asUint8List());
+      await File('$shots/photoroom_$name${screen.tag}.png').writeAsBytes(png!.buffer.asUint8List());
     });
   }
 
@@ -69,12 +70,12 @@ void main() {
     }
   }
 
-  for (final sideways in [false, true]) {
-    group(sideways ? 'landscape' : 'portrait', () {
-      setUp(() => land = sideways);
+  for (final s in _screens) {
+    group(s.name, () {
+      setUp(() => screen = s);
       testWidgets('the wizard: choose, pick, arrange', (tester) async {
-        tester.view.physicalSize = land ? const Size(2856, 1280) : const Size(1280, 2856);
-        tester.view.devicePixelRatio = 3.1;
+        tester.view.physicalSize = screen.size;
+        tester.view.devicePixelRatio = screen.dpr;
         addTearDown(tester.view.reset);
         await tester.runAsync(() async {
           await tester.pumpWidget(
@@ -152,6 +153,15 @@ void main() {
           }
         });
         await shoot(tester, 'strip_shuffled');
+        // the caption box with the keyboard up: it moves, the wizard stays put
+        tester.view.viewInsets = FakeViewPadding(bottom: screen.size.height * 0.42);
+        await tester.tap(find.text('Caption...'));
+        await tester.pumpAndSettle();
+        expect(find.text('Your text:'), findsOneWidget);
+        await shoot(tester, 'caption_keyboard');
+        await tester.tap(find.text('Cancel').last);
+        await tester.pumpAndSettle();
+        tester.view.resetViewInsets();
 
         // back to the start: a card
         await tester.tap(find.text('< Back'));
@@ -167,6 +177,20 @@ void main() {
         await real(tester, 8);
         expect(find.text('Hello!'), findsWidgets);
         await shoot(tester, 'card');
+        // the colour panel: a basic colour, then the card in it
+        await tester.tap(find.byTooltip('Card colour'));
+        await tester.pumpAndSettle();
+        expect(find.text('Basic colors:'), findsOneWidget);
+        await shoot(tester, 'card_colours');
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+        // add a photo from the pictures on C:
+        await tester.tap(find.byTooltip('Add a photo'));
+        await tester.pumpAndSettle();
+        expect(find.text('Add a Photo'), findsOneWidget);
+        await shoot(tester, 'card_add_photo');
+        await tester.tap(find.text('IMG_0016.JPG'));
+        await tester.pumpAndSettle();
 
         // and a GIF
         await tester.tap(find.text('< Back'));
@@ -214,9 +238,18 @@ void main() {
     expect(gif.numFrames, 3);
     expect(gif.width, 320);
     // a fade: five frames between each pair (round to the first again)
-    final faded = img.decodeGif(
-      await encodeGif(paths, 600, GifSize.small, transition: GifTransition.fade),
-    )!;
+    final faded = img.decodeGif(await encodeGif(paths, 600, GifSize.small, transition: GifTransition.fade))!;
     expect(faded.numFrames, 3 * 6);
   });
 }
+
+typedef _Screen = ({String name, String tag, Size size, double dpr});
+
+/// A big phone (the Pixel 9 Pro) and a small one (360 x 640), upright and
+/// sideways.
+const _screens = <_Screen>[
+  (name: 'portrait', tag: '', size: Size(1280, 2856), dpr: 3.1),
+  (name: 'landscape', tag: '_land', size: Size(2856, 1280), dpr: 3.1),
+  (name: 'small', tag: '_small', size: Size(720, 1280), dpr: 2.0),
+  (name: 'small landscape', tag: '_small_land', size: Size(1280, 720), dpr: 2.0),
+];

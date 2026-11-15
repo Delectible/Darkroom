@@ -461,23 +461,40 @@ void paintGifChange(Canvas c, Size size, ui.Image a, ui.Image b, double t, GifTr
       final rnd = math.Random(3);
       for (var y = 0; y < rows; y++) {
         for (var x = 0; x < n; x++) {
-          if (rnd.nextDouble() < t) path.addRect(Rect.fromLTWH(x * bw, y * bh, bw + 0.5, bh + 0.5));
+          if (rnd.nextDouble() < t) {
+            // (whole pixels, no soft edges: no seams between blocks)
+            path.addRect(
+              Rect.fromLTRB(
+                (x * bw).floorToDouble(),
+                (y * bh).floorToDouble(),
+                ((x + 1) * bw).ceilToDouble(),
+                ((y + 1) * bh).ceilToDouble(),
+              ),
+            );
+          }
         }
       }
       c.save();
-      c.clipPath(path);
+      c.clipPath(path, doAntiAlias: false);
       draw(b);
       c.restore();
     case GifTransition.blinds:
       draw(a);
       const strips = 8;
       final sh = size.height / strips;
+      // each slat opens to its whole height (whole pixels, hard edges): no
+      // thin lines left between them as it finishes
+      final open = Curves.easeOut.transform(t);
       final path = Path();
       for (var i = 0; i < strips; i++) {
-        path.addRect(Rect.fromLTWH(0, i * sh, size.width, sh * t + 0.5));
+        final top = (i * sh).floorToDouble();
+        final full = ((i + 1) * sh).ceilToDouble();
+        path.addRect(
+          Rect.fromLTRB(0, top, size.width, math.min(full, (top + (full - top) * open).ceilToDouble())),
+        );
       }
       c.save();
-      c.clipPath(path);
+      c.clipPath(path, doAntiAlias: false);
       draw(b);
       c.restore();
   }

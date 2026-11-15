@@ -344,7 +344,7 @@ class _NavButton extends StatelessWidget {
       child: Win98Button(
         onPressed: onPressed,
         padding: EdgeInsets.zero,
-        child: Win98GlyphView(glyph, dot: 2, color: onPressed == null ? W98.shadow : W98.dark),
+        child: Win98GlyphView(glyph, dot: 2, color: onPressed == null ? W98.shadow : W98.ink),
       ),
     );
   }

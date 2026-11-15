@@ -393,8 +393,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
       ),
       options: [
         Text(
-          '${widget.prints.length} pages, about ${seconds.toStringAsFixed(1)} s. '
-          'Saved as a video, ready for Instagram.',
+          '${widget.prints.length} pages · about ${seconds.toStringAsFixed(1)} s',
           textAlign: TextAlign.center,
           style: const TextStyle(color: StudioInk.muted, fontSize: 12),
         ),

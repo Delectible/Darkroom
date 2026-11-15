@@ -19,19 +19,6 @@ enum WordArtStyle {
   final String label;
 }
 
-/// The card's paper.
-enum CardPaper {
-  cream('Cream', Color(0xFFFFFBE8)),
-  white('White', Color(0xFFFFFFFF)),
-  sky('Sky', Color(0xFFCDEBFF)),
-  pink('Pink', Color(0xFFFFDDEE)),
-  teal('Teal', Color(0xFF008080));
-
-  const CardPaper(this.label, this.color);
-  final String label;
-  final Color color;
-}
-
 /// The clip art on offer.
 const clipArt = [
   PixelIcon.clipSun,
@@ -92,7 +79,9 @@ class CardDraft {
   }
 
   final bits = <CardBit>[];
-  CardPaper paper = CardPaper.cream;
+
+  /// The card's colour (any; cream to start).
+  Color paper = const Color(0xFFFFFBE8);
 
   /// A card is 5 x 7, upright.
   static const aspect = 5 / 7;
@@ -210,7 +199,10 @@ class WordArt extends StatelessWidget {
 /// The card maker: drag, pinch to size and turn; tap a piece to pick it.
 /// [boundary] wraps the card for saving.
 class CardEditor extends StatefulWidget {
-  const CardEditor({super.key, required this.draft, required this.boundary});
+  const CardEditor({super.key, required this.draft, required this.boundary, required this.pictures});
+
+  /// The pictures on C:, for Add a photo.
+  final List<MediaItem> pictures;
 
   final CardDraft draft;
   final GlobalKey boundary;
@@ -290,6 +282,31 @@ class CardEditorState extends State<CardEditor> {
     });
   }
 
+  Future<void> _addPhoto() async {
+    final m = await showWin98Window<MediaItem>(
+      context,
+      title: 'Add a Photo',
+      width: 320,
+      builder: (context) => _PhotoPick(pictures: widget.pictures),
+    );
+    if (m == null || !mounted) return;
+    setState(() {
+      final b = CardBit.photo(m, const Offset(0.5, 0.5))..turn = (math.Random().nextDouble() - 0.5) * 0.16;
+      _d.bits.add(b);
+      _picked = b;
+    });
+  }
+
+  Future<void> _pickColour() async {
+    final c = await showWin98Window<Color>(
+      context,
+      title: 'Edit Colors',
+      width: 300,
+      builder: (context) => _ColourPick(initial: _d.paper),
+    );
+    if (c != null && mounted) setState(() => _d.paper = c);
+  }
+
   Future<void> _edit(CardBit b) async {
     if (b.kind != CardBitKind.word) return;
     final t = await _ask('Edit WordArt', b.text ?? '');
@@ -342,29 +359,26 @@ class CardEditorState extends State<CardEditor> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // the tool column, like Paint's
-              Column(
-                children: [
-                  _Tool(label: 'A', tip: 'WordArt', onTap: _addWord, wordArt: true),
-                  _Tool(icon: PixelIcon.clipBalloon, tip: 'Clip Art', onTap: _addClip),
-                  _Tool(
-                    icon: PixelIcon.views,
-                    tip: 'Paper',
-                    onTap: () => setState(
-                      () => _d.paper = CardPaper.values[(_d.paper.index + 1) % CardPaper.values.length],
+              // the tool column, like Paint's (scrolls on a short window)
+              SingleChildScrollView(
+                child: Column(
+                  children: [
+                    _Tool(label: 'A', tip: 'WordArt', onTap: _addWord, wordArt: true),
+                    _Tool(icon: PixelIcon.clipBalloon, tip: 'Clip Art', onTap: _addClip),
+                    _Tool(icon: PixelIcon.addPhoto, tip: 'Add a photo', onTap: _addPhoto),
+                    _Tool(icon: PixelIcon.palette, tip: 'Card colour', onTap: _pickColour),
+                    _Tool(
+                      icon: PixelIcon.delete,
+                      tip: 'Delete',
+                      onTap: b == null
+                          ? null
+                          : () => setState(() {
+                              _d.bits.remove(b);
+                              _picked = null;
+                            }),
                     ),
-                  ),
-                  _Tool(
-                    icon: PixelIcon.delete,
-                    tip: 'Delete',
-                    onTap: b == null
-                        ? null
-                        : () => setState(() {
-                            _d.bits.remove(b);
-                            _picked = null;
-                          }),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(width: 4),
               Expanded(
@@ -417,7 +431,7 @@ class CardEditorState extends State<CardEditor> {
                               key: widget.boundary,
                               child: ClipRect(
                                 child: ColoredBox(
-                                  color: _d.paper.color,
+                                  color: _d.paper,
                                   child: Stack(
                                     clipBehavior: Clip.none,
                                     children: [
@@ -477,9 +491,8 @@ class CardEditorState extends State<CardEditor> {
               : Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    b == null
-                        ? 'Paper: ${_d.paper.label}. Tap a piece to pick it; drag, pinch to size and turn.'
-                        : 'Drag to move, pinch to size and turn. Delete removes it.',
+                    // (the one thing that isn't obvious: pieces move by touch)
+                    b == null ? 'Tap a piece to pick it, then drag or pinch it.' : '',
                     maxLines: 2,
                     style: W98.text.copyWith(fontSize: 11),
                   ),
@@ -592,4 +605,245 @@ class _TextAskState extends State<_TextAsk> {
       ],
     ),
   );
+}
+
+/// Pick one of the pictures on C:.
+class _PhotoPick extends StatelessWidget {
+  const _PhotoPick({required this.pictures});
+
+  final List<MediaItem> pictures;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(8),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SizedBox(
+          height: math.min(320, MediaQuery.sizeOf(context).height * 0.55),
+          child: Win98Bevel(
+            style: BevelStyle.sunken,
+            color: W98.window,
+            padding: const EdgeInsets.all(2),
+            child: pictures.isEmpty
+                ? Center(
+                    child: Text('No pictures on C:', style: W98.text.copyWith(color: W98.windowInk)),
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.all(4),
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 90,
+                      mainAxisSpacing: 4,
+                      crossAxisSpacing: 4,
+                      childAspectRatio: 0.86,
+                    ),
+                    itemCount: pictures.length,
+                    itemBuilder: (context, i) {
+                      final m = pictures[i];
+                      final path = m.thumbPath ?? m.outputPath;
+                      return GestureDetector(
+                        onTap: () => Navigator.of(context).pop(m),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(border: Border.all(color: W98.shadow)),
+                                child: path == null
+                                    ? ColoredBox(color: W98.face)
+                                    : Image.file(File(path), fit: BoxFit.cover, cacheWidth: 200),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              m.fileName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: W98.text.copyWith(fontSize: 10, color: W98.windowInk),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerRight,
+          child: Win98Button(
+            minWidth: 72,
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// The 98 colour dialog: the basic colours, and any colour by its red,
+/// green and blue.
+class _ColourPick extends StatefulWidget {
+  const _ColourPick({required this.initial});
+
+  final Color initial;
+
+  @override
+  State<_ColourPick> createState() => _ColourPickState();
+}
+
+class _ColourPickState extends State<_ColourPick> {
+  late double _r = widget.initial.r, _g = widget.initial.g, _b = widget.initial.b;
+
+  static const _basic = [
+    Color(0xFFFF8080),
+    Color(0xFFFFFF80),
+    Color(0xFF80FF80),
+    Color(0xFF00FF80),
+    Color(0xFF80FFFF),
+    Color(0xFF0080FF),
+    Color(0xFFFF80C0),
+    Color(0xFFFF80FF),
+    Color(0xFFFF0000),
+    Color(0xFFFFFF00),
+    Color(0xFF80FF00),
+    Color(0xFF00FF40),
+    Color(0xFF00FFFF),
+    Color(0xFF0080C0),
+    Color(0xFF8080C0),
+    Color(0xFFFF00FF),
+    Color(0xFF804040),
+    Color(0xFFFF8040),
+    Color(0xFF00FF00),
+    Color(0xFF008080),
+    Color(0xFF004080),
+    Color(0xFF8080FF),
+    Color(0xFF800040),
+    Color(0xFFFF0080),
+    Color(0xFF800000),
+    Color(0xFFFF8000),
+    Color(0xFF008000),
+    Color(0xFF008040),
+    Color(0xFF0000FF),
+    Color(0xFF0000A0),
+    Color(0xFF800080),
+    Color(0xFF8000FF),
+    Color(0xFF400000),
+    Color(0xFF804000),
+    Color(0xFF004000),
+    Color(0xFF004040),
+    Color(0xFF000080),
+    Color(0xFF000040),
+    Color(0xFF400040),
+    Color(0xFF400080),
+    Color(0xFF000000),
+    Color(0xFF808000),
+    Color(0xFF808040),
+    Color(0xFF808080),
+    Color(0xFF408080),
+    Color(0xFFC0C0C0),
+    Color(0xFFFFFBE8),
+    Color(0xFFFFFFFF),
+  ];
+
+  Color get _colour => Color.from(alpha: 1, red: _r, green: _g, blue: _b);
+
+  @override
+  Widget build(BuildContext context) {
+    Widget channel(String name, double v, ValueChanged<double> set) => Row(
+      children: [
+        SizedBox(width: 40, child: Text(name)),
+        Expanded(
+          child: Win98Slider(value: v, ticks: 0, onChanged: (x) => setState(() => set(x))),
+        ),
+        SizedBox(width: 30, child: Text('${(v * 255).round()}', textAlign: TextAlign.right)),
+      ],
+    );
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Basic colors:'),
+          const SizedBox(height: 4),
+          GridView.count(
+            crossAxisCount: 8,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 4,
+            children: [
+              for (final c in _basic)
+                GestureDetector(
+                  onTap: () => setState(() {
+                    _r = c.r;
+                    _g = c.g;
+                    _b = c.b;
+                  }),
+                  child: Win98Bevel(
+                    style: BevelStyle.sunken,
+                    padding: const EdgeInsets.all(2),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: c,
+                        border: c.toARGB32() == _colour.toARGB32()
+                            ? Border.all(color: W98.ink, width: 1.5)
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    channel('Red:', _r, (x) => _r = x),
+                    channel('Green:', _g, (x) => _g = x),
+                    channel('Blue:', _b, (x) => _b = x),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Column(
+                children: [
+                  Win98Bevel(
+                    style: BevelStyle.sunken,
+                    padding: const EdgeInsets.all(2),
+                    child: SizedBox(width: 56, height: 44, child: ColoredBox(color: _colour)),
+                  ),
+                  const SizedBox(height: 2),
+                  const Text('Color|Solid'),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Win98Button(
+                minWidth: 72,
+                onPressed: () => Navigator.of(context).pop(_colour),
+                child: const Text('OK'),
+              ),
+              const SizedBox(width: 6),
+              Win98Button(
+                minWidth: 72,
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -235,6 +235,9 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
     final size = MediaQuery.sizeOf(context);
     final sideways = size.width > size.height * 1.2;
     return Scaffold(
+      // (text boxes move up out of the keyboard's way; the screen stays put)
+
+      resizeToAvoidBottomInset: false,
       backgroundColor: StudioInk.table,
       body: StudioTable(
         child: SafeArea(
@@ -511,6 +514,9 @@ class _PickPrintsState extends State<PickPrints> {
     final ok = needs.fits(_picked.length);
     final (name, _) = studioKindLook(widget.kind);
     return Scaffold(
+      // (text boxes move up out of the keyboard's way; the screen stays put)
+
+      resizeToAvoidBottomInset: false,
       backgroundColor: StudioInk.table,
       appBar: StudioTitleBar(title: 'Pick prints', subtitle: 'For the $name · ${needs.label}'),
       body: StudioTable(

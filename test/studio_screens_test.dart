@@ -243,12 +243,19 @@ void main() {
               ),
             ),
           );
+          // (real time for the pictures; the test clock held, so the cover
+          // hasn't started to open)
           for (var i = 0; i < 20; i++) {
             await Future<void>.delayed(const Duration(milliseconds: 100));
-            await tester.pump(const Duration(milliseconds: 50));
+            await tester.pump();
           }
         });
         expect(find.text('page 1 of 2'), findsOneWidget);
+        // the cover swinging open, then open
+        await tester.pump(const Duration(milliseconds: 280));
+        await tester.pump(const Duration(milliseconds: 380));
+        await shoot(tester, 'book_opening');
+        await tester.pump(const Duration(milliseconds: 900));
         await shoot(tester, 'book');
         // drag the page part way over
         final page = tester.getRect(find.byType(PageTurn));

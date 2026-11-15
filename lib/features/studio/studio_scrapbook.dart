@@ -89,7 +89,8 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
   _Bit? _picked;
   _Bit? _moving;
   double _startScale = 1, _startTurn = 0;
-  Offset? _tapAt;
+  _Bit? _lastTapped;
+  DateTime _lastTapAt = DateTime(0);
   double _width = 1;
   bool _busy = false;
   bool _laid = false;
@@ -196,8 +197,8 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
     );
     if (s == null || !mounted) return;
     String? words;
-    if (s == Sticker.note) {
-      words = await _write('Sticky note', '', max: 40);
+    if (s.hasText) {
+      words = await _write(s.isTab ? 'Bookmark tab' : 'Sticky note', '', max: s.isTab ? 20 : 40);
       if (words == null || !mounted) return;
     }
     setState(() {
@@ -206,7 +207,7 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
         s,
         Offset(0.35 + rnd.nextDouble() * 0.3, 0.5 + rnd.nextDouble() * 0.3),
         text: words,
-      )..turn = (rnd.nextDouble() - 0.5) * 0.3;
+      )..turn = (rnd.nextDouble() - 0.5) * (s.isTab ? 0.08 : 0.3);
       _bits.add(b);
       _picked = b;
     });
@@ -224,7 +225,7 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
         if (t == null) return;
         setState(() => b.note = t.isEmpty ? null : t);
       case _Kind.sticker:
-        if (b.sticker != Sticker.note) return;
+        if (!b.sticker!.hasText) return;
         final t = await _write('Sticky note', b.text ?? '', max: 40);
         if (t == null) return;
         setState(() => b.text = t);
@@ -582,7 +583,7 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
           ),
           const SizedBox(height: 6),
           row([
-            if (b.sticker == Sticker.note) action(Icons.edit_outlined, 'Edit', () => _edit(b)),
+            if (b.sticker!.hasText) action(Icons.edit_outlined, 'Edit', () => _edit(b)),
             remove!,
             action(Icons.check, 'Done', () => setState(() => _picked = null)),
           ]),
@@ -643,48 +644,55 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
                       child: SizedBox(
                         width: w,
                         height: w / 0.75,
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTapUp: (d) => setState(() {
-                            final b = _bitAt(d.globalPosition);
-                            if (b == null) {
-                              _picked = null;
-                            } else {
-                              _lift(b);
-                            }
-                          }),
-                          onDoubleTapDown: (d) => _tapAt = d.globalPosition,
-                          onDoubleTap: () {
-                            final at = _tapAt;
-                            final b = at == null ? null : _bitAt(at);
-                            if (b != null) unawaited(_edit(b));
+                        // A piece is picked the moment a finger lands on it (a
+                        // double-tap recogniser made every tap wait); a second
+                        // tap on it soon after edits it.
+                        child: Listener(
+                          onPointerDown: (e) {
+                            final b = _bitAt(e.position);
+                            if (b != null && !identical(b, _picked)) setState(() => _lift(b));
                           },
-                          onScaleStart: _scaleStart,
-                          onScaleUpdate: _scaleUpdate,
-                          onScaleEnd: (_) => _moving = null,
-                          child: RepaintBoundary(
-                            key: _page,
-                            child: ClipRect(
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Positioned.fill(child: StudioPaperView(paper: _paper)),
-                                  if (_laid)
-                                    for (final b in _bits)
-                                      Positioned(
-                                        // (keyed: lifting a piece reorders the pile)
-                                        key: ObjectKey(b),
-                                        left: b.at.dx * w,
-                                        top: b.at.dy * w,
-                                        child: FractionalTranslation(
-                                          translation: const Offset(-0.5, -0.5),
-                                          child: Transform.rotate(
-                                            angle: b.turn,
-                                            child: Transform.scale(scale: b.scale, child: _bitView(b, w)),
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTapUp: (d) {
+                              final b = _bitAt(d.globalPosition);
+                              final now = DateTime.now();
+                              if (b == null) {
+                                setState(() => _picked = null);
+                              } else if (identical(b, _lastTapped) &&
+                                  now.difference(_lastTapAt) < const Duration(milliseconds: 400)) {
+                                unawaited(_edit(b));
+                              }
+                              _lastTapped = b;
+                              _lastTapAt = now;
+                            },
+                            onScaleStart: _scaleStart,
+                            onScaleUpdate: _scaleUpdate,
+                            onScaleEnd: (_) => _moving = null,
+                            child: RepaintBoundary(
+                              key: _page,
+                              child: ClipRect(
+                                child: Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    Positioned.fill(child: StudioPaperView(paper: _paper)),
+                                    if (_laid)
+                                      for (final b in _bits)
+                                        Positioned(
+                                          // (keyed: lifting a piece reorders the pile)
+                                          key: ObjectKey(b),
+                                          left: b.at.dx * w,
+                                          top: b.at.dy * w,
+                                          child: FractionalTranslation(
+                                            translation: const Offset(-0.5, -0.5),
+                                            child: Transform.rotate(
+                                              angle: b.turn,
+                                              child: Transform.scale(scale: b.scale, child: _bitView(b, w)),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           ),

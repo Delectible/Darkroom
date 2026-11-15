@@ -10,10 +10,19 @@ enum Sticker {
   arrow('Arrow', 0.28),
   note('Sticky note', 0.3),
   tape('Tape', 0.3),
-  flower('Flower', 0.2);
+  flower('Flower', 0.2),
+  tabYellow('Yellow tab', 0.34),
+  tabPink('Pink tab', 0.34),
+  tabBlue('Blue tab', 0.34);
 
   const Sticker(this.label, this.size);
   final String label;
+
+  /// Carries words (the sticky note, the bookmark tabs).
+  bool get hasText => this == note || isTab;
+
+  /// A bookmark-style sticky tab: short and wide, its words along it.
+  bool get isTab => this == tabYellow || this == tabPink || this == tabBlue;
 
   /// How wide it starts, in page widths.
   final double size;
@@ -30,6 +39,7 @@ class StickerView extends StatelessWidget {
   double get _aspect => switch (sticker) {
     Sticker.arrow => 2.2,
     Sticker.tape => 3.6,
+    Sticker.tabYellow || Sticker.tabPink || Sticker.tabBlue => 3.4,
     _ => 1,
   };
 
@@ -37,6 +47,38 @@ class StickerView extends StatelessWidget {
   Widget build(BuildContext context) {
     final h = width / _aspect;
     final paint = CustomPaint(size: Size(width, h), painter: _StickerPainter(sticker));
+    if (sticker.isTab) {
+      // words along the tab, on its paper part (the sticky end is darker)
+      return SizedBox(
+        width: width,
+        height: h,
+        child: Stack(
+          children: [
+            paint,
+            Positioned.fill(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(width * 0.2, 0, width * 0.05, 0),
+                child: Center(
+                  child: Text(
+                    text ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.fade,
+                    softWrap: false,
+                    style: TextStyle(
+                      fontFamily: 'Caveat',
+                      fontWeight: FontWeight.w600,
+                      fontSize: h * 0.55,
+                      height: 1.0,
+                      color: const Color(0xFF2A2A6A),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     if (sticker != Sticker.note) return paint;
     return SizedBox(
       width: width,
@@ -154,6 +196,30 @@ class _StickerPainter extends CustomPainter {
             ..lineTo(r.right - fold, r.bottom)
             ..close(),
           Paint()..color = const Color(0xFFE2C93A),
+        );
+      case Sticker.tabYellow || Sticker.tabPink || Sticker.tabBlue:
+        // a bookmark sticky tab: a coloured see-through sticky end, then
+        // paper, lying flat with a soft shadow
+        final colour = switch (sticker) {
+          Sticker.tabPink => const Color(0xFFFF9EC7),
+          Sticker.tabBlue => const Color(0xFF8EC9FF),
+          _ => const Color(0xFFFFE96B),
+        };
+        final r = Rect.fromLTWH(w * 0.02, h * 0.1, w * 0.96, h * 0.8);
+        final p = Path()..addRect(r);
+        canvas.drawShadow(p, const Color(0xFF000000), h * 0.08, false);
+        canvas.drawRect(r, Paint()..color = colour);
+        // the sticky end: a darker band
+        canvas.drawRect(
+          Rect.fromLTWH(r.left, r.top, r.width * 0.16, r.height),
+          Paint()..color = Color.lerp(colour, const Color(0xFF000000), 0.18)!,
+        );
+        // a faint lift at the free end
+        canvas.drawRect(
+          Rect.fromLTWH(r.right - r.width * 0.06, r.top, r.width * 0.06, r.height),
+          Paint()
+            ..shader = LinearGradient(colors: [colour.withValues(alpha: 0), const Color(0x22000000)])
+                .createShader(Rect.fromLTWH(r.right - r.width * 0.06, r.top, r.width * 0.06, r.height)),
         );
       case Sticker.tape:
         // washi tape: torn zigzag ends, see-through, striped

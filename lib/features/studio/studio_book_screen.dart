@@ -59,13 +59,37 @@ class StudioBookScreen extends ConsumerStatefulWidget {
   ConsumerState<StudioBookScreen> createState() => _StudioBookScreenState();
 }
 
-class _StudioBookScreenState extends ConsumerState<StudioBookScreen> {
+class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with SingleTickerProviderStateMixin {
   final _turn = GlobalKey<PageTurnState>();
   final _shot = GlobalKey();
   final _aspects = <String, double>{};
   final _asking = <String>{};
   int _at = 0;
   bool _saving = false;
+
+  // The book arrives shut and its cover swings open once its pictures are
+  // ready (0 shut .. 1 open).
+  late final AnimationController _open = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1150),
+  );
+  bool _opening = false;
+
+  @override
+  void dispose() {
+    _open.dispose();
+    super.dispose();
+  }
+
+  void _openWhenReady(bool ready) {
+    if (!ready || _opening) return;
+    _opening = true;
+    unawaited(
+      Future<void>.delayed(const Duration(milliseconds: 280), () {
+        if (mounted) unawaited(_open.forward());
+      }),
+    );
+  }
 
   void _measure(List<StudioWork> works) {
     for (final w in works) {
@@ -126,6 +150,9 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> {
         : const <BookPageLayout>[];
     final at = pages.isEmpty ? 0 : _at.clamp(0, pages.length - 1);
     return Scaffold(
+      // (text boxes move up out of the keyboard's way; the screen stays put)
+
+      resizeToAvoidBottomInset: false,
       backgroundColor: StudioInk.table,
       body: StudioTable(
         child: SafeArea(
@@ -172,36 +199,53 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> {
                           ),
                         ),
                       )
-                    : !ready
-                    ? const Center(child: CircularProgressIndicator(color: StudioInk.brass))
                     : LayoutBuilder(
                         builder: (context, box) {
-                          // the biggest 3:4 page that fits, room round it for the cover
-                          final pw = math.min(box.maxWidth - 44, (box.maxHeight - 40) * bookPageAspect);
+                          _openWhenReady(ready);
+                          // the open book: the right page as big as fits, a strip
+                          // of the left page beside it (all of it, sideways)
+                          final sideways = box.maxWidth > box.maxHeight * 1.2;
+                          final left = sideways ? 1.0 : 0.3;
+                          final pw = math.min(
+                            (box.maxWidth - 40) / (1 + left),
+                            (box.maxHeight - 90) * bookPageAspect,
+                          );
                           final ph = pw / bookPageAspect;
+                          final opened = _open.isCompleted;
                           return Column(
                             children: [
                               Expanded(
                                 child: Center(
-                                  child: _Cover(
-                                    width: pw,
-                                    height: ph,
-                                    child: ClipRect(
-                                      child: PageTurn(
-                                        key: _turn,
-                                        count: pages.length,
-                                        page: at,
-                                        onPage: (i) => setState(() => _at = i),
-                                        back: const _PaperPage(back: true),
-                                        builder: (context, i) {
-                                          final page = _AlbumPage(
-                                            number: i + 1,
-                                            works: [for (final k in pages[i].pieces) works[k]],
-                                            rects: pages[i].rects,
-                                          );
-                                          return i == at ? RepaintBoundary(key: _shot, child: page) : page;
-                                        },
-                                      ),
+                                  child: AnimatedBuilder(
+                                    animation: _open,
+                                    builder: (context, _) => _OpenBook(
+                                      pageWidth: pw,
+                                      pageHeight: ph,
+                                      left: left,
+                                      open: Curves.easeInOutCubic.transform(_open.value),
+                                      pages: !ready || pages.isEmpty
+                                          ? const _PaperPage()
+                                          : PageTurn(
+                                              key: _turn,
+                                              count: pages.length,
+                                              page: at,
+                                              onPage: (i) => setState(() => _at = i),
+                                              back: const _PaperPage(back: true),
+                                              // (facing page one: the cover's lining)
+                                              left: (context, i) => i == 0
+                                                  ? const _Endpaper()
+                                                  : const _PaperPage(back: true, left: true),
+                                              builder: (context, i) {
+                                                final page = _AlbumPage(
+                                                  number: i + 1,
+                                                  works: [for (final k in pages[i].pieces) works[k]],
+                                                  rects: pages[i].rects,
+                                                );
+                                                return i == at
+                                                    ? RepaintBoundary(key: _shot, child: page)
+                                                    : page;
+                                              },
+                                            ),
                                     ),
                                   ),
                                 ),
@@ -214,12 +258,12 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> {
                                     _NavButton(
                                       tooltip: 'Previous page',
                                       icon: Icons.chevron_left,
-                                      onTap: at == 0 ? null : () => _turn.currentState?.previous(),
+                                      onTap: !opened || at == 0 ? null : () => _turn.currentState?.previous(),
                                     ),
                                     const SizedBox(width: 12),
                                     Flexible(
                                       child: FilledButton(
-                                        onPressed: _saving ? null : () => _savePage(pw),
+                                        onPressed: _saving || !opened ? null : () => _savePage(pw),
                                         style: FilledButton.styleFrom(
                                           backgroundColor: StudioInk.brass,
                                           foregroundColor: const Color(0xFF22150B),
@@ -240,7 +284,9 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> {
                                     _NavButton(
                                       tooltip: 'Next page',
                                       icon: Icons.chevron_right,
-                                      onTap: at >= pages.length - 1 ? null : () => _turn.currentState?.next(),
+                                      onTap: !opened || at >= pages.length - 1
+                                          ? null
+                                          : () => _turn.currentState?.next(),
                                     ),
                                   ],
                                 ),
@@ -284,54 +330,245 @@ class _NavButton extends StatelessWidget {
   );
 }
 
-/// The leather cover round the page, and the page edges beneath it.
-class _Cover extends StatelessWidget {
-  const _Cover({required this.width, required this.height, required this.child});
+/// The open album: leather boards, the page edges, the left page (a strip
+/// of it upright, all of it sideways), the spine, the right page ([pages]).
+/// [open] runs the front cover swinging over from shut (0) to open (1).
+class _OpenBook extends StatelessWidget {
+  const _OpenBook({
+    required this.pageWidth,
+    required this.pageHeight,
+    required this.left,
+    required this.open,
+    required this.pages,
+  });
 
-  final double width, height;
-  final Widget child;
+  final double pageWidth, pageHeight;
+
+  /// How much of the left page shows, in page widths.
+  final double left;
+  final double open;
+  final Widget pages;
+
+  static const _leather = BorderRadius.horizontal(left: Radius.circular(6), right: Radius.circular(14));
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width,
-    height: height,
-    child: Stack(
-      clipBehavior: Clip.none,
-      children: [
-        const Positioned(
-          left: -10,
-          top: -10,
-          right: -16,
-          bottom: -12,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.horizontal(left: Radius.circular(6), right: Radius.circular(14)),
-              boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 26, offset: Offset(0, 14))],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.horizontal(left: Radius.circular(6), right: Radius.circular(14)),
-              child: RepaintBoundary(child: CustomPaint(painter: _LeatherPainter())),
-            ),
-          ),
-        ),
-        // the edges of the pages beneath this one
-        for (var k = 4; k >= 1; k--)
+  Widget build(BuildContext context) {
+    final pw = pageWidth, ph = pageHeight;
+    final spine = pw * left;
+    final shut = open < 1;
+    // while the cover swings, the left board slides in under it
+    final leftBoard = spine * open;
+    return SizedBox(
+      width: pw * (1 + left),
+      height: ph,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // the boards
           Positioned(
-            left: 0,
-            top: k * 0.8,
-            right: -k * 1.5,
-            bottom: -k * 1.4,
-            child: DecoratedBox(
+            left: spine - leftBoard - 10,
+            top: -10,
+            right: -16,
+            bottom: -12,
+            child: const DecoratedBox(
               decoration: BoxDecoration(
-                color: Color.lerp(const Color(0xFFE9E0CD), const Color(0xFFCFC3AA), k / 4),
-                borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
+                borderRadius: _leather,
+                boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 26, offset: Offset(0, 14))],
+              ),
+              child: ClipRRect(
+                borderRadius: _leather,
+                child: RepaintBoundary(child: CustomPaint(painter: _LeatherPainter())),
               ),
             ),
           ),
-        Positioned.fill(child: child),
+          // the edges of the pages beneath the right one
+          for (var k = 4; k >= 1; k--)
+            Positioned(
+              left: spine,
+              top: k * 0.8,
+              right: -k * 1.5,
+              bottom: -k * 1.4,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Color.lerp(const Color(0xFFE9E0CD), const Color(0xFFCFC3AA), k / 4),
+                  borderRadius: const BorderRadius.horizontal(right: Radius.circular(5)),
+                ),
+              ),
+            ),
+          // the pages: the right one, and the left one to its left (cut off
+          // at the book's left edge upright)
+          Positioned.fill(
+            child: ClipRect(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [Positioned(left: spine, width: pw, top: 0, bottom: 0, child: pages)],
+              ),
+            ),
+          ),
+          // the spine's fold
+          Positioned(
+            left: spine - 10,
+            width: 20,
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: open,
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0x00402510), Color(0x55402510), Color(0x00402510)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // the front cover, swinging open about the spine
+          if (shut)
+            Positioned(
+              left: spine,
+              width: pw,
+              top: -10,
+              bottom: -12,
+              child: Transform(
+                alignment: Alignment.centerLeft,
+                transform: Matrix4.identity()
+                  ..setEntry(3, 2, 0.0012)
+                  ..rotateY(-math.pi * open),
+                child: open < 0.5
+                    ? const _FrontCover()
+                    // (past halfway its inside shows: the lining, the right way round)
+                    : Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.rotationY(math.pi),
+                        child: const _Endpaper(board: true),
+                      ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The album's front cover: leather, a gold rule, its name stamped in gold.
+class _FrontCover extends StatelessWidget {
+  const _FrontCover();
+
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+    borderRadius: const BorderRadius.horizontal(left: Radius.circular(4), right: Radius.circular(14)),
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        const RepaintBoundary(child: CustomPaint(painter: _LeatherPainter())),
+        LayoutBuilder(
+          builder: (context, box) {
+            final u = box.maxWidth;
+            const gold = Color(0xFFD9B26A);
+            return Padding(
+              padding: EdgeInsets.all(u * 0.08),
+              child: DecoratedBox(
+                decoration: BoxDecoration(border: Border.all(color: gold.withValues(alpha: 0.7), width: 1.5)),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'DARKROOM',
+                        style: TextStyle(
+                          fontFamily: 'BookSerif',
+                          color: gold,
+                          fontSize: u * 0.085,
+                          letterSpacing: u * 0.02,
+                          shadows: const [Shadow(color: Color(0x99000000), offset: Offset(1, 1.5))],
+                        ),
+                      ),
+                      SizedBox(height: u * 0.03),
+                      Container(width: u * 0.3, height: 1.2, color: gold.withValues(alpha: 0.7)),
+                      SizedBox(height: u * 0.03),
+                      Text(
+                        'photographs',
+                        style: TextStyle(
+                          fontFamily: 'BookSerif',
+                          fontStyle: FontStyle.italic,
+                          color: gold.withValues(alpha: 0.85),
+                          fontSize: u * 0.045,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ],
     ),
   );
+}
+
+/// The inside of the front cover: a deep red lining paper with a small gold
+/// pattern ([board]: with the leather turned in round it, while it swings).
+class _Endpaper extends StatelessWidget {
+  const _Endpaper({this.board = false});
+
+  final bool board;
+
+  @override
+  Widget build(BuildContext context) {
+    const lining = RepaintBoundary(child: CustomPaint(painter: _LiningPainter()));
+    if (!board) return lining;
+    return const ClipRRect(
+      borderRadius: BorderRadius.horizontal(left: Radius.circular(4), right: Radius.circular(14)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          RepaintBoundary(child: CustomPaint(painter: _LeatherPainter())),
+          Padding(padding: EdgeInsets.fromLTRB(10, 10, 10, 12), child: lining),
+        ],
+      ),
+    );
+  }
+}
+
+class _LiningPainter extends CustomPainter {
+  const _LiningPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = Offset.zero & size;
+    canvas.drawRect(r, Paint()..color = const Color(0xFF5E1F1B));
+    final dot = Paint()..color = const Color(0x40D9B26A);
+    final step = math.max(10.0, size.width / 18);
+    for (var y = step / 2; y < size.height; y += step) {
+      for (var x = step / 2; x < size.width; x += step) {
+        final o = Offset(x + ((y / step).floor().isOdd ? step / 2 : 0), y);
+        canvas.drawPath(
+          Path()
+            ..moveTo(o.dx, o.dy - 2.4)
+            ..lineTo(o.dx + 2.4, o.dy)
+            ..lineTo(o.dx, o.dy + 2.4)
+            ..lineTo(o.dx - 2.4, o.dy)
+            ..close(),
+          dot,
+        );
+      }
+    }
+    // into the spine on its right
+    canvas.drawRect(
+      Rect.fromLTWH(size.width - size.width * 0.09, 0, size.width * 0.09, size.height),
+      Paint()
+        ..shader = ui.Gradient.linear(Offset(size.width, 0), Offset(size.width * 0.91, 0), const [
+          Color(0x80000000),
+          Color(0x00000000),
+        ]),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_LiningPainter old) => false;
 }
 
 class _LeatherPainter extends CustomPainter {
@@ -382,12 +619,33 @@ class _LeatherPainter extends CustomPainter {
 /// A bare album page: cream paper with a fine grain, the spine's shadow
 /// down its left edge (the back of a page: plain, a touch darker).
 class _PaperPage extends StatelessWidget {
-  const _PaperPage({this.back = false});
+  const _PaperPage({this.back = false, this.left = false});
 
   final bool back;
 
+  /// A left-hand page: curving into the spine on its right.
+  final bool left;
+
   @override
-  Widget build(BuildContext context) => RepaintBoundary(child: CustomPaint(painter: _GrainPainter(back)));
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: CustomPaint(painter: _GrainPainter(back), foregroundPainter: left ? const _LeftSpine() : null),
+  );
+}
+
+class _LeftSpine extends CustomPainter {
+  const _LeftSpine();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.translate(size.width, 0);
+    canvas.scale(-1, 1);
+    _spine(canvas, size);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_LeftSpine old) => false;
 }
 
 class _GrainPainter extends CustomPainter {
@@ -496,7 +754,7 @@ class _AlbumPage extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             const _PaperPage(),
-            for (var i = 0; i < works.length; i++) _placed(context, works[i], rects[i], u),
+            for (var i = 0; i < works.length; i++) _placed(context, works[i], rects[i], u, i, works.length),
             Positioned(
               left: 0,
               right: 0,
@@ -519,13 +777,29 @@ class _AlbumPage extends StatelessWidget {
     );
   }
 
-  Widget _placed(BuildContext context, StudioWork w, Rect unit, double u) {
+  Widget _placed(BuildContext context, StudioWork w, Rect unit, double u, int index, int count) {
     final rnd = math.Random(w.id.hashCode);
     final turn = (rnd.nextDouble() - 0.5) * 0.13;
+    // Stuck down by hand, not lined up: the first piece drifts towards the
+    // top left, the last towards the bottom right, a little at random too.
+    final along = count == 1 ? 0.0 : index / (count - 1) - 0.5;
+    final drift = Offset(along * 0.1 * u, along * 0.05 * u);
     final nudge = Offset((rnd.nextDouble() - 0.5) * 0.03 * u, (rnd.nextDouble() - 0.5) * 0.03 * u);
     final r = Rect.fromLTWH(unit.left * u, unit.top * u, unit.width * u, unit.height * u);
     // (a touch smaller than its spot: room to turn without touching)
-    final shown = Rect.fromCenter(center: r.center + nudge, width: r.width * 0.93, height: r.height * 0.93);
+    var shown = Rect.fromCenter(
+      center: r.center + drift + nudge,
+      width: r.width * 0.93,
+      height: r.height * 0.93,
+    );
+    // (never off the page)
+    final page = Rect.fromLTWH(0.03 * u, 0.03 * u, u * 0.94, u / bookPageAspect - 0.1 * u);
+    shown = shown.shift(
+      Offset(
+        math.max(0, page.left - shown.left) - math.max(0, shown.right - page.right),
+        math.max(0, page.top - shown.top) - math.max(0, shown.bottom - page.bottom),
+      ),
+    );
     return Positioned.fromRect(
       rect: shown,
       child: Transform.rotate(
@@ -558,7 +832,7 @@ class _StuckDown extends StatelessWidget {
   Widget build(BuildContext context) {
     if (work.kind == StudioKind.flipbook) {
       return Center(
-        child: FlipBooklet(work: work, riffle: Riffle.nowAndThen, badge: true),
+        child: FlipBooklet(work: work, riffle: Riffle.loop, badge: true),
       );
     }
     final rnd = math.Random(seed);
@@ -761,6 +1035,9 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
     final v = _video;
     final n = _work.pages.length;
     return Scaffold(
+      // (text boxes move up out of the keyboard's way; the screen stays put)
+
+      resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFF17120E),
       body: SafeArea(
         child: Column(
@@ -1036,6 +1313,9 @@ class _StudioWorkViewerState extends ConsumerState<StudioWorkViewer> {
     final v = _video;
     final (name, _) = studioKindLook(widget.work.kind);
     return Scaffold(
+      // (text boxes move up out of the keyboard's way; the screen stays put)
+
+      resizeToAvoidBottomInset: false,
       backgroundColor: const Color(0xFF17120E),
       appBar: StudioTitleBar(
         title: name,

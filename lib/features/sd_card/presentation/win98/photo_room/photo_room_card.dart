@@ -216,7 +216,8 @@ class CardEditorState extends State<CardEditor> {
   CardBit? _moving;
   double _startScale = 1, _startTurn = 0;
   double _width = 1;
-  Offset? _tapAt;
+  CardBit? _lastTapped;
+  DateTime _lastTapAt = DateTime(0);
 
   CardDraft get _d => widget.draft;
 
@@ -394,61 +395,67 @@ class CardEditorState extends State<CardEditor> {
                         child: SizedBox(
                           width: w,
                           height: w / CardDraft.aspect,
-                          child: GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTapUp: (d) => setState(() {
-                              final hit = _bitAt(d.globalPosition);
-                              if (hit == null) {
-                                _picked = null;
-                              } else {
-                                _lift(hit);
-                              }
-                            }),
-                            onDoubleTapDown: (d) => _tapAt = d.globalPosition,
-                            onDoubleTap: () {
-                              final hit = _tapAt == null ? null : _bitAt(_tapAt!);
-                              if (hit != null) _edit(hit);
+                          // (picked as the finger lands: no double-tap wait)
+                          child: Listener(
+                            onPointerDown: (e) {
+                              final hit = _bitAt(e.position);
+                              if (hit != null && !identical(hit, _picked)) setState(() => _lift(hit));
                             },
-                            onScaleStart: (d) {
-                              final hit = _bitAt(d.focalPoint) ?? (d.pointerCount > 1 ? _picked : null);
-                              _moving = hit;
-                              if (hit == null) return;
-                              _startScale = hit.scale;
-                              _startTurn = hit.turn;
-                              setState(() => _lift(hit));
-                            },
-                            onScaleUpdate: (d) {
-                              final m = _moving;
-                              if (m == null) return;
-                              setState(() {
-                                m.at += d.focalPointDelta / _width;
-                                m.scale = (_startScale * d.scale).clamp(0.3, 3.5);
-                                m.turn = _startTurn + d.rotation;
-                              });
-                            },
-                            onScaleEnd: (_) => _moving = null,
-                            child: RepaintBoundary(
-                              key: widget.boundary,
-                              child: ClipRect(
-                                child: ColoredBox(
-                                  color: _d.paper,
-                                  child: Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      for (final x in _d.bits)
-                                        Positioned(
-                                          key: ObjectKey(x),
-                                          left: x.at.dx * w,
-                                          top: x.at.dy * w,
-                                          child: FractionalTranslation(
-                                            translation: const Offset(-0.5, -0.5),
-                                            child: Transform.rotate(
-                                              angle: x.turn,
-                                              child: Transform.scale(scale: x.scale, child: _bitView(x, w)),
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTapUp: (d) {
+                                final hit = _bitAt(d.globalPosition);
+                                final now = DateTime.now();
+                                if (hit == null) {
+                                  setState(() => _picked = null);
+                                } else if (identical(hit, _lastTapped) &&
+                                    now.difference(_lastTapAt) < const Duration(milliseconds: 400)) {
+                                  _edit(hit);
+                                }
+                                _lastTapped = hit;
+                                _lastTapAt = now;
+                              },
+                              onScaleStart: (d) {
+                                final hit = _bitAt(d.focalPoint) ?? (d.pointerCount > 1 ? _picked : null);
+                                _moving = hit;
+                                if (hit == null) return;
+                                _startScale = hit.scale;
+                                _startTurn = hit.turn;
+                                setState(() => _lift(hit));
+                              },
+                              onScaleUpdate: (d) {
+                                final m = _moving;
+                                if (m == null) return;
+                                setState(() {
+                                  m.at += d.focalPointDelta / _width;
+                                  m.scale = (_startScale * d.scale).clamp(0.3, 3.5);
+                                  m.turn = _startTurn + d.rotation;
+                                });
+                              },
+                              onScaleEnd: (_) => _moving = null,
+                              child: RepaintBoundary(
+                                key: widget.boundary,
+                                child: ClipRect(
+                                  child: ColoredBox(
+                                    color: _d.paper,
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        for (final x in _d.bits)
+                                          Positioned(
+                                            key: ObjectKey(x),
+                                            left: x.at.dx * w,
+                                            top: x.at.dy * w,
+                                            child: FractionalTranslation(
+                                              translation: const Offset(-0.5, -0.5),
+                                              child: Transform.rotate(
+                                                angle: x.turn,
+                                                child: Transform.scale(scale: x.scale, child: _bitView(x, w)),
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),

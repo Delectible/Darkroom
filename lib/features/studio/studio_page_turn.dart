@@ -3,11 +3,16 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
-/// Pages you turn like paper: drag from anywhere and the page folds back
-/// along a line under your finger, its back showing, a shadow in the fold
-/// and on the page beneath. Let go past halfway (or flick) and it goes
-/// over; else it falls back. [PageTurnState.next] / [PageTurnState.previous]
-/// turn one for you.
+/// Pages you turn like paper: drag and the page folds back along a line
+/// under your finger, its back showing, shadows in the fold and on the page
+/// beneath. The page stays bound at the spine (its corner can only go where
+/// a real page could), and lies over to the left page when it goes over.
+/// Let go past halfway (or flick) and it goes over; else it falls back.
+/// [PageTurnState.next] / [PageTurnState.previous] turn one for you, and
+/// taps faster than a turn queue up (the turns speed up to catch up).
+///
+/// It draws past its own box on the left (the left page, where a turned
+/// page lands), so its parent must not clip there.
 class PageTurn extends StatefulWidget {
   const PageTurn({
     super.key,
@@ -16,7 +21,12 @@ class PageTurn extends StatefulWidget {
     required this.builder,
     required this.back,
     required this.onPage,
+    this.left,
   });
+
+  /// The left-hand page facing [page] (drawn a page's width to the left,
+  /// beneath anything turning over onto it); null: none.
+  final Widget Function(BuildContext context, int page)? left;
 
   final int count;
   final int page;
@@ -31,126 +41,199 @@ class PageTurn extends StatefulWidget {
 }
 
 class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin {
-  // p: where the turning page's corner is, in page widths: 1 flat, -1 over
-  late final AnimationController _p = AnimationController(
-    vsync: this,
-    lowerBound: -1,
-    upperBound: 1,
-    value: 1,
-  )..addListener(() => setState(() {}));
+  late final AnimationController _t = AnimationController(vsync: this)..addListener(() => setState(() {}));
 
   bool? _forward; // turning: forward (this page over) or back (the last one back)
   bool _bottom = true; // the corner taken: bottom or top
   Offset _start = Offset.zero;
-  double _drift = 0, _driftAt = 0; // the finger's up/down, eased out on release
-  double _p0 = 1;
+  Offset _at = Offset.zero; // where the corner is now (dragging)
+  Offset _from = Offset.zero, _to = Offset.zero; // the animation's ends
+  bool _arc = false; // an auto turn: the corner lifts as it goes
+  int _queued = 0; // turns asked for while one was running (+ forward, - back)
+  Size _size = Size.zero;
+
+  // Each page keeps its widgets as it moves between lying flat, turning
+  // and lying beneath (no reloads, no flashed frames).
+  final _keys = <int, GlobalKey>{};
 
   bool get turning => _forward != null;
 
   @override
   void dispose() {
-    _p.dispose();
+    _t.dispose();
     super.dispose();
   }
 
-  /// Turns to the next page, if there is one.
-  void next() => _auto(true);
+  Widget _page(BuildContext context, int i) =>
+      KeyedSubtree(key: _keys.putIfAbsent(i, GlobalKey.new), child: widget.builder(context, i));
 
-  void previous() => _auto(false);
+  /// Turns to the next page, if there is one (queued if a turn's running).
+  void next() => _ask(1);
 
-  void _auto(bool forward) {
-    if (turning) return;
+  void previous() => _ask(-1);
+
+  void _ask(int dir) {
+    if (turning) {
+      // (not past the last page or the first)
+      final landing = widget.page + (_forward! ? 1 : -1) + _queued + dir;
+      if (landing >= 0 && landing < widget.count) _queued += dir;
+      return;
+    }
+    _auto(dir > 0, fast: false);
+  }
+
+  void _auto(bool forward, {required bool fast}) {
     if (forward ? widget.page >= widget.count - 1 : widget.page <= 0) return;
+    final w = _size.width, h = _size.height;
     setState(() {
       _forward = forward;
       _bottom = true;
-      _drift = 0;
-      _p.value = forward ? 1 : -1;
+      _arc = true;
+      _from = Offset(forward ? w : -w, h);
+      _to = Offset(forward ? -w : w, h);
+      _at = _from;
     });
-    _finish(forward ? -1 : 1, const Duration(milliseconds: 650));
+    _run(Duration(milliseconds: fast ? 300 : 640));
   }
 
   void _dragStart(DragStartDetails d) {
     if (turning) return;
     _start = d.localPosition;
-    _forward = null;
+    _t.value = 0;
   }
 
-  void _dragUpdate(DragUpdateDetails d, Size size) {
-    if (_p.isAnimating) return;
-    final dx = d.localPosition.dx - _start.dx;
+  void _dragUpdate(DragUpdateDetails d) {
+    if (_t.isAnimating || _size.isEmpty) return;
+    final w = _size.width, h = _size.height;
+    final move = d.localPosition - _start;
     if (_forward == null) {
-      if (dx.abs() < 4) return;
-      final forward = dx < 0;
+      if (move.dx.abs() < 4) return;
+      final forward = move.dx < 0;
       if (forward ? widget.page >= widget.count - 1 : widget.page <= 0) return;
+      _bottom = _start.dy > h / 2;
       _forward = forward;
-      _bottom = _start.dy > size.height / 2;
+      _arc = false;
     }
-    final p = (_forward! ? 1 + 2 * dx / size.width : -1 + 2 * dx / size.width).clamp(-1.0, 1.0);
-    _drift = (d.localPosition.dy - _start.dy) * 0.4;
-    _p.value = p;
+    // the corner follows the finger (twice as far across: a short drag
+    // turns a page), held to where a bound page can reach
+    final cy = _bottom ? h : 0.0;
+    final base = Offset(_forward! ? w : -w, cy);
+    setState(() => _at = _bind(base + Offset(move.dx * 2, move.dy * 0.8)));
   }
 
-  void _dragEnd(DragEndDetails d, Size size) {
-    if (_forward == null || _p.isAnimating) return;
+  void _dragEnd(DragEndDetails d) {
+    if (_forward == null || _t.isAnimating) return;
     final v = d.velocity.pixelsPerSecond.dx;
-    final p = _p.value;
-    final over = _forward! ? (p < 0.1 || v < -500) && v < 300 : (p > -0.1 || v > 500) && v > -300;
-    final target = _forward! == over ? -1.0 : 1.0;
-    _finish(target, Duration(milliseconds: (120 + 260 * (target - p).abs() / 2).round()));
+    final w = _size.width, h = _size.height;
+    final over = _forward! ? (_at.dx < 0 || v < -500) && v < 300 : (_at.dx > 0 || v > 500) && v > -300;
+    final goLeft = _forward! == over;
+    final cy = _bottom ? h : 0.0;
+    _from = _at;
+    _to = Offset(goLeft ? -w : w, cy);
+    _arc = false;
+    final dist = (_to - _from).distance / (2 * w);
+    _run(Duration(milliseconds: (140 + 300 * dist).round()));
   }
 
-  void _finish(double target, Duration time) {
-    _p0 = _p.value;
-    _driftAt = _drift;
-    _p.animateTo(target, duration: time, curve: Curves.easeOutCubic).whenComplete(() {
+  void _run(Duration time) {
+    _t
+      ..duration = time
+      ..value = 0;
+    _t.animateTo(1, curve: Curves.easeInOutCubic).whenComplete(() {
       if (!mounted) return;
       final f = _forward;
-      setState(() {
-        _forward = null;
-        _p.value = 1;
-      });
-      // (landed over: forward, the next page; back, the last)
-      if (f == true && target < 0) widget.onPage(widget.page + 1);
-      if (f == false && target > 0) widget.onPage(widget.page - 1);
+      final landedLeft = _to.dx < 0;
+      // The new page first, then the turn ends, in the same frame: never a
+      // frame of the old page flat.
+      if (f == true && landedLeft) widget.onPage(widget.page + 1);
+      if (f == false && !landedLeft) widget.onPage(widget.page - 1);
+      setState(() => _forward = null);
+      if (_queued != 0) {
+        final dir = _queued > 0;
+        _queued += dir ? -1 : 1;
+        // (after the parent has the new page)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !turning) _auto(dir, fast: true);
+        });
+      }
     });
+  }
+
+  /// [p] held to where the corner of a page bound at the spine can go: no
+  /// further from the spine's near end than the page is wide, nor from its
+  /// far end than the page's diagonal.
+  Offset _bind(Offset p) {
+    final w = _size.width, h = _size.height;
+    final cy = _bottom ? h : 0.0;
+    final near = Offset(0, cy), far = Offset(0, h - cy);
+    var q = p;
+    final dn = q - near;
+    if (dn.distance > w) q = near + dn * (w / dn.distance);
+    final diag = math.sqrt(w * w + h * h);
+    final df = q - far;
+    if (df.distance > diag) q = far + df * (diag / df.distance);
+    return q;
   }
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, box) {
-        final size = box.biggest;
+        _size = box.biggest;
         return GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onHorizontalDragStart: _dragStart,
-          onHorizontalDragUpdate: (d) => _dragUpdate(d, size),
-          onHorizontalDragEnd: (d) => _dragEnd(d, size),
-          child: _forward == null ? widget.builder(context, widget.page) : _turning(context, size),
+          onHorizontalDragUpdate: _dragUpdate,
+          onHorizontalDragEnd: _dragEnd,
+          child: _forward == null ? _flat(context) : _turning(context, _size),
         );
       },
     );
   }
 
+  /// The left page facing [page], where it lies.
+  Widget _leftOf(BuildContext context, int page) => Positioned(
+    left: -_size.width,
+    width: _size.width,
+    top: 0,
+    bottom: 0,
+    child: widget.left!(context, page),
+  );
+
+  Widget _flat(BuildContext context) => widget.left == null
+      ? _page(context, widget.page)
+      : Stack(
+          fit: StackFit.expand,
+          clipBehavior: Clip.none,
+          children: [_leftOf(context, widget.page), _page(context, widget.page)],
+        );
+
   Widget _turning(BuildContext context, Size size) {
     final forward = _forward!;
     final top = forward ? widget.page : widget.page - 1; // the page that turns
     final under = forward ? widget.page + 1 : widget.page;
-    final p = _p.value;
-    final w = size.width, h = size.height;
-    // the corner, and where it's been brought to: a curl lifts it a little
-    final corner = Offset(w, _bottom ? h : 0);
-    final settled = _p.isAnimating && (_p0 - _p.value).abs() > 0 ? 1 - (p - _p0).abs() / 2 : 1.0;
-    final drift = _p.isAnimating ? _driftAt * settled.clamp(0.0, 1.0) : _drift;
-    final lift = (_bottom ? -1 : 1) * h * 0.09 * math.sin(math.pi * (1 - p) / 2) + drift;
-    final fold = _Fold(corner, Offset(p * w, corner.dy + lift), size);
-    if (fold.flat) return widget.builder(context, top);
+    final h = size.height;
+    var corner = _at;
+    if (_t.isAnimating || _t.value > 0) {
+      final e = _t.value;
+      corner = Offset.lerp(_from, _to, e)!;
+      if (_arc) {
+        // the corner lifts off the page and comes down on the other side
+        corner = corner + Offset(0, (_bottom ? -1 : 1) * h * 0.1 * math.sin(math.pi * e));
+      }
+      corner = _bind(corner);
+    }
+    final fold = _Fold(Offset(size.width, _bottom ? h : 0), corner, size);
+    if (fold.flat) return _page(context, top);
     return Stack(
       fit: StackFit.expand,
       clipBehavior: Clip.none,
       children: [
-        widget.builder(context, under),
+        // (beneath a page coming back: the left page before it)
+        if (widget.left != null) _leftOf(context, forward ? widget.page : widget.page - 1),
+        _page(context, under),
         CustomPaint(painter: _Shade(fold, _ShadeKind.under)),
-        ClipPath(clipper: _PolyClip(fold.kept), child: widget.builder(context, top)),
+        ClipPath(clipper: _PolyClip(fold.kept), child: _page(context, top)),
         CustomPaint(painter: _Shade(fold, _ShadeKind.flapShadow)),
         Transform(
           transform: fold.mirror,
@@ -247,8 +330,14 @@ class _Shade extends CustomPainter {
           Paint()..shader = _along(f.mid, f.mid + f.n * w, const [Color(0x66000000), Color(0x00000000)]),
         );
       case _ShadeKind.flapShadow:
-        // the flap's own shadow on the page it lies over
-        canvas.clipPath(Path()..addPolygon(f.kept, true));
+        // the flap's own shadow on the page it lies over (and the left page)
+        canvas.clipPath(
+          Path.combine(
+            PathOperation.difference,
+            Path()..addRect(Rect.fromLTRB(-size.width, -size.height, size.width, size.height * 2)),
+            Path()..addPolygon(f.folded, true),
+          ),
+        );
         canvas.drawPath(
           Path()..addPolygon([for (final q in f.mirrored) q - f.n * 4], true),
           Paint()
@@ -256,16 +345,19 @@ class _Shade extends CustomPainter {
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
         );
         // and the page darkening into the fold
+        canvas.save();
+        canvas.clipPath(Path()..addPolygon(f.kept, true));
         canvas.drawRect(
           Offset.zero & size,
           Paint()..shader = _along(f.mid, f.mid - f.n * 26, const [Color(0x22000000), Color(0x00000000)]),
         );
+        canvas.restore();
       case _ShadeKind.flapGloss:
         // the turned paper: shaded at the crease, catching the light across
         canvas.clipPath(Path()..addPolygon(f.mirrored, true));
         final w = math.max(reach, 1.0);
         canvas.drawRect(
-          Offset.zero & size,
+          Rect.fromLTRB(-size.width, -size.height, size.width, size.height * 2),
           Paint()
             ..shader = _along(
               f.mid,

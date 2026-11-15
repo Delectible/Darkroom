@@ -71,6 +71,9 @@ class _MakerScaffold extends StatelessWidget {
     // Sideways: the piece on the left as big as fits, its options beside it.
     final sideways = size.width > size.height * 1.2;
     return Scaffold(
+      // (text boxes move up out of the keyboard's way; the screen stays put)
+
+      resizeToAvoidBottomInset: false,
       backgroundColor: StudioInk.table,
       appBar: StudioTitleBar(title: title, subtitle: subtitle),
       body: StudioTable(

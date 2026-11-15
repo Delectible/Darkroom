@@ -37,7 +37,7 @@ class StudioMake {
   }
 
   /// A page's time: the speed slider's range and starting point.
-  static const pageMsMin = 150, pageMsMax = 900, pageMsDefault = 360;
+  static const pageMsMin = 150, pageMsMax = 1400, pageMsDefault = 700;
 
   /// The flip book's frame: 4:5 at 1080 x 1350 (for Instagram).
   static const _frame = Size(1080, 1350);
@@ -66,7 +66,8 @@ class StudioMake {
     final frames = FlipFrames(photos: images, paper: paper, style: style, pageMs: pageMs);
     final out = '${dir.path}/flipbook_$id.mp4';
     final cover = '${dir.path}/flipbook_$id.jpg';
-    await writeStudioJpeg(await _frameAt(frames, 0), cover);
+    // (the cover: the first photo, settled)
+    await writeStudioJpeg(await _frameAt(frames, pageMs * 0.92), cover);
     await _encode(frames, out);
     return StudioWork(
       id: id,

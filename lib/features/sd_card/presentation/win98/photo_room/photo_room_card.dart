@@ -216,6 +216,7 @@ class CardEditorState extends State<CardEditor> {
   CardBit? _moving;
   double _startScale = 1, _startTurn = 0;
   double _width = 1;
+  int _fingers = 0;
   CardBit? _lastTapped;
   DateTime _lastTapAt = DateTime(0);
 
@@ -397,10 +398,15 @@ class CardEditorState extends State<CardEditor> {
                           height: w / CardDraft.aspect,
                           // (picked as the finger lands: no double-tap wait)
                           child: Listener(
+                            // (only the first finger picks: a second sizes and
+                            // turns the piece the first is holding)
                             onPointerDown: (e) {
+                              if (_fingers++ > 0) return;
                               final hit = _bitAt(e.position);
                               if (hit != null && !identical(hit, _picked)) setState(() => _lift(hit));
                             },
+                            onPointerUp: (_) => _fingers = math.max(0, _fingers - 1),
+                            onPointerCancel: (_) => _fingers = math.max(0, _fingers - 1),
                             child: GestureDetector(
                               behavior: HitTestBehavior.opaque,
                               onTapUp: (d) {
@@ -416,7 +422,9 @@ class CardEditorState extends State<CardEditor> {
                                 _lastTapAt = now;
                               },
                               onScaleStart: (d) {
-                                final hit = _bitAt(d.focalPoint) ?? (d.pointerCount > 1 ? _picked : null);
+                                final hit = d.pointerCount > 1 && _picked != null
+                                    ? _picked
+                                    : _bitAt(d.focalPoint);
                                 _moving = hit;
                                 if (hit == null) return;
                                 _startScale = hit.scale;

@@ -89,6 +89,7 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
   _Bit? _picked;
   _Bit? _moving;
   double _startScale = 1, _startTurn = 0;
+  int _fingers = 0;
   _Bit? _lastTapped;
   DateTime _lastTapAt = DateTime(0);
   double _width = 1;
@@ -279,7 +280,8 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
   }
 
   void _scaleStart(ScaleStartDetails d) {
-    final b = _bitAt(d.focalPoint) ?? (d.pointerCount > 1 ? _picked : null);
+    // (two fingers: the piece already held, whatever the second is over)
+    final b = d.pointerCount > 1 && _picked != null ? _picked : _bitAt(d.focalPoint);
     _moving = b;
     if (b == null) return;
     _startScale = b.scale;
@@ -648,10 +650,15 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
                         // double-tap recogniser made every tap wait); a second
                         // tap on it soon after edits it.
                         child: Listener(
+                          // (only the first finger picks: a second one, wherever it
+                          // lands, sizes and turns the piece the first is holding)
                           onPointerDown: (e) {
+                            if (_fingers++ > 0) return;
                             final b = _bitAt(e.position);
                             if (b != null && !identical(b, _picked)) setState(() => _lift(b));
                           },
+                          onPointerUp: (_) => _fingers = math.max(0, _fingers - 1),
+                          onPointerCancel: (_) => _fingers = math.max(0, _fingers - 1),
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onTapUp: (d) {

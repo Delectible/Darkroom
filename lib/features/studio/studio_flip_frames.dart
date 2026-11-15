@@ -7,13 +7,15 @@ import 'studio_render.dart';
 
 /// How a flip book goes from one photo to the next.
 enum FlipStyle {
-  /// A little bound booklet, each page flicked over from the spiral.
+  /// A spiral-bound pad on the table: each page lifts towards you, bends,
+  /// and goes over the top onto the pages already turned.
   flip('Page flip'),
 
   /// Snap cuts: the print flashes white as it changes, the camera shakes.
   shutter('Shutter'),
 
-  /// Each print dropped onto a growing pile, landing a little crooked.
+  /// Each print dropped onto a growing pile, landing a little crooked;
+  /// at the end the pile's swept off the table, ready to start again.
   pile('Pile');
 
   const FlipStyle(this.label);
@@ -38,8 +40,11 @@ class FlipFrames {
 
   static const _shakeMs = 120, _flashMs = 34;
 
-  /// How long a page's change takes (the flick, the drop).
-  int get changeMs => math.min(pageMs * 0.55, style == FlipStyle.pile ? 280.0 : 240.0).round();
+  /// How long a page's change takes (the flip, the drop).
+  int get changeMs => math.min(pageMs * 0.6, style == FlipStyle.pile ? 280.0 : 420.0).round();
+
+  /// The pile's last moments: its prints swept off the table.
+  int get clearMs => math.min(pageMs - changeMs, 420);
 
   /// The video's frames: each moment and how long it holds. Changes are
   /// drawn at 30 frames a second, the still parts once.
@@ -55,11 +60,15 @@ class FlipFrames {
             marks.add(s);
           }
         case FlipStyle.flip || FlipStyle.pile:
-          if (page > 0) {
-            for (var s = 1000 / 30; s < changeMs; s += 1000 / 30) {
+          // (the first page too: it loops round from the last)
+          for (var s = 1000 / 30; s < changeMs; s += 1000 / 30) {
+            marks.add(s);
+          }
+          marks.add(changeMs.toDouble());
+          if (style == FlipStyle.pile && page == length - 1) {
+            for (var s = pageMs - clearMs.toDouble(); s < pageMs; s += 1000 / 30) {
               marks.add(s);
             }
-            marks.add(changeMs.toDouble());
           }
       }
       marks.sort();
@@ -166,130 +175,226 @@ class FlipFrames {
   void _pile(Canvas c, Size size, int page, double into) {
     paintPaper(c, Offset.zero & size, paper);
     final centre = size.center(Offset.zero);
+    // at the very end the pile's swept off to the left, top print first,
+    // leaving the bare table the first print drops onto again
+    final sweep = page == length - 1 && clearMs > 0
+        ? ((into - (pageMs - clearMs)) / clearMs).clamp(0.0, 1.0)
+        : 0.0;
+    Offset swept(int fromTop) {
+      if (sweep <= 0) return Offset.zero;
+      final local = Curves.easeIn.transform(((sweep - fromTop * 0.1) / 0.6).clamp(0.0, 1.0));
+      return Offset(-size.width * 1.25 * local, -size.height * 0.05 * local);
+    }
+
+    double spun(int fromTop) =>
+        sweep <= 0 ? 0 : -0.45 * Curves.easeIn.transform(((sweep - fromTop * 0.1) / 0.6).clamp(0.0, 1.0));
+
     // the ones beneath (the last few)
     for (var i = math.max(0, page - 4); i < page; i++) {
-      _card(c, size, photos[i], centre + _pileShift(i, size), turn: _pileTurn(i), fill: 0.7);
+      _card(
+        c,
+        size,
+        photos[i],
+        centre + _pileShift(i, size) + swept(page - i),
+        turn: _pileTurn(i) + spun(page - i),
+        fill: 0.7,
+      );
     }
-    final e = page == 0 ? 1.0 : Curves.easeOutBack.transform((into / changeMs).clamp(0.0, 1.0));
-    final fall = Curves.easeIn.transform((into / changeMs).clamp(0.0, 1.0));
+    // the print landing: held up big, dropped, a touch of turn as it lands
+    final q = (into / changeMs).clamp(0.0, 1.0);
+    final e = Curves.easeOutBack.transform(q);
+    final fall = Curves.easeIn.transform(q);
     _card(
       c,
       size,
       photos[page],
-      centre + _pileShift(page, size) + Offset(0, -size.height * 0.08 * (1 - (page == 0 ? 1 : fall))),
-      turn: _pileTurn(page) * (0.4 + 0.6 * e),
-      scale: 1 + 0.12 * (1 - (page == 0 ? 1 : fall)),
-      lift: page == 0 ? 0 : 1 - fall,
+      centre + _pileShift(page, size) + Offset(0, -size.height * 0.08 * (1 - fall)) + swept(0),
+      turn: _pileTurn(page) * (0.4 + 0.6 * e) + spun(0),
+      scale: 1 + 0.12 * (1 - fall),
+      lift: 1 - fall,
       fill: 0.7,
     );
   }
 
-  // ---- page flip: a spiral-bound booklet, the top page flicked over ----
+  // ---- page flip: a spiral-bound pad, each page lifted and turned over ----
 
-  Rect _bookletPage(Size size) =>
-      Rect.fromLTRB(size.width * 0.16, size.height * 0.08, size.width * 0.92, size.height * 0.9);
+  /// The pad's top page: bound along its top edge, room above it for the
+  /// pages already turned.
+  Rect _padPage(Size size) =>
+      Rect.fromLTRB(size.width * 0.1, size.height * 0.13, size.width * 0.9, size.height * 0.93);
 
-  void _bookPage(Canvas c, Rect r, ui.Image photo, {double shade = 0}) {
+  /// A page's face: paper, its photo in the middle. [r] is the whole page;
+  /// drawn where the canvas is clipped to.
+  void _padFace(Canvas c, Rect r, ui.Image photo) {
     c.drawRect(r, Paint()..color = const Color(0xFFFBF8F1));
-    final inset = r.deflate(r.width * 0.07);
-    // the photo, its own shape, in the middle of the page
+    final inset = Rect.fromLTRB(
+      r.left + r.width * 0.07,
+      r.top + r.height * 0.1,
+      r.right - r.width * 0.07,
+      r.bottom - r.height * 0.06,
+    );
     final aspect = photo.width / photo.height;
     var w = inset.width, h = w / aspect;
     if (h > inset.height) {
       h = inset.height;
       w = h * aspect;
     }
-    final pr = Rect.fromCenter(center: inset.center, width: w, height: h);
-    drawCover(c, photo, pr, paint: Paint()..filterQuality = FilterQuality.medium);
-    if (shade > 0) c.drawRect(r, Paint()..color = Color.fromRGBO(0, 0, 0, shade));
+    drawCover(
+      c,
+      photo,
+      Rect.fromCenter(center: inset.center, width: w, height: h),
+      paint: Paint()..filterQuality = FilterQuality.medium,
+    );
   }
 
   void _flip(Canvas c, Size size, int page, double into) {
     paintPaper(c, Offset.zero & size, paper);
-    final r = _bookletPage(size);
+    final r = _padPage(size);
     final u = size.width / 1080;
-    // the booklet's shadow and the edges of the pages below
+    // the pages already turned lie above the binding, their backs up
+    final turned = Rect.fromLTRB(r.left + 4 * u, r.top - r.height, r.right - 4 * u, r.top);
     c.drawRect(
-      r.shift(Offset(10 * u, 16 * u)),
+      turned.shift(Offset(6 * u, 8 * u)),
       Paint()
-        ..color = const Color(0x55000000)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 18 * u),
+        ..color = const Color(0x40000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 14 * u),
     );
-    for (var k = 4; k >= 1; k--) {
+    c.drawRect(turned, Paint()..color = const Color(0xFFEDE7DA));
+    // the pad: its shadow on the table, the edges of the pages below
+    c.drawRect(
+      r.shift(Offset(10 * u, 18 * u)),
+      Paint()
+        ..color = const Color(0x59000000)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, 20 * u),
+    );
+    for (var k = 5; k >= 1; k--) {
       c.drawRect(
-        r.shift(Offset(3.0 * k * u, 4.0 * k * u)),
-        Paint()..color = Color.lerp(const Color(0xFFF1ECE1), const Color(0xFFCFC6B4), k / 4)!,
+        Rect.fromLTRB(r.left, r.top, r.right + 2.2 * k * u, r.bottom + 3.2 * k * u),
+        Paint()..color = k.isOdd ? const Color(0xFFE9E3D6) : const Color(0xFFCFC6B4),
       );
     }
-    // the page beneath, then the one flicking over
-    _bookPage(c, r, photos[page]);
-    final turning = page > 0 && into < changeMs;
-    if (turning) {
-      final e = Curves.easeIn.transform(into / changeMs);
-      final angle = e * math.pi * 0.62;
-      c.save();
-      c.translate(r.left, r.center.dy);
-      // (as the app's own 3D turns: a little perspective, about the spiral)
-      c.transform(
-        (Matrix4.identity()
-              ..setEntry(3, 2, 0.0011 / u)
-              ..rotateY(-angle))
-            .storage,
-      );
-      _bookPage(c, Rect.fromLTWH(0, -r.height / 2, r.width, r.height), photos[page - 1], shade: 0.35 * e);
-      c.restore();
-      // the turning page's shadow on the one beneath
+    // the page beneath
+    c.save();
+    c.clipRect(r);
+    _padFace(c, r, photos[page]);
+    c.restore();
+    final q = (into / changeMs).clamp(0.0, 1.0);
+    if (q < 1 && length > 1) {
+      _turningPage(c, size, r, photos[(page - 1 + length) % length], q);
+    }
+    _coils(c, size, r);
+  }
+
+  /// The page going over: lifted from its foot towards you, bowed (the
+  /// bound end leads, the foot follows), over the top and down flat on the
+  /// turned pages. Drawn in strips, each tilted a little more than the last.
+  void _turningPage(Canvas c, Size size, Rect r, ui.Image photo, double q) {
+    final e = Curves.easeInOutSine.transform(q);
+    final base = e * math.pi;
+    final bow = 0.85 * math.sin(math.pi * e); // how bent it is, mid-turn
+    const strips = 14;
+    final seg = r.height / strips;
+    // (the eye two and a half page-lengths above the pad)
+    final persp = 0.4 / r.height;
+
+    // its shadow on the page beneath: under the lifted part, darkest at the binding
+    final reach = r.height * math.max(0.0, math.cos(base)).clamp(0.0, 1.0);
+    if (reach > 1) {
       c.drawRect(
-        Rect.fromLTWH(r.left, r.top, r.width * 0.25 * (1 - e), r.height),
+        Rect.fromLTWH(r.left, r.top, r.width, reach),
         Paint()
-          ..shader = ui.Gradient.linear(r.topLeft, Offset(r.left + r.width * 0.25, r.top), [
-            Color.fromRGBO(0, 0, 0, 0.25 * (1 - e)),
+          ..shader = ui.Gradient.linear(r.topLeft, Offset(r.left, r.top + reach), [
+            Color.fromRGBO(0, 0, 0, 0.34 * math.sin(base).clamp(0.0, 1.0) + 0.06),
             const Color(0x00000000),
           ]),
       );
     }
-    _spiral(c, size, r);
+
+    // the strips' places: each starts where the last ended
+    var y = 0.0, z = 0.0;
+    final placed = <(double, double, double)>[];
+    for (var i = 0; i < strips; i++) {
+      final along = (i + 0.5) / strips;
+      final angle = (base + bow * (0.5 - along) * 1.6).clamp(0.0, math.pi);
+      placed.add((y, z, angle));
+      y += seg * math.cos(angle);
+      z -= seg * math.sin(angle);
+    }
+    // far strips first (those furthest from the eye), so near ones cover them
+    final order = [for (var i = 0; i < strips; i++) i]..sort((a, b) => placed[b].$2.compareTo(placed[a].$2));
+    final hinge = Offset(r.center.dx, r.top);
+    final face = Rect.fromLTWH(-r.width / 2, 0, r.width, r.height);
+    for (final i in order) {
+      final (py, pz, angle) = placed[i];
+      final m = Matrix4.translationValues(hinge.dx, hinge.dy, 0)
+        ..multiply(Matrix4.identity()..setEntry(3, 2, persp))
+        ..multiply(Matrix4.translationValues(0, py, pz))
+        ..multiply(Matrix4.rotationX(-angle))
+        ..multiply(Matrix4.translationValues(0, -i * seg, 0));
+      c.save();
+      c.transform(m.storage);
+      // (a hair over, so no seams show between strips)
+      c.clipRect(Rect.fromLTWH(face.left, i * seg - 0.6, face.width, seg + 1.2));
+      final front = math.cos(angle) > 0;
+      if (front) {
+        _padFace(c, face, photo);
+      } else {
+        c.drawRect(face, Paint()..color = const Color(0xFFEDE7DA));
+      }
+      // light: brightest facing up, darker as it stands on edge
+      final shade = (front ? 0.24 : 0.18) * math.sin(angle).abs();
+      c.drawRect(face, Paint()..color = Color.fromRGBO(0, 0, 0, shade));
+      c.restore();
+    }
   }
 
-  /// Wire coils down the booklet's left edge, through punched holes.
-  void _spiral(Canvas c, Size size, Rect r) {
+  /// Wire coils along the pad's top edge, through punched holes.
+  void _coils(Canvas c, Size size, Rect r) {
     final u = size.width / 1080;
-    const coils = 11;
-    final gap = r.height / coils;
+    const coils = 13;
+    final gap = r.width / coils;
     final hole = Paint()..color = const Color(0xFF3A3530);
     for (var i = 0; i < coils; i++) {
-      final y = r.top + gap * (i + 0.5);
-      // the punched hole in the page
-      c.drawCircle(Offset(r.left + 26 * u, y), 9 * u, hole);
-      // the wire: round the edge from the hole, dark behind, bright in front
-      final coil = Rect.fromCenter(center: Offset(r.left + 2 * u, y), width: 64 * u, height: gap * 0.72);
-      c.drawArc(
-        coil,
-        -math.pi * 0.5,
-        -math.pi,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 9 * u
-          ..strokeCap = StrokeCap.round
-          ..color = const Color(0xFF2B2B2E),
-      );
-      c.drawArc(
-        coil,
-        -math.pi * 0.5,
-        -math.pi,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 4.5 * u
-          ..strokeCap = StrokeCap.round
-          ..shader = ui.Gradient.linear(
-            coil.topLeft,
-            coil.bottomLeft,
-            const [Color(0xFF9A9AA2), Color(0xFFF2F2F5), Color(0xFF6E6E76)],
+      final x = r.left + gap * (i + 0.5);
+      c.drawCircle(Offset(x, r.top + 30 * u), 9 * u, hole);
+      final coil = Rect.fromCenter(center: Offset(x, r.top + 4 * u), width: gap * 0.5, height: 66 * u);
+      for (final (width, shader) in [
+        (10 * u, null),
+        (
+          5 * u,
+          ui.Gradient.linear(
+            coil.centerLeft,
+            coil.centerRight,
+            const [Color(0xFF8E8E96), Color(0xFFF4F4F7), Color(0xFF6A6A72)],
             const [0, 0.4, 1],
           ),
-      );
+        ),
+      ]) {
+        c.drawArc(
+          coil,
+          math.pi * 0.12,
+          math.pi * 0.76,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = width
+            ..strokeCap = StrokeCap.round
+            ..color = const Color(0xFF2B2B2E)
+            ..shader = shader,
+        );
+        c.drawArc(
+          coil,
+          math.pi * 1.12,
+          math.pi * 0.76,
+          false,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = width
+            ..strokeCap = StrokeCap.round
+            ..color = const Color(0xFF2B2B2E)
+            ..shader = shader,
+        );
+      }
     }
   }
 }

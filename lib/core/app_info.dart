@@ -3,15 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.7';
+  static const version = '2.3.8';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The Studio album now opens from its leather cover, shows both pages, and turns pages like paper. '
-      'Flip books play in the book exactly as they save, in three styles: page flip, shutter or pile. '
-      'Move and zoom each photo in strips and collages, bookmark sticky notes, and a snappier scrapbook.';
+      'The album opens towards you and looks like a real book, with pages that turn past its edges. '
+      'A new page-flip pad for flip books, a pile that sweeps itself away to loop, and slower speeds. '
+      'New pieces land on the bare table. Two fingers now size the piece you are already holding.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

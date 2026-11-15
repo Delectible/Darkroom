@@ -217,15 +217,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
     if (made == null || !mounted) return;
     // out of the maker's white flash: the piece lands on the table
     await showSnapshotDrop(context, made);
-    if (!mounted) return;
-    final send = await studioAsk(
-      context,
-      title: 'Send the photos back to the corkboard?',
-      message: "It's in the book. The prints can go back to the board, or stay here for something else.",
-      yes: 'Send them',
-      no: 'Keep them',
-    );
-    if (send == true) await ref.read(studioProvider.notifier).remove(chosen.map((m) => m.id));
+    // (the prints stay on the table for something else; Return all sends them back)
   }
 
   @override

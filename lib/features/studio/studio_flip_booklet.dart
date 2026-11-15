@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/scheduler.dart';
@@ -23,7 +22,6 @@ class FlipBooklet extends StatefulWidget {
     this.riffle = Riffle.loop,
     this.face,
     this.cacheWidth = 700,
-    this.badge = false,
   });
 
   final StudioWork work;
@@ -32,9 +30,6 @@ class FlipBooklet extends StatefulWidget {
 
   /// The photos' size for playing (longest side).
   final int cacheWidth;
-
-  /// A play mark in the corner (on the book's page: tap to watch).
-  final bool badge;
 
   @override
   State<FlipBooklet> createState() => _FlipBookletState();
@@ -108,7 +103,6 @@ class _FlipBookletState extends State<FlipBooklet> with SingleTickerProviderStat
       aspectRatio: 4 / 5,
       child: LayoutBuilder(
         builder: (context, box) {
-          final u = box.maxWidth;
           return Stack(
             clipBehavior: Clip.none,
             children: [
@@ -120,25 +114,6 @@ class _FlipBookletState extends State<FlipBooklet> with SingleTickerProviderStat
                   child: ClipRect(child: picture),
                 ),
               ),
-              if (widget.badge)
-                Positioned(
-                  right: -u * 0.05,
-                  bottom: -u * 0.05,
-                  child: Container(
-                    width: math.max(22, u * 0.2),
-                    height: math.max(22, u * 0.2),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFD9A35B),
-                      shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 4, offset: Offset(0, 2))],
-                    ),
-                    child: Icon(
-                      Icons.play_arrow,
-                      color: const Color(0xFF22150B),
-                      size: math.max(14, u * 0.13),
-                    ),
-                  ),
-                ),
             ],
           );
         },

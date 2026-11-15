@@ -1226,3 +1226,22 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     (PhotoCrop; stripCells / collageCells give the frames).
   - Corkboard sideways: a left swipe no longer puts the board away (only
     the pull down does, as the long side runs up/down).
+- 68.5 Studio round 5 (2026-11-15), 2.3.8
+  - Book: the cover swings up towards you (the rotation's sign was wrong:
+    it sank into the table). Boards drawn once and uncovered as it opens;
+    page blocks as leaf lines with the top page's shadow on them (the flat
+    line under the book); no left block at page one. A turning page isn't
+    clipped above or below the book; the spine-fold overlay (it showed on
+    top of a turning page) is gone. Upright the book runs off the left of
+    the screen; sideways both pages show, with room for the buttons.
+  - Flip book, Page flip: a top-bound spiral pad on the table; the page
+    lifts towards you, bows (14 strips, each tilted a little more), goes
+    over the top onto the pages already turned. Loops (the last page flips
+    to the first). Default 0.7 s a page, slowest 1.4 s.
+  - Pile: every print drops in (the first too); at the end the pile is
+    swept off to the left, top first, so it loops from a bare table.
+  - No play badge on the book's flip books.
+  - Scrapbook / card: only the first finger picks; a second finger
+    anywhere sizes and turns the piece already held.
+  - After making: no "send the photos back" question (they stay); the new
+    piece drops onto the bare wooden table, then the Studio fades back in.

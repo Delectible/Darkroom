@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/device/haptics.dart';
+import 'studio_screen.dart';
 import 'studio_store.dart';
 
 /// A maker's page: slides in like any page, but closes at once (under the
@@ -50,14 +51,19 @@ Future<void> popWithFlash(BuildContext context, StudioWork work) async {
   white.dispose();
 }
 
-/// The new piece, just made: out of the white flash, held up big, then
-/// dropped onto the table, where it lands, settles, and fades away.
+/// The new piece, just made: out of the white flash it's held up over the
+/// bare wooden table, dropped, lands and settles; then the table's things
+/// (the Studio) fade back in round it as it goes.
 Future<void> showSnapshotDrop(BuildContext context, StudioWork work) => Navigator.of(context).push(
   PageRouteBuilder<void>(
     opaque: false,
     transitionDuration: Duration.zero,
-    reverseTransitionDuration: Duration.zero,
+    reverseTransitionDuration: const Duration(milliseconds: 520),
     pageBuilder: (_, _, _) => _SnapshotDrop(work: work),
+    transitionsBuilder: (_, a, _, child) => FadeTransition(
+      opacity: CurvedAnimation(parent: a, curve: Curves.easeInOut),
+      child: child,
+    ),
   ),
 );
 
@@ -73,12 +79,12 @@ class _SnapshotDrop extends StatefulWidget {
 class _SnapshotDropState extends State<_SnapshotDrop> with SingleTickerProviderStateMixin {
   late final AnimationController _t = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2600),
+    duration: const Duration(milliseconds: 2200),
   );
   bool _landed = false;
 
   // the moments, as fractions of the whole
-  static const _held = 0.22, _land = 0.5, _settled = 0.64, _fade = 0.84;
+  static const _held = 0.26, _land = 0.58, _settled = 0.76;
 
   @override
   void initState() {
@@ -119,16 +125,17 @@ class _SnapshotDropState extends State<_SnapshotDrop> with SingleTickerProviderS
     final scale = 1 - 0.36 * drop + bounce;
     final turn = -0.07 * drop + 0.025 * math.sin(settle * math.pi * 1.5) * (1 - settle);
     final lift = 1 - drop; // 1 held up, 0 on the table
-    final fade = 1 - _span(_fade, 1, Curves.easeIn);
-    final dim = 0.45 * (1 - _span(_land, 1)) * fade;
     final size = MediaQuery.sizeOf(context);
     return IgnorePointer(
       child: Stack(
         fit: StackFit.expand,
         children: [
-          ColoredBox(color: Color.fromRGBO(0, 0, 0, dim)),
-          Opacity(
-            opacity: fade,
+          // the bare table
+          const ColoredBox(
+            color: StudioInk.table,
+            child: StudioTable(child: SizedBox.expand()),
+          ),
+          RepaintBoundary(
             child: Center(
               child: Transform.translate(
                 offset: Offset(0, size.height * 0.06 * drop),

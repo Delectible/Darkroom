@@ -9,7 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Photo Room: cards save properly, pick any card colour from a paint palette, and add more photos. '
+      'Photo Room: cards save properly, strip thumbnails look right, pick any card colour from a paint '
+      'palette, and add more photos. '
       'Slower GIF speeds and cleaner blinds. The wizard sits as a window with the desktop round it and '
       'stays put when the keyboard opens. Clearer window buttons in dark themes, and layout fixes.';
 

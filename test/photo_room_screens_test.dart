@@ -221,6 +221,34 @@ void main() {
     expect(spritesAreValid(), isTrue);
   });
 
+  test('thumbnails come from the saved file (a tall strip stays a tall strip)', () async {
+    final dir = Directory.systemTemp.createTempSync('thumbs');
+    final strip = img.Image(width: 600, height: 1462)..clear(img.ColorRgb8(250, 240, 120));
+    img.fillRect(strip, x1: 44, y1: 48, x2: 556, y2: 432, color: img.ColorRgb8(200, 30, 40));
+    final out = '${dir.path}/STRIP001.JPG', thumb = '${dir.path}/thumb.jpg';
+    File(out).writeAsBytesSync(img.encodeJpg(strip));
+    File(thumb).writeAsBytesSync([0, 1, 2]); // (a garbled old one)
+    final item = MediaItem(
+      id: 'photoroom_1',
+      cameraId: 'photoroom',
+      kind: MediaKind.photo,
+      status: MediaStatus.ready,
+      fileName: 'STRIP001.JPG',
+      capturedAt: DateTime(2026, 11, 15),
+      readyAt: DateTime(2026, 11, 15),
+      outputPath: out,
+      thumbPath: thumb,
+      location: MediaLocation.c,
+    );
+    expect(await repairPhotoRoomThumbs([item]), isTrue);
+    final t = img.decodeJpg(File(thumb).readAsBytesSync())!;
+    expect((t.width, t.height), (164, 400));
+    // the top photo's red at the top, the lemon paper round it
+    expect(t.getPixel(82, 60).r, greaterThan(150));
+    expect(t.getPixel(82, 60).g, lessThan(90));
+    expect(t.getPixel(4, 200).g, greaterThan(200));
+  });
+
   test('a GIF encodes', () async {
     final dir = Directory.systemTemp.createTempSync('gif');
     final paths = [

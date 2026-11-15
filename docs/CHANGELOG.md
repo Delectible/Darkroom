@@ -1194,3 +1194,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     the writing and caption boxes. Fixed what that found: Studio cards
     sideways (set height), scrapbook tools (scroll, page ignores the
     keyboard), flip book viewer buttons (shrink to fit the side panel).
+  - Garbled strip thumbnails in the Photo Room folder (bits of other screens
+    in them): the thumbnail was drawn from the on-screen picture's GPU
+    texture. Now made on the CPU from the saved file; old ones redrawn from
+    their files the first time the folder opens.
+  - Card tools: a clearer paint palette (tan, colour dabs, thumb hole) and
+    Add a photo as a picture with a green +.

@@ -543,6 +543,44 @@ Future<Uint8List> encodeGif(
 Future<Uint8List> _encodeOff(List<(Uint8List, int)> frames, int w, int h) =>
     Isolate.run(() => _gifBytes(frames, w, h));
 
+bool _thumbsRepaired = false;
+
+/// Photo Room thumbnails made before they came from the files (some strips'
+/// were garbled): drawn again from each file, once a run. True if any was.
+Future<bool> repairPhotoRoomThumbs(List<MediaItem> items) async {
+  if (_thumbsRepaired) return false;
+  _thumbsRepaired = true;
+  var any = false;
+  for (final m in items) {
+    final from = m.outputPath, to = m.thumbPath;
+    if (from == null || to == null || !File(from).existsSync()) continue;
+    try {
+      await Isolate.run(() => _thumbFromFile(from, to));
+      any = true;
+    } catch (_) {
+      // (leave that one as it was)
+    }
+  }
+  return any;
+}
+
+/// A thumbnail of the picture (or a GIF's first frame) at [from], at most
+/// 400 px on its longest side.
+void _thumbFromFile(String from, String to) {
+  final bytes = File(from).readAsBytesSync();
+  final pic = img.decodeImage(bytes);
+  if (pic == null) throw StateError('Could not read $from');
+  final first = pic.frames.isEmpty ? pic : pic.frames.first;
+  final s = math.min(1.0, 400 / math.max(first.width, first.height));
+  final small = img.copyResize(
+    first,
+    width: math.max(1, (first.width * s).round()),
+    height: math.max(1, (first.height * s).round()),
+    interpolation: img.Interpolation.average,
+  );
+  File(to).writeAsBytesSync(img.encodeJpg(small, quality: 85));
+}
+
 Uint8List _gifBytes(List<(Uint8List, int)> frames, int w, int h) {
   final enc = img.GifEncoder(repeat: 0, samplingFactor: 20);
   for (final (f, cs) in frames) {
@@ -581,12 +619,10 @@ Future<MediaItem> keepOnC({
   final out = '${dir.path}/${id}_$file';
   await write(out);
   final thumbPath = '${paths.thumbsDir.path}/$id.jpg';
-  final s = math.min(1.0, 400 / math.max(thumb.width, thumb.height));
-  final small = await _record(Size(thumb.width * s, thumb.height * s), (c) {
-    drawCover(c, thumb, Rect.fromLTWH(0, 0, thumb.width * s, thumb.height * s));
-  });
-  await writeStudioJpeg(small, thumbPath, quality: 85);
-  small.dispose();
+  // The thumbnail is made from the saved file itself, on the CPU: drawing
+  // it from the on-screen picture could read a texture the GPU had already
+  // reused (garbled strip thumbnails, bits of other screens in them).
+  await Isolate.run(() => _thumbFromFile(out, thumbPath));
   final now = DateTime.now();
   await repo.insertReady(
     id: id,

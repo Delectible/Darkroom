@@ -21,6 +21,7 @@ import 'explorer_dialogs.dart';
 import 'explorer_panes.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import 'photo_room/photo_room.dart';
+import 'photo_room/photo_room_render.dart' show repairPhotoRoomThumbs;
 import 'pixel_icons.dart';
 import 'win98_viewer.dart';
 import 'games/bricks.dart';
@@ -271,10 +272,24 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
     return ExplorerPlace.myComputer;
   }
 
-  void _go(ExplorerPlace p) => setState(() {
-    _place = p;
-    _selected.clear();
-  });
+  void _go(ExplorerPlace p) {
+    setState(() {
+      _place = p;
+      _selected.clear();
+    });
+    if (p == ExplorerPlace.photoRoom) {
+      // (thumbnails from before 2.3.7 drawn again from their files, once)
+      unawaited(
+        repairPhotoRoomThumbs(ref.read(photoRoomFolderProvider)).then((changed) {
+          if (!changed || !mounted) return;
+          PaintingBinding.instance.imageCache
+            ..clear()
+            ..clearLiveImages();
+          setState(() {});
+        }),
+      );
+    }
+  }
 
   Future<int?> _box(
     String title,

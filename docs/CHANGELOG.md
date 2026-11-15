@@ -1200,3 +1200,27 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     their files the first time the folder opens.
   - Card tools: a clearer paint palette (tan, colour dabs, thumb hole) and
     Add a photo as a picture with a green +.
+- 68.4 Studio round 4 (2026-11-15), 2.3.7
+  - Scrapbook (and the Photo Room card): a piece is picked the moment a
+    finger lands (the double-tap recogniser made every tap wait ~0.3 s+);
+    a second tap soon after edits it.
+  - Stickers: bookmark tabs (yellow, pink, blue), short and wide, words
+    along them, laid nearly flat.
+  - Studio screens don't resize for the keyboard; only the text boxes move.
+  - Book: arrives shut (front cover with gold lettering) and swings open
+    once its pictures are decoded (no spinner); the left page shows (a
+    strip upright, all of it sideways), the cover's red lining facing page
+    one, page backs after. Page turn rewritten: the corner is bound to the
+    spine (no folds off the page or perpendicular to it), the turned page
+    lands on the left page, each page keeps its widgets through a turn
+    (GlobalKeys: no reloads), the new page is set before the turn ends (no
+    flashed frame), and arrow taps queue (later turns 300 ms). Pieces drift
+    first-to-top-left, last-to-bottom-right; flip books loop on the page.
+  - Flip books: studio_flip_frames.dart draws every frame for both the app
+    and the video (keyframes: changes at 30 fps, still parts once), so they
+    match. Styles: Page flip (spiral-bound booklet, page flicked over in
+    perspective), Shutter (the old snap / flash / shake), Pile (each print
+    dropped onto the last). No speed change after making (the viewer just
+    plays; reflip removed).
+  - Strip and collage makers: tap a photo to move and zoom it in its frame
+    (PhotoCrop; stripCells / collageCells give the frames).

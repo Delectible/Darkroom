@@ -5,6 +5,7 @@ import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/studio/studio_book_screen.dart';
+import 'package:darkroom/features/studio/studio_flip_frames.dart';
 import 'package:darkroom/features/studio/studio_makers.dart';
 import 'package:darkroom/features/studio/studio_page_turn.dart';
 import 'package:darkroom/features/studio/studio_scrapbook.dart';
@@ -128,6 +129,14 @@ void main() {
           await tester.pump();
           expect(find.byType(RawImage), findsOneWidget);
           await shoot(tester, kind.name);
+          // a photo tapped: its frame, to drag and pinch
+          await tester.tapAt(tester.getTopLeft(find.byType(RawImage)) + const Offset(60, 60));
+          await tester.pumpAndSettle();
+          expect(find.text('FRAME THE PHOTO'), findsOneWidget);
+          await shoot(tester, '${kind.name}_frame');
+          await tester.drag(find.byType(CustomPaint).last, const Offset(-40, 0));
+          await tester.tap(find.text('Done'));
+          await tester.pumpAndSettle();
           if (kind == StudioKind.collage) {
             await tester.runAsync(() async {
               await tester.tap(find.text('Loose'));
@@ -301,6 +310,29 @@ void main() {
       });
     });
   }
+
+  testWidgets('flip book frames: each style draws, and the video gets every change', (tester) async {
+    await tester.runAsync(() async {
+      final photos = [for (final m in prints) await loadStudioImage(m.outputPath!, maxSide: 400)];
+      for (final style in FlipStyle.values) {
+        final f = FlipFrames(photos: photos, paper: StudioPaper.cream, style: style, pageMs: 360);
+        final keys = f.keyframes();
+        // the frames cover the whole book, end to end, in order
+        expect(keys.first.at, 0);
+        expect(keys.fold<double>(0, (a, k) => a + k.hold), closeTo(f.totalMs, 1));
+        for (var i = 1; i < keys.length; i++) {
+          expect(keys[i].at, greaterThan(keys[i - 1].at));
+        }
+        // mid-change and still moments draw without trouble
+        for (final t in [0.0, 400.0, 500.0, 1000.0]) {
+          final rec = ui.PictureRecorder();
+          f.paint(Canvas(rec), const Size(216, 270), t);
+          final image = await rec.endRecording().toImage(216, 270);
+          image.dispose();
+        }
+      }
+    });
+  });
 
   test('how many each takes', () {
     expect(StudioNeeds.of(StudioKind.collage).fits(3), isFalse);

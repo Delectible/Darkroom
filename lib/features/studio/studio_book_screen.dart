@@ -12,7 +12,6 @@ import 'package:video_player/video_player.dart';
 
 import 'studio_flip_booklet.dart';
 import 'studio_layout.dart';
-import 'studio_make.dart';
 import 'studio_page_turn.dart';
 import 'studio_render.dart';
 import 'studio_screen.dart';
@@ -936,8 +935,7 @@ class FlipBookViewer extends ConsumerStatefulWidget {
 }
 
 class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
-  late StudioWork _work = widget.work;
-  late int _pageMs = widget.work.pageMs ?? StudioMake.pageMsDefault;
+  late final StudioWork _work = widget.work;
   int _replays = 0;
   String? _busy;
   VideoPlayerController? _video;
@@ -965,24 +963,8 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
     super.dispose();
   }
 
-  /// The video at the speed chosen (made again if it changed).
-  Future<String?> _ready() async {
-    if (!_hasPages || _pageMs == _work.pageMs) return _work.path;
-    setState(() => _busy = 'Making…');
-    try {
-      final w = await StudioMake.reflip(_work, _pageMs);
-      await ref.read(studioBookProvider.notifier).replace(w);
-      _work = w;
-      return w.path;
-    } catch (e) {
-      if (mounted) {
-        studioNote(context, "Couldn't make it: $e");
-      }
-      return null;
-    } finally {
-      if (mounted) setState(() => _busy = null);
-    }
-  }
+  /// The video (made at its speed when it was made: that's how it plays).
+  Future<String?> _ready() async => _work.path;
 
   Future<void> _save() async {
     final path = await _ready();
@@ -1085,7 +1067,6 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
                           key: ValueKey(_replays),
                           work: _work,
                           riffle: Riffle.loop,
-                          pageMs: _pageMs,
                           cacheWidth: 1000,
                           face: _hasPages
                               ? null
@@ -1104,29 +1085,6 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
                     ),
                   );
                   final controls = <Widget>[
-                    if (_hasPages)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Row(
-                          children: [
-                            const Text('Slow', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
-                            Expanded(
-                              child: Slider(
-                                // (right = faster)
-                                value: (StudioMake.pageMsMax + StudioMake.pageMsMin - _pageMs).toDouble(),
-                                min: StudioMake.pageMsMin.toDouble(),
-                                max: StudioMake.pageMsMax.toDouble(),
-                                activeColor: StudioInk.brass,
-                                inactiveColor: StudioInk.card,
-                                onChanged: (x) => setState(
-                                  () => _pageMs = StudioMake.pageMsMax + StudioMake.pageMsMin - x.round(),
-                                ),
-                              ),
-                            ),
-                            const Text('Fast', style: TextStyle(color: StudioInk.muted, fontSize: 12)),
-                          ],
-                        ),
-                      ),
                     // (shrinks to fit a narrow side panel)
                     FittedBox(
                       fit: BoxFit.scaleDown,

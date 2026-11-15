@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/painting.dart';
+
 import '../../core/db/media_repository.dart';
 import '../../core/processing/video_pipeline.dart';
 import '../viewer/presentation/media_actions.dart' show exportPathFor;
+import 'studio_flip_frames.dart';
 import 'studio_render.dart';
 import 'studio_store.dart';
 
@@ -33,23 +36,24 @@ class StudioMake {
     return StudioWork(id: id, kind: kind, path: path, createdAt: DateTime.now());
   }
 
-  /// How often a page shakes, and how long the flash between pages lasts.
-  static const _shakeMs = 120, _flashMs = 34;
-
   /// A page's time: the speed slider's range and starting point.
   static const pageMsMin = 150, pageMsMax = 900, pageMsDefault = 360;
 
-  /// A flip book: each photo snaps to the next with a flash of the print
-  /// and a handheld shake, [pageMs] a page, as a 4:5 MP4 (a video, for
-  /// Instagram).
+  /// The flip book's frame: 4:5 at 1080 x 1350 (for Instagram).
+  static const _frame = Size(1080, 1350);
+
+  /// A flip book: the photos one after another, [pageMs] each, changing
+  /// in [style], as a 4:5 MP4. The frames are drawn by the same
+  /// [FlipFrames] the app plays it with, so the two always match.
   static Future<StudioWork> flipBook(
     List<MediaItem> prints,
     StudioPaper paper, {
     int pageMs = pageMsDefault,
+    FlipStyle style = FlipStyle.shutter,
   }) async {
     final id = _id();
     final dir = await StudioBook.folder();
-    // the photos kept, one a page, for the book to riffle and new speeds
+    // the photos kept, one a page, for the app to play it from
     final keep = Directory('${dir.path}/flipbook_$id');
     await keep.create(recursive: true);
     final images = await photos(prints, maxSide: 1200);
@@ -59,10 +63,11 @@ class StudioMake {
       await writeStudioJpeg(images[i], f, quality: 88);
       pages.add(f);
     }
-    final out = '${dir.path}/flipbook_${id}_$pageMs.mp4';
+    final frames = FlipFrames(photos: images, paper: paper, style: style, pageMs: pageMs);
+    final out = '${dir.path}/flipbook_$id.mp4';
     final cover = '${dir.path}/flipbook_$id.jpg';
-    await writeStudioJpeg(await renderFlipPage(images.first, paper, 0), cover);
-    await _encodeFlip(images, paper, pageMs, out);
+    await writeStudioJpeg(await _frameAt(frames, 0), cover);
+    await _encode(frames, out);
     return StudioWork(
       id: id,
       kind: StudioKind.flipbook,
@@ -72,46 +77,30 @@ class StudioMake {
       pages: pages,
       paper: paper.name,
       pageMs: pageMs,
+      flipStyle: style.name,
     );
   }
 
-  /// [work] (a flip book with its pages kept) made again at [pageMs] a
-  /// page; the old video goes.
-  static Future<StudioWork> reflip(StudioWork work, int pageMs) async {
-    final paper = StudioPaper.values.asNameMap()[work.paper] ?? StudioPaper.cream;
-    final images = [for (final p in work.pages) await loadStudioImage(p, maxSide: 1200)];
-    final out = '${(await StudioBook.folder()).path}/flipbook_${work.id}_$pageMs.mp4';
-    await _encodeFlip(images, paper, pageMs, out);
-    if (out != work.path) {
-      try {
-        await File(work.path).delete();
-      } catch (_) {}
-    }
-    return work.copyWith(path: out, pageMs: pageMs);
+  static Future<ui.Image> _frameAt(FlipFrames frames, double t) {
+    final rec = ui.PictureRecorder();
+    frames.paint(Canvas(rec, Offset.zero & _frame), _frame, t);
+    return rec.endRecording().toImage(_frame.width.toInt(), _frame.height.toInt());
   }
 
-  static Future<void> _encodeFlip(List<ui.Image> images, StudioPaper paper, int pageMs, String out) async {
+  static Future<void> _encode(FlipFrames frames, String out) async {
     final work = Directory('${Directory.systemTemp.path}/flipbook_${_id()}');
     await work.create(recursive: true);
     try {
       final list = StringBuffer();
-      // (each page shakes every 120 ms; a fast page holds one pose)
-      final shakes = (pageMs / _shakeMs).round().clamp(1, 8);
-      final hold = pageMs / shakes / 1000;
       String? last;
-      for (var i = 0; i < images.length; i++) {
-        if (i > 0) {
-          // the incoming print flashes white as the page turns
-          final f = '${work.path}/f$i.png';
-          await writeStudioPng(await renderFlipPage(images[i], paper, i * 9, flash: true), f);
-          list.writeln("file '$f'\nduration ${_flashMs / 1000}");
-        }
-        for (var k = 0; k < shakes; k++) {
-          final f = '${work.path}/p${i}_$k.png';
-          await writeStudioPng(await renderFlipPage(images[i], paper, i * 9 + k), f);
-          list.writeln("file '$f'\nduration $hold");
-          last = f;
-        }
+      var n = 0;
+      for (final k in frames.keyframes()) {
+        final f = '${work.path}/f${n++}.png';
+        final image = await _frameAt(frames, k.at);
+        await writeStudioPng(image, f);
+        image.dispose();
+        list.writeln("file '$f'\nduration ${k.hold / 1000}");
+        last = f;
       }
       // (the concat demuxer wants the last file once more)
       if (last != null) list.writeln("file '$last'");
@@ -120,7 +109,7 @@ class StudioMake {
       await VideoPipeline.ffmpeg([
         '-y', '-f', 'concat', '-safe', '0', '-i', listPath, //
         '-r', '30', '-pix_fmt', 'yuv420p', ...VideoPipeline.encoder(6000), out,
-      ], timeout: const Duration(minutes: 3));
+      ], timeout: const Duration(minutes: 4));
     } finally {
       try {
         await work.delete(recursive: true);

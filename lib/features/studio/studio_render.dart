@@ -119,19 +119,44 @@ Future<ui.Image> loadStudioImage(String path, {int maxSide = 1600}) async {
   return frame.image;
 }
 
-/// [image] filling [dst], cropped from its middle.
-void drawCover(Canvas c, ui.Image image, Rect dst, {Paint? paint}) {
+/// Which part of a photo fills its frame: [x] and [y] from -1 (the left /
+/// top edge) through 0 (the middle) to 1 (the right / bottom edge), and how
+/// far it's zoomed in (1: the whole frame filled, no more).
+class PhotoCrop {
+  const PhotoCrop({this.x = 0, this.y = 0, this.zoom = 1});
+
+  final double x, y, zoom;
+
+  static const middle = PhotoCrop();
+
+  bool get isMiddle => x == 0 && y == 0 && zoom == 1;
+}
+
+/// The part of [image] that fills a frame shaped [aspect] (width / height)
+/// with [crop].
+Rect coverSource(ui.Image image, double aspect, [PhotoCrop crop = PhotoCrop.middle]) {
   final iw = image.width.toDouble(), ih = image.height.toDouble();
-  final want = dst.width / dst.height;
-  var src = Rect.fromLTWH(0, 0, iw, ih);
-  if (iw / ih > want) {
-    final w = ih * want;
-    src = Rect.fromLTWH((iw - w) / 2, 0, w, ih);
+  var sw = iw, sh = ih;
+  if (iw / ih > aspect) {
+    sw = ih * aspect;
   } else {
-    final h = iw / want;
-    src = Rect.fromLTWH(0, (ih - h) / 2, iw, h);
+    sh = iw / aspect;
   }
-  c.drawImageRect(image, src, dst, paint ?? (Paint()..filterQuality = FilterQuality.high));
+  sw /= crop.zoom;
+  sh /= crop.zoom;
+  final cx = iw / 2 + crop.x.clamp(-1.0, 1.0) * (iw - sw) / 2;
+  final cy = ih / 2 + crop.y.clamp(-1.0, 1.0) * (ih - sh) / 2;
+  return Rect.fromCenter(center: Offset(cx, cy), width: sw, height: sh);
+}
+
+/// [image] filling [dst], cropped from its middle (or as [crop] says).
+void drawCover(Canvas c, ui.Image image, Rect dst, {Paint? paint, PhotoCrop crop = PhotoCrop.middle}) {
+  c.drawImageRect(
+    image,
+    coverSource(image, dst.width / dst.height, crop),
+    dst,
+    paint ?? (Paint()..filterQuality = FilterQuality.high),
+  );
 }
 
 void _text(Canvas c, String s, Offset centre, double size, Color color, {double spacing = 3}) {
@@ -155,19 +180,37 @@ Future<ui.Image> _record(Size size, void Function(Canvas c) draw) {
   return rec.endRecording().toImage(size.width.round(), size.height.round());
 }
 
-/// A photo booth strip: 3 or 4 frames down booth paper, the date at the
-/// foot, the gaps a touch uneven like a real booth's.
-Future<ui.Image> renderStrip(List<ui.Image> photos, StudioPaper paper, DateTime date) {
+/// Where each frame of a booth strip of [n] goes, and the strip's size.
+(List<Rect>, Size) stripCells(int n, DateTime date) {
   const w = 600.0, cellW = 520.0, cellH = 390.0, top = 40.0, gap = 26.0, foot = 120.0;
-  final h = top + photos.length * cellH + (photos.length - 1) * gap + foot;
-  final rnd = math.Random(photos.length * 31 + date.day);
-  return _record(Size(w, h), (c) {
+  final h = top + n * cellH + (n - 1) * gap + foot;
+  final rnd = math.Random(n * 31 + date.day);
+  final cells = <Rect>[];
+  var y = top;
+  for (var i = 0; i < n; i++) {
+    final jitter = (rnd.nextDouble() - 0.5) * 6;
+    cells.add(Rect.fromLTWH((w - cellW) / 2 + jitter, y, cellW, cellH));
+    y += cellH + gap + (rnd.nextDouble() - 0.5) * 4;
+  }
+  return (cells, Size(w, h));
+}
+
+/// A photo booth strip: 3 or 4 frames down booth paper, the date at the
+/// foot, the gaps a touch uneven like a real booth's; each photo framed as
+/// [crops] says.
+Future<ui.Image> renderStrip(
+  List<ui.Image> photos,
+  StudioPaper paper,
+  DateTime date, {
+  List<PhotoCrop>? crops,
+}) {
+  const foot = 120.0;
+  final (cells, size) = stripCells(photos.length, date);
+  final w = size.width, h = size.height;
+  return _record(size, (c) {
     paintPaper(c, Rect.fromLTWH(0, 0, w, h), paper);
-    var y = top;
-    for (final p in photos) {
-      final jitter = (rnd.nextDouble() - 0.5) * 6;
-      drawCover(c, p, Rect.fromLTWH((w - cellW) / 2 + jitter, y, cellW, cellH));
-      y += cellH + gap + (rnd.nextDouble() - 0.5) * 4;
+    for (var i = 0; i < photos.length; i++) {
+      drawCover(c, photos[i], cells[i], crop: crops?[i] ?? PhotoCrop.middle);
     }
     _text(c, studioDate(date), Offset(w / 2, h - foot / 2 - 12), 26, paper.ink);
     _text(c, 'DARKROOM', Offset(w / 2, h - foot / 2 + 22), 15, paper.ink.withValues(alpha: 0.7), spacing: 6);
@@ -182,10 +225,10 @@ Future<ui.Image> renderStrip(List<ui.Image> photos, StudioPaper paper, DateTime 
   _ => (3, 3),
 };
 
-/// A collage: square photos on [paper], in a neat grid, edge to edge, or
-/// loose (bordered prints laid by hand, slightly turned and overlapping).
-Future<ui.Image> renderCollage(List<ui.Image> photos, CollageStyle style, StudioPaper paper) {
-  final (cols, rows) = collageGrid(photos.length);
+/// Where each photo of a collage of [n] in [style] goes (a loose print's
+/// photo, untilted), and the collage's size.
+(List<Rect>, Size) collageCells(int n, CollageStyle style) {
+  final (cols, rows) = collageGrid(n);
   const cell = 800.0;
   final g = switch (style) {
     CollageStyle.grid => 40.0,
@@ -193,14 +236,33 @@ Future<ui.Image> renderCollage(List<ui.Image> photos, CollageStyle style, Studio
     CollageStyle.loose => 110.0,
   };
   final w = cols * cell + (cols + 1) * g, h = rows * cell + (rows + 1) * g;
+  return (
+    [
+      for (var i = 0; i < n; i++)
+        Rect.fromLTWH(g + (i % cols) * (cell + g), g + (i ~/ cols) * (cell + g), cell, cell),
+    ],
+    Size(w, h),
+  );
+}
+
+/// A collage: square photos on [paper], in a neat grid, edge to edge, or
+/// loose (bordered prints laid by hand, slightly turned and overlapping);
+/// each photo framed as [crops] says.
+Future<ui.Image> renderCollage(
+  List<ui.Image> photos,
+  CollageStyle style,
+  StudioPaper paper, {
+  List<PhotoCrop>? crops,
+}) {
+  final (cells, size) = collageCells(photos.length, style);
   final rnd = math.Random(photos.length * 7 + style.index);
-  return _record(Size(w, h), (c) {
-    paintPaper(c, Rect.fromLTWH(0, 0, w, h), paper);
+  return _record(size, (c) {
+    paintPaper(c, Offset.zero & size, paper);
     for (var i = 0; i < photos.length; i++) {
-      final col = i % cols, row = i ~/ cols;
-      final r = Rect.fromLTWH(g + col * (cell + g), g + row * (cell + g), cell, cell);
+      final r = cells[i];
+      final crop = crops?[i] ?? PhotoCrop.middle;
       if (style != CollageStyle.loose) {
-        drawCover(c, photos[i], r);
+        drawCover(c, photos[i], r, crop: crop);
         continue;
       }
       // Loose: a print with a white border, a little bigger than its cell,
@@ -208,11 +270,11 @@ Future<ui.Image> renderCollage(List<ui.Image> photos, CollageStyle style, Studio
       final turn = (rnd.nextDouble() - 0.5) * 0.12;
       final nudge = Offset((rnd.nextDouble() - 0.5) * 40, (rnd.nextDouble() - 0.5) * 40);
       // (a little over its cell: neighbours overlap, the edges stay clear)
-      final size = cell + 60;
+      final cardSize = r.width + 60;
       c.save();
       c.translate(r.center.dx + nudge.dx, r.center.dy + nudge.dy);
       c.rotate(turn);
-      final card = Rect.fromCenter(center: Offset.zero, width: size, height: size);
+      final card = Rect.fromCenter(center: Offset.zero, width: cardSize, height: cardSize);
       c.drawRect(
         card.shift(const Offset(6, 10)),
         Paint()
@@ -220,50 +282,9 @@ Future<ui.Image> renderCollage(List<ui.Image> photos, CollageStyle style, Studio
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
       );
       c.drawRect(card, Paint()..color = const Color(0xFFF7F4EE));
-      drawCover(c, photos[i], card.deflate(26));
+      drawCover(c, photos[i], card.deflate(26), crop: crop);
       c.restore();
     }
-  });
-}
-
-/// A flip book page (4:5, Instagram's tall post): the photo as a bordered
-/// print on [paper], shaken by [shake] (picks the wobble) for the handheld
-/// snap from page to page. [flash]: the print white, as the page turns
-/// (only the print flashes, not the paper round it).
-Future<ui.Image> renderFlipPage(ui.Image photo, StudioPaper paper, int shake, {bool flash = false}) {
-  const w = 1080.0, h = 1350.0;
-  final rnd = math.Random(shake * 977 + photo.width);
-  return _record(const Size(w, h), (c) {
-    paintPaper(c, const Rect.fromLTWH(0, 0, w, h), paper);
-    final aspect = photo.width / photo.height;
-    var pw = 920.0, ph = pw / aspect;
-    if (ph > 1120) {
-      ph = 1120;
-      pw = ph * aspect;
-    }
-    c.save();
-    c.translate(w / 2 + (rnd.nextDouble() - 0.5) * 14, h / 2 + (rnd.nextDouble() - 0.5) * 14);
-    c.rotate((rnd.nextDouble() - 0.5) * 0.025);
-    final card = Rect.fromCenter(center: Offset.zero, width: pw + 40, height: ph + 40);
-    c.drawRect(
-      card.shift(const Offset(5, 9)),
-      Paint()
-        ..color = const Color(0x55000000)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
-    );
-    c.drawRect(card, Paint()..color = const Color(0xFFF7F4EE));
-    if (flash) {
-      c.drawRect(card, Paint()..color = const Color(0xFFFFFFFF));
-      c.restore();
-      return;
-    }
-    c.drawImageRect(
-      photo,
-      Rect.fromLTWH(0, 0, photo.width.toDouble(), photo.height.toDouble()),
-      Rect.fromCenter(center: Offset.zero, width: pw, height: ph),
-      Paint()..filterQuality = FilterQuality.high,
-    );
-    c.restore();
   });
 }
 

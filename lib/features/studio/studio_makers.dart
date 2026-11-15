@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -7,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/db/media_repository.dart';
+import 'studio_flip_frames.dart';
 import 'studio_make.dart';
 import 'studio_render.dart';
 import 'studio_screen.dart';
@@ -186,6 +186,10 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
   CollageStyle _style = CollageStyle.grid;
   bool _busy = false;
   int _run = 0;
+  final _date = DateTime.now();
+
+  /// How each photo sits in its frame (moved and zoomed by hand).
+  late final List<PhotoCrop> _crops = List.filled(widget.prints.length, PhotoCrop.middle);
 
   bool get _strip => widget.kind == StudioKind.strip;
 
@@ -210,8 +214,34 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
     super.dispose();
   }
 
-  Future<ui.Image> _render() =>
-      _strip ? renderStrip(_photos!, _paper, DateTime.now()) : renderCollage(_photos!, _style, _paper);
+  Future<ui.Image> _render() => _strip
+      ? renderStrip(_photos!, _paper, _date, crops: _crops)
+      : renderCollage(_photos!, _style, _paper, crops: _crops);
+
+  /// The frames, where they are on the piece.
+  List<Rect> get _cells =>
+      _strip ? stripCells(_crops.length, _date).$1 : collageCells(_crops.length, _style).$1;
+
+  /// A tap at [at] on the piece (in its own pixels): that photo's framing.
+  Future<void> _frameAt(Offset at) async {
+    final photos = _photos;
+    if (photos == null) return;
+    final cells = _cells;
+    var i = cells.indexWhere((r) => r.contains(at));
+    // (loose prints are a little bigger and turned: near enough will do)
+    if (i < 0) i = cells.indexWhere((r) => r.inflate(40).contains(at));
+    if (i < 0) return;
+    final cell = cells[i];
+    final crop = await showModalBottomSheet<PhotoCrop>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: StudioInk.tableDark,
+      builder: (context) => _CropSheet(photo: photos[i], aspect: cell.width / cell.height, crop: _crops[i]),
+    );
+    if (crop == null || !mounted) return;
+    _crops[i] = crop;
+    await _draw();
+  }
 
   Future<void> _draw() async {
     if (_photos == null) return;
@@ -253,13 +283,27 @@ class _PictureMakerState extends ConsumerState<_PictureMaker> {
           : '${widget.prints.length} prints, cropped to fit',
       body: preview == null
           ? const CircularProgressIndicator(color: StudioInk.brass)
-          : DecoratedBox(
-              decoration: const BoxDecoration(
-                boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 16, offset: Offset(0, 8))],
+          : AspectRatio(
+              aspectRatio: preview.width / preview.height,
+              child: LayoutBuilder(
+                builder: (context, box) => GestureDetector(
+                  // (a photo tapped: move or zoom it in its frame)
+                  onTapUp: (d) => unawaited(_frameAt(d.localPosition * (preview.width / box.maxWidth))),
+                  child: DecoratedBox(
+                    decoration: const BoxDecoration(
+                      boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 16, offset: Offset(0, 8))],
+                    ),
+                    child: RawImage(image: preview, fit: BoxFit.fill),
+                  ),
+                ),
               ),
-              child: RawImage(image: preview, fit: BoxFit.contain),
             ),
       options: [
+        const Text(
+          'Tap a photo to move or zoom it in its frame.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: StudioInk.muted, fontSize: 12),
+        ),
         if (!_strip)
           _Choices<CollageStyle>(
             label: 'Style',
@@ -304,6 +348,7 @@ class _FlipMaker extends ConsumerStatefulWidget {
 
 class _FlipMakerState extends ConsumerState<_FlipMaker> {
   StudioPaper _paper = StudioPaper.cream;
+  FlipStyle _style = FlipStyle.flip;
   int _pageMs = StudioMake.pageMsDefault;
   late final Timer _tick;
   final _clock = Stopwatch()..start();
@@ -313,12 +358,13 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
   double _pos = 0;
   int _lastMs = 0;
   bool _busy = false;
+  List<ui.Image>? _photos;
 
   @override
   void initState() {
     super.initState();
-    // (a steady 25 frames a second; the page and shake follow the clock)
-    _tick = Timer.periodic(const Duration(milliseconds: 40), (_) {
+    unawaited(_load());
+    _tick = Timer.periodic(const Duration(milliseconds: 33), (_) {
       final now = _clock.elapsedMilliseconds;
       _pos += (now - _lastMs) / _pageMs;
       _lastMs = now;
@@ -326,16 +372,30 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
     });
   }
 
+  Future<void> _load() async {
+    final photos = await StudioMake.photos(widget.prints, maxSide: 800);
+    if (!mounted) {
+      for (final p in photos) {
+        p.dispose();
+      }
+      return;
+    }
+    setState(() => _photos = photos);
+  }
+
   @override
   void dispose() {
     _tick.cancel();
+    for (final p in _photos ?? const <ui.Image>[]) {
+      p.dispose();
+    }
     super.dispose();
   }
 
   Future<void> _make() async {
     setState(() => _busy = true);
     try {
-      final work = await StudioMake.flipBook(widget.prints, _paper, pageMs: _pageMs);
+      final work = await StudioMake.flipBook(widget.prints, _paper, pageMs: _pageMs, style: _style);
       await ref.read(studioBookProvider.notifier).add(work);
       if (mounted) await popWithFlash(context, work);
     } catch (e) {
@@ -348,55 +408,29 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
 
   @override
   Widget build(BuildContext context) {
-    final whole = _pos.floor();
-    final page = whole % widget.prints.length;
-    final into = ((_pos - whole) * _pageMs).round();
-    // the print flashes white for a moment as each page turns
-    final flash = into < 40 && whole > 0;
-    final rnd = math.Random(page * 9 + into ~/ 120);
-    final m = widget.prints[page];
-    final path = m.outputPath;
+    final photos = _photos;
     final seconds = widget.prints.length * _pageMs / 1000;
+    // (the very frames the video will have: the same drawing)
+    final frames = photos == null
+        ? null
+        : FlipFrames(photos: photos, paper: _paper, style: _style, pageMs: _pageMs);
     return _MakerScaffold(
       title: 'Flip Book',
-      subtitle: '${widget.prints.length} pages, snap cuts',
+      subtitle: '${widget.prints.length} pages',
       body: AspectRatio(
         aspectRatio: 4 / 5,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            StudioPaperView(paper: _paper),
-            Center(
-              child: Transform.translate(
-                offset: Offset((rnd.nextDouble() - 0.5) * 4, (rnd.nextDouble() - 0.5) * 4),
-                child: Transform.rotate(
-                  angle: (rnd.nextDouble() - 0.5) * 0.025,
-                  child: FractionallySizedBox(
-                    widthFactor: 0.86,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      color: const Color(0xFFF7F4EE),
-                      child: Stack(
-                        children: [
-                          if (path == null)
-                            const SizedBox(height: 120)
-                          else
-                            Image.file(File(path), cacheWidth: 700, gaplessPlayback: true),
-                          // (only the print flashes, not the paper round it)
-                          if (flash) const Positioned.fill(child: ColoredBox(color: Color(0xFFFFFFFF))),
-                        ],
-                      ),
-                    ),
-                  ),
+        child: frames == null
+            ? const Center(child: CircularProgressIndicator(color: StudioInk.brass))
+            : DecoratedBox(
+                decoration: const BoxDecoration(
+                  boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 10, offset: Offset(0, 6))],
                 ),
+                child: ClipRect(child: CustomPaint(painter: _FlipPreview(frames, _pos * _pageMs))),
               ),
-            ),
-          ],
-        ),
       ),
       options: [
         Text(
-          '${widget.prints.length} pages · about ${seconds.toStringAsFixed(1)} s',
+          'About ${seconds.toStringAsFixed(1)} s',
           textAlign: TextAlign.center,
           style: const TextStyle(color: StudioInk.muted, fontSize: 12),
         ),
@@ -419,6 +453,13 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
             const Text('Fast', style: TextStyle(color: StudioInk.muted, fontSize: 11)),
           ],
         ),
+        _Choices<FlipStyle>(
+          label: 'Change',
+          values: FlipStyle.values,
+          name: (f) => f.label,
+          value: _style,
+          onPick: (f) => setState(() => _style = f),
+        ),
         _Choices<StudioPaper>(
           label: 'Paper',
           values: StudioPaper.values,
@@ -432,4 +473,134 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
       onMake: _make,
     );
   }
+}
+
+class _FlipPreview extends CustomPainter {
+  _FlipPreview(this.frames, this.t);
+
+  final FlipFrames frames;
+  final double t;
+
+  @override
+  void paint(Canvas canvas, Size size) => frames.paint(canvas, size, t);
+
+  @override
+  bool shouldRepaint(_FlipPreview old) => true;
+}
+
+/// One photo in its frame: drag to move it, pinch to zoom in. Pops the new
+/// framing (Done) or nothing.
+class _CropSheet extends StatefulWidget {
+  const _CropSheet({required this.photo, required this.aspect, required this.crop});
+
+  final ui.Image photo;
+  final double aspect;
+  final PhotoCrop crop;
+
+  @override
+  State<_CropSheet> createState() => _CropSheetState();
+}
+
+class _CropSheetState extends State<_CropSheet> {
+  late PhotoCrop _crop = widget.crop;
+  double _startZoom = 1;
+
+  void _move(Offset delta, double frameWidth) {
+    final img = widget.photo;
+    final src = coverSource(img, widget.aspect, _crop);
+    // how much of the photo is left over each way to move into
+    final spareX = (img.width - src.width) / 2, spareY = (img.height - src.height) / 2;
+    final perPixel = src.width / frameWidth; // photo pixels per screen pixel
+    setState(
+      () => _crop = PhotoCrop(
+        // (the photo follows the finger: the frame moves the other way)
+        x: spareX <= 0 ? 0 : (_crop.x - delta.dx * perPixel / spareX).clamp(-1.0, 1.0),
+        y: spareY <= 0 ? 0 : (_crop.y - delta.dy * perPixel / spareY).clamp(-1.0, 1.0),
+        zoom: _crop.zoom,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final frameW = math.min(size.width - 48, (size.height * 0.5) * widget.aspect);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 18, 24, 12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const StudioLabel('Frame the photo'),
+            const SizedBox(height: 4),
+            const Text(
+              'Drag to move it · pinch to zoom',
+              style: TextStyle(color: StudioInk.muted, fontSize: 12),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: frameW,
+              height: frameW / widget.aspect,
+              child: GestureDetector(
+                onScaleStart: (_) => _startZoom = _crop.zoom,
+                onScaleUpdate: (d) {
+                  final zoom = (_startZoom * d.scale).clamp(1.0, 4.0);
+                  if (zoom != _crop.zoom) _crop = PhotoCrop(x: _crop.x, y: _crop.y, zoom: zoom);
+                  _move(d.focalPointDelta, frameW);
+                },
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: StudioInk.brass, width: 2),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x99000000), blurRadius: 12, offset: Offset(0, 6)),
+                    ],
+                  ),
+                  child: ClipRect(child: CustomPaint(painter: _CropPainter(widget.photo, _crop))),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: _crop.isMiddle ? null : () => setState(() => _crop = PhotoCrop.middle),
+                  style: TextButton.styleFrom(foregroundColor: StudioInk.muted),
+                  child: const Text('Reset'),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, _crop),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: StudioInk.brass,
+                    foregroundColor: const Color(0xFF22150B),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CropPainter extends CustomPainter {
+  _CropPainter(this.photo, this.crop);
+
+  final ui.Image photo;
+  final PhotoCrop crop;
+
+  @override
+  void paint(Canvas canvas, Size size) => drawCover(
+    canvas,
+    photo,
+    Offset.zero & size,
+    crop: crop,
+    paint: Paint()..filterQuality = FilterQuality.medium,
+  );
+
+  @override
+  bool shouldRepaint(_CropPainter old) => old.crop != crop;
 }

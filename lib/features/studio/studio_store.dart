@@ -83,6 +83,7 @@ class StudioWork {
     this.pages = const [],
     this.paper,
     this.pageMs,
+    this.flipStyle,
   });
 
   final String id;
@@ -103,6 +104,10 @@ class StudioWork {
   final String? paper;
   final int? pageMs;
 
+  /// A flip book's change from photo to photo (a FlipStyle name; none for
+  /// those made before: the shutter).
+  final String? flipStyle;
+
   StudioWork copyWith({String? path, String? cover, int? pageMs}) => StudioWork(
     id: id,
     kind: kind,
@@ -112,6 +117,7 @@ class StudioWork {
     pages: pages,
     paper: paper,
     pageMs: pageMs ?? this.pageMs,
+    flipStyle: flipStyle,
   );
 
   bool get isVideo => kind == StudioKind.flipbook;
@@ -125,6 +131,7 @@ class StudioWork {
     if (pages.isNotEmpty) 'pages': pages,
     'paper': ?paper,
     'pageMs': ?pageMs,
+    'flipStyle': ?flipStyle,
   };
 
   static StudioWork? fromJson(Object? j) {
@@ -145,6 +152,7 @@ class StudioWork {
       ],
       paper: j['paper'] as String?,
       pageMs: j['pageMs'] as int?,
+      flipStyle: j['flipStyle'] as String?,
     );
   }
 }

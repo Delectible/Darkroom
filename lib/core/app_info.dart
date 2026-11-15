@@ -3,16 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.6';
+  static const version = '2.3.7';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Photo Room: cards save properly, strip thumbnails look right, pick any card colour from a paint '
-      'palette, and add more photos. '
-      'Slower GIF speeds and cleaner blinds. The wizard sits as a window with the desktop round it and '
-      'stays put when the keyboard opens. Clearer window buttons in dark themes, and layout fixes.';
+      'The Studio album now opens from its leather cover, shows both pages, and turns pages like paper. '
+      'Flip books play in the book exactly as they save, in three styles: page flip, shutter or pile. '
+      'Move and zoom each photo in strips and collages, bookmark sticky notes, and a snappier scrapbook.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

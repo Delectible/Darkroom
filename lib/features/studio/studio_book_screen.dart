@@ -13,6 +13,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/device/upright.dart';
 import 'studio_flip_booklet.dart';
 import 'studio_layout.dart';
+import 'studio_make.dart';
 import 'studio_page_turn.dart';
 import 'studio_render.dart';
 import 'studio_screen.dart';
@@ -1302,8 +1303,21 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
     super.dispose();
   }
 
-  /// The video (made at its speed when it was made: that's how it plays).
-  Future<String?> _ready() async => _work.path;
+  /// The video (at the speed the book was made at: that's how it plays).
+  /// A new book's is made a little after the book: if it isn't there yet
+  /// this waits for it, saying so.
+  Future<String?> _ready() async {
+    if (!_hasPages || File(_work.path).existsSync()) return _work.path;
+    setState(() => _busy = 'Making video…');
+    try {
+      return await StudioMake.flipVideo(_work);
+    } catch (e) {
+      if (mounted) studioNote(context, "Couldn't make the video: $e");
+      return null;
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
 
   Future<void> _save() async {
     final path = await _ready();

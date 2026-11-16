@@ -416,7 +416,23 @@ bool looksScrambled(Uint8List bytes, int w, int h) {
   return noisy >= grid * grid * 0.4;
 }
 
-Future<Uint8List?> _rawOf(ui.Image image, {required bool flat}) async {
+/// Waits for the next frame to be drawn. A picture made off screen is only
+/// certain to be finished by the GPU once a frame has gone through after
+/// it; read back sooner, some phones hand over whatever was in that memory
+/// (see [looksScrambled]). At most 120 ms (nothing may be drawing frames).
+Future<void> settleGpu() async {
+  try {
+    final binding = WidgetsBinding.instance;
+    binding.scheduleFrame();
+    await Future.any([binding.endOfFrame, Future<void>.delayed(const Duration(milliseconds: 120))]);
+  } catch (_) {
+    // (no app running: a plain test)
+  }
+}
+
+/// [image]'s pixels as the GPU gives them, unchecked; [flat]: through a
+/// copy drawn into a plain 8-bit picture. Null if it gives none.
+Future<Uint8List?> rawStudioPixels(ui.Image image, {required bool flat}) async {
   final w = image.width, h = image.height;
   ByteData? data;
   if (flat) {
@@ -435,16 +451,19 @@ Future<Uint8List?> _rawOf(ui.Image image, {required bool flat}) async {
   return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 }
 
-/// [image]'s pixels, read now, checked: if they come back as noise (see
-/// [looksScrambled]) they're read again, a moment later and another way,
-/// a few times; [StudioScrambled] if they never come back right. For a
-/// picture of something on screen (a RepaintBoundary's): read it before
-/// the screen changes.
-Future<StudioPixels> readStudioPixels(ui.Image image) async {
+/// [image]'s pixels. First the GPU is given a frame to finish it
+/// ([settleGpu]: the cure; [settle] false skips that for a first try, where
+/// hundreds are read in a row). Then they're checked all the same: if they
+/// come back as noise (see [looksScrambled]) they're read again, a frame
+/// and a moment later and another way, a few times; [StudioScrambled] if
+/// they never come back right. For a picture of something on screen (a
+/// RepaintBoundary's): read it before the screen changes.
+Future<StudioPixels> readStudioPixels(ui.Image image, {bool settle = true}) async {
   final w = image.width, h = image.height;
   for (var i = 0; i < 4; i++) {
-    if (i > 0) await Future<void>.delayed(Duration(milliseconds: 90 * i));
-    final bytes = await _rawOf(image, flat: i.isOdd);
+    if (settle || i > 0) await settleGpu();
+    if (i > 1) await Future<void>.delayed(Duration(milliseconds: 90 * i));
+    final bytes = await rawStudioPixels(image, flat: i.isOdd);
     if (bytes != null && !looksScrambled(bytes, w, h)) return (bytes: bytes, width: w, height: h);
   }
   throw const StudioScrambled();
@@ -452,11 +471,15 @@ Future<StudioPixels> readStudioPixels(ui.Image image) async {
 
 /// The pixels of the picture [draw] makes, checked like [readStudioPixels];
 /// drawn afresh if it stays scrambled (up to [tries] times).
-Future<StudioPixels> drawStudioPixels(Future<ui.Image> Function() draw, {int tries = 3}) async {
+Future<StudioPixels> drawStudioPixels(
+  Future<ui.Image> Function() draw, {
+  int tries = 3,
+  bool settle = true,
+}) async {
   for (var i = 0; ; i++) {
     final image = await draw();
     try {
-      return await readStudioPixels(image);
+      return await readStudioPixels(image, settle: settle);
     } on StudioScrambled {
       if (i + 1 >= tries) rethrow;
     } finally {
@@ -474,12 +497,32 @@ Future<void> writeStudioPixels(StudioPixels pixels, String path, {int quality = 
   });
 }
 
-/// [image] as a PNG at [path] (the flip book's video frames, for the
-/// encoder): from its checked pixels, so never a frame of noise.
-Future<void> writeStudioPng(ui.Image image, String path) async {
-  final (:bytes, width: w, height: h) = await readStudioPixels(image);
-  await Isolate.run(() {
+/// [pixels] as a PNG at [path] (the flip book's video frames, for the
+/// encoder), on another core.
+Future<void> writeStudioPng(StudioPixels pixels, String path) {
+  final (:bytes, width: w, height: h) = pixels;
+  return Isolate.run(() {
     final out = img.Image.fromBytes(width: w, height: h, bytes: bytes.buffer, numChannels: 4);
     File(path).writeAsBytesSync(img.encodePng(out, level: 1, filter: img.PngFilter.none));
   });
 }
+
+/// The photo at [from] as a JPEG at [to], at most [maxSide] on its longest
+/// side: read, sized and written on another core, never near the GPU (so
+/// it can't come out scrambled).
+Future<void> copyStudioPhoto(String from, String to, {int maxSide = 1200, int quality = 88}) =>
+    Isolate.run(() {
+      final decoded = img.decodeImage(File(from).readAsBytesSync());
+      if (decoded == null) throw StateError('Could not read $from');
+      final pic = img.bakeOrientation(decoded);
+      final s = math.min(1.0, maxSide / math.max(pic.width, pic.height));
+      final out = s < 1
+          ? img.copyResize(
+              pic,
+              width: math.max(1, (pic.width * s).round()),
+              height: math.max(1, (pic.height * s).round()),
+              interpolation: img.Interpolation.average,
+            )
+          : pic;
+      File(to).writeAsBytesSync(img.encodeJpg(out, quality: quality));
+    });

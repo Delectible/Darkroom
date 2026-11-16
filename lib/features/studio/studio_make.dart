@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -43,8 +44,9 @@ class StudioMake {
   static const _frame = Size(1080, 1350);
 
   /// A flip book: the photos one after another, [pageMs] each, changing
-  /// in [style], as a 4:5 MP4. The frames are drawn by the same
-  /// [FlipFrames] the app plays it with, so the two always match.
+  /// in [style]. The book is ready at once (its pages kept, a cover); its
+  /// video, a 4:5 MP4 drawn by the same [FlipFrames] the app plays it with,
+  /// is made afterwards, out of sight (see [flipVideo]).
   static Future<StudioWork> flipBook(
     List<MediaItem> prints,
     StudioPaper paper, {
@@ -53,33 +55,86 @@ class StudioMake {
   }) async {
     final id = _id();
     final dir = await StudioBook.folder();
-    // the photos kept, one a page, for the app to play it from
+    // the photos kept, one a page, for the app to play it from: copied
+    // without the GPU, several at a time
     final keep = Directory('${dir.path}/flipbook_$id');
     await keep.create(recursive: true);
-    final images = await photos(prints, maxSide: 1200);
-    final pages = <String>[];
-    for (var i = 0; i < images.length; i++) {
-      final f = '${keep.path}/page$i.jpg';
-      await writeStudioJpeg(images[i], f, quality: 88);
-      pages.add(f);
+    final from = [for (final m in prints) ?m.outputPath];
+    final pages = [for (var i = 0; i < from.length; i++) '${keep.path}/page$i.jpg'];
+    for (var i = 0; i < from.length; i += 4) {
+      await Future.wait([
+        for (var j = i; j < from.length && j < i + 4; j++)
+          copyStudioPhoto(from[j], pages[j]).catchError((Object _) async {
+            // (a picture the copier can't read: through the GPU after all)
+            final image = await loadStudioImage(from[j], maxSide: 1200);
+            try {
+              await writeStudioJpeg(image, pages[j], quality: 88);
+            } finally {
+              image.dispose();
+            }
+          }),
+      ]);
     }
-    final frames = FlipFrames(photos: images, paper: paper, style: style, pageMs: pageMs);
-    final out = '${dir.path}/flipbook_$id.mp4';
-    final cover = '${dir.path}/flipbook_$id.jpg';
-    // (the cover: the first photo, settled)
-    await writeStudioJpeg(await _frameAt(frames, pageMs * 0.92), cover);
-    await _encode(frames, out);
-    return StudioWork(
+    final work = StudioWork(
       id: id,
       kind: StudioKind.flipbook,
-      path: out,
-      cover: cover,
+      path: '${dir.path}/flipbook_$id.mp4',
+      cover: '${dir.path}/flipbook_$id.jpg',
       createdAt: DateTime.now(),
       pages: pages,
       paper: paper.name,
       pageMs: pageMs,
       flipStyle: style.name,
     );
+    // (the cover: the first photo, settled)
+    final first = await loadStudioImage(pages.first, maxSide: 1200);
+    try {
+      final frames = FlipFrames(photos: [first], paper: paper, style: style, pageMs: pageMs);
+      final pixels = await drawStudioPixels(() => _frameAt(frames, pageMs * 0.92));
+      await writeStudioPixels(pixels, work.cover!);
+    } finally {
+      first.dispose();
+    }
+    // The video once the new book has landed on the table and the Studio's
+    // settled (making it is heavy work); sooner if it's asked for.
+    unawaited(
+      Future<void>.delayed(const Duration(seconds: 5), () => flipVideo(work)).then((_) {}, onError: (_) {}),
+    );
+    return work;
+  }
+
+  static final _videos = <String, Future<String>>{};
+
+  /// [work]'s video, made now if it hasn't been yet (a new book's is made
+  /// a little after the book; one whose making was cut short, when it's
+  /// first wanted). Asked for twice, it's made once.
+  static Future<String> flipVideo(StudioWork work) {
+    if (File(work.path).existsSync()) return Future.value(work.path);
+    return _videos[work.id] ??= _makeVideo(work).whenComplete(() => _videos.remove(work.id));
+  }
+
+  static Future<String> _makeVideo(StudioWork work) async {
+    final images = <ui.Image>[];
+    try {
+      for (final p in work.pages) {
+        images.add(await loadStudioImage(p, maxSide: 1200));
+      }
+      final frames = FlipFrames(
+        photos: images,
+        paper: StudioPaper.values.asNameMap()[work.paper] ?? StudioPaper.cream,
+        style: FlipStyle.named(work.flipStyle),
+        pageMs: work.pageMs ?? pageMsDefault,
+      );
+      // (under another name till it's whole: a half-made file is never taken for it)
+      final part = work.path.replaceFirst(RegExp(r'\.mp4$'), '_part.mp4');
+      await _encode(frames, part);
+      await File(part).rename(work.path);
+      return work.path;
+    } finally {
+      for (final i in images) {
+        i.dispose();
+      }
+    }
   }
 
   static Future<ui.Image> _frameAt(FlipFrames frames, double t) {
@@ -95,14 +150,18 @@ class StudioMake {
       final list = StringBuffer();
       String? last;
       var n = 0;
+      // Each frame drawn and read here, checked; its PNG written on
+      // another core meanwhile, three at a time.
+      final writing = <Future<void>>[];
       for (final k in frames.keyframes()) {
         final f = '${work.path}/f${n++}.png';
-        final image = await _frameAt(frames, k.at);
-        await writeStudioPng(image, f);
-        image.dispose();
+        final pixels = await drawStudioPixels(() => _frameAt(frames, k.at), settle: false);
+        writing.add(writeStudioPng(pixels, f));
+        if (writing.length >= 3) await writing.removeAt(0);
         list.writeln("file '$f'\nduration ${k.hold / 1000}");
         last = f;
       }
+      await Future.wait(writing);
       // (the concat demuxer wants the last file once more)
       if (last != null) list.writeln("file '$last'");
       final listPath = '${work.path}/list.txt';

@@ -30,6 +30,7 @@ import '../../../../core/providers.dart';
 import '../../../../core/skins/camera_skins.dart';
 import '../../../../core/review/review_prompt.dart';
 import '../../../camera/application/camera_session_controller.dart';
+import '../../../studio/studio_readback_check.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 import '../../../cameras/domain/camera_spec.dart';
 import '../../../camera/presentation/body_quality.dart';
@@ -182,6 +183,19 @@ final _tools = <_Tool>[
     'Camera Log',
     'Recent camera session events: opens, closes, errors. Screenshot it when the viewfinder misbehaves.',
     (context, _) => showCameraLog(context),
+  ),
+  _Tool(
+    PixelIcon.imageFile,
+    'Picture Readback Test',
+    'Draws 80 pictures and reads them back from the graphics chip four ways, counting any that come back '
+        'as coloured snow (what some saved cards and flip books were). Takes a few seconds; the result is '
+        'copied, to paste into a message.',
+    (context, _) async {
+      final report = await studioReadbackReport();
+      await Clipboard.setData(ClipboardData(text: report));
+      if (!context.mounted) return;
+      await showWin98MessageBox(context, title: 'Picture Readback Test', message: '$report\n\n(Copied.)');
+    },
   ),
   _Tool(
     PixelIcon.error,
@@ -617,7 +631,7 @@ final _groups = <(String, List<String>)>[
   ('Darkroom', ['Darkroom Development', 'Develop Everything Now', 'Development Stats']),
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
   ('Speed Test Switches', [for (final (name, _, _) in _speedTests) name]),
-  ('Diagnostics', ['Camera Log', 'Crash Reports', 'Test Crash']),
+  ('Diagnostics', ['Camera Log', 'Picture Readback Test', 'Crash Reports', 'Test Crash']),
   ('First Run & Prompts', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt', 'Lag Prompt']),
 ];
 

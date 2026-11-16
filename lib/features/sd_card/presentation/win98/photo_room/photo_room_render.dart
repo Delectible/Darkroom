@@ -518,7 +518,7 @@ Future<Uint8List> encodeGif(
   final frames = <(Uint8List, int)>[];
   Future<void> add(ui.Image frame, int ms) async {
     // (checked: a frame of noise read back from the GPU is read again)
-    final pixels = await readStudioPixels(frame);
+    final pixels = await readStudioPixels(frame, settle: false);
     frames.add((pixels.bytes, (ms / 10).round().clamp(2, 300)));
   }
 

@@ -179,7 +179,11 @@ class StudioBook extends AsyncNotifier<List<StudioWork>> {
       if (list is! List) return const [];
       return [
         for (final j in list)
-          if (StudioWork.fromJson(j) case final w? when File(w.path).existsSync()) w,
+          // (a flip book is its pages: its video may not be made yet)
+          if (StudioWork.fromJson(j) case final w?
+              when File(w.kind == StudioKind.flipbook && w.pages.isNotEmpty ? w.pages.first : w.path)
+                  .existsSync())
+            w,
       ];
     } catch (_) {
       return const [];

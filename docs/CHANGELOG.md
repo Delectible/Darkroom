@@ -1357,3 +1357,23 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     the board, not grown). Pages are straight at the foot (dip at the
     head only; no wedge there). The left block is leaves + 1 edges thick,
     5 like the right after four turns.
+- 68.13 Snow: a cure tried, a test, and flip books at once (2026-11-16), 2.3.13
+  - Nothing found on the Flutter tracker matching it. Best guess: a
+    picture made off screen (Picture.toImage, a boundary's toImage) isn't
+    certain to be finished by the GPU until a frame has gone through, and
+    toByteData read sooner gets whatever was in that memory. settleGpu
+    (schedule a frame, wait for it, 120 ms at most) now comes before
+    every single save's read, and before every re-read. The check and
+    retries of 68.12 stay as the fallback. NOT CONFIRMED on the phone.
+  - Debug > Diagnostics > Picture Readback Test: 20 pictures each of four
+    ways (read at once; after a frame; toImageSync; through a copy),
+    counting scrambled ones and whether a second read cures them. Ask for
+    its result before guessing again.
+  - Flip book pages are copied on the CPU (copyStudioPhoto, image
+    package, four at a time): no GPU, can't be snow.
+  - Flip book at once: flipBook makes the pages and cover and returns;
+    the MP4 (StudioMake.flipVideo) is made 5 s later in the background,
+    or when Save/Share video first wants it ("Making video…"), or again
+    from the kept pages if it was cut short. The book lists a flip book
+    by its pages, not its video. Frames' PNGs are written on other cores,
+    three at a time.

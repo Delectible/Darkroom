@@ -1377,3 +1377,14 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     from the kept pages if it was cut short. The book lists a flip book
     by its pages, not its video. Frames' PNGs are written on other cores,
     three at a time.
+- 68.14 Readback test, round two (2026-11-16), 2.3.14
+  - Pixel 9 Pro, 2.3.13: all four drawn-picture rows 0 of 20 scrambled.
+    So a plain drawn picture reads back fine, at once or after a frame:
+    the "read too soon" guess of 68.13 is not it (settleGpu is harmless,
+    left in). What the test didn't cover and the failures all had: real
+    photos (decoded files) and pictures taken from the screen
+    (boundary.toImage, the card's). The test now adds: photo read at
+    once; photo drawn into a picture; the screen as it is, at 1500
+    across, and at 1500 after a frame (8 each). Next step depends on
+    which row shows snow: photos -> decode them on the CPU; screen ->
+    draw the card on a canvas.

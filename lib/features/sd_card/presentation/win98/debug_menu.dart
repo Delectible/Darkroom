@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart' show RenderRepaintBoundary;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gpu/gpu.dart' as gpu;
@@ -187,11 +188,18 @@ final _tools = <_Tool>[
   _Tool(
     PixelIcon.imageFile,
     'Picture Readback Test',
-    'Draws 80 pictures and reads them back from the graphics chip four ways, counting any that come back '
+    'Makes pictures the ways the Studio and Photo Room do (drawn, from your photos, from the screen) and '
+        'reads them back from the graphics chip, counting any that come back '
         'as coloured snow (what some saved cards and flip books were). Takes a few seconds; the result is '
         'copied, to paste into a message.',
-    (context, _) async {
-      final report = await studioReadbackReport();
+    (context, ref) async {
+      final report = await studioReadbackReport(
+        photos: [
+          for (final m in ref.read(cDriveFilesProvider).where((m) => !m.isVideo).take(6)) ?m.outputPath,
+        ],
+        screen: context.findAncestorRenderObjectOfType<RenderRepaintBoundary>(),
+        screenRatio: MediaQuery.devicePixelRatioOf(context),
+      );
       await Clipboard.setData(ClipboardData(text: report));
       if (!context.mounted) return;
       await showWin98MessageBox(context, title: 'Picture Readback Test', message: '$report\n\n(Copied.)');

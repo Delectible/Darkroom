@@ -1411,3 +1411,11 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     page and the precache so they match.
   - Not measured on a phone yet: ask for Debug > Performance Report after
     using the corkboard, Studio and book, then do the corkboard from it.
+- 68.17 Readback test, round two's result (2026-11-16)
+  - Pixel 9 Pro, 2.3.14: every row 0 scrambled, photos and screen
+    captures (as shown and at 1500) included. The test can't make the
+    snow; cards, flip books and GIFs have been fine since 2.3.13. Cause
+    still unknown (it needed something the test lacks: the wizard's page
+    change mid-save, memory pressure, many reads in a row). The check and
+    retries stay. If snow comes back: get the exact steps, and whether
+    "The picture came out scrambled" was shown.

@@ -727,7 +727,9 @@ class _BookBody extends CustomPainter {
         ..lineTo(spine - (leftPage ? 0.01 : 0), y + dir * (n + 1));
       if (leftPage) wedge.quadraticBezierTo(spine - g * 0.35, y + dir * 0.5, spine - g, y + dir * 0.5);
       wedge.close();
-      canvas.drawPath(wedge, Paint()..color = const Color(0xFF24150C));
+      // (at the head: the dark of the gutter. At the tail the pages below
+      // show in the dip: paper, not a black notch in the middle of them)
+      canvas.drawPath(wedge, Paint()..color = top ? const Color(0xFF24150C) : const Color(0xFFD9CDB5));
       canvas.restore();
       // the headband: a little striped silk roll across the spine (at the
       // head in the pages' dip; at the tail below the whole block of pages)
@@ -1104,18 +1106,26 @@ class _AlbumPage extends StatelessWidget {
     final nudge = Offset((rnd.nextDouble() - 0.5) * 0.03 * u, (rnd.nextDouble() - 0.5) * 0.03 * u);
     final r = Rect.fromLTWH(unit.left * u, unit.top * u, unit.width * u, unit.height * u);
     // (a touch smaller than its spot: room to turn without touching)
-    var shown = Rect.fromCenter(
-      center: r.center + drift + nudge,
-      width: r.width * 0.93,
-      height: r.height * 0.93,
+    var wide = r.width * 0.93, tall = r.height * 0.93;
+    // Never off the page, and well clear of the page number at its foot:
+    // measured as it lies, turned (its corners reach further than its box).
+    final page = Rect.fromLTRB(0.04 * u, 0.04 * u, 0.96 * u, u / bookPageAspect - 0.125 * u);
+    final c = math.cos(turn).abs(), s = math.sin(turn).abs();
+    final fit = math.min(
+      1.0,
+      math.min(page.width / (wide * c + tall * s), page.height / (wide * s + tall * c)),
     );
-    // (never off the page)
-    final page = Rect.fromLTWH(0.03 * u, 0.03 * u, u * 0.94, u / bookPageAspect - 0.1 * u);
-    shown = shown.shift(
-      Offset(
-        math.max(0, page.left - shown.left) - math.max(0, shown.right - page.right),
-        math.max(0, page.top - shown.top) - math.max(0, shown.bottom - page.bottom),
+    wide *= fit;
+    tall *= fit;
+    final reachX = (wide * c + tall * s) / 2, reachY = (wide * s + tall * c) / 2;
+    final centre = r.center + drift + nudge;
+    final shown = Rect.fromCenter(
+      center: Offset(
+        centre.dx.clamp(page.left + reachX, page.right - reachX),
+        centre.dy.clamp(page.top + reachY, page.bottom - reachY),
       ),
+      width: wide,
+      height: tall,
     );
     return Positioned.fromRect(
       rect: shown,
@@ -1140,7 +1150,8 @@ void _open(BuildContext context, StudioWork w) => Navigator.of(context).push(
 );
 
 /// A piece as it sits on the page: strips taped at the top, collages held
-/// by photo corners, a flip book as its booklet (riffling now and then).
+/// by photo corners, a flip book as a little stapled book, its pages
+/// flicking over.
 class _StuckDown extends StatelessWidget {
   const _StuckDown({required this.work, required this.unit, required this.seed});
 
@@ -1151,9 +1162,7 @@ class _StuckDown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (work.kind == StudioKind.flipbook) {
-      return Center(
-        child: FlipBooklet(work: work, riffle: Riffle.loop),
-      );
+      return Center(child: StapledFlipBook(work: work));
     }
     final rnd = math.Random(seed);
     final picture = DecoratedBox(

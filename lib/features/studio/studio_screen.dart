@@ -149,8 +149,55 @@ class StudioScreen extends ConsumerStatefulWidget {
   ConsumerState<StudioScreen> createState() => _StudioScreenState();
 }
 
-class _StudioScreenState extends ConsumerState<StudioScreen> {
+class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerProviderStateMixin {
   static const _kinds = [StudioKind.strip, StudioKind.collage, StudioKind.scrapbook, StudioKind.flipbook];
+
+  // The prints slide into the tray from the right each time the Studio is
+  // opened, one after another, once their pictures are ready (so none is
+  // seen loading).
+  late final AnimationController _arrive = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 950),
+  );
+  bool _arriving = false;
+
+  @override
+  void dispose() {
+    _arrive.dispose();
+    super.dispose();
+  }
+
+  void _bringIn(List<MediaItem> prints) {
+    if (_arriving || prints.isEmpty) return;
+    _arriving = true;
+    final ready = Future.wait([
+      for (final m in prints.take(8))
+        if (m.thumbPath ?? m.outputPath case final path?)
+          precacheImage(
+            ResizeImage.resizeIfNeeded(300, null, FileImage(File(path))),
+            context,
+            onError: (_, _) {},
+          ),
+    ]);
+    // (not held up for long by a slow picture)
+    unawaited(
+      ready.timeout(const Duration(milliseconds: 1200), onTimeout: () => const []).whenComplete(() {
+        if (mounted) unawaited(_arrive.forward());
+      }),
+    );
+  }
+
+  /// [child], the tray's [i]th print, where it is on its way in.
+  Widget _onItsWayIn(int i, Widget child) => AnimatedBuilder(
+    animation: _arrive,
+    child: child,
+    builder: (context, child) {
+      if (_arrive.isCompleted) return child!;
+      final t = ((_arrive.value - math.min(i, 7) * 0.08) / 0.44).clamp(0.0, 1.0);
+      final e = Curves.easeOutCubic.transform(t);
+      return Transform.translate(offset: Offset((1 - e) * MediaQuery.sizeOf(context).width, 0), child: child);
+    },
+  );
 
   List<MediaItem> _prints() {
     final ids = ref.watch(studioProvider);
@@ -231,6 +278,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
   @override
   Widget build(BuildContext context) {
     final prints = _prints();
+    _bringIn(prints);
     final works = ref.watch(studioBookProvider).value?.length ?? 0;
     final size = MediaQuery.sizeOf(context);
     final sideways = size.width > size.height * 1.2;
@@ -319,13 +367,16 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
                               itemBuilder: (context, i) => ReorderableDelayedDragStartListener(
                                 key: ValueKey(prints[i].id),
                                 index: i,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7),
-                                  child: Builder(
-                                    builder: (anchor) => TrayPrint(
-                                      item: prints[i],
-                                      turn: ((prints[i].id.hashCode % 9) - 4) / 90,
-                                      onTap: () => _printMenu(prints[i], anchor),
+                                child: _onItsWayIn(
+                                  i,
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7),
+                                    child: Builder(
+                                      builder: (anchor) => TrayPrint(
+                                        item: prints[i],
+                                        turn: ((prints[i].id.hashCode % 9) - 4) / 90,
+                                        onTap: () => _printMenu(prints[i], anchor),
+                                      ),
                                     ),
                                   ),
                                 ),

@@ -1320,3 +1320,17 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     now shrink to fit), the viewer's Send/Rename/Delete ran off (they
     shrink to fit), the Photo Room wizard's first page overflowed on
     short screens (it scrolls).
+- 68.11 Book and Studio touches (2026-11-16), 2.3.12
+  - The black notch above the tail headband was the gutter's dark wedge
+    showing in the page's dip: right at the head, wrong at the tail (the
+    pages below are there). Paper colour at the tail now.
+  - Pieces kept clear of the page number: placed by their turned bounds
+    (corners reach further than the box), bottom limit 0.125 page widths
+    up, shrunk if they can't fit.
+  - Flip books in the album: StapledFlipBook, a little book of prints
+    stapled down its left edge, each page flicking up on the staples to
+    show the next photo, at the book's own pace. Same for every style
+    (the style plays when it's opened). No photos kept: the old booklet.
+  - Studio: the tray's prints slide in from the right each time it's
+    opened, staggered, after their thumbnails are decoded (1.2 s at most),
+    so none is seen loading.

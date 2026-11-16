@@ -10,9 +10,9 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'Greeting cards from the Photo Room save properly again (they came out as noise), with new clip art. '
-      'Darkroom 98: Edit has Deselect All and Multi-Select (tap files one after another to pick several), '
-      'menus stay on the screen, and windows fit at 640 x 480 with large fonts. The album opens and turns '
-      'more cleanly.';
+      'Darkroom 98: Edit has Deselect All and Multi-Select, menus stay on the screen, and windows fit at '
+      '640 x 480 with large fonts. The Studio: prints slide into the tray as it opens, flip books sit in '
+      'the album as little stapled books, and the album opens and turns more cleanly.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

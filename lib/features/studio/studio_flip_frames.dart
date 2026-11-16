@@ -7,7 +7,7 @@ import 'studio_render.dart';
 
 /// How a flip book goes from one photo to the next.
 enum FlipStyle {
-  /// A spiral-bound pad on the table: each page lifts towards you, bends,
+  /// A pad on the table, bound along its top: each page lifts towards you, bends,
   /// and goes over the top onto the pages already turned.
   flip('Page flip'),
 
@@ -36,15 +36,16 @@ class FlipFrames {
   final int pageMs;
 
   int get length => photos.length;
-  int get totalMs => length * pageMs;
+  int get totalMs => length * pageMs + (style == FlipStyle.pile ? clearMs + bareMs : 0);
 
   static const _shakeMs = 120, _flashMs = 34;
 
   /// How long a page's change takes (the flip, the drop).
   int get changeMs => math.min(pageMs * 0.6, style == FlipStyle.pile ? 280.0 : 420.0).round();
 
-  /// The pile's last moments: its prints swept off the table.
-  int get clearMs => math.min(pageMs - changeMs, 420);
+  /// After the pile's last print has had its time: the prints swept off
+  /// the table, then the table bare for a moment before it starts again.
+  static const clearMs = 620, bareMs = 260;
 
   /// The video's frames: each moment and how long it holds. Changes are
   /// drawn at 30 frames a second, the still parts once.
@@ -66,14 +67,17 @@ class FlipFrames {
           }
           marks.add(changeMs.toDouble());
           if (style == FlipStyle.pile && page == length - 1) {
-            for (var s = pageMs - clearMs.toDouble(); s < pageMs; s += 1000 / 30) {
+            for (var s = pageMs.toDouble(); s < pageMs + clearMs; s += 1000 / 30) {
               marks.add(s);
             }
+            marks.add(pageMs + clearMs.toDouble());
           }
       }
+      // (the pile's last page runs on: the sweep and the bare table)
+      final ends = page == length - 1 ? totalMs - start : pageMs.toDouble();
       marks.sort();
       for (var i = 0; i < marks.length; i++) {
-        final end = i + 1 < marks.length ? marks[i + 1] : pageMs.toDouble();
+        final end = i + 1 < marks.length ? marks[i + 1] : ends;
         if (end - marks[i] < 1) continue;
         out.add((at: start + marks[i], hold: end - marks[i]));
       }
@@ -177,9 +181,8 @@ class FlipFrames {
     final centre = size.center(Offset.zero);
     // at the very end the pile's swept off to the left, top print first,
     // leaving the bare table the first print drops onto again
-    final sweep = page == length - 1 && clearMs > 0
-        ? ((into - (pageMs - clearMs)) / clearMs).clamp(0.0, 1.0)
-        : 0.0;
+    final sweep = page == length - 1 ? ((into - pageMs) / clearMs).clamp(0.0, 1.0) : 0.0;
+    if (sweep >= 1) return;
     Offset swept(int fromTop) {
       if (sweep <= 0) return Offset.zero;
       final local = Curves.easeIn.transform(((sweep - fromTop * 0.1) / 0.6).clamp(0.0, 1.0));
@@ -216,7 +219,7 @@ class FlipFrames {
     );
   }
 
-  // ---- page flip: a spiral-bound pad, each page lifted and turned over ----
+  // ---- page flip: a pad, each page lifted and turned over ----
 
   /// The pad's top page: bound along its top edge, room above it for the
   /// pages already turned.
@@ -282,7 +285,6 @@ class FlipFrames {
     if (q < 1 && length > 1) {
       _turningPage(c, size, r, photos[(page - 1 + length) % length], q);
     }
-    _coils(c, size, r);
   }
 
   /// The page going over: lifted from its foot towards you, bowed (the
@@ -345,56 +347,6 @@ class FlipFrames {
       final shade = (front ? 0.24 : 0.18) * math.sin(angle).abs();
       c.drawRect(face, Paint()..color = Color.fromRGBO(0, 0, 0, shade));
       c.restore();
-    }
-  }
-
-  /// Wire coils along the pad's top edge, through punched holes.
-  void _coils(Canvas c, Size size, Rect r) {
-    final u = size.width / 1080;
-    const coils = 13;
-    final gap = r.width / coils;
-    final hole = Paint()..color = const Color(0xFF3A3530);
-    for (var i = 0; i < coils; i++) {
-      final x = r.left + gap * (i + 0.5);
-      c.drawCircle(Offset(x, r.top + 30 * u), 9 * u, hole);
-      final coil = Rect.fromCenter(center: Offset(x, r.top + 4 * u), width: gap * 0.5, height: 66 * u);
-      for (final (width, shader) in [
-        (10 * u, null),
-        (
-          5 * u,
-          ui.Gradient.linear(
-            coil.centerLeft,
-            coil.centerRight,
-            const [Color(0xFF8E8E96), Color(0xFFF4F4F7), Color(0xFF6A6A72)],
-            const [0, 0.4, 1],
-          ),
-        ),
-      ]) {
-        c.drawArc(
-          coil,
-          math.pi * 0.12,
-          math.pi * 0.76,
-          false,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = width
-            ..strokeCap = StrokeCap.round
-            ..color = const Color(0xFF2B2B2E)
-            ..shader = shader,
-        );
-        c.drawArc(
-          coil,
-          math.pi * 1.12,
-          math.pi * 0.76,
-          false,
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = width
-            ..strokeCap = StrokeCap.round
-            ..color = const Color(0xFF2B2B2E)
-            ..shader = shader,
-        );
-      }
     }
   }
 }

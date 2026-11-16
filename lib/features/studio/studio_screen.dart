@@ -339,7 +339,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> {
               if (prints.length > 1)
                 const SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.only(top: 2),
+                    padding: EdgeInsets.only(top: 12),
                     child: Text(
                       'Hold a print to move it along',
                       textAlign: TextAlign.center,

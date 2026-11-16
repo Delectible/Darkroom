@@ -601,7 +601,8 @@ Future<MediaItem> keepOnC({
   required PhotoRoomMake make,
   required String ext,
   required Future<void> Function(String path) write,
-  required ui.Image thumb,
+  required int width,
+  required int height,
 }) async {
   final paths = await AppPaths.resolve();
   final dir = Directory('${paths.documentsDir.path}/photoroom');
@@ -630,8 +631,8 @@ Future<MediaItem> keepOnC({
     fileName: file,
     outputPath: out,
     thumbPath: thumbPath,
-    width: thumb.width,
-    height: thumb.height,
+    width: width,
+    height: height,
     capturedAt: now,
   );
   await repo.markSaved([id], moveToC: true);
@@ -645,8 +646,8 @@ Future<MediaItem> keepOnC({
     readyAt: now,
     outputPath: out,
     thumbPath: thumbPath,
-    width: thumb.width,
-    height: thumb.height,
+    width: width,
+    height: height,
     location: MediaLocation.c,
     savedAt: now,
   );

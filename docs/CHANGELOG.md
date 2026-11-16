@@ -1287,3 +1287,22 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     and drags), and a turning page's back is the left page it becomes
     (PageTurn.back is gone). Save takes the right page (the left if
     there's no right). Upright is as before.
+- 68.9 Book polish, flip books, card save, clip art (2026-11-16), 2.3.12
+  - Greeting cards saved as noise (Pixel 9 Pro): the card's picture was
+    taken from the screen, then the page changed to Saving before its
+    pixels were read, and the GPU had reused them. readStudioPixels reads
+    them at once (through a plain 8-bit copy); keepOnC takes a width and
+    height, not an image.
+  - Book: left of the hinge the spine and headbands stay under the front
+    board until it's nearly down (they drew over it in the air); the tail
+    headband sits below the whole block of pages, not in the page's dip.
+  - Page turn: its shadows scale with how far the page is off the pages
+    (_Shade.lift), so nothing is left to vanish when it lands.
+  - Studio: "Hold a print to move it along" 10 px lower, clear of the
+    tray's shadow.
+  - Flip book, Page flip: the wire coils are gone (drawn flat over the
+    turning page). Pile: after the last print's time the pile is swept
+    off (620 ms) and the table left bare (260 ms) before it loops
+    (totalMs is longer by that for piles; the video too).
+  - Photo Room clip art: confetti cannon in place of the cake; gift,
+    crown, rocket, rainbow, lightning bolt added.

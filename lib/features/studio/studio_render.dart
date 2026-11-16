@@ -370,11 +370,32 @@ Future<ui.Image> renderCollage(
 }
 
 /// [image] as a JPEG at [path] (encoded off the UI isolate).
-Future<void> writeStudioJpeg(ui.Image image, String path, {int quality = 92}) async {
-  final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-  if (data == null) throw StateError('No pixels');
+Future<void> writeStudioJpeg(ui.Image image, String path, {int quality = 92}) async =>
+    writeStudioPixels(await readStudioPixels(image), path, quality: quality);
+
+/// A picture's pixels (RGBA, 8 bits each), off the GPU.
+typedef StudioPixels = ({Uint8List bytes, int width, int height});
+
+/// [image]'s pixels, read now. For a picture of something on screen (a
+/// RepaintBoundary's): read it before the screen changes, or the GPU may
+/// have reused its memory (a saved card that was all noise). It's drawn
+/// into a plain 8-bit picture first, whatever the screen's own format.
+Future<StudioPixels> readStudioPixels(ui.Image image) async {
   final w = image.width, h = image.height;
-  final bytes = data.buffer.asUint8List();
+  final rec = ui.PictureRecorder();
+  Canvas(rec).drawImage(image, Offset.zero, Paint());
+  final picture = rec.endRecording();
+  final flat = await picture.toImage(w, h);
+  picture.dispose();
+  final data = await flat.toByteData(format: ui.ImageByteFormat.rawRgba);
+  flat.dispose();
+  if (data == null || data.lengthInBytes != w * h * 4) throw StateError('No pixels');
+  return (bytes: data.buffer.asUint8List(), width: w, height: h);
+}
+
+/// [pixels] as a JPEG at [path].
+Future<void> writeStudioPixels(StudioPixels pixels, String path, {int quality = 92}) async {
+  final (:bytes, width: w, height: h) = pixels;
   await Isolate.run(() {
     final out = img.Image.fromBytes(width: w, height: h, bytes: bytes.buffer, numChannels: 4);
     File(path).writeAsBytesSync(img.encodeJpg(out, quality: quality));

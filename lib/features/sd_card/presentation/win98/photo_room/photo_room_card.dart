@@ -23,13 +23,18 @@ enum WordArtStyle {
 const clipArt = [
   PixelIcon.clipSun,
   PixelIcon.clipBalloon,
-  PixelIcon.clipCake,
+  PixelIcon.clipConfetti,
   PixelIcon.clipHeart,
   PixelIcon.clipStar,
   PixelIcon.clipFlower,
   PixelIcon.clipNote,
   PixelIcon.clipSmiley,
   PixelIcon.clipComputer,
+  PixelIcon.clipGift,
+  PixelIcon.clipCrown,
+  PixelIcon.clipRocket,
+  PixelIcon.clipRainbow,
+  PixelIcon.clipBolt,
 ];
 
 enum CardBitKind { photo, word, clip }

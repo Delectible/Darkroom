@@ -3,15 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.11';
+  static const version = '2.3.12';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The Studio album held sideways now fills both pages. Fixed: a stray page over the inside cover when '
-      'turning back to page one, flickering shadows when a page is let go, and the headband popping in as '
-      'the book opens.';
+      'Greeting cards from the Photo Room save properly again (they came out as noise). New clip art: a '
+      'confetti cannon, a gift, a crown, a rocket, a rainbow and a lightning bolt. The album opens and turns '
+      'more cleanly, and the Pile flip book clears the table before it starts again.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

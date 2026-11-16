@@ -234,6 +234,13 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
       corner = _bind(corner);
     }
     final fold = _Fold(Offset(size.width, _bottom ? h : 0), corner, size);
+    // The shadows are as strong as the page is far from lying down, either
+    // side: none left to vanish when it lands.
+    final cy = _bottom ? h : 0.0;
+    final lift =
+        (math.min((corner - Offset(size.width, cy)).distance, (corner - Offset(-size.width, cy)).distance) /
+                (size.width * 0.7))
+            .clamp(0.0, 1.0);
     // (all but flat: the same two pages as when it's down, nothing blinking)
     if (fold.flat) return _lying(context, top);
     return Stack(
@@ -243,9 +250,9 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
         // (beneath a page coming back: the left page before it)
         _leftOf(context, top),
         _right(_page(context, under)),
-        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.under))),
+        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.under, lift))),
         _right(ClipPath(clipper: _PolyClip(fold.kept), child: _page(context, top))),
-        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.flapShadow))),
+        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.flapShadow, lift))),
         // the page's back: the left page it becomes, turned over with it
         _right(
           Transform(
@@ -256,7 +263,7 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
             ),
           ),
         ),
-        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.flapGloss))),
+        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.flapGloss, lift))),
       ],
     );
   }
@@ -326,10 +333,16 @@ class _PolyClip extends CustomClipper<Path> {
 enum _ShadeKind { under, flapShadow, flapGloss }
 
 class _Shade extends CustomPainter {
-  const _Shade(this.fold, this.kind);
+  const _Shade(this.fold, this.kind, this.lift);
 
   final _Fold fold;
   final _ShadeKind kind;
+
+  /// How far off the pages the turning one is (0 lying .. 1).
+  final double lift;
+
+  Color _black(double alpha) => Color.fromRGBO(0, 0, 0, alpha * lift);
+  Color _white(double alpha) => Color.fromRGBO(255, 255, 255, alpha * lift);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -344,7 +357,7 @@ class _Shade extends CustomPainter {
         canvas.clipPath(Path()..addPolygon(f.folded, true));
         canvas.drawRect(
           Offset.zero & size,
-          Paint()..shader = _along(f.mid, f.mid + f.n * w, const [Color(0x66000000), Color(0x00000000)]),
+          Paint()..shader = _along(f.mid, f.mid + f.n * w, [_black(0.4), const Color(0x00000000)]),
         );
       case _ShadeKind.flapShadow:
         // the flap's own shadow on the page it lies over (and the left page)
@@ -358,7 +371,7 @@ class _Shade extends CustomPainter {
         canvas.drawPath(
           Path()..addPolygon([for (final q in f.mirrored) q - f.n * 4], true),
           Paint()
-            ..color = const Color(0x55000000)
+            ..color = _black(0.33)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 9),
         );
         // and the page darkening into the fold
@@ -366,7 +379,7 @@ class _Shade extends CustomPainter {
         canvas.clipPath(Path()..addPolygon(f.kept, true));
         canvas.drawRect(
           Offset.zero & size,
-          Paint()..shader = _along(f.mid, f.mid - f.n * 26, const [Color(0x22000000), Color(0x00000000)]),
+          Paint()..shader = _along(f.mid, f.mid - f.n * 26, [_black(0.13), const Color(0x00000000)]),
         );
         canvas.restore();
       case _ShadeKind.flapGloss:
@@ -379,7 +392,7 @@ class _Shade extends CustomPainter {
             ..shader = _along(
               f.mid,
               f.mid - f.n * w,
-              const [Color(0x30000000), Color(0x10FFFFFF), Color(0x00FFFFFF), Color(0x1A000000)],
+              [_black(0.19), _white(0.06), const Color(0x00FFFFFF), _black(0.1)],
               const [0, 0.25, 0.7, 1],
             ),
         );

@@ -634,7 +634,13 @@ class _BookBody extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final h = size.height;
     final lying = open >= 1, leftPage = leaves > 0;
+    // Left of the hinge the board is over the spine and the headbands till
+    // it's nearly down; they come out from under it as it settles.
+    final from = spine - 10 * ((open - 0.8) / 0.2).clamp(0.0, 1.0);
+    final shown = Rect.fromLTRB(from, -_overhang * 2, size.width + _overhang * 2, h + _overhang * 2);
     // the spine: a rounded back between the boards
+    canvas.save();
+    canvas.clipRect(shown);
     final back = Rect.fromLTRB(spine - 9, -_overhang, spine + 9, h + _overhang);
     canvas.drawRRect(
       RRect.fromRectAndRadius(back, const Radius.circular(5)),
@@ -652,6 +658,7 @@ class _BookBody extends CustomPainter {
           const [0, 0.25, 0.5, 0.75, 1],
         ),
     );
+    canvas.restore();
 
     void block(Rect page, int leaves, {required bool right}) {
       for (var k = leaves; k >= 1; k--) {
@@ -707,8 +714,6 @@ class _BookBody extends CustomPainter {
     // the gutter: dark where the pages dip into the spine, head and tail
     // (shut, or with the front board still in the air, only the right half:
     // the rest is under the board)
-    // The headbands come out from under the board as it lifts.
-    final bandFrom = spine - 10 * (open * 2).clamp(0.0, 1.0);
     final n = pageWidth * _dip, g = pageWidth * _dipLength;
     for (final top in [true, false]) {
       final y = top ? 0.0 : h, dir = top ? 1.0 : -1.0;
@@ -724,17 +729,19 @@ class _BookBody extends CustomPainter {
       wedge.close();
       canvas.drawPath(wedge, Paint()..color = const Color(0xFF24150C));
       canvas.restore();
-      // the headband: a little striped silk roll across the spine
+      // the headband: a little striped silk roll across the spine (at the
+      // head in the pages' dip; at the tail below the whole block of pages)
+      final bandHeight = math.max(4.0, math.min(n * 0.9, 5.5));
       final band = RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: Offset(spine, y + dir * (n * 0.5 - 1)),
+          center: Offset(spine, top ? n * 0.5 - 1 : h + 5 * 1.25 + bandHeight / 2 - 1),
           width: 20,
-          height: math.max(4, n * 0.9),
+          height: bandHeight,
         ),
         const Radius.circular(2.5),
       );
       canvas.save();
-      canvas.clipRect(Rect.fromLTRB(bandFrom, -_overhang, size.width, h + _overhang));
+      canvas.clipRect(shown);
       canvas.clipRRect(band);
       canvas.drawRRect(band, Paint()..color = const Color(0xFFE9DFC8));
       final stripe = Paint()..color = const Color(0xFFA5281F);

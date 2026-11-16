@@ -179,15 +179,21 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
   }
 
   Future<void> _saveOnce() async {
-    // The card is captured as it is on screen, before the page changes to
-    // Saving (and it with it); the pick's outline off.
-    ui.Image? card;
+    // The card is captured as it is on screen, and its pixels read, before
+    // the page changes to Saving (and it with it); the pick's outline off.
+    StudioPixels? card;
     if (_make == PhotoRoomMake.card) {
       _cardEditor.currentState?.unpick();
       await WidgetsBinding.instance.endOfFrame;
       final box = _cardBoundary.currentContext?.findRenderObject();
       if (box is RenderRepaintBoundary && box.hasSize) {
-        card = await box.toImage(pixelRatio: 1500 / box.size.width);
+        final shot = await box.toImage(pixelRatio: 1500 / box.size.width);
+        try {
+          card = await readStudioPixels(shot);
+        } catch (_) {
+          // (said below: the card could not be drawn)
+        }
+        shot.dispose();
       }
       if (!mounted) return;
     }
@@ -215,22 +221,23 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
             make: _make,
             ext: 'GIF',
             write: (p) => File(p).writeAsBytes(bytes),
-            thumb: thumb,
+            width: thumb.width,
+            height: thumb.height,
           );
           thumb.dispose();
         case PhotoRoomMake.card:
           // (the card as it looked, 1500 px across)
-          final image = card;
-          if (image == null) throw StateError('The card could not be drawn');
+          final pixels = card;
+          if (pixels == null) throw StateError('The card could not be drawn');
           made = await keepOnC(
             repo: repo,
             existing: existing,
             make: _make,
             ext: 'JPG',
-            write: (p) => writeStudioJpeg(image, p),
-            thumb: image,
+            write: (p) => writeStudioPixels(pixels, p),
+            width: pixels.width,
+            height: pixels.height,
           );
-          image.dispose();
         default:
           final image = _preview;
           if (image == null) throw StateError('Still drawing');
@@ -240,7 +247,8 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
             make: _make,
             ext: 'JPG',
             write: (p) => writeStudioJpeg(image, p),
-            thumb: image,
+            width: image.width,
+            height: image.height,
           );
       }
       if (!mounted) return;

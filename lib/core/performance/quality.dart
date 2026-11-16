@@ -5,6 +5,8 @@ import 'dart:ui' as dart_ui;
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../diagnostics/perf_recorder.dart';
+
 /// How much drawing this phone gets, steered by how its frames really run.
 ///
 /// Instead of one "fancy graphics" switch, two ladders of small steps, each
@@ -17,18 +19,20 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///  * the app's own work, the processor's ([uiSteps]): a simpler strap, the
 ///    film grain moving 12 times a second instead of 24, a steady 60 Hz.
 ///
-/// Judged only on frames drawn while something moves (PerfRecorder tags
-/// them), in windows of [window] frames: how many of the screen's refreshes
-/// got no new frame, and which side (UI or GPU) took the time. Two bad
-/// windows in a row take a step down the ladder of whichever side is the
-/// bottleneck (a very bad one, two steps at once); six clean ones in a row take the last step back up (once a
-/// step back up goes wrong, no more tries this run). A steady 60 frames a
+/// Judged only on the camera screen's frames drawn while something moves
+/// (PerfRecorder tags them), in windows of [window] frames: how many of the
+/// screen's refreshes got no new frame, and which side (UI or GPU) took the
+/// time. Three bad windows of the last four (a very bad one counts twice)
+/// take one step down the ladder of whichever side is the bottleneck; six
+/// clean ones in a row take the last step back up (once a step back up
+/// goes wrong, no more tries this run). A steady 60 frames a
 /// second is good enough on any screen: a 120 Hz phone held to 60 by Android
 /// (a Pixel while its camera runs) isn't blamed for it (2.1.10: it was, when
 /// its frames weren't very cheap, and stepped all the way down). Below 60, if
 /// frames are cheap, the rate they come at is the one judged against.
-/// Steps are saved, so the next launch starts where this one ended; a new
-/// phone starts by its memory (low RAM: the first two steps taken).
+/// Steps are saved, and the next launch starts one step better than this
+/// one ended; a new phone starts by its memory (low RAM: the first two
+/// steps taken).
 ///
 /// Light: a few comparisons per frame, nothing while nothing moves. Debug >
 /// Performance > Quality Manager shows it all and steps it by hand.
@@ -110,8 +114,20 @@ class Quality {
     _saved = g != null || u != null;
     _gpu = (g ?? 0).clamp(0, gpuSteps.length);
     _ui = (u ?? 0).clamp(0, uiSteps.length);
+    // Each launch starts a step better than the last one ended (the side
+    // with more taken gives one back): a bad few minutes don't stick for
+    // good, and if it's still needed it's taken again.
+    if (_gpu + _ui > 0) {
+      if (_gpu >= _ui) {
+        _gpu--;
+      } else {
+        _ui--;
+      }
+      _prefs?.setInt(_gpuKey, _gpu);
+      _prefs?.setInt(_uiKey, _ui);
+    }
     _apply();
-    if (_saved) _log('started at the saved steps');
+    if (_saved) _log('started a step above the saved steps');
   }
 
   /// A first start on a phone with little memory: begins two steps down
@@ -129,7 +145,7 @@ class Quality {
   static const window = 48;
 
   static final _frames = <({double ui, double gpu, int vsync})>[];
-  static int _bad = 0, _good = 0, _cooldown = 0, _probe = 0;
+  static int _good = 0, _cooldown = 0, _probe = 0;
   static bool _ceiling = false;
   static final _taken = <String>[]; // 'g' / 'u', newest last: the next step up
 
@@ -137,6 +153,14 @@ class Quality {
   /// whether something moved.
   static void frame(double uiMs, double gpuMs, int vsync, bool moving) {
     if (!moving || !auto || paused || !listening) return;
+    // Only the camera screen's frames: every step lightens the camera (its
+    // 3D body, halation, strap, grain), so the corkboard's or the book's
+    // frames stepping it down cost the camera for nothing (2.3.15: an
+    // idle corkboard had taken every step).
+    if (PerfRecorder.screen != 'camera') {
+      _frames.clear();
+      return;
+    }
     _frames.add((ui: uiMs, gpu: gpuMs, vsync: vsync));
     if (_frames.length >= window) _judge();
   }
@@ -158,28 +182,31 @@ class Quality {
       _cooldown--;
       return;
     }
+    // Three bad windows of the last four take a step; a very bad one (a
+    // third of the refreshes or more missed) counts twice. One step at a
+    // time, never two at once (2.3.16: it was two bad in a row, and a very
+    // bad one took two steps: too ready to give up quality).
+    _recent.add(v.bad ? (v.drop >= 0.33 ? 2 : 1) : 0);
+    if (_recent.length > 4) _recent.removeAt(0);
     if (v.bad) {
       _good = 0;
-      // (two bad windows in a row; a very bad one, a third of the
-      // refreshes or more missed, steps down at once, two steps)
-      final severe = v.drop >= 0.33;
-      if (++_bad < (severe ? 1 : 2)) return;
-      _bad = 0;
+      if (_recent.fold<int>(0, (a, b) => a + b) < 3) return;
+      _recent.clear();
       // A step back up that went wrong: down again, and no more tries.
       if (_probe > 0) _ceiling = true;
       stepDown(gpuSide: v.gpuBound, why: v.text);
-      if (severe) stepDown(gpuSide: v.gpuBound, why: 'and again: ${v.text}');
     } else if (v.clean) {
-      _bad = 0;
       if (++_good < 6 || _ceiling || _taken.isEmpty && _gpu == 0 && _ui == 0) return;
       _good = 0;
       stepUp(why: 'room to spare');
       _probe = 3;
     } else {
-      _bad = 0;
       _good = 0;
     }
   }
+
+  // The last four windows: 0 fine, 1 bad, 2 very bad.
+  static final _recent = <int>[];
 
   /// A window's numbers, and what they say (pure: tested).
   static Verdict? verdict(List<({double ui, double gpu, int vsync})> fs, double hz) {
@@ -268,7 +295,8 @@ class Quality {
     _taken.clear();
     _ceiling = false;
     _exhausted = false;
-    _bad = _good = _cooldown = _probe = 0;
+    _good = _cooldown = _probe = 0;
+    _recent.clear();
     _set(0, 0, 'reset');
     _prefs?.remove(_gpuKey);
     _prefs?.remove(_uiKey);

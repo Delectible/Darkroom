@@ -1435,3 +1435,17 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - Report labels: screens 'studio' and 'book'; marks 'book opening' and
     'book page turn' (the last report had no Studio/book lines at all).
   - Owner: thinks the quality manager steps down too readily. Next.
+- 68.19 Quality manager tuned; makers labelled (2026-11-16), 2.3.16
+  - 2.3.15 report: idle corkboard 149 frames (was 2113), scroll 105 fps,
+    book turns 117 fps, quality full. Idle studio 96 fps / 243 slow: the
+    makers and the drop were counted as the Studio.
+  - Quality judged on the camera screen's frames only
+    (PerfRecorder.screen == 'camera'): every step lightens the camera, so
+    other screens stepping it down cost it for nothing (2.3.14: all steps
+    taken, mostly from the idle corkboard).
+  - Steps down: three bad windows of the last four (very bad counts
+    twice), one step at a time (was two in a row, very bad = two steps).
+  - Each launch starts one step above the saved steps (the side with
+    more taken gives one back).
+  - Report: makers as 'maker: strip/collage/scrapbook/flipbook', marks
+    'studio drop' and 'studio prints slide in'.

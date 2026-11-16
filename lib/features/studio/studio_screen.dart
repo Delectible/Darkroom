@@ -194,7 +194,9 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
     // (not held up for long by a slow picture)
     unawaited(
       ready.timeout(const Duration(milliseconds: 1200), onTimeout: () => const []).whenComplete(() {
-        if (mounted) unawaited(_arrive.forward());
+        if (!mounted) return;
+        PerfRecorder.mark('studio prints slide in', hold: const Duration(milliseconds: 1000));
+        unawaited(_arrive.forward());
       }),
     );
   }
@@ -279,10 +281,15 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
       if (picked == null || !mounted) return;
       chosen = picked;
     }
+    // (each maker its own lines in Debug > Performance Report, and the
+    // drop its own: not counted as the Studio sitting idle)
+    PerfRecorder.screen = 'maker: ${kind.name}';
     final made = await Navigator.of(context)
         .push<StudioWork>(makerRoute(StudioMaker(kind: kind, prints: chosen)));
+    PerfRecorder.screen = 'studio';
     if (made == null || !mounted) return;
     // out of the maker's white flash: the piece lands on the table
+    PerfRecorder.mark('studio drop', hold: const Duration(milliseconds: 2800));
     await showSnapshotDrop(context, made);
     // (the prints stay on the table for something else; Return all sends them back)
   }

@@ -3,12 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.15';
+  static const version = '2.3.16';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest = 'The corkboard runs more smoothly, especially while prints are developing.';
+  static const latest =
+      'The camera keeps its best picture quality more of the time: other screens no longer make it turn '
+      'its quality down, and it gives up quality less readily.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

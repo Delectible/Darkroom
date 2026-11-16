@@ -1,3 +1,4 @@
+import 'package:darkroom/core/diagnostics/perf_recorder.dart';
 import 'package:darkroom/core/performance/quality.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -93,5 +94,38 @@ void main() {
     expect(Quality.exhausted, isTrue);
     Quality.reset();
     expect(Quality.exhausted, isFalse);
+  });
+
+  // A window of 48 frames at 60 Hz, fed through the judge.
+  // (bad: one refresh in four missed, a quarter: bad, not very bad)
+  void feed({required bool bad, int start = 0}) {
+    var t = start.toDouble();
+    for (var i = 0; i < Quality.window; i++) {
+      Quality.frame(2, bad ? 14 : 4, t.round(), true);
+      t += (bad && i % 3 == 2 ? 33.3 : 16.7) * 1000;
+    }
+  }
+
+  test('judged on the camera only, and slow to step down', () {
+    Quality.reset();
+    Quality.listening = true;
+    addTearDown(() {
+      Quality.listening = false;
+      PerfRecorder.screen = 'camera';
+      Quality.reset();
+    });
+    // the corkboard janking: not the camera's to pay for
+    PerfRecorder.screen = 'corkboard';
+    for (var w = 0; w < 6; w++) {
+      feed(bad: true, start: w * 5000000);
+    }
+    expect(Quality.summary, 'full');
+    // on the camera: two bad windows aren't enough now, three of four are
+    PerfRecorder.screen = 'camera';
+    feed(bad: true, start: 40000000);
+    feed(bad: true, start: 45000000);
+    expect(Quality.summary, 'full');
+    feed(bad: true, start: 50000000);
+    expect(Quality.summary, isNot('full'));
   });
 }

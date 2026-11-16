@@ -52,10 +52,12 @@ CLAUDE.md.)
   run 208's build; releases itself once approved). Before it: 2.2.0 (build
   191, live 2026-11-08), 2.0.3. Newer builds only on TestFlight until the
   owner says "release to iPhone".
-- **Google Play:** production access was refused on 2026-11-01 ("needs more
-  testing"). Plan: keep promoting a stable build to closed testing about
-  weekly (last: 2.3.0, 2026-11-13), then reapply. Internal testing gets every
-  `main` build.
+- **Google Play:** production access granted 2026-11-16 (refused on
+  2026-11-01, "needs more testing"; closed testing got it there). Production
+  releases go out only on "release to Android": `promote-production.yml`
+  (Actions tab, by hand) promotes a build already on internal testing,
+  optionally as a staged rollout. Internal testing still gets every `main`
+  build; closed testing via `promote-closed.yml` as before.
 - **To verify on the owner's phones (not possible in the cloud):** digital
   3D skins swapping in (grip has its own normal map: the desktop preview
   can't draw the digital model), Performance Report numbers (launches, frames,

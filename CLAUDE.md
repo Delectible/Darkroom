@@ -32,6 +32,8 @@ matching section of **`docs/NOTES.md`** before changing an area
 
 - `main` → Play internal testing + TestFlight. Closed testing:
   `promote-closed.yml` when he says a build is stable.
+- `promote-production.yml` (Play production) only on "release to Android"; leave
+  the build number empty.
 - `appstore-release.yml` only on "release to iPhone", after checking App
   Store Connect; never cancel a submission in review.
 - Never run `play-listing.yml` unless asked (the Play Console is the copy).

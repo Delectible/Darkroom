@@ -1,0 +1,69 @@
+name: Promote to production
+# Sends a build that's already on internal testing to the production track
+# (the public Play Store), with its release notes. Run it by hand only, when
+# the owner says a build is ready for everyone: Actions tab > "Promote to
+# production" > Run workflow. Play reviews each production release (usually
+# hours, sometimes a few days) before it goes out.
+#
+# Leave the build number empty for the newest internal build (a version code
+# made fastlane miss the track before: see promote-closed.yml). Rollout under
+# 100 is a staged rollout: Play gives it to that share of phones first; raise
+# it later in the Play Console (Production > Releases > Manage rollout), or
+# run this again with a higher number.
+on:
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Build number to promote (empty = newest on internal testing)'
+        required: false
+        default: ''
+      rollout:
+        description: 'Percent of phones to roll out to (100 = everyone at once)'
+        required: false
+        default: '100'
+permissions:
+  contents: read
+concurrency:
+  group: play-promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    env:
+      SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+    steps:
+      - name: Look for the Play service account
+        run: |
+          if [ -z "$SA" ]; then echo "::error::No PLAY_SERVICE_ACCOUNT_JSON secret."; exit 1; fi
+      - run: sudo gem install fastlane --no-document --quiet
+      - name: Promote internal -> production
+        env:
+          BUILD: ${{ inputs.build }}
+          ROLLOUT: ${{ inputs.rollout }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/play.json"
+          extra=()
+          if [ -n "$BUILD" ]; then extra+=("version_code:$BUILD"); fi
+          pct="${ROLLOUT:-100}"
+          if ! [[ "$pct" =~ ^[0-9]+$ ]] || [ "$pct" -lt 1 ] || [ "$pct" -gt 100 ]; then
+            echo "::error::Rollout must be a whole number from 1 to 100 (got '$pct')."; exit 1
+          fi
+          if [ "$pct" -lt 100 ]; then
+            extra+=("release_status:inProgress" "rollout:$(awk "BEGIN{print $pct/100}")")
+          else
+            extra+=("release_status:completed")
+          fi
+          fastlane run supply \
+            package_name:com.dingo.darkroom \
+            json_key:"$RUNNER_TEMP/play.json" \
+            track:internal \
+            track_promote_to:production \
+            deactivate_on_promote:false \
+            skip_upload_apk:true \
+            skip_upload_aab:true \
+            skip_upload_metadata:true \
+            skip_upload_changelogs:true \
+            skip_upload_images:true \
+            skip_upload_screenshots:true \
+            "${extra[@]}"

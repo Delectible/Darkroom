@@ -134,6 +134,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
   final _cScroll = ScrollController();
   final _aScroll = ScrollController();
   final Set<String> _selected = {};
+
+  /// Edit > Multi-Select: taps add and remove files, nothing opens.
+  bool _multi = false;
   ExplorerPlace? _place;
 
   /// Shut Down plays its own tune and switch-off, not the exit chime.
@@ -890,6 +893,12 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                     ),
                                             ),
                                             Win98MenuItem(
+                                              'Deselect All',
+                                              onSelected: _selected.isEmpty
+                                                  ? null
+                                                  : () => setState(_selected.clear),
+                                            ),
+                                            Win98MenuItem(
                                               'Invert Selection',
                                               onSelected: visible.isEmpty
                                                   ? null
@@ -898,6 +907,12 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                         if (!_selected.remove(m.id)) _selected.add(m.id);
                                                       }
                                                     }),
+                                            ),
+                                            const Win98MenuItem.separator(),
+                                            Win98MenuItem(
+                                              'Multi-Select',
+                                              checked: _multi,
+                                              onSelected: () => setState(() => _multi = !_multi),
                                             ),
                                           ],
                                           'View': () => [
@@ -1063,6 +1078,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                         ),
                                         onSelect: (i) => _go(_tabs[i]),
                                       ),
+                                      // (so files not opening is no surprise)
+                                      if (_multi && place != ExplorerPlace.myComputer)
+                                        _MultiSelectBar(onDone: () => setState(() => _multi = false)),
                                       Expanded(
                                         child: Win98Bevel(
                                           style: BevelStyle.window,
@@ -1140,14 +1158,24 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                                         )
                                                                     ? 'Auto Transfer is Enabled'
                                                                     : null,
+                                                                multi: _multi,
                                                                 onSelect: (m) => setState(() {
-                                                                  _selected
-                                                                    ..clear()
-                                                                    ..add(m.id);
+                                                                  if (_multi) {
+                                                                    if (!_selected.remove(m.id)) {
+                                                                      _selected.add(m.id);
+                                                                    }
+                                                                  } else {
+                                                                    _selected
+                                                                      ..clear()
+                                                                      ..add(m.id);
+                                                                  }
                                                                 }),
                                                                 onOpen: _open,
-                                                                onClearSelection: () =>
-                                                                    setState(_selected.clear),
+                                                                // (a stray tap on the blank part
+                                                                // doesn't throw away what's picked)
+                                                                onClearSelection: () {
+                                                                  if (!_multi) setState(_selected.clear);
+                                                                },
                                                                 onSort: prefsN.sortBy,
                                                               ),
                                                             ),
@@ -1557,4 +1585,36 @@ class _SwipeToCloseState extends ConsumerState<_SwipeToClose> {
       child: widget.child,
     );
   }
+}
+
+/// Shown over the files while Edit > Multi-Select is on: what taps do now,
+/// and the way out.
+class _MultiSelectBar extends StatelessWidget {
+  const _MultiSelectBar({required this.onDone});
+
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    color: W98.navy,
+    padding: const EdgeInsets.fromLTRB(6, 2, 2, 2),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Multi-Select is on: tap files to pick them',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: W98.text.copyWith(color: W98.selectInk),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Win98Button(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          onPressed: onDone,
+          child: const Text('Done'),
+        ),
+      ],
+    ),
+  );
 }

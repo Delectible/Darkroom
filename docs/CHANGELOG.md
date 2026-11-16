@@ -1306,3 +1306,17 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     (totalMs is longer by that for piles; the video too).
   - Photo Room clip art: confetti cannon in place of the cake; gift,
     crown, rocket, rainbow, lightning bolt added.
+- 68.10 Darkroom 98: Multi-Select, menus and large text (2026-11-16), 2.3.12
+  - Edit: Deselect All, and Multi-Select (checked while on): each tap
+    adds a file to the selection or takes it out, nothing opens (no
+    double tap or hold either, so taps land at once). A navy bar over the
+    files says so, with Done. Off: a tap selects that one file alone.
+  - Menus ran off the right of the screen (Tools at any resolution): the
+    drop-down assumed 200 wide. _MenuPlace moves it left to fit; it stays
+    under its title (never up over the bar, where a finger still down
+    would pick from it) and scrolls if too tall for the room below.
+  - 640 x 480 with large fonts, checked by running every Darkroom 98
+    screen test with that as the default: the menu bar lost Help (titles
+    now shrink to fit), the viewer's Send/Rename/Delete ran off (they
+    shrink to fit), the Photo Room wizard's first page overflowed on
+    short screens (it scrolls).

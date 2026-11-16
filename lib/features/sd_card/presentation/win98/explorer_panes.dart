@@ -34,7 +34,12 @@ class ExplorerFilePane extends StatelessWidget {
     this.emptyText,
     this.emptyNote,
     this.folders = const [],
+    this.multi = false,
   });
+
+  /// Multi-Select: a tap adds a file to the selection or takes it out
+  /// (nothing opens), like holding Ctrl.
+  final bool multi;
 
   /// Folders listed first, always (a tap opens one).
   final List<ExplorerFolder> folders;
@@ -80,18 +85,21 @@ class ExplorerFilePane extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: () {
           // Second tap on a selected file opens it (double-click is fiddly
-          // on a phone).
-          if (selected.contains(m.id)) {
+          // on a phone). In Multi-Select every tap goes to [onSelect].
+          if (!multi && selected.contains(m.id)) {
             onOpen(m);
           } else {
             onSelect(m);
           }
         },
-        onDoubleTap: () => onOpen(m),
-        onLongPress: () {
-          onSelect(m);
-          if (m.isReady && !locked) unawaited(shareMedia(anchor, m));
-        },
+        // (no double tap to wait for in Multi-Select: taps land at once)
+        onDoubleTap: multi ? null : () => onOpen(m),
+        onLongPress: multi
+            ? null
+            : () {
+                onSelect(m);
+                if (m.isReady && !locked) unawaited(shareMedia(anchor, m));
+              },
         child: builder(selected.contains(m.id)),
       ),
     );

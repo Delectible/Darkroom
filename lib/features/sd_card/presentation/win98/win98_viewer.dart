@@ -164,24 +164,37 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Builder(
-                          builder: (anchor) => Win98Button(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                            onPressed: () => unawaited(shareMedia(anchor, item)),
-                            child: const Text('Send'),
+                        // (large fonts: the three shrink to fit, not run off)
+                        Flexible(
+                          flex: 8,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Builder(
+                                  builder: (anchor) => Win98Button(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                    onPressed: () => unawaited(shareMedia(anchor, item)),
+                                    child: const Text('Send'),
+                                  ),
+                                ),
+                                const SizedBox(width: 3),
+                                Win98Button(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  onPressed: _rename,
+                                  child: const Text('Rename'),
+                                ),
+                                const SizedBox(width: 3),
+                                Win98Button(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  onPressed: _delete,
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 3),
-                        Win98Button(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                          onPressed: _rename,
-                          child: const Text('Rename'),
-                        ),
-                        const SizedBox(width: 3),
-                        Win98Button(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                          onPressed: _delete,
-                          child: const Text('Delete'),
                         ),
                       ],
                     ),

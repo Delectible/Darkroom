@@ -143,6 +143,24 @@ void main() {
         await tester.tapAt(Offset(land ? 5 : 405, land ? 380 : 900)); // dismiss (off the folder tree)
         await settle(tester);
       }
+      // Edit > Multi-Select: a bar says so over the files; Done ends it.
+      // (on the shortest screens the last menu is still open: shut it)
+      await tester.tapAt(const Offset(2, 2));
+      await settle(tester);
+      await settle(tester);
+      await tester.tap(find.text('C:').first);
+      await settle(tester);
+      await tester.tap(find.text('Edit').first);
+      await settle(tester);
+      await tester.tap(find.text('Multi-Select'));
+      await settle(tester);
+      expect(find.textContaining('Multi-Select is on'), findsOneWidget);
+      await shoot(tester, 'multi');
+      await tester.tap(find.text('Done'));
+      await settle(tester);
+      expect(find.textContaining('Multi-Select is on'), findsNothing);
+      await tester.tap(find.text('My Computer').first);
+      await settle(tester);
       await tester.tap(find.text('Start'));
       await settle(tester);
       await shoot(tester, 'start');

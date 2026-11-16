@@ -399,31 +399,42 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Welcome to the Photo Room Wizard',
-                style: W98.text.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 6),
-              const Text('Make something from the pictures in My Pictures. What would you like to make?'),
-              const SizedBox(height: 6),
-              for (final m in PhotoRoomMake.values)
-                Win98Radio(
-                  selected: _make == m,
-                  label: m.label,
-                  onTap: () => setState(() {
-                    _make = m;
-                    _card = null;
-                  }),
+              // (a short window, or large fonts: this part scrolls)
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Welcome to the Photo Room Wizard',
+                        style: W98.text.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Make something from the pictures in My Pictures. What would you like to make?',
+                      ),
+                      const SizedBox(height: 6),
+                      for (final m in PhotoRoomMake.values)
+                        Win98Radio(
+                          selected: _make == m,
+                          label: m.label,
+                          onTap: () => setState(() {
+                            _make = m;
+                            _card = null;
+                          }),
+                        ),
+                      const SizedBox(height: 4),
+                      Win98GroupBox(
+                        label: _make.label,
+                        child: Padding(
+                          padding: const EdgeInsets.all(6),
+                          child: Text('${_make.blurb}\n\nTakes ${_make.needs} photos.'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              const SizedBox(height: 4),
-              Win98GroupBox(
-                label: _make.label,
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Text('${_make.blurb}\n\nTakes ${_make.needs} photos.'),
-                ),
               ),
-              const Spacer(),
               Text('To continue, click Next.', style: W98.text.copyWith(fontSize: 11)),
             ],
           ),

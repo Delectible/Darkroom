@@ -626,16 +626,11 @@ Future<void> showWin98Menu(
         Win98Scale(
           child: Builder(
             builder: (context) {
-              // Anchor is in real screen pixels; the menu lays out scaled.
-              final screen = MediaQuery.sizeOf(context);
-              return Stack(
-                children: [
-                  Positioned(
-                    left: math.min(topLeft.dx / f, screen.width - 200),
-                    top: topLeft.dy / f,
-                    child: Win98Glass(child: _MenuPanel(items: items)),
-                  ),
-                ],
+              // Anchor is in real screen pixels; the menu lays out scaled,
+              // and is moved in from an edge it would run past.
+              return CustomSingleChildLayout(
+                delegate: _MenuPlace(topLeft / f),
+                child: Win98Glass(child: _MenuPanel(items: items)),
               );
             },
           ),
@@ -651,6 +646,28 @@ Future<void> showWin98Menu(
     if (picked.onSelected != null) Sfx.w98Click.play();
     picked.onSelected?.call();
   }
+}
+
+/// A menu at [at], moved left if it would run off the right of the screen.
+/// It stays under its title (never up over the bar: a finger still down
+/// would pick from it); one too tall for the room below scrolls.
+class _MenuPlace extends SingleChildLayoutDelegate {
+  const _MenuPlace(this.at);
+
+  final Offset at;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) => BoxConstraints(
+    maxWidth: constraints.maxWidth,
+    maxHeight: math.max(60, constraints.maxHeight - at.dy - 2),
+  );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      Offset(math.max(0, math.min(at.dx, size.width - childSize.width - 2)), at.dy);
+
+  @override
+  bool shouldRelayout(_MenuPlace old) => old.at != at;
 }
 
 class _MenuPanel extends StatefulWidget {
@@ -679,63 +696,65 @@ class _MenuPanelState extends State<_MenuPanel> {
           child: Win98Bevel(
             style: BevelStyle.window,
             padding: const EdgeInsets.all(3),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var i = 0; i < widget.items.length; i++)
-                  if (widget.items[i].separator)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 1),
-                      child: Column(
-                        children: [
-                          Divider(height: 1, thickness: 1, color: W98.shadow),
-                          Divider(height: 1, thickness: 1, color: W98.white),
-                        ],
-                      ),
-                    )
-                  else
-                    GestureDetector(
-                      onTapDown: (_) => setState(() => _hot = i),
-                      onTapCancel: () => setState(() => _hot = null),
-                      onTap: widget.items[i].onSelected == null
-                          ? null
-                          : () => Navigator.of(context).pop(widget.items[i]),
-                      child: Container(
-                        color: _hot == i ? W98.navy : Colors.transparent,
-                        padding: const EdgeInsets.fromLTRB(4, 8, 18, 8),
-                        child: Row(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var i = 0; i < widget.items.length; i++)
+                    if (widget.items[i].separator)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 1),
+                        child: Column(
                           children: [
-                            SizedBox(
-                              width: 18,
-                              child: widget.items[i].checked && !widget.items[i].radio
-                                  ? Center(
-                                      child: Win98GlyphView(
-                                        Win98Glyph.check,
-                                        color: _hot == i ? W98.selectInk : W98.ink,
-                                      ),
-                                    )
-                                  : widget.items[i].checked
-                                  ? Text(
-                                      '•',
-                                      style: W98.text.copyWith(
-                                        color: _hot == i ? W98.selectInk : W98.ink,
-                                        fontWeight: FontWeight.w900,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            Text(
-                              widget.items[i].label,
-                              style: widget.items[i].onSelected == null
-                                  ? W98.disabledText
-                                  : W98.text.copyWith(color: _hot == i ? W98.selectInk : W98.ink),
-                            ),
+                            Divider(height: 1, thickness: 1, color: W98.shadow),
+                            Divider(height: 1, thickness: 1, color: W98.white),
                           ],
                         ),
+                      )
+                    else
+                      GestureDetector(
+                        onTapDown: (_) => setState(() => _hot = i),
+                        onTapCancel: () => setState(() => _hot = null),
+                        onTap: widget.items[i].onSelected == null
+                            ? null
+                            : () => Navigator.of(context).pop(widget.items[i]),
+                        child: Container(
+                          color: _hot == i ? W98.navy : Colors.transparent,
+                          padding: const EdgeInsets.fromLTRB(4, 8, 18, 8),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 18,
+                                child: widget.items[i].checked && !widget.items[i].radio
+                                    ? Center(
+                                        child: Win98GlyphView(
+                                          Win98Glyph.check,
+                                          color: _hot == i ? W98.selectInk : W98.ink,
+                                        ),
+                                      )
+                                    : widget.items[i].checked
+                                    ? Text(
+                                        '•',
+                                        style: W98.text.copyWith(
+                                          color: _hot == i ? W98.selectInk : W98.ink,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              Text(
+                                widget.items[i].label,
+                                style: widget.items[i].onSelected == null
+                                    ? W98.disabledText
+                                    : W98.text.copyWith(color: _hot == i ? W98.selectInk : W98.ink),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -776,11 +795,15 @@ class _Win98MenuBarState extends State<Win98MenuBar> {
     while (_keys.length < entries.length) {
       _keys.add(GlobalKey());
     }
+    // (all the titles always there: at 640 x 480 with large fonts they
+    // shrink a little to fit, not run off the window)
     return SizedBox(
       height: 30,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             for (var i = 0; i < entries.length; i++)
               GestureDetector(

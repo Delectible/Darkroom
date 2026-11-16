@@ -9,9 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Cards, flip books and GIFs should no longer come out as coloured snow, and are checked as they are '
-      'saved. A flip book is ready at once: its video is made afterwards, out of sight. Greeting cards '
-      'take up to 8 photos, GIF changes are smoother, and the album opens and lies more like a real one.';
+      'Photo Room: the photo strip has its own text colour, and long GIFs are made several times faster. '
+      'Cards, flip books and GIFs no longer come out as coloured snow, and a flip book is ready at once.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

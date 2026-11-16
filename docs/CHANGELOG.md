@@ -1388,3 +1388,13 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     across, and at 1500 after a frame (8 each). Next step depends on
     which row shows snow: photos -> decode them on the CPU; screen ->
     draw the card on a canvas.
+- 68.15 Strip text colour; GIFs made side by side (2026-11-16), 2.3.14
+  - 2.3.13 on the Pixel: new card, flip book and GIFs all fine (which of
+    68.12/68.13's changes did it isn't known: the checked re-read, the
+    frame's wait, or the pages off the GPU).
+  - Strip: StripInk, the lettering's colour (Auto + 8), a row of swatches
+    under Background. Auto is by the background alone now: it was drawn
+    from the doodles' random run, so it changed with them.
+  - GIF: each frame's 256 colours (NeuQuant + dither, the slow part) are
+    found on 2 to 6 cores at once (_indexOff), then one pass writes the
+    file (the encoder takes ready palette images as they are).

@@ -191,11 +191,30 @@ enum StripFill {
   final Color color;
 }
 
-/// How the doodled strip looks: its fill, caption, the doodles' shuffle
-/// ([seed]) and what's shown.
+/// The strip's lettering: a colour of its own, or one picked to suit the
+/// background.
+enum StripInk {
+  auto('Auto', null),
+  red('Red', Color(0xFFE0001B)),
+  orange('Orange', Color(0xFFFF7A00)),
+  yellow('Yellow', Color(0xFFFFFF00)),
+  green('Green', Color(0xFF008A2E)),
+  blue('Blue', Color(0xFF0050E0)),
+  pink('Pink', Color(0xFFD000C8)),
+  black('Black', Color(0xFF000000)),
+  white('White', Color(0xFFFFFFFF));
+
+  const StripInk(this.label, this.color);
+  final String label;
+  final Color? color;
+}
+
+/// How the doodled strip looks: its fill, lettering, caption, the doodles'
+/// shuffle ([seed]) and what's shown.
 class StripLook {
   const StripLook({
     this.fill = StripFill.lemon,
+    this.ink = StripInk.auto,
     this.caption = 'best day ever!!',
     this.seed = 1,
     this.doodles = true,
@@ -204,6 +223,7 @@ class StripLook {
   });
 
   final StripFill fill;
+  final StripInk ink;
   final String caption;
   final int seed;
   final bool doodles;
@@ -214,6 +234,7 @@ class StripLook {
 
   StripLook copyWith({
     StripFill? fill,
+    StripInk? ink,
     String? caption,
     int? seed,
     bool? doodles,
@@ -221,6 +242,7 @@ class StripLook {
     bool? crooked,
   }) => StripLook(
     fill: fill ?? this.fill,
+    ink: ink ?? this.ink,
     caption: caption ?? this.caption,
     seed: seed ?? this.seed,
     doodles: doodles ?? this.doodles,
@@ -295,8 +317,11 @@ Future<ui.Image> renderRoomStrip(List<ui.Image> photos, StripLook look, DateTime
     // (bright inks on the dark fills)
     final inks = dark ? _brightInks : _inks;
     if (look.doodles) _doodle(c, rnd, cells, Size(w, h), foot, inks);
-    // the caption: pixel letters with a hard shadow, in one of the inks
-    final ink = inks[rnd.nextInt(inks.length)];
+    // the caption: pixel letters with a hard shadow, in the colour picked;
+    // Auto: one that suits the background (the same whatever the doodles
+    // do: it used to change with them)
+    final ink = look.ink.color ?? inks[look.fill.index % inks.length];
+    final dateInk = look.ink.color ?? (dark ? const Color(0xFFFFFFFF) : const Color(0xFF000000));
     final capY = h - foot + 34;
     if (look.caption.trim().isNotEmpty) {
       _pixelText(c, look.caption, Offset(4, capY + 4), 46, shadow, align: TextAlign.center, width: w);
@@ -308,7 +333,7 @@ Future<ui.Image> renderRoomStrip(List<ui.Image> photos, StripLook look, DateTime
         pcDate(date),
         Offset(0, capY + 70),
         26,
-        dark ? const Color(0xDDFFFFFF) : const Color(0xCC000000),
+        dateInk.withValues(alpha: 0.85),
         align: TextAlign.center,
         width: w,
       );
@@ -542,10 +567,43 @@ Future<Uint8List> encodeGif(
   return _encodeOff(frames, w, h);
 }
 
-// (its own function, so only the bytes cross to the other isolate: a
+// The slow part of a GIF is finding each frame's 256 colours. Each frame's
+// are its own, so the frames are shared out over the phone's cores and
+// done side by side; then one pass writes the file.
+// (their own functions, so only bytes cross to the other isolates: a
 // closure inside encodeGif would carry its dart:ui images along)
-Future<Uint8List> _encodeOff(List<(Uint8List, int)> frames, int w, int h) =>
-    Isolate.run(() => _gifBytes(frames, w, h));
+Future<Uint8List> _encodeOff(List<(Uint8List, int)> frames, int w, int h) async {
+  final lanes = (Platform.numberOfProcessors - 2).clamp(2, 6);
+  final per = math.max(1, (frames.length / lanes).ceil());
+  final parts = await Future.wait([
+    for (var i = 0; i < frames.length; i += per)
+      _indexOff([for (final f in frames.sublist(i, math.min(i + per, frames.length))) f.$1], w, h),
+  ]);
+  return _joinOff([for (final p in parts) ...p], [for (final f in frames) f.$2]);
+}
+
+Future<List<img.Image>> _indexOff(List<Uint8List> rgba, int w, int h) => Isolate.run(
+  () => [
+    for (final f in rgba)
+      () {
+        final frame = img.Image.fromBytes(width: w, height: h, bytes: f.buffer, numChannels: 4);
+        return img.ditherImage(
+          frame,
+          quantizer: img.NeuralQuantizer(frame, numberOfColors: 256, samplingFactor: 20),
+          kernel: img.DitherKernel.floydSteinberg,
+          scanOrder: img.DitherScanOrder.raster,
+        );
+      }(),
+  ],
+);
+
+Future<Uint8List> _joinOff(List<img.Image> indexed, List<int> hundredths) => Isolate.run(() {
+  final enc = img.GifEncoder(repeat: 0);
+  for (var i = 0; i < indexed.length; i++) {
+    enc.addFrame(indexed[i], duration: hundredths[i]);
+  }
+  return enc.finish()!;
+});
 
 bool _thumbsRepaired = false;
 
@@ -583,17 +641,6 @@ void _thumbFromFile(String from, String to) {
     interpolation: img.Interpolation.average,
   );
   File(to).writeAsBytesSync(img.encodeJpg(small, quality: 85));
-}
-
-Uint8List _gifBytes(List<(Uint8List, int)> frames, int w, int h) {
-  final enc = img.GifEncoder(repeat: 0, samplingFactor: 20);
-  for (final (f, cs) in frames) {
-    enc.addFrame(
-      img.Image.fromBytes(width: w, height: h, bytes: f.buffer, numChannels: 4),
-      duration: cs,
-    );
-  }
-  return enc.finish()!;
 }
 
 /// Files [bytes] (a JPEG or GIF made by Photo Room) on C: in its folder:

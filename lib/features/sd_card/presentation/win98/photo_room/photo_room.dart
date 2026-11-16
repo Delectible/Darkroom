@@ -754,6 +754,46 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
       ),
     ),
     const SizedBox(height: 4),
+    // the lettering's colour, its own (Auto: one to suit the background)
+    Row(
+      children: [
+        Text('Text:', style: W98.text.copyWith(fontSize: 11)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Wrap(
+            spacing: 3,
+            runSpacing: 3,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final k in StripInk.values)
+                Tooltip(
+                  message: k.label,
+                  child: GestureDetector(
+                    onTap: () => _restrip(_strip.copyWith(ink: k)),
+                    child: Win98Bevel(
+                      style: _strip.ink == k ? BevelStyle.pressed : BevelStyle.sunken,
+                      padding: const EdgeInsets.all(2),
+                      child: Container(
+                        width: k.color == null ? 32 : 18,
+                        height: 14,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: k.color,
+                          border: _strip.ink == k ? Border.all(color: W98.windowInk) : null,
+                        ),
+                        child: k.color == null
+                            ? Text('Auto', style: W98.text.copyWith(fontSize: 10, height: 1))
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    ),
+    const SizedBox(height: 4),
     Wrap(
       spacing: 4,
       runSpacing: 4,

@@ -143,7 +143,9 @@ void main() {
         expect(find.byType(RawImage), findsOneWidget);
         expect(find.text('Shuffle doodles'), findsOneWidget);
         await shoot(tester, 'strip');
-        // a new shuffle, a new fill
+        // a new shuffle, a new fill (on a short screen the options scroll)
+        await tester.ensureVisible(find.text('Shuffle doodles'));
+        await tester.pump();
         await tester.runAsync(() async {
           await tester.tap(find.text('Shuffle doodles'));
           await tester.tap(find.text('Sky'));
@@ -155,6 +157,8 @@ void main() {
         await shoot(tester, 'strip_shuffled');
         // the caption box with the keyboard up: it moves, the wizard stays put
         tester.view.viewInsets = FakeViewPadding(bottom: screen.size.height * 0.42);
+        await tester.ensureVisible(find.text('Caption...'));
+        await tester.pump();
         await tester.tap(find.text('Caption...'));
         await tester.pumpAndSettle();
         expect(find.text('Your text:'), findsOneWidget);

@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/device/upright.dart';
 import '../../core/db/media_repository.dart';
 import '../../core/device/haptics.dart';
+import '../../core/diagnostics/perf_recorder.dart';
 import '../../core/providers.dart';
 import 'studio_book_screen.dart';
 import 'studio_makers.dart';
@@ -161,8 +162,19 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
   );
   bool _arriving = false;
 
+  // (its own lines in Debug > Performance Report)
+  late final String _wasScreen = PerfRecorder.screen;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasScreen;
+    PerfRecorder.screen = 'studio';
+  }
+
   @override
   void dispose() {
+    PerfRecorder.screen = _wasScreen;
     _arrive.dispose();
     super.dispose();
   }

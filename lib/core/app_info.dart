@@ -3,15 +3,12 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.14';
+  static const version = '2.3.15';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
-  static const latest =
-      'Photo Room: the photo strip has its own text colour, and long GIFs are made several times faster. '
-      'The Studio album opens and turns more smoothly. Cards, flip books and GIFs no longer come out as '
-      'coloured snow, and a flip book is ready at once.';
+  static const latest = 'The corkboard runs more smoothly, especially while prints are developing.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

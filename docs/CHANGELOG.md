@@ -1419,3 +1419,19 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     change mid-save, memory pressure, many reads in a row). The check and
     retries stay. If snow comes back: get the exact steps, and whether
     "The picture came out scrambled" was shown.
+- 68.18 Corkboard performance from the report (2026-11-16), 2.3.15
+  - Report (Pixel 9 Pro, 2.3.14, quality manager at all steps, 60 Hz):
+    idle corkboard 2113 frames, 50 fps, GPU 8.8 avg / 16 p90 / 88 max,
+    UI spikes ~20 ms; the board was drawing constantly while idle.
+  - Whole board rebuilt every second (secondTickerProvider at the top of
+    its build). Now built on a Timer for the next print's readyAt; only
+    the darkroom strip keeps the per-second clock (a Consumer).
+  - Each developing tray's SlowLoop had its own 30 fps timer, out of step:
+    four trays asked for up to 120 frames a second, so the board redrew
+    at the screen's full rate. One shared beat now.
+  - Trays: Opacity + ColorFiltered (two offscreen layers a frame) merged
+    into one ColorFiltered with the fade in its alpha row; the print
+    image in a RepaintBoundary apart from the rocking tray.
+  - Report labels: screens 'studio' and 'book'; marks 'book opening' and
+    'book page turn' (the last report had no Studio/book lines at all).
+  - Owner: thinks the quality manager steps down too readily. Next.

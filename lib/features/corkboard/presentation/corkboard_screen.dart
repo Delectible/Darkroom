@@ -100,6 +100,10 @@ class CorkboardScreen extends ConsumerStatefulWidget {
 
 class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerProviderStateMixin {
   bool _saving = false;
+
+  /// Wakes the board when the next print comes out of the darkroom (it used
+  /// to be built again every second, a whole board for a clock's tick).
+  Timer? _nextOut;
   late final _scroll = ScrollController()
     ..addListener(() => PerfRecorder.mark('corkboard scroll', hold: const Duration(milliseconds: 150)));
 
@@ -150,6 +154,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
 
   @override
   void dispose() {
+    _nextOut?.cancel();
     _galleryTimer?.cancel();
     _scroll.dispose();
     _shaker.stop();
@@ -497,10 +502,19 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
   @override
   Widget build(BuildContext context) {
     final items = ref.watch(filmItemsProvider).value ?? const <MediaItem>[];
-    final now = ref.watch(secondTickerProvider).value ?? DateTime.now();
+    final now = DateTime.now();
     final developed = items.where((m) => m.isDevelopedAt(now)).toList();
     final inDarkroom = items.where((m) => !m.isDevelopedAt(now)).toList()
       ..sort((a, b) => a.readyAt.compareTo(b.readyAt));
+    // (built again when the next one's ready, not on every tick: the
+    // darkroom strip keeps its own clock)
+    _nextOut?.cancel();
+    if (inDarkroom.isNotEmpty) {
+      final wait = inDarkroom.first.readyAt.difference(now) + const Duration(milliseconds: 50);
+      _nextOut = Timer(wait.isNegative ? Duration.zero : wait, () {
+        if (mounted) setState(() {});
+      });
+    }
     final unsaved = developed.where((m) => !m.isSaved).length;
     // (prints in the Studio: their spot shows the pin and a note)
     final inStudio = ref.watch(studioProvider).toSet();
@@ -595,7 +609,12 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                 ),
                                 if (inDarkroom.isNotEmpty)
                                   SliverToBoxAdapter(
-                                    child: _DarkroomStrip(items: inDarkroom, now: now),
+                                    child: Consumer(
+                                      builder: (context, ref, _) => _DarkroomStrip(
+                                        items: inDarkroom,
+                                        now: ref.watch(secondTickerProvider).value ?? DateTime.now(),
+                                      ),
+                                    ),
                                   ),
                                 if (shown.isEmpty)
                                   const SliverFillRemaining(hasScrollBody: false, child: _EmptyBoard())
@@ -1993,17 +2012,15 @@ class _Tray extends ConsumerWidget {
                           // The latent image surfaces as development proceeds,
                           // seen through the red safelight.
                           if (thumb != null && !processing)
-                            Opacity(
-                              opacity: Curves.easeIn.transform(progress) * 0.85,
-                              child: ColorFiltered(
-                                colorFilter: const ColorFilter.matrix([
-                                  0.5, 0.3, 0.1, 0, 0, //
-                                  0.05, 0.05, 0.02, 0, 0, //
-                                  0.03, 0.03, 0.02, 0, 0, //
-                                  0, 0, 0, 1, 0,
-                                ]),
-                                child: Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 160),
-                              ),
+                            // (the fade in the colour filter itself: one layer, not two)
+                            ColorFiltered(
+                              colorFilter: ColorFilter.matrix([
+                                0.5, 0.3, 0.1, 0, 0, //
+                                0.05, 0.05, 0.02, 0, 0, //
+                                0.03, 0.03, 0.02, 0, 0, //
+                                0, 0, 0, Curves.easeIn.transform(progress) * 0.85, 0,
+                              ]),
+                              child: Image.file(File(thumb), fit: BoxFit.cover, cacheWidth: 160),
                             ),
                           const ColoredBox(color: Color(0x66B71C1C)),
                           if (item.isVideo)
@@ -2839,15 +2856,16 @@ class _PrintTrayState extends State<_PrintTray> {
                   if (thumb != null)
                     Padding(
                       padding: EdgeInsets.all(widget.large ? 12 : 3),
-                      child: Opacity(
-                        opacity: dev,
+                      // Monochrome under the safelight, coming up as it
+                      // develops: the fade in the filter (one layer, not two),
+                      // and kept apart from the rocking tray's repaints.
+                      child: RepaintBoundary(
                         child: ColorFiltered(
-                          // Monochrome under the safelight.
-                          colorFilter: const ColorFilter.matrix([
+                          colorFilter: ColorFilter.matrix([
                             0.33, 0.5, 0.17, 0, 0, //
                             0.33, 0.5, 0.17, 0, 0, //
                             0.33, 0.5, 0.17, 0, 0, //
-                            0, 0, 0, 1, 0,
+                            0, 0, 0, dev, 0,
                           ]),
                           child: Image.file(
                             File(thumb),
@@ -2955,27 +2973,47 @@ class SlowLoop extends ChangeNotifier implements ValueListenable<double> {
 
   final Duration period;
   final _clock = Stopwatch();
-  Timer? _timer;
+  bool _on = false;
+
+  // One beat for every loop on the screen: four trays each on its own
+  // 30 fps timer asked for frames out of step, up to 120 a second between
+  // them, so the whole board was drawn at the screen's full rate. Now they
+  // all move on the same tick, 30 times a second.
+  static final _loops = <SlowLoop>{};
+  static Timer? _beat;
 
   @override
   double get value => (_clock.elapsedMicroseconds / period.inMicroseconds) % 1;
 
   /// Off while the screen is covered (as an AnimationController's ticker).
   set active(bool on) {
-    if (on == (_timer != null)) return;
+    if (on == _on) return;
+    _on = on;
     if (on) {
       _clock.start();
-      _timer = Timer.periodic(const Duration(microseconds: 33333), (_) => notifyListeners());
+      _loops.add(this);
+      _beat ??= Timer.periodic(const Duration(microseconds: 33333), (_) {
+        for (final l in _loops.toList()) {
+          l.notifyListeners();
+        }
+      });
     } else {
       _clock.stop();
-      _timer?.cancel();
-      _timer = null;
+      _leave();
+    }
+  }
+
+  void _leave() {
+    _loops.remove(this);
+    if (_loops.isEmpty) {
+      _beat?.cancel();
+      _beat = null;
     }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _leave();
     super.dispose();
   }
 }

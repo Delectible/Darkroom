@@ -3,6 +3,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../../core/diagnostics/perf_recorder.dart';
+
 /// Pages you turn like paper: drag and the page folds back along a line
 /// under your finger, its back showing, shadows in the fold and on the page
 /// beneath. The page stays bound at the spine (its corner can only go where
@@ -128,6 +130,7 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
     // (up and down counts for less, and only so far: a sideways drag that
     // wanders doesn't throw the corner across the page)
     final lift = (move.dy * 0.45).clamp(-h * 0.28, h * 0.28);
+    PerfRecorder.mark('book page turn', hold: const Duration(milliseconds: 150));
     setState(() => _at = _bind(base + Offset(move.dx * 2, lift)));
   }
 
@@ -147,6 +150,7 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
   }
 
   void _run(Duration time) {
+    PerfRecorder.mark('book page turn', hold: time);
     _t
       ..duration = time
       ..value = 0;

@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../core/device/upright.dart';
+import '../../core/diagnostics/perf_recorder.dart';
 import 'studio_flip_booklet.dart';
 import 'studio_layout.dart';
 import 'studio_make.dart';
@@ -88,8 +89,19 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
         });
   bool _opening = false;
 
+  // (its own lines in Debug > Performance Report)
+  late final String _wasScreen = PerfRecorder.screen;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasScreen;
+    PerfRecorder.screen = 'book';
+  }
+
   @override
   void dispose() {
+    PerfRecorder.screen = _wasScreen;
     _open.dispose();
     super.dispose();
   }
@@ -99,7 +111,9 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
     _opening = true;
     unawaited(
       Future<void>.delayed(const Duration(milliseconds: 280), () {
-        if (mounted) unawaited(_open.forward());
+        if (!mounted) return;
+        PerfRecorder.mark('book opening', hold: const Duration(milliseconds: 1200));
+        unawaited(_open.forward());
       }),
     );
   }

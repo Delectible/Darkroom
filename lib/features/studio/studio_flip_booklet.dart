@@ -154,8 +154,22 @@ class StapledFlipBook extends StatefulWidget {
 }
 
 class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProviderStateMixin {
-  late final Ticker _ticker = createTicker((e) => setState(() => _t = e));
+  // Drawn again only while a page is flicking over (and once as it comes
+  // to rest): lying still between flicks it costs nothing.
+  late final Ticker _ticker = createTicker((e) {
+    final n = _photos?.length ?? 0;
+    if (n < 2) return;
+    final pageMs = widget.work.pageMs ?? 360;
+    final ms = e.inMicroseconds / 1000;
+    final into = ms % pageMs;
+    final moving = into < _StapledPainter.flipMsOf(pageMs);
+    final phase = moving ? -1 : ms ~/ pageMs;
+    if (!moving && phase == _rest) return;
+    _rest = phase;
+    setState(() => _t = e);
+  });
   Duration _t = Duration.zero;
+  int _rest = -2;
   List<ui.Image>? _photos;
 
   @override
@@ -221,6 +235,9 @@ class _StapledPainter extends CustomPainter {
 
   static const _paper = Color(0xFFF7F4EE);
 
+  /// How long a page takes to flick over.
+  static double flipMsOf(int pageMs) => math.min(pageMs * 0.7, 240.0);
+
   /// A page's face: paper, the stapled margin down its left, its photo.
   void _face(Canvas c, Rect face, ui.Image photo) {
     final fw = face.width;
@@ -264,7 +281,7 @@ class _StapledPainter extends CustomPainter {
     final looped = t % (n * pageMs);
     final page = (looped ~/ pageMs).clamp(0, n - 1);
     final into = looped - page * pageMs;
-    final flipMs = math.min(pageMs * 0.7, 240.0);
+    final flipMs = flipMsOf(pageMs);
     final q = n > 1 ? (into / flipMs).clamp(0.0, 1.0) : 1.0;
     final hinge = face.left + face.width * 0.115;
 

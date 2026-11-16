@@ -10,7 +10,8 @@ class AppInfo {
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
       'Photo Room: the photo strip has its own text colour, and long GIFs are made several times faster. '
-      'Cards, flip books and GIFs no longer come out as coloured snow, and a flip book is ready at once.';
+      'The Studio album opens and turns more smoothly. Cards, flip books and GIFs no longer come out as '
+      'coloured snow, and a flip book is ready at once.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

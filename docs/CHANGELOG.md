@@ -1398,3 +1398,16 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - GIF: each frame's 256 colours (NeuQuant + dither, the slow part) are
     found on 2 to 6 cores at once (_indexOff), then one pass writes the
     file (the encoder takes ready palette images as they are).
+- 68.16 Book performance, first pass (2026-11-16), 2.3.14
+  - The book's leather (up to 30,000 pits a board), paper (20,000 specks
+    and 18 blurred blotches a page) and lining were CustomPainters: on
+    Impeller, drawn in full every frame while the cover swung or a page
+    turned. Baked (studio_ui.dart): painted once into a picture per size
+    (at most 2x), one textured rect a frame after. Same look.
+  - StapledFlipBook set state every tick: now only while a page is
+    flicking, and once as it rests.
+  - Pieces decoded at 640 wide (tall strips narrower, 240 at least), a
+    scrapbook at 1000, not 900 / 1400; one table (_decodeWidths) for the
+    page and the precache so they match.
+  - Not measured on a phone yet: ask for Debug > Performance Report after
+    using the corkboard, Studio and book, then do the corkboard from it.

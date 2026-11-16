@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:material_ui/material_ui.dart';
 
 import 'studio_screen.dart';
@@ -267,3 +270,49 @@ void studioNote(BuildContext context, String text) => ScaffoldMessenger.of(conte
     ),
   ),
 );
+
+/// A painting made once and kept as a picture. Impeller draws every layer
+/// afresh every frame (it keeps no raster cache), so leather of thirty
+/// thousand pits or paper of twenty thousand specks would be drawn in full
+/// sixty times a second while anything on the screen moves. Baked, it's one
+/// textured rectangle a frame. [name] says what it is (with anything that
+/// changes its look); it's made again for another size.
+class Baked extends CustomPainter {
+  Baked(this.name, this.draw);
+
+  final String name;
+  final void Function(Canvas canvas, Size size) draw;
+
+  static final _made = <String, ui.Image>{};
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.isEmpty) return;
+    // (twice the layout's size is plenty for grain; less to keep on the GPU)
+    final scale = math.min(2.0, ui.PlatformDispatcher.instance.views.first.devicePixelRatio);
+    final w = (size.width * scale).ceil(), h = (size.height * scale).ceil();
+    final key = '$name $w x $h';
+    // Bounded: a book's few surfaces, twice over for a turn of the phone.
+    // Old ones are left to the GC, not disposed: a frame may still hold them.
+    if (!_made.containsKey(key) && _made.length >= 20) _made.clear();
+    final image = _made.putIfAbsent(key, () {
+      final rec = ui.PictureRecorder();
+      final c = Canvas(rec, Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()));
+      c.scale(w / size.width, h / size.height);
+      draw(c, size);
+      final picture = rec.endRecording();
+      final made = picture.toImageSync(w, h);
+      picture.dispose();
+      return made;
+    });
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()),
+      Offset.zero & size,
+      Paint()..filterQuality = FilterQuality.low,
+    );
+  }
+
+  @override
+  bool shouldRepaint(Baked old) => old.name != name;
+}

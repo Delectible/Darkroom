@@ -32,6 +32,10 @@ class _Album {
   static const number = Color(0xFF8A7258);
 }
 
+/// How wide each piece's picture is decoded for its page (by its id), set
+/// as it's measured: the same for the page as for warming it beforehand.
+final _decodeWidths = <String, int>{};
+
 /// A piece's shape on the page: its picture's, or a flip book's booklet.
 Future<double> _aspectOf(StudioWork w) async {
   if (w.kind == StudioKind.flipbook) return 0.8;
@@ -107,7 +111,11 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
         _aspectOf(w).then((a) async {
           // (decoded before the page shows it, at the size the page uses)
           if (mounted && w.kind != StudioKind.flipbook) {
-            final size = w.kind == StudioKind.scrapbook ? 1400 : 900;
+            // (no bigger than it's shown: a scrapbook fills the page, a
+            // piece at most two thirds of it; a tall strip is narrow)
+            final size = _decodeWidths[w.id] = w.kind == StudioKind.scrapbook
+                ? 1000
+                : math.max(240, ((a >= 1 ? 640 : 640 * a) / 20).ceil() * 20);
             await precacheImage(
               ResizeImage(FileImage(File(w.path)), width: size),
               context,
@@ -565,7 +573,11 @@ class _Board extends StatelessWidget {
       borderRadius: const BorderRadius.all(Radius.circular(8)),
       child: RepaintBoundary(
         child: CustomPaint(
-          painter: _LeatherPainter(stitchLeft: stitchLeft, stitchRight: stitchRight),
+          // (baked: see [Baked])
+          painter: Baked(
+            'leather $stitchLeft $stitchRight',
+            _LeatherPainter(stitchLeft: stitchLeft, stitchRight: stitchRight).paint,
+          ),
           child: const SizedBox.expand(),
         ),
       ),
@@ -841,13 +853,13 @@ class _CoverInside extends StatelessWidget {
   const _CoverInside();
 
   @override
-  Widget build(BuildContext context) => const Stack(
+  Widget build(BuildContext context) => Stack(
     fit: StackFit.expand,
     children: [
-      _Board(stitchLeft: true),
+      const _Board(stitchLeft: true),
       Padding(
-        padding: EdgeInsets.fromLTRB(_overhang, _overhang, 0, _overhang),
-        child: RepaintBoundary(child: CustomPaint(painter: _LiningPainter())),
+        padding: const EdgeInsets.fromLTRB(_overhang, _overhang, 0, _overhang),
+        child: RepaintBoundary(child: CustomPaint(painter: Baked('lining', const _LiningPainter().paint))),
       ),
     ],
   );
@@ -953,7 +965,7 @@ class _PaperPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => RepaintBoundary(
     child: CustomPaint(
-      painter: _GrainPainter(back, spine: !back && !left),
+      painter: Baked('paper $back $left', _GrainPainter(back, spine: !back && !left).paint),
       foregroundPainter: left ? const _LeftSpine() : null,
     ),
   );
@@ -1069,7 +1081,7 @@ class _AlbumPage extends StatelessWidget {
                 Image.file(
                   File(w.path),
                   fit: BoxFit.cover,
-                  cacheWidth: 1400,
+                  cacheWidth: _decodeWidths[w.id] ?? 1000,
                   gaplessPlayback: true,
                   frameBuilder: studioFadeIn,
                 ),
@@ -1182,7 +1194,7 @@ class _StuckDown extends StatelessWidget {
       child: Image.file(
         File(work.path),
         fit: BoxFit.fill,
-        cacheWidth: 900,
+        cacheWidth: _decodeWidths[work.id] ?? 640,
         gaplessPlayback: true,
         frameBuilder: studioFadeIn,
       ),

@@ -11,29 +11,30 @@ import 'package:flutter/widgets.dart';
 /// [PageTurnState.next] / [PageTurnState.previous] turn one for you, and
 /// taps faster than a turn queue up (the turns speed up to catch up).
 ///
-/// It draws past its own box on the left (the left page, where a turned
-/// page lands), so its parent must not clip there.
+/// Its box is the open book, both pages: the right half is [page], the left
+/// half the left-hand page facing it (where a turned page lands).
 class PageTurn extends StatefulWidget {
   const PageTurn({
     super.key,
     required this.count,
     required this.page,
     required this.builder,
-    required this.back,
+    required this.left,
     required this.onPage,
-    this.left,
+    this.onTurning,
   });
 
-  /// The left-hand page facing [page] (drawn a page's width to the left,
-  /// beneath anything turning over onto it); null: none.
-  final Widget Function(BuildContext context, int page)? left;
+  /// The left-hand page facing [page], as it lies: the back of the page
+  /// before it (so it's also what shows on that page's back as it turns).
+  final Widget Function(BuildContext context, int page) left;
+
+  /// A turn began (true: forward, false: a page lifted off the left to
+  /// come back) or ended (null).
+  final ValueChanged<bool?>? onTurning;
 
   final int count;
   final int page;
   final Widget Function(BuildContext context, int page) builder;
-
-  /// The back of a page (plain paper).
-  final Widget back;
   final ValueChanged<int> onPage;
 
   @override
@@ -55,6 +56,7 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
   // Each page keeps its widgets as it moves between lying flat, turning
   // and lying beneath (no reloads, no flashed frames).
   final _keys = <int, GlobalKey>{};
+  final _leftKeys = <int, GlobalKey>{};
 
   bool get turning => _forward != null;
 
@@ -66,6 +68,9 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
 
   Widget _page(BuildContext context, int i) =>
       KeyedSubtree(key: _keys.putIfAbsent(i, GlobalKey.new), child: widget.builder(context, i));
+
+  Widget _left(BuildContext context, int i) =>
+      KeyedSubtree(key: _leftKeys.putIfAbsent(i, GlobalKey.new), child: widget.left(context, i));
 
   /// Turns to the next page, if there is one (queued if a turn's running).
   void next() => _ask(1);
@@ -93,6 +98,7 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
       _to = Offset(forward ? -w : w, h);
       _at = _from;
     });
+    widget.onTurning?.call(forward);
     _run(Duration(milliseconds: fast ? 300 : 640));
   }
 
@@ -113,6 +119,7 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
       _bottom = _start.dy > h / 2;
       _forward = forward;
       _arc = false;
+      widget.onTurning?.call(forward);
     }
     // the corner follows the finger (twice as far across: a short drag
     // turns a page), held to where a bound page can reach
@@ -152,6 +159,7 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
       if (f == true && landedLeft) widget.onPage(widget.page + 1);
       if (f == false && !landedLeft) widget.onPage(widget.page - 1);
       setState(() => _forward = null);
+      widget.onTurning?.call(null);
       if (_queued != 0) {
         final dir = _queued > 0;
         _queued += dir ? -1 : 1;
@@ -183,34 +191,32 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, box) {
-        _size = box.biggest;
+        _size = Size(box.maxWidth / 2, box.maxHeight);
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
           onHorizontalDragStart: _dragStart,
           onHorizontalDragUpdate: _dragUpdate,
           onHorizontalDragEnd: _dragEnd,
-          child: _forward == null ? _flat(context) : _turning(context, _size),
+          child: _forward == null ? _lying(context, widget.page) : _turning(context, _size),
         );
       },
     );
   }
 
-  /// The left page facing [page], where it lies.
-  Widget _leftOf(BuildContext context, int page) => Positioned(
-    left: -_size.width,
-    width: _size.width,
-    top: 0,
-    bottom: 0,
-    child: widget.left!(context, page),
-  );
+  /// On the right half (everything about a turn is measured from there).
+  Widget _right(Widget child) =>
+      Positioned(left: _size.width, width: _size.width, top: 0, bottom: 0, child: child);
 
-  Widget _flat(BuildContext context) => widget.left == null
-      ? _page(context, widget.page)
-      : Stack(
-          fit: StackFit.expand,
-          clipBehavior: Clip.none,
-          children: [_leftOf(context, widget.page), _page(context, widget.page)],
-        );
+  /// The left page facing [page], where it lies.
+  Widget _leftOf(BuildContext context, int page) =>
+      Positioned(left: 0, width: _size.width, top: 0, bottom: 0, child: _left(context, page));
+
+  /// The book open flat at [page].
+  Widget _lying(BuildContext context, int page) => Stack(
+    fit: StackFit.expand,
+    clipBehavior: Clip.none,
+    children: [_leftOf(context, page), _right(_page(context, page))],
+  );
 
   Widget _turning(BuildContext context, Size size) {
     final forward = _forward!;
@@ -228,22 +234,29 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
       corner = _bind(corner);
     }
     final fold = _Fold(Offset(size.width, _bottom ? h : 0), corner, size);
-    if (fold.flat) return _page(context, top);
+    // (all but flat: the same two pages as when it's down, nothing blinking)
+    if (fold.flat) return _lying(context, top);
     return Stack(
       fit: StackFit.expand,
       clipBehavior: Clip.none,
       children: [
         // (beneath a page coming back: the left page before it)
-        if (widget.left != null) _leftOf(context, forward ? widget.page : widget.page - 1),
-        _page(context, under),
-        CustomPaint(painter: _Shade(fold, _ShadeKind.under)),
-        ClipPath(clipper: _PolyClip(fold.kept), child: _page(context, top)),
-        CustomPaint(painter: _Shade(fold, _ShadeKind.flapShadow)),
-        Transform(
-          transform: fold.mirror,
-          child: ClipPath(clipper: _PolyClip(fold.folded), child: widget.back),
+        _leftOf(context, top),
+        _right(_page(context, under)),
+        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.under))),
+        _right(ClipPath(clipper: _PolyClip(fold.kept), child: _page(context, top))),
+        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.flapShadow))),
+        // the page's back: the left page it becomes, turned over with it
+        _right(
+          Transform(
+            transform: fold.mirror,
+            child: ClipPath(
+              clipper: _PolyClip(fold.folded),
+              child: Transform.flip(flipX: true, child: _left(context, top + 1)),
+            ),
+          ),
         ),
-        CustomPaint(painter: _Shade(fold, _ShadeKind.flapGloss)),
+        _right(CustomPaint(painter: _Shade(fold, _ShadeKind.flapGloss))),
       ],
     );
   }

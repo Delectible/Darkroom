@@ -282,7 +282,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 900));
         await shoot(tester, 'book');
         // drag the page part way over
-        final page = tester.getRect(find.byType(PageTurn));
+        // (the right-hand page: the turn's box is both)
+        final both = tester.getRect(find.byType(PageTurn));
+        final page = Rect.fromLTRB(both.center.dx, both.top, both.right, both.bottom);
         final g = await tester.startGesture(page.bottomRight - const Offset(20, 60));
         await g.moveBy(const Offset(-40, 0));
         await tester.pump();

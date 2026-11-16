@@ -1267,3 +1267,23 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - Book sideways: the heading stands in a column on the left, the page
     buttons and Save in one on the right, so the book takes the screen's
     whole height (about twice the size).
+- 68.8 Book fixes; both pages filled sideways (2026-11-16), 2.3.11
+  - Turning back to page one showed a page over the cover's lining until
+    the turn ended: the left block of leaves was drawn whenever at > 0.
+    Now _OpenBook gets a count of leaves lying on the left (one fewer while
+    a page is lifted to come back: PageTurn.onTurning), the block only
+    for leaves beneath the top one.
+  - Headband half cut off until the board landed (the gutter's clip took
+    it too): the clip is the gutter's only; the band comes out from under
+    the board over the first half of the swing.
+  - Valley shadows flickering when a part-turned page is let go: the last
+    frames of the fall (fold all but flat) drew the page alone, without
+    the left page. Same two pages now as when it's down.
+  - Grey line under the page: the shadow on the leaves' edges was 45%
+    black; now a light warm one.
+  - Sideways both pages are filled, as a book's are: page 1 faces the
+    lining, then 2-3, 4-5 (an even count ends on a left page facing a
+    blank one). PageTurn's box is now both pages (the left one takes taps
+    and drags), and a turning page's back is the left page it becomes
+    (PageTurn.back is gone). Save takes the right page (the left if
+    there's no right). Upright is as before.

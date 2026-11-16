@@ -70,6 +70,8 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
   final _asking = <String>{};
   int _at = 0;
   bool _saving = false;
+  // (a page is up off the left, on its way back)
+  bool _lifted = false;
 
   // The book arrives shut and its cover swings open once its pictures are
   // ready (0 shut .. 1 open).
@@ -154,7 +156,8 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
             for (final w in works) (aspect: _aspects[w.id]!, fullPage: w.kind == StudioKind.scrapbook),
           ])
         : const <BookPageLayout>[];
-    final at = pages.isEmpty ? 0 : _at.clamp(0, pages.length - 1);
+    final n = pages.length;
+    final at = n == 0 ? 0 : _at.clamp(0, n - 1);
     return Scaffold(
       // (text boxes move up out of the keyboard's way; the screen stays put)
 
@@ -182,10 +185,20 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                   fontSize: 16,
                 ),
               );
+              // Sideways both pages are filled, as a book's are: page one
+              // faces the cover's lining, then two and three, and so on.
+              // [open] is how many leaves have been turned over.
+              final open = sideways ? (at + 1) ~/ 2 : at;
+              final turns = sideways ? n ~/ 2 + 1 : n;
+              int rightOf(int i) => sideways ? 2 * i : i;
+              // (the page Save takes: the right one, or the last, on the left)
+              final shown = sideways ? math.min(2 * open, n - 1) : at;
               final count = pages.isEmpty
                   ? null
                   : Text(
-                      'page ${at + 1} of ${pages.length}',
+                      !sideways || open == 0 || 2 * open >= n
+                          ? 'page ${shown + 1} of $n'
+                          : 'pages ${2 * open}–${2 * open + 1} of $n',
                       style: const TextStyle(color: StudioInk.muted, fontSize: 12),
                     );
               final Widget content = works.isEmpty
@@ -220,40 +233,67 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                             child: AnimatedBuilder(
                               animation: _open,
                               builder: (context, _) => _OpenBook(
-                                // (nothing's been turned over at page one)
-                                leavesOnLeft: at > 0,
+                                // (a page on its way back isn't lying there)
+                                leaves: open - (_lifted ? 1 : 0),
                                 pageWidth: pw,
                                 pageHeight: ph,
                                 left: left,
                                 open: Curves.easeInOutCubic.transform(_open.value),
                                 pages: !ready || pages.isEmpty
-                                    ? const _PaperPage()
+                                    ? const Align(
+                                        alignment: Alignment.centerRight,
+                                        child: FractionallySizedBox(widthFactor: 0.5, child: _PaperPage()),
+                                      )
                                     : PageTurn(
                                         key: _turn,
-                                        count: pages.length,
-                                        page: at,
-                                        onPage: (i) => setState(() => _at = i),
-                                        back: const ClipPath(
-                                          clipper: _PageShape(),
-                                          child: _PaperPage(back: true),
-                                        ),
-                                        // (facing page one: the front board's
-                                        // lining, already there beneath)
-                                        left: (context, i) => i == 0
-                                            ? const SizedBox.shrink()
-                                            : const ClipPath(
-                                                clipper: _PageShape(left: true),
-                                                child: _PaperPage(back: true, left: true),
-                                              ),
-                                        builder: (context, i) {
+                                        count: turns,
+                                        page: open,
+                                        onPage: (i) =>
+                                            setState(() => _at = sideways ? math.min(2 * i, n - 1) : i),
+                                        onTurning: (forward) {
+                                          final lifted = forward == false;
+                                          if (lifted != _lifted) setState(() => _lifted = lifted);
+                                        },
+                                        left: (context, i) {
+                                          // (facing page one: the front board's
+                                          // lining, already there beneath)
+                                          if (i == 0) return const SizedBox.shrink();
+                                          if (!sideways) {
+                                            return const ClipPath(
+                                              clipper: _PageShape(left: true),
+                                              child: _PaperPage(back: true, left: true),
+                                            );
+                                          }
+                                          final c = 2 * i - 1;
                                           final page = _AlbumPage(
-                                            number: i + 1,
-                                            works: [for (final k in pages[i].pieces) works[k]],
-                                            rects: pages[i].rects,
+                                            number: c + 1,
+                                            left: true,
+                                            works: [for (final k in pages[c].pieces) works[k]],
+                                            rects: pages[c].rects,
+                                          );
+                                          return ClipPath(
+                                            clipper: const _PageShape(left: true),
+                                            child: c == shown
+                                                ? RepaintBoundary(key: _shot, child: page)
+                                                : page,
+                                          );
+                                        },
+                                        builder: (context, i) {
+                                          final c = rightOf(i);
+                                          // (sideways the last page may be a left one)
+                                          if (c >= n) {
+                                            return const ClipPath(clipper: _PageShape(), child: _PaperPage());
+                                          }
+                                          final page = _AlbumPage(
+                                            number: c + 1,
+                                            works: [for (final k in pages[c].pieces) works[k]],
+                                            rects: pages[c].rects,
                                           );
                                           return ClipPath(
                                             clipper: const _PageShape(),
-                                            child: i == at ? RepaintBoundary(key: _shot, child: page) : page,
+                                            child: c == shown
+                                                ? RepaintBoundary(key: _shot, child: page)
+                                                : page,
                                           );
                                         },
                                       ),
@@ -264,12 +304,12 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                         final prev = _NavButton(
                           tooltip: 'Previous page',
                           icon: Icons.chevron_left,
-                          onTap: !opened || at == 0 ? null : () => _turn.currentState?.previous(),
+                          onTap: !opened || open == 0 ? null : () => _turn.currentState?.previous(),
                         );
                         final next = _NavButton(
                           tooltip: 'Next page',
                           icon: Icons.chevron_right,
-                          onTap: !opened || at >= pages.length - 1 ? null : () => _turn.currentState?.next(),
+                          onTap: !opened || open >= turns - 1 ? null : () => _turn.currentState?.next(),
                         );
                         final save = FilledButton(
                           onPressed: _saving || !opened ? null : () => _savePage(pw),
@@ -418,7 +458,7 @@ class _OpenBook extends StatelessWidget {
     required this.left,
     required this.open,
     required this.pages,
-    required this.leavesOnLeft,
+    required this.leaves,
   });
 
   final double pageWidth, pageHeight;
@@ -428,8 +468,8 @@ class _OpenBook extends StatelessWidget {
   final double open;
   final Widget pages;
 
-  /// Pages have been turned over onto the left (their edges show there).
-  final bool leavesOnLeft;
+  /// How many pages lie turned over on the left.
+  final int leaves;
 
   @override
   Widget build(BuildContext context) {
@@ -479,7 +519,7 @@ class _OpenBook extends StatelessWidget {
           // gutter where the pages curve down into it, the headbands
           Positioned.fill(
             child: CustomPaint(
-              painter: _BookBody(spine: spine, pageWidth: pw, leftBlock: lying && leavesOnLeft, lying: lying),
+              painter: _BookBody(spine: spine, pageWidth: pw, leaves: lying ? leaves : 0, open: open),
             ),
           ),
           // the pages: the right one, and (once the book's open) the left.
@@ -489,7 +529,7 @@ class _OpenBook extends StatelessWidget {
               clipper: _TallClip(ph, from: lying ? 0 : spine),
               child: Stack(
                 clipBehavior: Clip.none,
-                children: [Positioned(left: spine, width: pw, top: 0, bottom: 0, child: pages)],
+                children: [Positioned(left: spine - pw, width: pw * 2, top: 0, bottom: 0, child: pages)],
               ),
             ),
           ),
@@ -579,22 +619,21 @@ class _PageShape extends CustomClipper<Path> {
 /// the top page's shadow on them), the dark of the gutter where the pages
 /// dip, and the headbands at the head and tail of the spine.
 class _BookBody extends CustomPainter {
-  const _BookBody({
-    required this.spine,
-    required this.pageWidth,
-    required this.leftBlock,
-    required this.lying,
-  });
+  const _BookBody({required this.spine, required this.pageWidth, required this.leaves, required this.open});
 
   final double spine, pageWidth;
-  final bool leftBlock;
 
-  /// The front board is down on the left (the whole gutter shows).
-  final bool lying;
+  /// How many pages lie on the left (the top one drawn by the pages' layer;
+  /// the rest a block beneath it).
+  final int leaves;
+
+  /// How far the front board has swung (1: down on the left).
+  final double open;
 
   @override
   void paint(Canvas canvas, Size size) {
     final h = size.height;
+    final lying = open >= 1, leftPage = leaves > 0;
     // the spine: a rounded back between the boards
     final back = Rect.fromLTRB(spine - 9, -_overhang, spine + 9, h + _overhang);
     canvas.drawRRect(
@@ -631,7 +670,8 @@ class _BookBody extends CustomPainter {
           Paint()..color = k.isOdd ? const Color(0xFFE6DCC7) : const Color(0xFFCDBFA4),
         );
       }
-      // the top page's shadow on the block's edges: dark close under it
+      // the top page's shadow on the block's edges: a little, close under
+      // it (paper still, not a grey line)
       final depth = leaves * 1.25;
       canvas.drawRect(
         Rect.fromLTRB(
@@ -642,8 +682,8 @@ class _BookBody extends CustomPainter {
         ),
         Paint()
           ..shader = ui.Gradient.linear(Offset(0, page.bottom), Offset(0, page.bottom + depth), const [
-            Color(0x73000000),
-            Color(0x14000000),
+            Color(0x38402510),
+            Color(0x08402510),
           ]),
       );
       final sideX = right ? page.right : page.left;
@@ -653,31 +693,37 @@ class _BookBody extends CustomPainter {
             : Rect.fromLTRB(sideX - depth, page.top, sideX, page.bottom),
         Paint()
           ..shader = ui.Gradient.linear(Offset(sideX, 0), Offset(sideX + (right ? depth : -depth), 0), const [
-            Color(0x59000000),
-            Color(0x0D000000),
+            Color(0x30402510),
+            Color(0x08402510),
           ]),
       );
     }
 
     block(Rect.fromLTRB(spine, 0, spine + pageWidth, h), 5, right: true);
-    if (leftBlock) block(Rect.fromLTRB(spine - pageWidth, 0, spine, h), 2, right: false);
+    if (leaves > 1) {
+      block(Rect.fromLTRB(spine - pageWidth, 0, spine, h), math.min(leaves - 1, 2), right: false);
+    }
 
     // the gutter: dark where the pages dip into the spine, head and tail
     // (shut, or with the front board still in the air, only the right half:
     // the rest is under the board)
-    if (!lying) canvas.clipRect(Rect.fromLTRB(spine, -_overhang, size.width + _overhang, h + _overhang));
+    // The headbands come out from under the board as it lifts.
+    final bandFrom = spine - 10 * (open * 2).clamp(0.0, 1.0);
     final n = pageWidth * _dip, g = pageWidth * _dipLength;
     for (final top in [true, false]) {
       final y = top ? 0.0 : h, dir = top ? 1.0 : -1.0;
+      canvas.save();
+      if (!lying) canvas.clipRect(Rect.fromLTRB(spine, -_overhang, size.width + _overhang, h + _overhang));
       final wedge = Path()
-        ..moveTo(spine - (leftBlock ? g : 0), y)
+        ..moveTo(spine - (leftPage ? g : 0), y)
         ..lineTo(spine + g, y)
         ..lineTo(spine + g, y + dir * 0.5)
         ..quadraticBezierTo(spine + g * 0.35, y + dir * 0.5, spine, y + dir * (n + 1))
-        ..lineTo(spine - (leftBlock ? 0.01 : 0), y + dir * (n + 1));
-      if (leftBlock) wedge.quadraticBezierTo(spine - g * 0.35, y + dir * 0.5, spine - g, y + dir * 0.5);
+        ..lineTo(spine - (leftPage ? 0.01 : 0), y + dir * (n + 1));
+      if (leftPage) wedge.quadraticBezierTo(spine - g * 0.35, y + dir * 0.5, spine - g, y + dir * 0.5);
       wedge.close();
       canvas.drawPath(wedge, Paint()..color = const Color(0xFF24150C));
+      canvas.restore();
       // the headband: a little striped silk roll across the spine
       final band = RRect.fromRectAndRadius(
         Rect.fromCenter(
@@ -688,6 +734,7 @@ class _BookBody extends CustomPainter {
         const Radius.circular(2.5),
       );
       canvas.save();
+      canvas.clipRect(Rect.fromLTRB(bandFrom, -_overhang, size.width, h + _overhang));
       canvas.clipRRect(band);
       canvas.drawRRect(band, Paint()..color = const Color(0xFFE9DFC8));
       final stripe = Paint()..color = const Color(0xFFA5281F);
@@ -711,7 +758,7 @@ class _BookBody extends CustomPainter {
 
   @override
   bool shouldRepaint(_BookBody old) =>
-      old.spine != spine || old.pageWidth != pageWidth || old.leftBlock != leftBlock || old.lying != lying;
+      old.spine != spine || old.pageWidth != pageWidth || old.leaves != leaves || old.open != open;
 }
 
 /// The album's front cover: leather, a gold rule, its name stamped in gold.
@@ -886,7 +933,10 @@ class _PaperPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => RepaintBoundary(
-    child: CustomPaint(painter: _GrainPainter(back), foregroundPainter: left ? const _LeftSpine() : null),
+    child: CustomPaint(
+      painter: _GrainPainter(back, spine: !back && !left),
+      foregroundPainter: left ? const _LeftSpine() : null,
+    ),
   );
 }
 
@@ -907,9 +957,9 @@ class _LeftSpine extends CustomPainter {
 }
 
 class _GrainPainter extends CustomPainter {
-  const _GrainPainter(this.back);
+  const _GrainPainter(this.back, {required this.spine});
 
-  final bool back;
+  final bool back, spine;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -939,11 +989,11 @@ class _GrainPainter extends CustomPainter {
         speck,
       );
     }
-    if (!back) _spine(canvas, size);
+    if (spine) _spine(canvas, size);
   }
 
   @override
-  bool shouldRepaint(_GrainPainter old) => old.back != back;
+  bool shouldRepaint(_GrainPainter old) => old.back != back || old.spine != spine;
 }
 
 /// The page curving into the spine: dark at the left edge.
@@ -975,8 +1025,10 @@ class _SpinePainter extends CustomPainter {
 /// little turned and off true, as if stuck down by hand (the same each
 /// time). A scrapbook is the page.
 class _AlbumPage extends StatelessWidget {
-  const _AlbumPage({required this.number, required this.works, required this.rects});
+  const _AlbumPage({required this.number, required this.works, required this.rects, this.left = false});
 
+  /// A left-hand page: the spine on its right.
+  final bool left;
   final int number;
   final List<StudioWork> works;
   final List<Rect> rects;
@@ -1002,7 +1054,7 @@ class _AlbumPage extends StatelessWidget {
                   gaplessPlayback: true,
                   frameBuilder: studioFadeIn,
                 ),
-                const IgnorePointer(child: CustomPaint(painter: _SpinePainter())),
+                IgnorePointer(child: CustomPaint(painter: left ? const _LeftSpine() : const _SpinePainter())),
               ],
             ),
           );
@@ -1011,7 +1063,7 @@ class _AlbumPage extends StatelessWidget {
           fit: StackFit.expand,
           clipBehavior: Clip.none,
           children: [
-            const _PaperPage(),
+            _PaperPage(left: left),
             for (var i = 0; i < works.length; i++) _placed(context, works[i], rects[i], u, i, works.length),
             Positioned(
               left: 0,

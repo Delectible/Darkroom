@@ -376,21 +376,93 @@ Future<void> writeStudioJpeg(ui.Image image, String path, {int quality = 92}) as
 /// A picture's pixels (RGBA, 8 bits each), off the GPU.
 typedef StudioPixels = ({Uint8List bytes, int width, int height});
 
-/// [image]'s pixels, read now. For a picture of something on screen (a
-/// RepaintBoundary's): read it before the screen changes, or the GPU may
-/// have reused its memory (a saved card that was all noise). It's drawn
-/// into a plain 8-bit picture first, whatever the screen's own format.
+/// Reading a picture back from the GPU kept giving noise.
+class StudioScrambled implements Exception {
+  const StudioScrambled();
+
+  @override
+  String toString() => 'The picture came out scrambled. Please try again.';
+}
+
+/// True if [bytes] (RGBA, [w] x [h]) is noise, not a picture: what some
+/// phones' GPUs hand back now and then when a picture is read from them
+/// (saved cards, flip book pages and GIF frames that were coloured snow).
+/// In a picture neighbouring pixels are alike; in noise they aren't, all
+/// over. Looked at in a 5 x 5 grid of patches, so a busy corner of a real
+/// picture doesn't count.
+bool looksScrambled(Uint8List bytes, int w, int h) {
+  if (w < 40 || h < 40 || bytes.length < w * h * 4) return false;
+  var noisy = 0;
+  const grid = 5, span = 24;
+  for (var gy = 0; gy < grid; gy++) {
+    for (var gx = 0; gx < grid; gx++) {
+      final x0 = ((gx + 0.5) * w / grid).floor() - span ~/ 2,
+          y0 = ((gy + 0.5) * h / grid).floor() - span ~/ 2;
+      var sum = 0, n = 0;
+      for (var y = y0; y < y0 + span; y += 3) {
+        for (var x = x0; x < x0 + span - 1; x++) {
+          final i = (y * w + x) * 4;
+          sum +=
+              (bytes[i] - bytes[i + 4]).abs() +
+              (bytes[i + 1] - bytes[i + 5]).abs() +
+              (bytes[i + 2] - bytes[i + 6]).abs();
+          n += 3;
+        }
+      }
+      // (random bytes differ by 85 on average; a grainy photo by 20 or so)
+      if (sum / n > 55) noisy++;
+    }
+  }
+  return noisy >= grid * grid * 0.4;
+}
+
+Future<Uint8List?> _rawOf(ui.Image image, {required bool flat}) async {
+  final w = image.width, h = image.height;
+  ByteData? data;
+  if (flat) {
+    // (through a plain 8-bit picture, whatever the image's own format)
+    final rec = ui.PictureRecorder();
+    Canvas(rec).drawImage(image, Offset.zero, Paint());
+    final picture = rec.endRecording();
+    final copy = await picture.toImage(w, h);
+    picture.dispose();
+    data = await copy.toByteData(format: ui.ImageByteFormat.rawRgba);
+    copy.dispose();
+  } else {
+    data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+  }
+  if (data == null || data.lengthInBytes != w * h * 4) return null;
+  return data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+}
+
+/// [image]'s pixels, read now, checked: if they come back as noise (see
+/// [looksScrambled]) they're read again, a moment later and another way,
+/// a few times; [StudioScrambled] if they never come back right. For a
+/// picture of something on screen (a RepaintBoundary's): read it before
+/// the screen changes.
 Future<StudioPixels> readStudioPixels(ui.Image image) async {
   final w = image.width, h = image.height;
-  final rec = ui.PictureRecorder();
-  Canvas(rec).drawImage(image, Offset.zero, Paint());
-  final picture = rec.endRecording();
-  final flat = await picture.toImage(w, h);
-  picture.dispose();
-  final data = await flat.toByteData(format: ui.ImageByteFormat.rawRgba);
-  flat.dispose();
-  if (data == null || data.lengthInBytes != w * h * 4) throw StateError('No pixels');
-  return (bytes: data.buffer.asUint8List(), width: w, height: h);
+  for (var i = 0; i < 4; i++) {
+    if (i > 0) await Future<void>.delayed(Duration(milliseconds: 90 * i));
+    final bytes = await _rawOf(image, flat: i.isOdd);
+    if (bytes != null && !looksScrambled(bytes, w, h)) return (bytes: bytes, width: w, height: h);
+  }
+  throw const StudioScrambled();
+}
+
+/// The pixels of the picture [draw] makes, checked like [readStudioPixels];
+/// drawn afresh if it stays scrambled (up to [tries] times).
+Future<StudioPixels> drawStudioPixels(Future<ui.Image> Function() draw, {int tries = 3}) async {
+  for (var i = 0; ; i++) {
+    final image = await draw();
+    try {
+      return await readStudioPixels(image);
+    } on StudioScrambled {
+      if (i + 1 >= tries) rethrow;
+    } finally {
+      image.dispose();
+    }
+  }
 }
 
 /// [pixels] as a JPEG at [path].
@@ -402,9 +474,12 @@ Future<void> writeStudioPixels(StudioPixels pixels, String path, {int quality = 
   });
 }
 
-/// [image] as a PNG at [path] (the flip book's pages, for the encoder).
+/// [image] as a PNG at [path] (the flip book's video frames, for the
+/// encoder): from its checked pixels, so never a frame of noise.
 Future<void> writeStudioPng(ui.Image image, String path) async {
-  final data = await image.toByteData(format: ui.ImageByteFormat.png);
-  if (data == null) throw StateError('No pixels');
-  await File(path).writeAsBytes(Uint8List.sublistView(data));
+  final (:bytes, width: w, height: h) = await readStudioPixels(image);
+  await Isolate.run(() {
+    final out = img.Image.fromBytes(width: w, height: h, bytes: bytes.buffer, numChannels: 4);
+    File(path).writeAsBytesSync(img.encodePng(out, level: 1, filter: img.PngFilter.none));
+  });
 }

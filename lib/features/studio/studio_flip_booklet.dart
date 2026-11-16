@@ -142,9 +142,12 @@ class _FramePainter extends CustomPainter {
 /// when it's opened). One from before its photos were kept is the old
 /// booklet, still.
 class StapledFlipBook extends StatefulWidget {
-  const StapledFlipBook({super.key, required this.work});
+  const StapledFlipBook({super.key, required this.work, this.still = false});
 
   final StudioWork work;
+
+  /// Shut, as just made: its first page, nothing flicking.
+  final bool still;
 
   @override
   State<StapledFlipBook> createState() => _StapledFlipBookState();
@@ -164,13 +167,13 @@ class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProv
   Future<void> _load() async {
     final images = <ui.Image>[];
     try {
-      for (final p in widget.work.pages) {
-        images.add(await loadStudioImage(p, maxSide: 500));
+      for (final p in widget.still ? widget.work.pages.take(1) : widget.work.pages) {
+        images.add(await loadStudioImage(p, maxSide: widget.still ? 900 : 500));
       }
     } catch (_) {
       // (the old booklet instead)
     }
-    if (!mounted || images.length != widget.work.pages.length || images.isEmpty) {
+    if (!mounted || images.isEmpty || (!widget.still && images.length != widget.work.pages.length)) {
       for (final i in images) {
         i.dispose();
       }

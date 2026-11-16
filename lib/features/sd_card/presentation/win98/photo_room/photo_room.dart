@@ -184,16 +184,20 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
     StudioPixels? card;
     if (_make == PhotoRoomMake.card) {
       _cardEditor.currentState?.unpick();
+      final onScreen = MediaQuery.devicePixelRatioOf(context);
       await WidgetsBinding.instance.endOfFrame;
       final box = _cardBoundary.currentContext?.findRenderObject();
       if (box is RenderRepaintBoundary && box.hasSize) {
-        final shot = await box.toImage(pixelRatio: 1500 / box.size.width);
-        try {
-          card = await readStudioPixels(shot);
-        } catch (_) {
-          // (said below: the card could not be drawn)
+        // (1500 px across; if that keeps coming back scrambled, as it is
+        // on screen)
+        for (final ratio in [1500 / box.size.width, onScreen]) {
+          try {
+            card = await drawStudioPixels(() => box.toImage(pixelRatio: ratio));
+            break;
+          } catch (_) {
+            // (said below: the card could not be drawn)
+          }
         }
-        shot.dispose();
       }
       if (!mounted) return;
     }
@@ -228,7 +232,7 @@ class _PhotoRoomWizardState extends ConsumerState<PhotoRoomWizard> {
         case PhotoRoomMake.card:
           // (the card as it looked, 1500 px across)
           final pixels = card;
-          if (pixels == null) throw StateError('The card could not be drawn');
+          if (pixels == null) throw const StudioScrambled();
           made = await keepOnC(
             repo: repo,
             existing: existing,

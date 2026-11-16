@@ -445,6 +445,13 @@ class _NavButton extends StatelessWidget {
 /// How far the boards stand out past the pages, all round.
 const _overhang = 12.0;
 
+/// The front board's hinge is on the far side of the spine: shut, it's over
+/// the pages' edge; open, half the spine's width (and the headbands') to
+/// the left. It moves across as the board swings, and the spine and
+/// headbands show only up to it, so the board uncovers them: they're never
+/// seen growing, or over the board.
+const _hinge = 10.0;
+
 /// The album, built as a book is: a back board with the block of pages on
 /// it, a spine with its headbands, and the front board, hinged at the
 /// spine. [open] swings the front board up towards you and over (0 shut,
@@ -479,7 +486,8 @@ class _OpenBook extends StatelessWidget {
     // The front board: the same one the whole way, so nothing changes as
     // it lands. Past upright its inside shows (the lining).
     final cover = Positioned(
-      left: spine,
+      // (its hinge moves out across the spine as it opens: see [_hinge])
+      left: spine - _hinge * open.clamp(0.0, 1.0),
       width: pw + _overhang,
       top: -_overhang,
       bottom: -_overhang,
@@ -581,8 +589,9 @@ class _TallClip extends CustomClipper<Rect> {
 /// (in page widths).
 const _dip = 0.02, _dipLength = 0.2;
 
-/// A page's outline: its gutter-side corners dip, as pages do curving down
-/// into the spine ([left]: a left-hand page, its gutter on the right).
+/// A page's outline: its gutter-side corner dips at the head, as pages do
+/// curving down into the spine; its foot is straight, like the edges of
+/// the pages beneath it ([left]: a left-hand page, its gutter on the right).
 class _PageShape extends CustomClipper<Path> {
   const _PageShape({this.left = false});
 
@@ -597,8 +606,7 @@ class _PageShape extends CustomClipper<Path> {
       ..quadraticBezierTo(g * 0.35, 0, g, 0)
       ..lineTo(w, 0)
       ..lineTo(w, h)
-      ..lineTo(g, h)
-      ..quadraticBezierTo(g * 0.35, h, 0, h - n)
+      ..lineTo(0, h)
       ..close();
     return left
         ? p.transform(
@@ -634,9 +642,9 @@ class _BookBody extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final h = size.height;
     final lying = open >= 1, leftPage = leaves > 0;
-    // Left of the hinge the board is over the spine and the headbands till
-    // it's nearly down; they come out from under it as it settles.
-    final from = spine - 10 * ((open - 0.8) / 0.2).clamp(0.0, 1.0);
+    // The spine and the headbands show as far as the board's hinge has
+    // moved (see [_hinge]): uncovered by it, never over it.
+    final from = spine - _hinge * open.clamp(0.0, 1.0);
     final shown = Rect.fromLTRB(from, -_overhang * 2, size.width + _overhang * 2, h + _overhang * 2);
     // the spine: a rounded back between the boards
     canvas.save();
@@ -707,8 +715,9 @@ class _BookBody extends CustomPainter {
     }
 
     block(Rect.fromLTRB(spine, 0, spine + pageWidth, h), 5, right: true);
-    if (leaves > 1) {
-      block(Rect.fromLTRB(spine - pageWidth, 0, spine, h), math.min(leaves - 1, 2), right: false);
+    // (the left block thickens a leaf a turn: as thick as the right after four)
+    if (leaves > 0) {
+      block(Rect.fromLTRB(spine - pageWidth, 0, spine, h), math.min(leaves + 1, 5), right: false);
     }
 
     // the gutter: dark where the pages dip into the spine, head and tail
@@ -717,6 +726,8 @@ class _BookBody extends CustomPainter {
     final n = pageWidth * _dip, g = pageWidth * _dipLength;
     for (final top in [true, false]) {
       final y = top ? 0.0 : h, dir = top ? 1.0 : -1.0;
+      // (the gutter's dark shows at the head only, where the pages dip: at
+      // the tail they're cut straight, like the pages beneath them)
       canvas.save();
       if (!lying) canvas.clipRect(Rect.fromLTRB(spine, -_overhang, size.width + _overhang, h + _overhang));
       final wedge = Path()
@@ -727,9 +738,7 @@ class _BookBody extends CustomPainter {
         ..lineTo(spine - (leftPage ? 0.01 : 0), y + dir * (n + 1));
       if (leftPage) wedge.quadraticBezierTo(spine - g * 0.35, y + dir * 0.5, spine - g, y + dir * 0.5);
       wedge.close();
-      // (at the head: the dark of the gutter. At the tail the pages below
-      // show in the dip: paper, not a black notch in the middle of them)
-      canvas.drawPath(wedge, Paint()..color = top ? const Color(0xFF24150C) : const Color(0xFFD9CDB5));
+      if (top) canvas.drawPath(wedge, Paint()..color = const Color(0xFF24150C));
       canvas.restore();
       // the headband: a little striped silk roll across the spine (at the
       // head in the pages' dip; at the tail below the whole block of pages)

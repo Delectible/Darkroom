@@ -3,16 +3,15 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.12';
+  static const version = '2.3.13';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Greeting cards from the Photo Room save properly again (they came out as noise), with new clip art. '
-      'Darkroom 98: Edit has Deselect All and Multi-Select, menus stay on the screen, and windows fit at '
-      '640 x 480 with large fonts. The Studio: prints slide into the tray as it opens, flip books sit in '
-      'the album as little stapled books, and the album opens and turns more cleanly.';
+      'Cards, flip books and GIFs are checked as they are saved, so they no longer come out as coloured '
+      'snow. Greeting cards take up to 8 photos, GIF changes are smoother, a new flip book lands on the '
+      'table as a little shut book, and the album opens and lies more like a real one.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

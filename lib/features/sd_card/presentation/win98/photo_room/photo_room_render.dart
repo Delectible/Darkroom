@@ -25,7 +25,7 @@ enum PhotoRoomMake {
     2,
     36,
   ),
-  card('Greeting card or poster', 'CARD', 'Photos, WordArt and clip art on a card you arrange.', 1, 4),
+  card('Greeting card or poster', 'CARD', 'Photos, WordArt and clip art on a card you arrange.', 1, 8),
   gif('Animated GIF', 'ANIM', 'Your photos one after another, looping, at the speed you pick.', 2, 30),
   strip('Photo booth strip', 'STRIP', 'Three or four photos down a booth strip with the date.', 3, 4);
 
@@ -41,7 +41,7 @@ enum PhotoRoomMake {
 
   String get needs => switch (this) {
     PhotoRoomMake.collage => '2 to 36',
-    PhotoRoomMake.card => '1 to 4',
+    PhotoRoomMake.card => '1 to 8',
     PhotoRoomMake.gif => '2 to 30',
     PhotoRoomMake.strip => '3 or 4',
   };
@@ -512,12 +512,14 @@ Future<Uint8List> encodeGif(
   final w = size.side, h = (size.side * 3 / 4).round();
   final photos = [for (final p in paths) await gifFrameOf(p, w, h)];
   final change = transitionMs(transition, frameMs);
-  // fewer in-between frames on long GIFs (the file stays a sensible size)
-  final steps = change == 0 ? 0 : (paths.length > 12 ? 3 : 5);
+  // A change is a frame every 55 ms or so, however long the GIF: 6 at
+  // least, so even a quick one reads as a movement, not a glitch.
+  final steps = change == 0 ? 0 : (change / 55).round().clamp(6, 14);
   final frames = <(Uint8List, int)>[];
   Future<void> add(ui.Image frame, int ms) async {
-    final bytes = await frame.toByteData(format: ui.ImageByteFormat.rawRgba);
-    frames.add((bytes!.buffer.asUint8List(), (ms / 10).round().clamp(2, 300)));
+    // (checked: a frame of noise read back from the GPU is read again)
+    final pixels = await readStudioPixels(frame);
+    frames.add((pixels.bytes, (ms / 10).round().clamp(2, 300)));
   }
 
   for (var i = 0; i < photos.length; i++) {
@@ -526,7 +528,9 @@ Future<Uint8List> encodeGif(
     final next = photos[(i + 1) % photos.length];
     for (var k = 1; k <= steps; k++) {
       final f = await _record(Size(w.toDouble(), h.toDouble()), (c) {
-        paintGifChange(c, Size(w.toDouble(), h.toDouble()), photos[i], next, k / (steps + 1), transition);
+        // (eased: it gathers speed and settles, each change the same way)
+        final t = Curves.easeInOut.transform(k / (steps + 1));
+        paintGifChange(c, Size(w.toDouble(), h.toDouble()), photos[i], next, t, transition);
       });
       await add(f, change ~/ steps);
       f.dispose();

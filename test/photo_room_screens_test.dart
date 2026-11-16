@@ -267,7 +267,8 @@ void main() {
     expect(gif.width, 320);
     // a fade: five frames between each pair (round to the first again)
     final faded = img.decodeGif(await encodeGif(paths, 600, GifSize.small, transition: GifTransition.fade))!;
-    expect(faded.numFrames, 3 * 6);
+    // (each photo, then its change to the next: 6 frames at least)
+    expect(faded.numFrames, 3 * 7);
   });
 }
 

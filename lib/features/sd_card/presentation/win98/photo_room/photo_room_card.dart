@@ -65,20 +65,23 @@ class CardDraft {
     bits.add(CardBit.word('Hello!', const Offset(0.5, 0.13)));
     final n = photos.length;
     final rnd = math.Random(n);
+    // one big; up to four in twos; more in threes, smaller
+    final cols = n == 1 ? 1 : (n <= 4 ? 2 : 3);
+    final rows = (n / cols).ceil();
+    final down = rows <= 2 ? 0.38 : 0.92 / rows;
     for (var i = 0; i < n; i++) {
-      final cols = n == 1 ? 1 : 2;
       final row = i ~/ cols, col = i % cols;
-      final rows = (n / cols).ceil();
       bits.add(
         CardBit.photo(
             photos[i],
-            Offset(
-              cols == 1 ? 0.5 : 0.28 + col * 0.44,
-              0.34 + (rows == 1 ? 0.18 : row * 0.38) + (rnd.nextDouble() - 0.5) * 0.03,
-            ),
+            Offset(switch (cols) {
+              1 => 0.5,
+              2 => 0.28 + col * 0.44,
+              _ => 0.2 + col * 0.3,
+            }, (rows <= 2 ? 0.34 : 0.3) + (rows == 1 ? 0.18 : row * down) + (rnd.nextDouble() - 0.5) * 0.03),
           )
           ..turn = (rnd.nextDouble() - 0.5) * 0.16
-          ..scale = n == 1 ? 1.5 : 1,
+          ..scale = n == 1 ? 1.5 : (cols == 3 ? 0.66 : 1),
       );
     }
   }
@@ -87,6 +90,9 @@ class CardDraft {
 
   /// The card's colour (any; cream to start).
   Color paper = const Color(0xFFFFFBE8);
+
+  /// The most photos a card holds (chosen at the start or added later).
+  static const maxPhotos = 8;
 
   /// A card is 5 x 7, upright.
   static const aspect = 5 / 7;
@@ -290,6 +296,14 @@ class CardEditorState extends State<CardEditor> {
   }
 
   Future<void> _addPhoto() async {
+    if (_d.bits.where((b) => b.kind == CardBitKind.photo).length >= CardDraft.maxPhotos) {
+      await showWin98MessageBox(
+        context,
+        title: 'Add a Photo',
+        message: 'A card holds up to ${CardDraft.maxPhotos} photos.\n\nDelete one to add another.',
+      );
+      return;
+    }
     final m = await showWin98Window<MediaItem>(
       context,
       title: 'Add a Photo',

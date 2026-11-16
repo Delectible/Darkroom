@@ -1,4 +1,8 @@
+import 'dart:math' as math;
+import 'dart:typed_data';
+
 import 'package:darkroom/features/studio/studio_layout.dart';
+import 'package:darkroom/features/studio/studio_render.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -22,5 +26,27 @@ void main() {
         expect(r.bottom, lessThanOrEqualTo(4 / 3 + 1e-9));
       }
     }
+  });
+
+  test('noise read back from the GPU is told from a picture', () {
+    const w = 200, h = 160;
+    final rnd = math.Random(4);
+    final noise = Uint8List.fromList([for (var i = 0; i < w * h * 4; i++) rnd.nextInt(256)]);
+    expect(looksScrambled(noise, w, h), isTrue);
+    // a picture, grainy: a gradient with +-20 of grain
+    final picture = Uint8List(w * h * 4);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        final i = (y * w + x) * 4;
+        for (var c = 0; c < 3; c++) {
+          picture[i + c] = (x + y * (c + 1) ~/ 2 + rnd.nextInt(41) - 20).clamp(0, 255);
+        }
+        picture[i + 3] = 255;
+      }
+    }
+    expect(looksScrambled(picture, w, h), isFalse);
+    // half noise (the top of a frame): still caught
+    final half = Uint8List.fromList(picture)..setRange(0, w * h * 2, noise);
+    expect(looksScrambled(half, w, h), isTrue);
   });
 }

@@ -1334,3 +1334,26 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   - Studio: the tray's prints slide in from the right each time it's
     opened, staggered, after their thumbnails are decoded (1.2 s at most),
     so none is seen loading.
+- 68.12 Scrambled saves, card limit, GIF changes, book (2026-11-16), 2.3.13
+  - Still noise on the Pixel 9 Pro: a greeting card (every time), a flip
+    book's cover and one of its pages. Reading pixels back from the GPU
+    (toByteData) returns noise there now and then, whatever made the
+    image. Not reproduced here; so every save now checks: looksScrambled
+    (neighbouring pixels unlike all over a 5 x 5 grid of patches), and
+    readStudioPixels reads again, later and by another route, up to 4
+    times; drawStudioPixels draws afresh too. The card falls back to
+    screen resolution, then says so (StudioScrambled) rather than save
+    snow. GIF frames and the flip book's video frames (now PNGs encoded
+    from the checked pixels, slower) go through it too. IF IT STILL
+    HAPPENS: the card needs drawing on a canvas instead of from the screen.
+  - Card: 1 to 8 photos (three across past four); Add a photo refuses a
+    ninth (delete one first).
+  - GIF: a change is a frame every 55 ms or so, 6 at least, eased, however
+    many photos (long GIFs had 3 steps: read as a glitch).
+  - New flip book's drop: the stapled book itself, shut (StapledFlipBook
+    still), not its video's frame with the table in it.
+  - Book: the front board's hinge moves 10 px out across the spine as it
+    opens, and the spine and headbands show only up to it (uncovered by
+    the board, not grown). Pages are straight at the foot (dip at the
+    head only; no wedge there). The left block is leaves + 1 edges thick,
+    5 like the right after four turns.

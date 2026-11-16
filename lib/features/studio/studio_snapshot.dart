@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/device/upright.dart';
 import '../../core/device/haptics.dart';
+import 'studio_flip_booklet.dart';
 import 'studio_screen.dart';
 import 'studio_store.dart';
 
@@ -158,7 +159,11 @@ class _SnapshotDropState extends State<_SnapshotDrop> with SingleTickerProviderS
                             ),
                           ],
                         ),
-                        child: Image.file(File(path), fit: BoxFit.contain),
+                        // (a flip book: the little book itself, shut, not a
+                        // frame of its video with the table in it)
+                        child: widget.work.kind == StudioKind.flipbook && widget.work.pages.isNotEmpty
+                            ? StapledFlipBook(work: widget.work, still: true)
+                            : Image.file(File(path), fit: BoxFit.contain),
                       ),
                     ),
                   ),

@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/device/physical_orientation.dart';
 import 'package:darkroom/core/providers.dart';
+import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/core/theme/retro_theme.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/camera/presentation/photo_body.dart';
@@ -71,7 +72,7 @@ void main() {
       seen: true,
     );
     final key = GlobalKey();
-    Widget button(AppMode mode, List<MediaItem> items) => ProviderScope(
+    Widget button(AppMode mode, List<MediaItem> items, {bool autoSave = false}) => ProviderScope(
       overrides: [
         // The classic drawn buttons (the photoreal ones: photo_body_test).
         bodyArtProvider.overrideWithValue(null),
@@ -79,6 +80,9 @@ void main() {
         physicalOrientationProvider.overrideWith(_Held.new),
         filmItemsProvider.overrideWith((ref) => Stream.value(items)),
         sdCardItemsProvider.overrideWith((ref) => Stream.value(items)),
+        initialGlobalSettingsProvider.overrideWithValue(
+          GlobalSettings(autoSaveSince: autoSave ? DateTime(2026) : null),
+        ),
       ],
       child: Theme(
         data: RetroPalette.forMode(mode).toTheme(),
@@ -103,6 +107,8 @@ void main() {
                   button(AppMode.film, const []),
                   button(AppMode.digital, [item('ccd2003')]),
                   button(AppMode.digital, const []),
+                  // Auto Transfer: the card's empty, C: is shown (none here)
+                  button(AppMode.digital, [item('ccd2003')], autoSave: true),
                 ],
               ),
             ),
@@ -115,6 +121,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
     }
     expect(tester.takeException(), isNull);
+    expect(find.text('SD\nEMPTY'), findsOneWidget);
+    expect(find.text('STORAGE\nEMPTY'), findsOneWidget);
     await save(tester, key, 'gallery_buttons');
   });
 

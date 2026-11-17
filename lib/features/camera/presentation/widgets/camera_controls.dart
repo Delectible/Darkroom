@@ -1146,15 +1146,22 @@ class _PhotoReview extends StatelessWidget {
                   ColoredBox(
                     color: const Color(0xFF14306E),
                     child: Center(
-                      child: Text(
-                        empty,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFFBFD3FF),
-                          fontSize: 8,
-                          height: 1.1,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
+                      // (shrunk to fit: never wrapped mid-word)
+                      child: Padding(
+                        padding: const EdgeInsets.all(3),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            empty,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Color(0xFFBFD3FF),
+                              fontSize: 8,
+                              height: 1.1,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1269,15 +1276,22 @@ class _LcdThumb extends StatelessWidget {
                 ColoredBox(
                   color: const Color(0xFF14306E),
                   child: Center(
-                    child: Text(
-                      empty,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFFBFD3FF),
-                        fontSize: 8,
-                        height: 1.1,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
+                    // (shrunk to fit: never wrapped mid-word)
+                    child: Padding(
+                      padding: const EdgeInsets.all(3),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          empty,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Color(0xFFBFD3FF),
+                            fontSize: 8,
+                            height: 1.1,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
                       ),
                     ),
                   ),

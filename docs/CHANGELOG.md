@@ -1465,7 +1465,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 
 ## 71. Sounds in the Studio; flip book look (2026-11-17), 2.3.17
 - [x] 71.1 Page turns in the Book: four recorded takes (CC0, OpenGameArt
-  "80 CC0 RPG SFX" book_01..04), round-robin players so quick taps
+  "80 CC0 RPG SFX" book_01..04), 8 players (each take pitched low and high), shuffled, so quick taps
   overlap; on each tap / queued turn, and when a dragged page goes over.
 - [x] 71.2 Studio snapshot: an old shutter's cha-chunk (CC0, OpenGameArt
   "Camera") with the white flash after a strip / collage / scrapbook page

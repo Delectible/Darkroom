@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:video_player/video_player.dart';
@@ -28,11 +29,26 @@ class Sfx {
   // Recorded (CC0, tool/sfx/import_recorded.sh): the Book's pages and the
   // Studio's snapshot.
 
-  /// The Book's page turns: four takes, each its own player, played in
-  /// turn, so quick turns overlap instead of cutting each other off.
-  static final pageTurns = [for (var i = 1; i <= 4; i++) Sfx._('assets/sfx/page_turn_$i.wav')];
-  static int _nextPage = 0;
-  static void pageTurn() => pageTurns[_nextPage++ % pageTurns.length].play();
+  /// The Book's page turns: four takes, each a touch lower and higher (8),
+  /// each on its own player, picked at random but never one of the last
+  /// three (they may still be sounding), so quick turns overlap and no two
+  /// in a row sound the same.
+  static final pageTurns = [
+    for (var i = 1; i <= 4; i++)
+      for (final v in ['a', 'b']) Sfx._('assets/sfx/page_turn_$i$v.wav'),
+  ];
+  static final _recentPages = <int>[];
+  static final _random = math.Random();
+  static void pageTurn() {
+    final free = [
+      for (var i = 0; i < pageTurns.length; i++)
+        if (!_recentPages.contains(i)) i,
+    ];
+    final pick = free[_random.nextInt(free.length)];
+    _recentPages.add(pick);
+    if (_recentPages.length > 3) _recentPages.removeAt(0);
+    pageTurns[pick].play();
+  }
 
   /// A Studio piece made: the old shutter's cha-chunk under the white flash.
   static final studioSnap = Sfx._('assets/sfx/studio_snap.wav');

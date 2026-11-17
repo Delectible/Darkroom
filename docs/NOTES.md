@@ -594,7 +594,8 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   (photos get Make/Model on export).
 - Recorded sounds (CC0, `tool/sfx/import_recorded.sh` downloads, trims and
   levels them; sources in its header): the Book's page turns
-  (`Sfx.pageTurn()`, four takes on their own players in turn, so a burst of
+  (`Sfx.pageTurn()`, four takes each pitched a touch low and high, shuffled (never one of
+  the last three), on their own players, so a burst of
   taps overlaps instead of cutting off; played as a turn starts, and as a
   dragged page is let go over) and the Studio snapshot (`Sfx.studioSnap`,
   started with `popWithFlash`'s white). Everything else is synthesized.

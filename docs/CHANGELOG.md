@@ -1470,8 +1470,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 71.2 Studio snapshot: an old shutter's cha-chunk (CC0, OpenGameArt
   "Camera") with the white flash after a strip / collage / scrapbook page
   / flip book is made.
-- [ ] 71.3 Owner to pick by ear: page sets 1–3, shutters 1–4 (sent).
+- [x] 71.3 Owner picked page set 1 and shutter 1 (the ones built in).
 - [ ] 71.4 Flip book: the stapled look as the default style, made more
   real. Mockups A (stiff swing, lit), B (page bows over from the free
-  edge), C (corner first, like a thumb riffle); owner to pick.
+  edge), C (corner first, like a thumb riffle): owner picked C; where
+  the turned pages go is still open.
 - [x] 71.5 Performance Report expanded (hitches, stalls, events, one clock).

@@ -11,12 +11,16 @@ matching section of **`docs/NOTES.md`** before changing an area
   tests that matter (full suite once before committing a batch).
 - Big changes: ask first. Open-ended visual changes: show 2–3 screenshot
   options before building.
-- Work on the session branch; commit freely. **Only on "push"**:
-  fast-forward onto `main` (`git fetch origin main && git merge-base
-  --is-ancestor origin/main HEAD && git push origin HEAD:main`). Then
-  send_later ~20 min, check the run, and once the `play` job has uploaded
-  (+2 min) PushNotification: version, build, one line of what's new (or
-  the failure).
+- Work on the session branch; commit freely. **"push"** (unless he says
+  otherwise) = internal testing + TestFlight: fast-forward onto `main`
+  (`git fetch origin main && git merge-base --is-ancestor origin/main HEAD
+  && git push origin HEAD:main`). Then send_later ~20 min, check the run,
+  and once the `play` job has uploaded (+2 min) PushNotification: version,
+  build, one line of what's new (or the failure).
+- **"publish"** = both stores' production: push first if needed, wait for
+  that build to reach internal testing, then run `promote-production.yml`
+  (straight to Play production; build number empty) and
+  `appstore-release.yml` (rules under Stores).
 - User-visible change: bump `pubspec.yaml` version+build and
   `AppInfo.version`; set `AppInfo.latest` (Play's "What's new", plain
   words). Unpushed changes share one version. Only ever bump the last
@@ -30,12 +34,12 @@ matching section of **`docs/NOTES.md`** before changing an area
 
 ## Stores
 
-- `main` → Play internal testing + TestFlight. Closed testing:
-  `promote-closed.yml` when he says a build is stable.
-- `promote-production.yml` (Play production) only on "release to Android"; leave
-  the build number empty.
-- `appstore-release.yml` only on "release to iPhone", after checking App
-  Store Connect; never cancel a submission in review.
+- `main` → Play internal testing + TestFlight.
+- Android production: `promote-production.yml` on "publish" or "release
+  to Android", straight from internal (no closed-testing step); leave the
+  build number empty. `promote-closed.yml` only when he asks.
+- `appstore-release.yml` on "publish" or "release to iPhone", after
+  checking App Store Connect; never cancel a submission in review.
 - Never run `play-listing.yml` unless asked (the Play Console is the copy).
 
 ## Never

@@ -1449,3 +1449,16 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
     more taken gives one back).
   - Report: makers as 'maker: strip/collage/scrapbook/flipbook', marks
     'studio drop' and 'studio prints slide in'.
+
+## 70. Store pages and release words (2026-11-17)
+- [x] 70.1 Play production access granted (2026-11-16): Google Play section
+  taken off the checklist. "push" = internal testing + TestFlight;
+  "publish" = Play production (`promote-production.yml`, straight from
+  internal, no closed step) + App Store (`appstore-release.yml`).
+  CLAUDE.md, NOTES.md, RELEASE.md updated.
+- [ ] 70.2 Store videos and hero image: one ~25 s portrait clip recorded
+  on the iPhone (shutter, develop, print, film swap, Win98) as the App
+  Store preview (886×1920, 15–30 s, app footage only); the same on YouTube
+  (unlisted, no ads, landscape canvas) as Play's promo video, which turns
+  the 1024×500 feature graphic into the big banner at the top of the page.
+  Optional: a fresh feature graphic / cover frame (2–3 options first).

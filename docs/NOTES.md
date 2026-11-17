@@ -54,10 +54,11 @@ CLAUDE.md.)
   owner says "release to iPhone".
 - **Google Play:** production access granted 2026-11-16 (refused on
   2026-11-01, "needs more testing"; closed testing got it there). Production
-  releases go out only on "release to Android": `promote-production.yml`
-  (Actions tab, by hand) promotes a build already on internal testing,
-  optionally as a staged rollout. Internal testing still gets every `main`
-  build; closed testing via `promote-closed.yml` as before.
+  releases go out on "publish" (both stores) or "release to Android":
+  `promote-production.yml` (Actions tab, by hand) promotes a build already
+  on internal testing straight to production, optionally as a staged
+  rollout. Internal testing still gets every `main` build; closed testing
+  (`promote-closed.yml`) is skipped unless the owner asks.
 - **To verify on the owner's phones (not possible in the cloud):** digital
   3D skins swapping in (grip has its own normal map: the desktop preview
   can't draw the digital model), Performance Report numbers (launches, frames,

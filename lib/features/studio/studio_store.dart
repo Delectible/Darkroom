@@ -84,6 +84,7 @@ class StudioWork {
     this.paper,
     this.pageMs,
     this.flipStyle,
+    this.silent = false,
   });
 
   final String id;
@@ -108,6 +109,9 @@ class StudioWork {
   /// those made before: the shutter).
   final String? flipStyle;
 
+  /// A flip book whose video was asked for without its page sounds.
+  final bool silent;
+
   StudioWork copyWith({String? path, String? cover, int? pageMs}) => StudioWork(
     id: id,
     kind: kind,
@@ -118,6 +122,7 @@ class StudioWork {
     paper: paper,
     pageMs: pageMs ?? this.pageMs,
     flipStyle: flipStyle,
+    silent: silent,
   );
 
   bool get isVideo => kind == StudioKind.flipbook;
@@ -132,6 +137,7 @@ class StudioWork {
     'paper': ?paper,
     'pageMs': ?pageMs,
     'flipStyle': ?flipStyle,
+    if (silent) 'silent': true,
   };
 
   static StudioWork? fromJson(Object? j) {
@@ -153,6 +159,7 @@ class StudioWork {
       paper: j['paper'] as String?,
       pageMs: j['pageMs'] as int?,
       flipStyle: j['flipStyle'] as String?,
+      silent: j['silent'] == true,
     );
   }
 }

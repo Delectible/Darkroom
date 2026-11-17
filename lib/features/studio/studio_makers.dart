@@ -401,6 +401,7 @@ class _FlipMaker extends ConsumerStatefulWidget {
 class _FlipMakerState extends ConsumerState<_FlipMaker> {
   StudioPaper _paper = StudioPaper.cream;
   FlipStyle _style = FlipStyle.standard;
+  bool _sound = true;
   int _pageMs = StudioMake.pageMsDefault;
   late final Timer _tick;
   final _clock = Stopwatch()..start();
@@ -448,7 +449,13 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
   Future<void> _make() async {
     setState(() => _busy = true);
     try {
-      final work = await StudioMake.flipBook(widget.prints, _paper, pageMs: _pageMs, style: _style);
+      final work = await StudioMake.flipBook(
+        widget.prints,
+        _paper,
+        pageMs: _pageMs,
+        style: _style,
+        sound: _sound,
+      );
       await ref.read(studioBookProvider.notifier).add(work);
       if (mounted) await popWithFlash(context, work);
     } catch (e) {
@@ -482,10 +489,26 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
               ),
       ),
       options: [
-        Text(
-          'About ${seconds.toStringAsFixed(1)} s',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: StudioInk.muted, fontSize: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'About ${seconds.toStringAsFixed(1)} s',
+              style: const TextStyle(color: StudioInk.muted, fontSize: 12),
+            ),
+            // page sounds in the video (the styles that have them)
+            if (FlipFrames.hasSound(_style))
+              IconButton(
+                tooltip: _sound ? 'Page sounds in the video: on' : 'Page sounds in the video: off',
+                visualDensity: VisualDensity.compact,
+                onPressed: () => setState(() => _sound = !_sound),
+                icon: Icon(
+                  _sound ? Icons.volume_up_outlined : Icons.volume_off_outlined,
+                  size: 20,
+                  color: _sound ? StudioInk.brass : StudioInk.muted,
+                ),
+              ),
+          ],
         ),
         Row(
           children: [

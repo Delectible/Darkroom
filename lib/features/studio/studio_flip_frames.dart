@@ -57,6 +57,9 @@ class FlipFrames {
     flipMs: math.min(pageMs * 0.6, 400.0).round(),
   );
 
+  /// Whether [style]'s videos have page sounds.
+  static bool hasSound(FlipStyle style) => style == FlipStyle.stapled;
+
   /// The sounds and when they come (ms into the loop); only the stapled
   /// style has them.
   List<(double, FlipCue)> cues() => style == FlipStyle.stapled ? _stapled.cues() : const [];

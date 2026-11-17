@@ -3,14 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.17';
+  static const version = '2.3.18';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'New flip book style: a stapled booklet whose pages flick over and riffle back, with page sounds. '
-      'Sharper flip book videos without stray frames. Page sounds in the Book, and a shutter when you make something.';
+      'Flip books: a speaker button to leave the page sounds out of the video, and a smoother riffle back.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

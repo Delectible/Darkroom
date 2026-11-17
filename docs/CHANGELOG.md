@@ -1484,3 +1484,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 71.7 Flip book videos: quality-based MPEG-4 (was a fixed 6 Mbps) and
   each frame marked and checked on readback (the owner's videos had a frame
   of stale GPU memory and a black last frame).
+
+## 72. Flip book follow-ups (2026-11-17), 2.3.18
+- [x] 72.1 Riffle back: pages in the air drawn flattest first (the more
+  upright one covers the flatter), not in the order they left the pile.
+- [x] 72.2 Speaker button in the flip book maker (styles with sounds):
+  off = the video has no sound track (`StudioWork.silent`). The Book still
+  plays page sounds as it plays.

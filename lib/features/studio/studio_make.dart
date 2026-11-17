@@ -57,6 +57,7 @@ class StudioMake {
     StudioPaper paper, {
     int pageMs = pageMsDefault,
     FlipStyle style = FlipStyle.standard,
+    bool sound = true,
   }) async {
     final id = _id();
     final dir = await StudioBook.folder();
@@ -90,6 +91,7 @@ class StudioMake {
       paper: paper.name,
       pageMs: pageMs,
       flipStyle: style.name,
+      silent: !sound,
     );
     // (the cover: the first photo, settled)
     final first = await loadStudioImage(pages.first, maxSide: 1200);
@@ -132,7 +134,7 @@ class StudioMake {
       );
       // (under another name till it's whole: a half-made file is never taken for it)
       final part = work.path.replaceFirst(RegExp(r'\.mp4$'), '_part.mp4');
-      await _encode(frames, part);
+      await _encode(frames, part, sound: !work.silent);
       await File(part).rename(work.path);
       return work.path;
     } finally {
@@ -305,7 +307,7 @@ class StudioMake {
     return bytes.buffer.asUint8List();
   }
 
-  static Future<void> _encode(FlipFrames frames, String out) async {
+  static Future<void> _encode(FlipFrames frames, String out, {required bool sound}) async {
     final work = Directory('${Directory.systemTemp.path}/flipbook_${_id()}');
     await work.create(recursive: true);
     try {
@@ -328,12 +330,12 @@ class StudioMake {
       if (last != null) list.writeln("file '$last'");
       final listPath = '${work.path}/list.txt';
       await File(listPath).writeAsString(list.toString());
-      final sound = await _flipAudio(frames, work.path);
+      final audio = sound ? await _flipAudio(frames, work.path) : null;
       await VideoPipeline.ffmpeg([
         '-y', '-f', 'concat', '-safe', '0', '-i', listPath, //
-        if (sound != null) ...['-i', sound],
+        if (audio != null) ...['-i', audio],
         '-r', '30', '-pix_fmt', 'yuv420p', ..._videoArgs,
-        if (sound != null) ...['-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k'],
+        if (audio != null) ...['-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k'],
         out,
       ], timeout: const Duration(minutes: 4));
     } finally {

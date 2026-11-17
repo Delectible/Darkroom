@@ -116,7 +116,10 @@ class StapledFlip {
         b.leftEdge(c, thick(onLeft));
         _turn(c, b, onLeft - 1, math.pi, 0);
       }
-      // the one that left first is underneath: it lands first, the next on it
+      // pages in the air share the spine: the one standing up straighter is
+      // above the flatter one on either side, so the flattest go first
+      double tilt(double e) => (math.pi * Curves.easeInOut.transform(1 - e) - math.pi / 2).abs();
+      flying.sort((p, q) => tilt(q.$2).compareTo(tilt(p.$2)));
       for (final (k, e) in flying) {
         _motion(c, b, k, 1 - e);
       }

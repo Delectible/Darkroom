@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import '../../../core/diagnostics/perf_recorder.dart';
+
 /// A short log of camera session events (lifecycle, open, close, errors,
 /// whether the viewfinder is getting frames), shown in Windows 98 under
 /// Debug > Camera Log so a flaky camera can be diagnosed from a copy of it.
@@ -42,6 +44,7 @@ class CameraLog {
   static void add(String event) {
     final t = DateTime.now();
     _lines.add('${_time(t)}  $event');
+    if (!event.startsWith('app ')) PerfRecorder.event('camera: $event'); // (on the report's clock too)
     _trim();
     // Leaving the app may be the last chance: kept at once then.
     if (event.startsWith('app ') && event != 'app resumed' && event != 'app inactive') {

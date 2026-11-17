@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleListener, AppLifecycleState;
 
 import '../shaders/shader_library.dart' show FilmUniforms;
 import '../performance/quality.dart';
+import 'launch_timer.dart';
 import 'speed_tests.dart';
 
 /// Records every frame's timings on the phone (Win98 Help > Debug >
@@ -32,7 +36,14 @@ class PerfRecorder {
   static String? test;
 
   /// The screen on top, for frames nothing labelled ("idle camera"...).
-  static String screen = 'camera';
+  static String get screen => _screen;
+  static set screen(String v) {
+    if (v == _screen) return;
+    _screen = v;
+    event('screen: $v');
+  }
+
+  static String _screen = 'camera';
   static DateTime _labelUntil = DateTime(0);
 
   /// Labels the frames of the next [hold] (an animation, a dialog opening).
@@ -41,13 +52,22 @@ class PerfRecorder {
     if (!_on) return;
     _label = label;
     _labelUntil = DateTime.now().add(hold);
+    event(label);
   }
 
   static void start() {
     if (_on) return;
     _on = true;
     SchedulerBinding.instance.addTimingsCallback(_onTimings);
+    _startBeat();
     if (!_watching) {
+      _lifecycle = AppLifecycleListener(
+        onStateChange: (s) {
+          _foreground = s == AppLifecycleState.resumed;
+          event('app ${s.name}');
+          _lastVsync = 0; // (the gap over a trip to the background isn't a hitch)
+        },
+      );
       _watching = true;
       // Which frames were drawn while something moved: an animation running
       // (a ticker asked for the next frame) or a finger on the screen. The
@@ -55,6 +75,7 @@ class PerfRecorder {
       SchedulerBinding.instance.addPersistentFrameCallback((_) {
         if (!_on) return;
         final b = SchedulerBinding.instance;
+        _sync(b.currentSystemFrameTimeStamp.inMicroseconds);
         if (b.transientCallbackCount > 0 || _down > 0) {
           _moving.add(b.currentSystemFrameTimeStamp.inMicroseconds);
           if (_moving.length > 2000) _moving.remove(_moving.first);
@@ -72,6 +93,8 @@ class PerfRecorder {
   static int scene3d = 0;
 
   static bool _watching = false;
+  // ignore: unused_field
+  static AppLifecycleListener? _lifecycle;
   static int _down = 0;
 
   /// vsync times (µs) of frames drawn while something moved, until matched.
@@ -94,9 +117,17 @@ class PerfRecorder {
     if (!_on) return;
     _on = false;
     SchedulerBinding.instance.removeTimingsCallback(_onTimings);
+    _beat?.cancel();
   }
 
-  static void clear() => _frames.clear();
+  /// Clears the frames and the recent lists (the launch's are kept).
+  static void clear() {
+    _frames.clear();
+    _hitches.clear();
+    _stalls.clear();
+    _events.clear();
+    _lastVsync = 0;
+  }
 
   /// The frames recorded under [label] (a speed test step): build (UI) and
   /// raster (GPU) ms, and vsync time (µs).
@@ -121,58 +152,190 @@ class PerfRecorder {
     return (fps: n, ui: ui / n, gpu: gpu / n);
   }
 
+  /// Feeds frame timings as the engine would (tests).
+  @visibleForTesting
+  static void debugTimings(List<ui.FrameTiming> timings) => _onTimings(timings);
+
   static void _onTimings(List<ui.FrameTiming> timings) {
     final now = DateTime.now();
     final activity = now.isBefore(_labelUntil) ? _label! : 'idle $screen';
     final t = test;
     final label = t != null ? '$t · $activity' : '$activity${SpeedTests.tag}';
+    final budget = _budget;
     for (final t in timings) {
       final vsync = t.timestampInMicroseconds(ui.FramePhase.vsyncStart);
       final moving = _wasMoving(vsync);
       final build = t.buildDuration.inMicroseconds / 1000, raster = t.rasterDuration.inMicroseconds / 1000;
+      final wait = t.vsyncOverhead.inMicroseconds / 1000;
       Quality.frame(build, raster, vsync, moving);
-      _frames.add(
-        _Frame(
-          label,
-          t.buildDuration.inMicroseconds / 1000,
-          t.rasterDuration.inMicroseconds / 1000,
-          t.totalSpan.inMicroseconds / 1000,
-          vsync,
-          moving,
-        ),
-      );
+      final gap = _lastVsync == 0 ? 0.0 : (vsync - _lastVsync) / 1000;
+      _lastVsync = vsync;
+      final f = _Frame(label, build, raster, t.totalSpan.inMicroseconds / 1000, vsync, moving, wait, gap);
+      _frames.add(f);
+      // A hitch: a frame over twice the budget, or a gap in a steady run of
+      // frames (the camera's own stream: 2.5x the usual gap, 50 ms+).
+      final usual = _usualGap();
+      final slow = build > budget * 2 || raster > budget * 2;
+      final hole = gap > 50 && gap < 3000 && usual > 0 && usual < 50 && gap > usual * 2.5;
+      if (slow || hole) _hitch(f, usual);
+      if (gap > 0 && gap < 1000) {
+        _gaps.add(gap);
+        if (_gaps.length > 30) _gaps.removeAt(0);
+      }
     }
     if (_frames.length > _keep) _frames.removeRange(0, _frames.length - _keep);
   }
 
-  /// A plain-text summary to copy and send: per activity, how many frames
-  /// missed the display's budget and which thread was the bottleneck.
+  // ---- hitches, stalls, events, memory (all timed from the app's start) ----
+
+  static int _lastVsync = 0;
+  static final _gaps = <double>[];
+  static double _usualGap() {
+    if (_gaps.length < 10) return 0;
+    final s = [..._gaps]..sort();
+    return s[s.length ~/ 2];
+  }
+
+  static double get _budget =>
+      1000 / (ui.PlatformDispatcher.instance.implicitView?.display.refreshRate ?? 60);
+
+  /// The engine's clock minus the app's (µs), from frames' vsync times: the
+  /// largest seen is the closest (a frame callback runs after its vsync).
+  static int? _offset;
+  static void _sync(int vsyncUs) {
+    final o = vsyncUs - LaunchTimer.sinceStartUs;
+    if (_offset == null || o > _offset!) _offset = o;
+  }
+
+  /// Seconds since the app's code started, for an engine vsync time.
+  static String _at(int vsyncUs) => _offset == null ? '?' : _secs(vsyncUs - _offset!);
+  static String _now() => _secs(LaunchTimer.sinceStartUs);
+  static String _secs(int us) => (us / 1e6).toStringAsFixed(2);
+
+  static final _launchHitches = <String>[], _hitches = <String>[];
+  static void _hitch(_Frame f, double usual) {
+    final line =
+        '${_at(f.vsync)}s ${f.label}: UI ${_n(f.build)} GPU ${_n(f.raster)} wait ${_n(f.wait)}, '
+        'gap ${_n(f.gap)} (usual ${_n(usual)})${f.moving ? ' moving' : ''}';
+    if (LaunchTimer.sinceStartUs < 20000000 && _launchHitches.length < 60) {
+      _launchHitches.add(line);
+    } else {
+      _add(_hitches, line, 80);
+    }
+  }
+
+  static final _stalls = <String>[];
+  static final _events = <String>[];
+
+  /// Something happened (a screen, a mark, the app going to the background):
+  /// listed with its time, to line up with the hitches.
+  static void event(String what) {
+    if (!_on) return;
+    _add(_events, '${_now()}s $what', 120);
+  }
+
+  static void _add(List<String> to, String line, int keep) {
+    to.add(line);
+    if (to.length > keep) to.removeAt(0);
+  }
+
+  /// Memory every 5 s (MB, the process's resident size), the last 2 minutes.
+  static final _rss = <int>[];
+  static int _peakRss = 0;
+
+  static Timer? _beat;
+  static final _beatClock = Stopwatch();
+  static int _beats = 0;
+  static bool _foreground = true;
+
+  /// Every 50 ms: a tick that comes late means the app's thread was busy
+  /// (a stall, with or without a frame due). And memory every 100 ticks.
+  static void _startBeat() {
+    _beat?.cancel();
+    _beatClock
+      ..reset()
+      ..start();
+    _beat = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      final ms = _beatClock.elapsedMicroseconds / 1000;
+      _beatClock
+        ..reset()
+        ..start();
+      if (!_foreground) return;
+      if (ms >= 90) {
+        final activity = DateTime.now().isBefore(_labelUntil) ? _label! : 'idle $screen';
+        final line =
+            '${_secs(LaunchTimer.sinceStartUs - (ms * 1000).round())}s busy ${_n(ms - 50)} ms ($activity)';
+        if (LaunchTimer.sinceStartUs < 20000000 && _launchStalls.length < 40) {
+          _launchStalls.add(line);
+        } else {
+          _add(_stalls, line, 60);
+        }
+      }
+      if (++_beats % 100 == 1) {
+        try {
+          final mb = ProcessInfo.currentRss >> 20;
+          _peakRss = math.max(_peakRss, mb);
+          _rss.add(mb);
+          if (_rss.length > 24) _rss.removeAt(0);
+        } catch (_) {}
+      }
+    });
+  }
+
+  static final _launchStalls = <String>[];
+
   /// More lines for the report's header (e.g. the 3D camera's quality).
   static final extras = <String Function()>[];
 
+  static String _n(double v) => v >= 100 ? v.round().toString() : v.toStringAsFixed(1);
+
+  /// The frames as plain text to copy: per activity, then the hitches,
+  /// stalls and events on one clock (seconds since the app's code started,
+  /// the same as Launch Timing's).
   static String report() {
     final view = ui.PlatformDispatcher.instance.implicitView;
     final hz = view?.display.refreshRate ?? 60;
     final budget = 1000 / hz;
     final b = StringBuffer()
-      ..writeln('Darkroom performance report')
-      ..writeln('${Platform.operatingSystem} ${Platform.operatingSystemVersion}')
+      ..writeln('FRAMES')
       ..writeln(
         'Screen ${view?.physicalSize.width.round()}x${view?.physicalSize.height.round()} '
-        '@${view?.devicePixelRatio.toStringAsFixed(2)}x, ${hz.round()} Hz (budget ${budget.toStringAsFixed(1)} ms)',
+        '@${view?.devicePixelRatio.toStringAsFixed(2)}x ${hz.round()} Hz (budget ${_n(budget)} ms); '
+        'halation ${FilmUniforms.lite ? 'off' : 'on'}; up ${_now()}s',
       )
-      ..writeln('Viewfinder halation: ${FilmUniforms.lite ? 'off' : 'on'}')
       ..writeln(SpeedTests.summary);
     for (final extra in extras) {
       b.writeln(extra());
     }
-    b
-      ..writeln('Frames recorded: ${_frames.length}')
-      ..writeln()
-      ..writeln('activity: frames, fps, slow (UI or GPU over budget), UI avg/p90/max, GPU avg/p90/max (ms)');
-    if (_frames.isEmpty) {
-      return (b..writeln('(nothing yet: turn the recorder on, then use the app)')).toString();
+    if (_rss.isNotEmpty) b.writeln('RSS MB every 5 s: ${_rss.join(' ')} (peak $_peakRss)');
+    if (_frames.isEmpty) return (b..writeln('No frames yet.')).toString();
+    final span = (_frames.last.vsync - _frames.first.vsync) / 1e6;
+    var drops = 0;
+    final hist = List<int>.filled(7, 0);
+    const edges = [8.4, 16.7, 33.4, 50, 100, 250];
+    for (final f in _frames) {
+      final worst = math.max(f.build, f.raster);
+      drops += math.max(0, (worst / budget).ceil() - 1);
+      var i = 0;
+      while (i < edges.length && worst > edges[i]) {
+        i++;
+      }
+      hist[i]++;
     }
+    b
+      ..writeln(
+        '${_frames.length} frames over ${span.toStringAsFixed(0)}s (${_at(_frames.first.vsync)}-${_at(_frames.last.vsync)}s), '
+        '~$drops refreshes missed',
+      )
+      ..writeln(
+        'Slower thread ms: <8 ${hist[0]}, 8-17 ${hist[1]}, 17-33 ${hist[2]}, 33-50 ${hist[3]}, '
+        '50-100 ${hist[4]}, 100-250 ${hist[5]}, 250+ ${hist[6]}',
+      )
+      ..writeln()
+      ..writeln(
+        'BY ACTIVITY  frames, fps, slow (a thread over budget), hiccups (gap 2.5x usual, worst ms); '
+        'UI / GPU / wait (vsync to UI start) as avg/p90/p99/max ms; mov = share drawn while moving',
+      );
     final byLabel = <String, List<_Frame>>{};
     for (final f in _frames) {
       (byLabel[f.label] ??= []).add(f);
@@ -192,22 +355,54 @@ class PerfRecorder {
       });
     for (final l in labels) {
       final fs = byLabel[l]!;
-      final ui_ = fs.map((f) => f.build).toList(), gpu = fs.map((f) => f.raster).toList();
+      final ui_ = [for (final f in fs) f.build], gpu = [for (final f in fs) f.raster];
+      final wait = [for (final f in fs) f.wait];
+      final (hic, worstGap) = _hiccups(fs);
+      final mov = fs.where((f) => f.moving).length * 100 ~/ fs.length;
+      final uiAvg = ui_.reduce((a, c) => a + c) / fs.length, gpuAvg = gpu.reduce((a, c) => a + c) / fs.length;
       b.writeln(
-        '$l: ${fs.length}, ${_fps(fs)} fps, ${_slow(fs, budget)} slow, '
-        'UI ${_stats(ui_)}, GPU ${_stats(gpu)}',
+        '$l: ${fs.length}f ${_fps(fs)}fps slow ${_slow(fs, budget)} hiccups $hic'
+        '${hic > 0 ? ' (${_n(worstGap)})' : ''} mov $mov% '
+        '${gpuAvg > uiAvg ? 'GPU' : 'UI'}-bound | UI ${_stats(ui_)} | GPU ${_stats(gpu)} | wait ${_stats(wait)}',
       );
     }
-    final worst = [..._frames]..sort((a, c) => c.total.compareTo(a.total));
+    final worst = [..._frames]
+      ..sort((a, c) => math.max(c.build, c.raster).compareTo(math.max(a.build, a.raster)));
     b
       ..writeln()
-      ..writeln('Worst frames (activity: UI / GPU / total ms):');
-    for (final f in worst.take(12)) {
-      b.writeln(
-        '${f.label}: ${f.build.toStringAsFixed(1)} / ${f.raster.toStringAsFixed(1)} / ${f.total.toStringAsFixed(1)}',
-      );
-    }
+      ..writeln('WORST FRAMES  (over budget, up to 15) time, activity: UI / GPU / wait / total ms')
+      ..writeAll([
+        for (final f in worst.take(15).where((f) => math.max(f.build, f.raster) > budget))
+          '${_at(f.vsync)}s ${f.label}: ${_n(f.build)} / ${_n(f.raster)} / ${_n(f.wait)} / ${_n(f.total)}\n',
+      ])
+      ..writeln()
+      ..writeln('HITCHES IN THE FIRST 20 S  (a frame over 2x budget, or a gap in steady frames)')
+      ..writeln(_launchHitches.isEmpty ? '  none' : _launchHitches.join('\n'))
+      ..writeln()
+      ..writeln('HITCHES SINCE (last 80)')
+      ..writeln(_hitches.isEmpty ? '  none' : _hitches.join('\n'))
+      ..writeln()
+      ..writeln('STALLS  the app\'s thread busy 40 ms+ (frame due or not); first 20 s, then the last 60')
+      ..writeln(_launchStalls.isEmpty ? '  none at launch' : _launchStalls.join('\n'))
+      ..writeln(_stalls.isEmpty ? '  none since' : _stalls.join('\n'))
+      ..writeln()
+      ..writeln('EVENTS  (screens, marks, app state; last 120)')
+      ..writeln(_events.isEmpty ? '  none' : _events.join('\n'));
     return b.toString();
+  }
+
+  /// Gaps over 2.5x the activity's usual gap (and 50 ms+): the camera's
+  /// stream skipping, or the thread too busy to draw.
+  static (int, double) _hiccups(List<_Frame> fs) {
+    final gaps = [
+      for (final f in fs)
+        if (f.gap > 0 && f.gap < 1000) f.gap,
+    ]..sort();
+    if (gaps.length < 10) return (0, 0);
+    final usual = gaps[gaps.length ~/ 2];
+    if (usual >= 50) return (0, 0);
+    final big = gaps.where((g) => g > 50 && g > usual * 2.5).toList();
+    return (big.length, big.isEmpty ? 0 : big.last);
   }
 
   /// A frame misses the screen when either thread takes longer than a
@@ -234,13 +429,13 @@ class PerfRecorder {
   static String _stats(List<double> v) {
     final s = [...v]..sort();
     final avg = s.reduce((a, c) => a + c) / s.length;
-    final p90 = s[math.min(s.length - 1, (s.length * 0.9).floor())];
-    return '${avg.toStringAsFixed(1)}/${p90.toStringAsFixed(1)}/${s.last.toStringAsFixed(1)}';
+    double p(double q) => s[math.min(s.length - 1, (s.length * q).floor())];
+    return '${_n(avg)}/${_n(p(.9))}/${_n(p(.99))}/${_n(s.last)}';
   }
 }
 
 class _Frame {
-  const _Frame(this.label, this.build, this.raster, this.total, this.vsync, this.moving);
+  const _Frame(this.label, this.build, this.raster, this.total, this.vsync, this.moving, this.wait, this.gap);
 
   final String label;
   final double build;
@@ -252,4 +447,11 @@ class _Frame {
 
   /// Drawn while something moved (an animation, a finger on the screen).
   final bool moving;
+
+  /// From its vsync to the UI thread starting it (ms): long = the thread
+  /// was busy with something else when the frame was due.
+  final double wait;
+
+  /// Since the frame before (ms).
+  final double gap;
 }

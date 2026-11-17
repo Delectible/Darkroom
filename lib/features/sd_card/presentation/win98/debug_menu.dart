@@ -303,10 +303,10 @@ final _tools = <_Tool>[
 /// Debug > Performance Report: the phone, the launches, the frames, the 3D
 /// camera and memory, in one text to copy.
 Future<void> _perfReport(BuildContext context, _Read read) async {
-  final battery = await Battery.level();
+  final (battery, state) = await (Battery.level(), _phoneState()).wait;
   if (!context.mounted) return;
   String all() => [
-    _phoneReport(read, battery),
+    _phoneReport(read, battery, state),
     PerfRecorder.report(),
     LaunchTimer.report(),
     'QUALITY MANAGER\n${Quality.report()}',
@@ -370,15 +370,51 @@ Future<void> _perfReport(BuildContext context, _Read read) async {
   );
 }
 
-String _phoneReport(_Read read, int? battery) {
+/// The phone's model, heat, battery saver, refresh rate and free memory, as
+/// one line (Android: darkroom/display; iPhone: darkroom/device). Never
+/// throws; "?" for what the phone won't say.
+Future<String> _phoneState() async {
+  Future<Object?> call(String channel, String method) async {
+    try {
+      return await MethodChannel(channel).invokeMethod<Object?>(method).timeout(const Duration(seconds: 2));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  if (Platform.isAndroid) {
+    final (model, state, hz) = await (
+      call('darkroom/display', 'device'),
+      call('darkroom/display', 'deviceState'),
+      call('darkroom/display', 'displayHz'),
+    ).wait;
+    return '${model ?? '?'}; ${state is Map ? SpeedTestRun.stateLine(state) : 'state ?'}; '
+        'drawing at ${hz is num ? hz.round() : '?'} Hz now';
+  }
+  if (Platform.isIOS) {
+    final m = await call('darkroom/device', 'state');
+    if (m is! Map) return 'state ?';
+    const heat = ['nominal', 'fair', 'serious', 'critical'];
+    final t = m['thermal'];
+    return '${m['model'] ?? '?'}; low power ${m['lowPower'] == true ? 'ON' : 'off'}, '
+        'heat ${t is int && t >= 0 && t < heat.length ? heat[t] : '?'}, '
+        'free RAM for the app ${m['freeMb'] ?? '?'} MB, '
+        'screen max ${m['maxHz'] ?? '?'} Hz';
+  }
+  return '';
+}
+
+String _phoneReport(_Read read, int? battery, String state) {
   final settings = read(globalSettingsProvider);
   final preview = read(cameraSessionProvider).controller?.value.previewSize;
   return [
     'PHONE',
     '${AppInfo.name} ${AppInfo.version}, ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+    state,
     'RAM ${DeviceMemory.gb?.toStringAsFixed(1) ?? '?'} GB${DeviceMemory.low ? ' (low: lighter settings)' : ''}, '
         '${Platform.numberOfProcessors} cores, battery ${battery == null ? '?' : '$battery%'}',
-    'Fancy graphics: ${settings.controls3d ? 'on' : 'off'}',
+    'Fancy graphics ${settings.controls3d ? 'on' : 'off'}, performance mode ${settings.performance ? 'on' : 'off'}, '
+        'screen: ${PerfRecorder.screen}',
     'Camera stream: ${preview == null ? 'closed' : '${preview.width.round()} x ${preview.height.round()}'}',
     'Prints and reels: ${read(filmItemsProvider).value?.length ?? '?'}, '
         'SD card files: ${read(sdCardFilesProvider).length}, crash reports: ${CrashLog.reports.length}',

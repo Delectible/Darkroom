@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'perf_recorder.dart';
+
 /// How long each step of a launch took, from the start of Dart's main
 /// (Win98 Help > Debug > Performance Report). The engine's own start, before
 /// main, isn't in it. The last few launches are kept in prefs.
@@ -12,6 +14,9 @@ class LaunchTimer {
   static final Stopwatch _clock = Stopwatch();
   static final List<(String, int)> _marks = [];
   static bool _done = false;
+
+  /// µs since the app's code started (the Performance Report's clock).
+  static int get sinceStartUs => _clock.elapsedMicroseconds;
 
   /// Time from Android starting the process to Dart's main (engine,
   /// plugins), once known; null on iPhone.
@@ -64,6 +69,7 @@ class LaunchTimer {
   static void mark(String label) {
     if (_done || !_clock.isRunning) return;
     _marks.add((label, _clock.elapsedMilliseconds));
+    PerfRecorder.event('launch: $label');
   }
 
   /// [label] happened now, unless it already did this launch.
@@ -78,6 +84,7 @@ class LaunchTimer {
     if (!_done) return once(label);
     if (_marks.any((m) => m.$1 == label) || _clock.elapsed > const Duration(seconds: 30)) return;
     _marks.add((label, _clock.elapsedMilliseconds));
+    PerfRecorder.event('launch: $label');
     _save(replace: true);
   }
 

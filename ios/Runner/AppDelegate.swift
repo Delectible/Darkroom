@@ -4,6 +4,7 @@ import Flutter
 import Photos
 import UIKit
 import UserNotifications
+import os
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
@@ -51,6 +52,22 @@ import UserNotifications
       switch call.method {
       case "memory":
         result(["total": Int64(ProcessInfo.processInfo.physicalMemory), "lowRam": false])
+      case "state":
+        // Debug > Performance Report: model, heat, Low Power Mode, memory
+        // the app may still use, the screen's top rate.
+        var sys = utsname()
+        uname(&sys)
+        let model = withUnsafePointer(to: &sys.machine) {
+          $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(cString: $0) }
+        }
+        let free = Int(os_proc_available_memory() / (1024 * 1024))
+        result([
+          "model": model,
+          "thermal": ProcessInfo.processInfo.thermalState.rawValue,
+          "lowPower": ProcessInfo.processInfo.isLowPowerModeEnabled,
+          "freeMb": free,
+          "maxHz": UIScreen.main.maximumFramesPerSecond,
+        ])
       case "brightness":
         // the front flash: the screen at full brightness (0..1), or back to
         // what it was (below 0)

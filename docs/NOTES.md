@@ -722,7 +722,16 @@ UI
 - Measuring (2.0.8): Debug > Performance Report is the one report to ask
   for (phone, frames by activity, last 5 launches incl. Android's time
   before main and each 3D load step, 3D quality, memory); the frame
-  recorder is always on. Debug > Speed Tests (`core/diagnostics/
+  recorder is always on. 2.3.x: one clock for everything (seconds since
+  Dart's main = Launch Timing's): per activity UI / GPU / wait (vsync to
+  UI start) avg/p90/p99/max and hiccups (gaps 2.5x the usual, the camera
+  stream skipping); hitches (frame over 2x budget or a gap) for the first
+  20 s and the last 80; stalls (a 50 ms timer late by 40 ms+: the UI
+  thread busy with or without a frame due); events (`PerfRecorder.event`:
+  marks, screens, app state, Camera Log lines, launch marks, quality
+  steps); RSS every 5 s; heat / battery saver / live Hz / model (Android
+  `deviceState`, iPhone `darkroom/device` `state`). Label new costly jobs
+  with `PerfRecorder.mark` so they show by name. Debug > Speed Tests (`core/diagnostics/
   speed_tests.dart`, listed in debug_menu `_speedTests`) switch off one
   cost each and tag the frames; they reset on restart. **Run Speed Test**
   (Debug > Performance, first item; `speed_test_run.dart`) is what to ask

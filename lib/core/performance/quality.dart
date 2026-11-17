@@ -337,6 +337,7 @@ class Quality {
   static void _log(String text) {
     final s = _clock.elapsed.inSeconds;
     _events.add('${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')} $text');
+    PerfRecorder.event('quality: $text');
     if (_events.length > 30) _events.removeAt(0);
   }
 

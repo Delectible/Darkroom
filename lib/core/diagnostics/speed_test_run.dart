@@ -140,9 +140,9 @@ class SpeedTestRun {
   static Future<Object?> _channel(String method, [Object? args]) async {
     if (!Platform.isAndroid) return null;
     try {
-      return await const MethodChannel(
-        'darkroom/display',
-      ).invokeMethod<Object?>(method, args).timeout(const Duration(seconds: 3));
+      return await const MethodChannel('darkroom/display')
+          .invokeMethod<Object?>(method, args)
+          .timeout(const Duration(seconds: 3));
     } catch (_) {
       return null;
     }
@@ -161,7 +161,6 @@ class SpeedTestRun {
 
   /// [m] from Android as one line. Smooth display's top rate can be
   /// Infinity ("as fast as the screen goes", Pixels): "max".
-  @visibleForTesting
   static String stateLine(Map<Object?, Object?> m) {
     String hz(Object? v) {
       if (v is! num || v.isNaN || v <= 0) return '?';

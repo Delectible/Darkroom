@@ -20,6 +20,7 @@ import '../../../../core/theme/surfaces.dart';
 import '../../../../core/utils/pixel_font.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../cameras/domain/camera_spec.dart';
+import '../../../settings/application/settings_controllers.dart';
 import '../body_quality.dart';
 import '../photo_body.dart';
 import '../whole_body.dart';
@@ -956,8 +957,13 @@ class GalleryButton extends ConsumerWidget {
         ? items.where((m) => m.status != MediaStatus.failed && !m.isDevelopedAt(now)).length
         : items.where((m) => m.status != MediaStatus.failed).length;
     final newPrints = film ? items.where((m) => m.isDevelopedAt(now) && !m.seen).length : 0;
-    final latest = items.where((m) => m.isReady && m.thumbPath != null && (!film || m.isDevelopedAt(now)));
+    // Digital with Auto Transfer on: the card stays empty (new pictures go
+    // straight to C:), so the review screen shows C:'s newest instead
+    final onC = !film && ref.watch(globalSettingsProvider.select((s) => s.autoSave));
+    final shown = onC ? all.where((m) => m.location == MediaLocation.c) : items;
+    final latest = shown.where((m) => m.isReady && m.thumbPath != null && (!film || m.isDevelopedAt(now)));
     final thumb = latest.isEmpty ? null : latest.first.thumbPath;
+    final empty = onC ? 'STORAGE\nEMPTY' : 'SD\nEMPTY';
 
     return Semantics(
       button: true,
@@ -976,8 +982,8 @@ class GalleryButton extends ConsumerWidget {
                   final art? =>
                     film
                         ? _PhotoPrints(thumb: thumb, print: art.part(mode, 'print')!)
-                        : _PhotoReview(thumb: thumb, bezel: art.part(mode, 'review')!),
-                  null => film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb),
+                        : _PhotoReview(thumb: thumb, empty: empty, bezel: art.part(mode, 'review')!),
+                  null => film ? _PrintThumb(thumb: thumb) : _LcdThumb(thumb: thumb, empty: empty),
                 },
               ),
               if (badge > 0 || newPrints > 0)
@@ -1115,9 +1121,12 @@ class _PhotoPrints extends StatelessWidget {
 
 /// Photoreal digital body: the review screen under its rendered bezel.
 class _PhotoReview extends StatelessWidget {
-  const _PhotoReview({required this.thumb, required this.bezel});
+  const _PhotoReview({required this.thumb, required this.empty, required this.bezel});
 
   final String? thumb;
+
+  /// What the screen says with nothing to show.
+  final String empty;
   final BodyPart bezel;
 
   @override
@@ -1134,13 +1143,13 @@ class _PhotoReview extends StatelessWidget {
               Upright(
                 child: _thumbImage(
                   thumb,
-                  const ColoredBox(
-                    color: Color(0xFF14306E),
+                  ColoredBox(
+                    color: const Color(0xFF14306E),
                     child: Center(
                       child: Text(
-                        'SD\nEMPTY',
+                        empty,
                         textAlign: TextAlign.center,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Color(0xFFBFD3FF),
                           fontSize: 8,
                           height: 1.1,
@@ -1228,9 +1237,12 @@ class _PrintThumb extends StatelessWidget {
 /// Digital: the camera's own little review screen: a bezel, an LCD with a
 /// faint pixel grid and glass sheen, and a play mark in the corner.
 class _LcdThumb extends StatelessWidget {
-  const _LcdThumb({required this.thumb});
+  const _LcdThumb({required this.thumb, required this.empty});
 
   final String? thumb;
+
+  /// What the screen says with nothing to show.
+  final String empty;
 
   @override
   Widget build(BuildContext context) {
@@ -1254,13 +1266,13 @@ class _LcdThumb extends StatelessWidget {
             Upright(
               child: _thumbImage(
                 thumb,
-                const ColoredBox(
-                  color: Color(0xFF14306E),
+                ColoredBox(
+                  color: const Color(0xFF14306E),
                   child: Center(
                     child: Text(
-                      'SD\nEMPTY',
+                      empty,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Color(0xFFBFD3FF),
                         fontSize: 8,
                         height: 1.1,
@@ -1616,9 +1628,8 @@ class _LensFlipPainter extends CustomPainter {
       c,
       r,
       Paint()
-        ..shader = SweepGradient(
-          colors: [ring, ringDark, ring, ringDark, ring],
-        ).createShader(Rect.fromCircle(center: c, radius: r)),
+        ..shader = SweepGradient(colors: [ring, ringDark, ring, ringDark, ring])
+            .createShader(Rect.fromCircle(center: c, radius: r)),
     );
     final knurl = Paint()
       ..color = Colors.black.withValues(alpha: 0.22)

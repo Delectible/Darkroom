@@ -1504,3 +1504,6 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   shutter blink waits for takePicture to return (the pre-flash metering
   made the blink at the press read as done). Without flash it stays at
   the press.
+- [x] 72.7 Digital with Auto Transfer (`autoSave`) on: the gallery
+  button's review screen shows C:'s newest picture; "STORAGE EMPTY" when
+  C: has none (still "SD EMPTY" otherwise).

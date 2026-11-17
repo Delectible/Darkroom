@@ -13,6 +13,7 @@
 // uploaded (on backends that can sample hand-uploaded chains), so mipped KTX2
 // textures sample with proper minification.
 
+import 'package:flutter_scene/src/darkroom_trace.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -163,6 +164,15 @@ _Prepared _prepare(Ktx2Texture texture, int mode, {required bool mips}) {
 
 /// Uploads prepared level bytes to a GPU texture. Must run on the main thread.
 gpu.Texture _upload(_Prepared p) {
+  final uploading = Stopwatch()..start();
+  final texture = _uploadNow(p);
+  if (uploading.elapsedMilliseconds >= 5) {
+    darkroomTrace?.call('texture upload ${uploading.elapsedMilliseconds} ms (${p.width}x${p.height})');
+  }
+  return texture;
+}
+
+gpu.Texture _uploadNow(_Prepared p) {
   final gpu.Texture texture;
   if (p.mode == _modeRgba8) {
     texture = gpu.gpuContext.createTexture(

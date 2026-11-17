@@ -84,6 +84,8 @@ class WholeArt {
     bool early = false,
     void Function()? onFirstFailed,
   }) async {
+    // (the 3D library's loading steps, in Debug > Performance Report's events)
+    fs.darkroomTrace ??= (m) => PerfRecorder.event('3D lib: $m');
     try {
       final j = jsonDecode(await rootBundle.loadString('$root/manifest.json')) as Map<String, dynamic>;
       final d = j['design'] as Map<String, dynamic>;

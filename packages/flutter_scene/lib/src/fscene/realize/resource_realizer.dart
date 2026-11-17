@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 
+import 'package:flutter_scene/src/darkroom_trace.dart';
 import 'package:collection/collection.dart' show DeepCollectionEquality;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show AssetBundle, rootBundle;
@@ -298,6 +299,7 @@ class ResourceRealizer {
       }
     }
     await Future.wait(textures);
+    darkroomTrace?.call('textures in (${textures.length})');
 
     final materials = <Future<void>>[];
     for (final resource in document.resources.values) {
@@ -311,20 +313,27 @@ class ResourceRealizer {
       }
     }
     await Future.wait(materials);
+    darkroomTrace?.call('materials in (${materials.length})');
 
     // DARKROOM PATCH: the meshes, built now a few milliseconds at a time with
     // the event loop let through in between (frames go on being drawn).
     // Otherwise the synchronous realize builds every one at once: a camera
     // model held the UI thread ~450 ms on a Pixel 9 Pro.
     final slice = Stopwatch()..start();
+    var meshes = 0, busy = 0, longest = 0;
     for (final resource in document.resources.values) {
       if (resource is! GeometryResource || _geometries.containsKey(resource.id)) continue;
+      final one = Stopwatch()..start();
       geometry(resource.id);
+      meshes++;
+      busy += one.elapsedMilliseconds;
+      longest = longest > one.elapsedMilliseconds ? longest : one.elapsedMilliseconds;
       if (slice.elapsedMilliseconds >= 6) {
         await Future<void>.delayed(Duration.zero);
         slice.reset();
       }
     }
+    darkroomTrace?.call('meshes built ($meshes, $busy ms, longest $longest ms)');
 
     // Environments are GPU-bound and async (they build prefilter cubes and may
     // load image assets), so realize them here and cache the result for the
@@ -385,8 +394,12 @@ class ResourceRealizer {
         content,
       );
     }
+    final reading = Stopwatch()..start();
     final payload = document.payload(res.payload!);
     final bytes = _payloadBytes(res.payload!, 'image');
+    if (reading.elapsedMilliseconds >= 5) {
+      darkroomTrace?.call('texture bytes ${reading.elapsedMilliseconds} ms');
+    }
     // KTX2 block payloads carry their own mip chain and transcode off the main
     // isolate; the rest build one here, also off the main isolate.
     if (payload?.format == 'ktx2') {

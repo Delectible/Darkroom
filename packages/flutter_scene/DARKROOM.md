@@ -20,6 +20,11 @@ between (marked `DARKROOM PATCH`). Upstream realizes every mesh at once,
 synchronously, after preload: loading the second 3D camera after launch
 froze the app ~450 ms (2.3.19 Performance Report). Same result, spread out.
 
+`lib/src/darkroom_trace.dart` (exported): `darkroomTrace`, called by the
+loader at its steps (document read, textures in, each texture upload of 5 ms+,
+materials in, meshes built, realized). Diagnostics only; the app sends them to
+its Performance Report. Calls marked `darkroomTrace?.call`.
+
 ## Updating / undoing
 
 - Undo: in the root `pubspec.yaml` set `flutter_scene: ^0.24.3` (or newer)

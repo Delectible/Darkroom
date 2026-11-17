@@ -1,3 +1,4 @@
+import 'package:flutter_scene/src/darkroom_trace.dart';
 import 'package:flutter/foundation.dart' show internal;
 import 'package:flutter/services.dart';
 
@@ -353,8 +354,10 @@ final class SceneRegistry {
     Future<_SceneTemplate> loadTemplate() async {
       final seen = <String>{key};
       final document = await readComposed(seen);
+      darkroomTrace?.call('document read');
       final resources = ResourceRealizer(document, bundle: assetBundle);
       await resources.preload();
+      darkroomTrace?.call('preloaded');
       return _SceneTemplate(document, resources, seen);
     }
 
@@ -375,12 +378,14 @@ final class SceneRegistry {
     }
 
     try {
+      final realizing = Stopwatch()..start();
       final root = await realizeSceneAsync(
         template.document,
         registry: registry,
         bundle: assetBundle,
         resources: template.resources,
       );
+      darkroomTrace?.call('realized ${realizing.elapsedMilliseconds} ms');
       if (applyStageTo != null) {
         await realizeStage(
           template.document,

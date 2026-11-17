@@ -1545,3 +1545,8 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   page opens: their first photo is decoded with the page's other pieces
   (`StapledFlipBook.warm`, kept for 24), drawn from the first frame; an
   old one's cover is precached.
+- [ ] 73.7 2.3.20 report: the stall after launch is down to 342 ms (was
+  428): still inside loadScene but not mostly the meshes. The loader now
+  reports its steps (`darkroomTrace`: textures, each upload, materials,
+  meshes with their ms, realize) into the report's events; next report says
+  which.

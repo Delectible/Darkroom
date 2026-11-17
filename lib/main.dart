@@ -90,7 +90,12 @@ Future<void> _start() async {
   LaunchPicture.init(paths.supportDir);
   CameraLog.init(paths.supportDir);
   // (it judges only once the launch curtain has gone)
-  unawaited(LaunchCurtain.gone.then((_) => Quality.listening = true));
+  unawaited(
+    LaunchCurtain.gone.then((_) {
+      Quality.listening = true;
+      PerfRecorder.mark('launch: curtain lifted', hold: const Duration(milliseconds: 600));
+    }),
+  );
   LaunchTimer.mark('storage open');
   // Crash reports stay on the phone (Win98 Help > Crash Reports).
   _stage = 'crash log';
@@ -140,6 +145,7 @@ Future<void> _start() async {
   //  * re-arm the darkroom wake-ups (covers reboots on iOS too).
   unawaited(() async {
     await LaunchCurtain.gone;
+    PerfRecorder.mark('launch: maintenance', hold: const Duration(seconds: 2));
     final processor = container.read(captureProcessorProvider);
     await processor.recover();
     await processor.sweepOrphans();

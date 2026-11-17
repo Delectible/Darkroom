@@ -163,7 +163,9 @@ class WholeArt {
   /// Loads the models [load] left for later (the camera not in hand).
   Future<void> loadRest() async {
     for (final mode in [...bodies.keys]) {
-      if (!isReady(mode)) await _loadModel(mode);
+      if (isReady(mode)) continue;
+      PerfRecorder.mark('launch: other 3D camera loading', hold: const Duration(seconds: 3));
+      await _loadModel(mode);
     }
   }
 
@@ -373,10 +375,8 @@ final wholeArtProvider = FutureProvider<WholeArt?>((ref) async {
     // fade) and the first is in, and after the first frames when 3D is
     // switched on later.
     unawaited(
-      Future.wait([
-        LaunchCurtain.gone,
-        art.ready(first),
-      ]).then((_) => Future<void>.delayed(const Duration(milliseconds: 400), art.loadRest)),
+      Future.wait([LaunchCurtain.gone, art.ready(first)])
+          .then((_) => Future<void>.delayed(const Duration(milliseconds: 400), art.loadRest)),
     );
   }
   return art;

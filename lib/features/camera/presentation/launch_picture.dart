@@ -258,6 +258,7 @@ class _LaunchPictureFadeState extends State<LaunchPictureFade> with SingleTicker
       WidgetsBinding.instance.scheduleFrame();
       return _afterFrame();
     }
+    PerfRecorder.mark('launch: 3D camera takes over from the picture');
     _fade.reverse().whenComplete(() {
       LaunchPicture.done();
       if (mounted) setState(() {});

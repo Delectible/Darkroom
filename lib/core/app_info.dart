@@ -9,8 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The Book\'s pages make a soft paper sound as they turn, and a shutter clicks when you make a strip, '
-      'collage, scrapbook page or flip book. Fuller performance report for tracking down slowdowns.';
+      'New flip book style: a stapled booklet whose pages flick over and riffle back, with page sounds. '
+      'Sharper flip book videos without stray frames. Page sounds in the Book, and a shutter when you make something.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -50,6 +50,9 @@ class Sfx {
     pageTurns[pick].play();
   }
 
+  /// A stapled flip book's pile riffling back (pages flicking over fast).
+  static final flipRiffle = Sfx._('assets/sfx/flip_riffle.wav');
+
   /// A Studio piece made: the old shutter's cha-chunk under the white flash.
   static final studioSnap = Sfx._('assets/sfx/studio_snap.wav');
 

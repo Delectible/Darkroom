@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/audio/sfx.dart';
 import 'studio_flip_frames.dart';
 import 'studio_render.dart';
 import 'studio_store.dart';
@@ -23,6 +24,7 @@ class FlipBooklet extends StatefulWidget {
     this.riffle = Riffle.loop,
     this.face,
     this.cacheWidth = 700,
+    this.sound = false,
   });
 
   final StudioWork work;
@@ -32,12 +34,43 @@ class FlipBooklet extends StatefulWidget {
   /// The photos' size for playing (longest side).
   final int cacheWidth;
 
+  /// Its page sounds as it plays (the stapled style's turns and riffle back).
+  final bool sound;
+
   @override
   State<FlipBooklet> createState() => _FlipBookletState();
 }
 
 class _FlipBookletState extends State<FlipBooklet> with SingleTickerProviderStateMixin {
-  late final Ticker _ticker = createTicker((e) => setState(() => _t = e));
+  late final Ticker _ticker = createTicker((e) {
+    _sounds(_t, e);
+    setState(() => _t = e);
+  });
+
+  /// The cues passed between [from] and [to] (the loop may have wrapped).
+  void _sounds(Duration from, Duration to) {
+    final frames = _frames;
+    if (!widget.sound || frames == null) return;
+    final cues = frames.cues();
+    if (cues.isEmpty) return;
+    final total = frames.totalMs.toDouble();
+    final a = from.inMicroseconds / 1000, b = to.inMicroseconds / 1000;
+    if (b <= a) return;
+    final la = a % total, lb = la + (b - a);
+    for (final (at, cue) in cues) {
+      final hit = (at > la && at <= lb) || (at + total > la && at + total <= lb);
+      if (!hit) continue;
+      switch (cue) {
+        case FlipCue.turn:
+          Sfx.pageTurn();
+        case FlipCue.riffle:
+          Sfx.flipRiffle.play();
+        case FlipCue.back:
+          break; // (the riffle sound covers them)
+      }
+    }
+  }
+
   Duration _t = Duration.zero;
   FlipFrames? _frames;
 
@@ -75,12 +108,18 @@ class _FlipBookletState extends State<FlipBooklet> with SingleTickerProviderStat
         pageMs: w.pageMs ?? 360,
       ),
     );
+    if (widget.sound) {
+      for (final s in [...Sfx.pageTurns, Sfx.flipRiffle]) {
+        unawaited(s.preload());
+      }
+    }
     if (widget.riffle == Riffle.loop) _ticker.start();
   }
 
   @override
   void dispose() {
     _ticker.dispose();
+    clearStapledTextures();
     for (final i in _frames?.photos ?? const <ui.Image>[]) {
       i.dispose();
     }

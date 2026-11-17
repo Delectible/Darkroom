@@ -1,8 +1,13 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
+import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/painting.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
 import '../../core/db/media_repository.dart';
 import '../../core/processing/video_pipeline.dart';
@@ -51,7 +56,7 @@ class StudioMake {
     List<MediaItem> prints,
     StudioPaper paper, {
     int pageMs = pageMsDefault,
-    FlipStyle style = FlipStyle.shutter,
+    FlipStyle style = FlipStyle.standard,
   }) async {
     final id = _id();
     final dir = await StudioBook.folder();
@@ -90,7 +95,7 @@ class StudioMake {
     final first = await loadStudioImage(pages.first, maxSide: 1200);
     try {
       final frames = FlipFrames(photos: [first], paper: paper, style: style, pageMs: pageMs);
-      final pixels = await drawStudioPixels(() => _frameAt(frames, pageMs * 0.92));
+      final pixels = await _framePixels(frames, pageMs * 0.92, 0, settle: true);
       await writeStudioPixels(pixels, work.cover!);
     } finally {
       first.dispose();
@@ -131,16 +136,173 @@ class StudioMake {
       await File(part).rename(work.path);
       return work.path;
     } finally {
+      clearStapledTextures();
       for (final i in images) {
         i.dispose();
       }
     }
   }
 
-  static Future<ui.Image> _frameAt(FlipFrames frames, double t) {
+  /// The frame at [t], with two rows of [mark] below it (see [_framePixels]).
+  static Future<ui.Image> _frameAt(FlipFrames frames, double t, Color mark) {
     final rec = ui.PictureRecorder();
-    frames.paint(Canvas(rec, Offset.zero & _frame), _frame, t);
-    return rec.endRecording().toImage(_frame.width.toInt(), _frame.height.toInt());
+    final c = Canvas(rec, Offset.zero & Size(_frame.width, _frame.height + 2));
+    frames.paint(c, _frame, t);
+    c.drawRect(Rect.fromLTWH(0, _frame.height, _frame.width, 2), Paint()..color = mark);
+    return rec.endRecording().toImage(_frame.width.toInt(), _frame.height.toInt() + 2);
+  }
+
+  /// A colour only frame [n] has.
+  static Color _markOf(int n) => Color.fromARGB(255, (n * 37 + 11) & 255, (n * 101 + 50) & 255, 0xA5);
+
+  /// Frame [n]'s pixels, checked. Some phones' GPUs hand back whatever was in
+  /// that memory when a picture is read too soon: noise (caught by
+  /// readStudioPixels), but also an old picture (the book, a black frame),
+  /// which looks fine. So each frame carries a mark of its own below it; one
+  /// read back without it is read again after a frame, then drawn again.
+  static Future<StudioPixels> _framePixels(FlipFrames frames, double t, int n, {bool settle = false}) async {
+    final mark = _markOf(n);
+    final w = _frame.width.toInt(), h = _frame.height.toInt();
+    for (var i = 0; ; i++) {
+      final image = await _frameAt(frames, t, mark);
+      try {
+        final px = await readStudioPixels(image, settle: settle || i > 0);
+        if (_marked(px.bytes, w, h, mark)) {
+          return (bytes: Uint8List.fromList(px.bytes.sublist(0, w * h * 4)), width: w, height: h);
+        }
+      } on StudioScrambled {
+        // (read again below)
+      } finally {
+        image.dispose();
+      }
+      if (i >= 4) throw const StudioScrambled();
+      await settleGpu();
+      await Future<void>.delayed(Duration(milliseconds: 40 * (i + 1)));
+    }
+  }
+
+  static bool _marked(Uint8List bytes, int w, int h, Color mark) {
+    final r = (mark.r * 255).round(), g = (mark.g * 255).round(), b = (mark.b * 255).round();
+    for (final x in [1, w ~/ 3, w ~/ 2, w * 2 ~/ 3, w - 2]) {
+      for (final y in [h, h + 1]) {
+        final i = (y * w + x) * 4;
+        if (i + 2 >= bytes.length) return false;
+        if ((bytes[i] - r).abs() > 2 || (bytes[i + 1] - g).abs() > 2 || (bytes[i + 2] - b).abs() > 2) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /// The video's settings: the encoder we ship (MPEG-4 part 2), by quality
+  /// rather than a fixed bitrate (that blurred grainy photos), with its
+  /// careful options on.
+  static const _videoArgs = [
+    '-c:v', 'mpeg4', '-q:v', '2', '-mbd', 'rd', '-trellis', '2', '-cmp', '2', '-subcmp', '2', //
+    '-flags', '+mv4+aic', '-g', '30', '-vtag', 'mp4v',
+  ];
+
+  /// The page sounds under a stapled flip book: one take a turn, and in the
+  /// riffle back a short, higher flick for each page as it lifts. Mixed here
+  /// (a WAV for ffmpeg), louder than the app's own quiet sounds. Null for
+  /// styles without sounds.
+  static Future<String?> _flipAudio(FlipFrames frames, String dir) async {
+    final cues = frames.cues();
+    if (cues.isEmpty) return null;
+    final takes = <Float32List>[];
+    for (var i = 1; i <= 4; i++) {
+      for (final v in ['a', 'b']) {
+        final data = await rootBundle.load('assets/sfx/page_turn_$i$v.wav');
+        takes.add(pcmOf(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes)));
+      }
+    }
+    final path = '$dir/sound.wav';
+    final total = frames.totalMs.toDouble();
+    final plan = [for (final (at, cue) in cues) (at, cue.index)];
+    await Isolate.run(() => File(path).writeAsBytesSync(mixFlipSound(takes, plan, total)));
+    return path;
+  }
+
+  /// 16-bit mono PCM from a WAV's data chunk, as -1..1.
+  @visibleForTesting
+  static Float32List pcmOf(Uint8List wav) {
+    final bd = ByteData.sublistView(wav);
+    var p = 12;
+    while (p + 8 <= wav.length) {
+      final id = String.fromCharCodes(wav.sublist(p, p + 4));
+      final size = bd.getUint32(p + 4, Endian.little);
+      if (id == 'data') {
+        final n = math.min(size, wav.length - p - 8) ~/ 2;
+        final out = Float32List(n);
+        for (var i = 0; i < n; i++) {
+          out[i] = bd.getInt16(p + 8 + i * 2, Endian.little) / 32768;
+        }
+        return out;
+      }
+      p += 8 + size + (size & 1);
+    }
+    return Float32List(0);
+  }
+
+  @visibleForTesting
+  static Uint8List mixFlipSound(List<Float32List> takes, List<(double, int)> plan, double totalMs) {
+    const sr = 44100;
+    final out = Float32List((totalMs * sr / 1000).ceil());
+    final rnd = math.Random(plan.length * 31 + 7);
+    var last = -1;
+    for (final (at, cue) in plan) {
+      if (cue == FlipCue.riffle.index || takes.isEmpty) continue;
+      var pick = rnd.nextInt(takes.length);
+      if (pick == last) pick = (pick + 1) % takes.length;
+      last = pick;
+      final take = takes[pick];
+      final back = cue == FlipCue.back.index;
+      // a riffled page: quicker and higher, cut short, softer
+      final speed = back ? 1.35 : 1.0, gain = back ? 0.55 : 1.0;
+      final len = back ? math.min(take.length / speed, 0.26 * sr).floor() : take.length;
+      final fade = (0.04 * sr).floor();
+      final start = (at * sr / 1000).round();
+      for (var i = 0; i < len && start + i < out.length; i++) {
+        final src = i * speed;
+        final j = src.floor();
+        if (j + 1 >= take.length) break;
+        final v = take[j] + (take[j + 1] - take[j]) * (src - j);
+        final env = back && i > len - fade ? (len - i) / fade : 1.0;
+        out[start + i] += v * gain * env;
+      }
+    }
+    // up to -6 dB at its loudest
+    var peak = 0.0;
+    for (final v in out) {
+      peak = math.max(peak, v.abs());
+    }
+    final k = peak > 0 ? 0.5 / peak : 1.0;
+    final bytes = ByteData(44 + out.length * 2);
+    void str(int at, String s) {
+      for (var i = 0; i < 4; i++) {
+        bytes.setUint8(at + i, s.codeUnitAt(i));
+      }
+    }
+
+    str(0, 'RIFF');
+    bytes.setUint32(4, 36 + out.length * 2, Endian.little);
+    str(8, 'WAVE');
+    str(12, 'fmt ');
+    bytes
+      ..setUint32(16, 16, Endian.little)
+      ..setUint16(20, 1, Endian.little)
+      ..setUint16(22, 1, Endian.little)
+      ..setUint32(24, sr, Endian.little)
+      ..setUint32(28, sr * 2, Endian.little)
+      ..setUint16(32, 2, Endian.little)
+      ..setUint16(34, 16, Endian.little);
+    str(36, 'data');
+    bytes.setUint32(40, out.length * 2, Endian.little);
+    for (var i = 0; i < out.length; i++) {
+      bytes.setInt16(44 + i * 2, (out[i] * k * 32767).round().clamp(-32768, 32767), Endian.little);
+    }
+    return bytes.buffer.asUint8List();
   }
 
   static Future<void> _encode(FlipFrames frames, String out) async {
@@ -154,8 +316,8 @@ class StudioMake {
       // another core meanwhile, three at a time.
       final writing = <Future<void>>[];
       for (final k in frames.keyframes()) {
-        final f = '${work.path}/f${n++}.png';
-        final pixels = await drawStudioPixels(() => _frameAt(frames, k.at), settle: false);
+        final f = '${work.path}/f$n.png';
+        final pixels = await _framePixels(frames, k.at, n++);
         writing.add(writeStudioPng(pixels, f));
         if (writing.length >= 3) await writing.removeAt(0);
         list.writeln("file '$f'\nduration ${k.hold / 1000}");
@@ -166,9 +328,13 @@ class StudioMake {
       if (last != null) list.writeln("file '$last'");
       final listPath = '${work.path}/list.txt';
       await File(listPath).writeAsString(list.toString());
+      final sound = await _flipAudio(frames, work.path);
       await VideoPipeline.ffmpeg([
         '-y', '-f', 'concat', '-safe', '0', '-i', listPath, //
-        '-r', '30', '-pix_fmt', 'yuv420p', ...VideoPipeline.encoder(6000), out,
+        if (sound != null) ...['-i', sound],
+        '-r', '30', '-pix_fmt', 'yuv420p', ..._videoArgs,
+        if (sound != null) ...['-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '128k'],
+        out,
       ], timeout: const Duration(minutes: 4));
     } finally {
       try {

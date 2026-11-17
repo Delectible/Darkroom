@@ -35,5 +35,17 @@ for i in 1 2 3 4; do
   ffmpeg -v error -y -i "$tmp/take.wav" -af "asetrate=44100*0.94,aresample=44100" -c:a pcm_s16le "$out/page_turn_${i}a.wav"
   ffmpeg -v error -y -i "$tmp/take.wav" -af "asetrate=44100*1.06,aresample=44100" -c:a pcm_s16le "$out/page_turn_${i}b.wav"
 done
+# the stapled flip book's riffle back (played in the app; the video mixes
+# each page itself): eight quick, higher flicks from the takes, slow then
+# quicker, as StapledFlip.riffleStarts
+delays=(0 110 202 276 332 377 422 467)
+args=(); graph=""
+for k in 0 1 2 3 4 5 6 7; do
+  t=$(( k % 4 + 1 )); v=$([ $(( k % 2 )) = 0 ] && echo a || echo b)
+  args+=(-i "$out/page_turn_$t$v.wav")
+  graph+="[$k:a]asetrate=44100*1.35,aresample=44100,atrim=0:0.26,afade=t=out:st=0.22:d=0.04,volume=0.55,adelay=${delays[$k]}[p$k];"
+done
+ffmpeg -v error -y "${args[@]}" -filter_complex "${graph}[p0][p1][p2][p3][p4][p5][p6][p7]amix=inputs=8:normalize=0,volume=24dB" "$tmp/riffle.wav"
+prep "$tmp/riffle.wav" "$out/flip_riffle.wav" 1.0 -50
 prep "$tmp/photo.ogg" "$out/studio_snap.wav" 0.9 -48
-ls -la "$out"/page_turn_*.wav "$out"/studio_snap.wav
+ls -la "$out"/page_turn_*.wav "$out"/flip_riffle.wav "$out"/studio_snap.wav

@@ -598,7 +598,21 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   the last three), on their own players, so a burst of
   taps overlaps instead of cutting off; played as a turn starts, and as a
   dragged page is let go over) and the Studio snapshot (`Sfx.studioSnap`,
-  started with `popWithFlash`'s white). Everything else is synthesized.
+  started with `popWithFlash`'s white), and `flip_riffle.wav` (baked from
+  the takes). Everything else is synthesized.
+- Stapled flip book (`studio_flip_stapled.dart`, `FlipStyle.standard`):
+  each page bent in its own plane (corner curl, nothing at the spine), then
+  turned about the spine, drawn as a mesh with a cached page picture (front:
+  paper, photo, spine shade; back: paper + photo at 8%) so a page just
+  landed is drawn exactly as the pile's top (nothing changes when it
+  lands). Stack edges ≤ 0.75% of the book width, by pages per side: the
+  right drops as a page lifts, the left grows as it lands. `cues()` gives
+  the sounds: the video mixes a take per turn and a quick high flick per
+  riffled page (`StudioMake.mixFlipSound`); the Book plays `Sfx.pageTurn` /
+  `Sfx.flipRiffle` as it plays. Video frames carry a 2-row colour mark
+  below the frame, checked on readback (stale GPU memory can look like a
+  real picture: the book, black) and cropped off; encoded MPEG-4 at -q:v 2
+  with rd/trellis (ffmpeg-kit min has no H.264).
 - Win98 sounds (`Sfx.w98*`, made by `tool/sfx/make_sfx.py`, all original,
   never Microsoft's): click on Win98Button / menu / Start items, error bong
   / warning ding from `showWin98MessageBox`, exit chime when the explorer

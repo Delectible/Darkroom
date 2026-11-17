@@ -400,7 +400,7 @@ class _FlipMaker extends ConsumerStatefulWidget {
 
 class _FlipMakerState extends ConsumerState<_FlipMaker> {
   StudioPaper _paper = StudioPaper.cream;
-  FlipStyle _style = FlipStyle.flip;
+  FlipStyle _style = FlipStyle.standard;
   int _pageMs = StudioMake.pageMsDefault;
   late final Timer _tick;
   final _clock = Stopwatch()..start();
@@ -438,6 +438,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
   @override
   void dispose() {
     _tick.cancel();
+    clearStapledTextures();
     for (final p in _photos ?? const <ui.Image>[]) {
       p.dispose();
     }

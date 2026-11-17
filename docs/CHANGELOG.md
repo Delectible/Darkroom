@@ -1476,3 +1476,11 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   edge), C (corner first, like a thumb riffle): owner picked C; where
   the turned pages go is still open.
 - [x] 71.5 Performance Report expanded (hitches, stalls, events, one clock).
+- [x] 71.6 "Stapled" flip style, the new default (mockup 1d): corner-first
+  turn pinned at the spine, pile on the left (half in frame), riffle back;
+  stack edges a few px, timed to lift / land. Page sound once a turn, a
+  riffle on the way back (in the video, mixed per page; in the Book as it
+  plays). Album flip books stay shut until tapped.
+- [x] 71.7 Flip book videos: quality-based MPEG-4 (was a fixed 6 Mbps) and
+  each frame marked and checked on readback (the owner's videos had a frame
+  of stale GPU memory and a black last frame).

@@ -3,10 +3,18 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import 'studio_flip_stapled.dart';
 import 'studio_render.dart';
+
+export 'studio_flip_stapled.dart' show FlipCue, clearStapledTextures;
 
 /// How a flip book goes from one photo to the next.
 enum FlipStyle {
+  /// A booklet stapled down its left edge: each page's corner curls up and
+  /// it turns over the staples onto a pile on the left; after the last
+  /// photo the pile riffles back (studio_flip_stapled.dart).
+  stapled('Stapled'),
+
   /// A pad on the table, bound along its top: each page lifts towards you, bends,
   /// and goes over the top onto the pages already turned.
   flip('Page flip'),
@@ -22,6 +30,9 @@ enum FlipStyle {
   final String label;
 
   static FlipStyle named(String? name) => values.asNameMap()[name] ?? FlipStyle.shutter;
+
+  /// What a new flip book starts with.
+  static const standard = FlipStyle.stapled;
 }
 
 /// One flip book's moving picture, the same in the app as in the video: its
@@ -36,7 +47,19 @@ class FlipFrames {
   final int pageMs;
 
   int get length => photos.length;
-  int get totalMs => length * pageMs + (style == FlipStyle.pile ? clearMs + bareMs : 0);
+  int get totalMs => style == FlipStyle.stapled
+      ? _stapled.totalMs.round()
+      : length * pageMs + (style == FlipStyle.pile ? clearMs + bareMs : 0);
+
+  late final StapledFlip _stapled = StapledFlip(
+    photos: photos,
+    pageMs: pageMs,
+    flipMs: math.min(pageMs * 0.6, 400.0).round(),
+  );
+
+  /// The sounds and when they come (ms into the loop); only the stapled
+  /// style has them.
+  List<(double, FlipCue)> cues() => style == FlipStyle.stapled ? _stapled.cues() : const [];
 
   static const _shakeMs = 120, _flashMs = 34;
 
@@ -51,6 +74,23 @@ class FlipFrames {
   /// drawn at 30 frames a second, the still parts once.
   List<({double at, double hold})> keyframes() {
     final out = <({double at, double hold})>[];
+    if (style == FlipStyle.stapled) {
+      // still between the turns; 30 a second while anything moves
+      final total = totalMs.toDouble();
+      final marks = <double>{0};
+      for (final (from, to) in _stapled.motion()) {
+        for (var s = from; s < to; s += 1000 / 30) {
+          marks.add(s);
+        }
+        marks.add(to);
+      }
+      final sorted = marks.where((m) => m < total).toList()..sort();
+      for (var i = 0; i < sorted.length; i++) {
+        final end = i + 1 < sorted.length ? sorted[i + 1] : total;
+        if (end - sorted[i] >= 1) out.add((at: sorted[i], hold: end - sorted[i]));
+      }
+      return out;
+    }
     for (var page = 0; page < length; page++) {
       final start = page * pageMs.toDouble();
       final marks = <double>[0];
@@ -60,7 +100,7 @@ class FlipFrames {
           for (var s = _shakeMs.toDouble(); s < pageMs; s += _shakeMs) {
             marks.add(s);
           }
-        case FlipStyle.flip || FlipStyle.pile:
+        case FlipStyle.flip || FlipStyle.pile || FlipStyle.stapled:
           // (the first page too: it loops round from the last)
           for (var s = 1000 / 30; s < changeMs; s += 1000 / 30) {
             marks.add(s);
@@ -88,6 +128,10 @@ class FlipFrames {
   /// The moment [t] ms in (looping).
   void paint(Canvas c, Size size, double t) {
     if (photos.isEmpty) return;
+    if (style == FlipStyle.stapled) {
+      _stapled.paint(c, size, t, (c, r) => paintPaper(c, r, paper));
+      return;
+    }
     final looped = t % totalMs;
     final page = (looped ~/ pageMs).clamp(0, length - 1);
     final into = looped - page * pageMs;
@@ -98,6 +142,8 @@ class FlipFrames {
         _flip(c, size, page, into);
       case FlipStyle.pile:
         _pile(c, size, page, into);
+      case FlipStyle.stapled:
+        break; // (above)
     }
   }
 

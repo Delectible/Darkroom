@@ -1202,7 +1202,8 @@ class _StuckDown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (work.kind == StudioKind.flipbook) {
-      return Center(child: StapledFlipBook(work: work));
+      // (shut until it's opened: nothing flicking on the page)
+      return Center(child: StapledFlipBook(work: work, still: true));
     }
     final rnd = math.Random(seed);
     final picture = DecoratedBox(
@@ -1450,6 +1451,7 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
                           key: ValueKey(_replays),
                           work: _work,
                           riffle: Riffle.loop,
+                          sound: true,
                           cacheWidth: 1000,
                           face: _hasPages
                               ? null

@@ -99,7 +99,7 @@ class StapledFlip {
       b.staples(c);
       if (turned > 0) {
         b.leftEdge(c, thick(turned));
-        _turn(c, b, turned - 1, math.pi, 0);
+        _pileTop(c, b, turned - 1);
       }
       if (turning) {
         final e = ((into - (pageMs - flipMs)) / flipMs).clamp(0.0, 1.0);
@@ -124,7 +124,7 @@ class StapledFlip {
       b.staples(c);
       if (onLeft > 0) {
         b.leftEdge(c, thick(onLeft));
-        _turn(c, b, onLeft - 1, math.pi, 0);
+        _pileTop(c, b, onLeft - 1);
       }
       // pages in the air share the spine: the one standing up straighter is
       // above the flatter one on either side, so the flattest go first
@@ -176,42 +176,54 @@ class StapledFlip {
     }
 
     // columns: two inside the shade beside the spine (so it's drawn as on
-    // a page lying flat), then even
+    // a page lying flat), then even. Typed lists, no objects a vertex: it's
+    // built every frame a page moves.
     final spine = w * _Booklet.spineShade;
-    final us = <double>[0, spine / 2, spine, for (var i = 1; i <= 40; i++) spine + (w - spine) * i / 40];
-    const rows = 40;
+    const even = 30, rows = 28;
+    final us = Float64List(even + 3)
+      ..[0] = 0
+      ..[1] = spine / 2
+      ..[2] = spine;
+    for (var i = 1; i <= even; i++) {
+      us[i + 2] = spine + (w - spine) * i / even;
+    }
     final cols = us.length - 1;
     final f = face.width * 2.6;
     final cx = face.center.dx, cy = face.center.dy;
     final count = (cols + 1) * (rows + 1);
-    final pos = <Offset>[], tex = <Offset>[], col = <Color>[];
+    final pos = Float32List(count * 2), tex = Float32List(count * 2);
+    final col = Int32List(count);
     final zv = Float64List(count);
-    final backV = List<bool>.filled(count, false);
+    final backV = Uint8List(count);
     final flat = _shade(0, 0, 1);
     final cp = math.cos(phi), sp = math.sin(phi);
     final tw = _PageTextures.scaleOf(b);
     var idx = 0;
     for (var j = 0; j <= rows; j++) {
+      final v = h * j / rows;
       for (var i = 0; i <= cols; i++, idx++) {
-        final u = us[i], v = h * j / rows;
+        final u = us[i];
         final d = dOf(u, v);
         final (xd, zl) = at(d);
         final x0 = u + (xd - d) * nx, y0 = v + (xd - d) * ny;
         final a = ang(d);
-        final lnx = -math.sin(a) * nx, lny = -math.sin(a) * ny, lnz = math.cos(a);
+        final sa = math.sin(a);
+        final lnx = -sa * nx, lny = -sa * ny, lnz = math.cos(a);
         final x = x0 * cp - zl * sp, z = x0 * sp + zl * cp;
         final nX = lnx * cp - lnz * sp, nZ = lnx * sp + lnz * cp, nY = lny;
         final px = hinge + x, py = face.top + y0;
         final k = f / (f - z);
-        pos.add(Offset(cx + (px - cx) * k, cy + (py - cy) * k));
+        pos[idx * 2] = cx + (px - cx) * k;
+        pos[idx * 2 + 1] = cy + (py - cy) * k;
         // texture: the page's picture is face-sized from the face's corner
-        tex.add(Offset((hinge - face.left + u) * tw, v * tw));
+        tex[idx * 2] = (hinge - face.left + u) * tw;
+        tex[idx * 2 + 1] = v * tw;
         zv[idx] = z;
         final back = nZ < 0;
-        backV[idx] = back;
-        final s = ((back ? _shade(-nX, -nY, -nZ) : _shade(nX, nY, nZ)) / flat).clamp(0.0, 1.0);
-        final g = (255 * s).round();
-        col.add(Color.fromARGB(255, g, g, g));
+        backV[idx] = back ? 1 : 0;
+        final g = (255 * ((back ? _shade(-nX, -nY, -nZ) : _shade(nX, nY, nZ)) / flat).clamp(0.0, 1.0))
+            .round();
+        col[idx] = 0xFF000000 | (g << 16) | (g << 8) | g;
       }
     }
     // its shadow on what's beneath, strongest when it's up
@@ -219,7 +231,7 @@ class StapledFlip {
     if (lifted > 0.01) {
       final outline = Path();
       void edge(int i, bool first) =>
-          first ? outline.moveTo(pos[i].dx, pos[i].dy) : outline.lineTo(pos[i].dx, pos[i].dy);
+          first ? outline.moveTo(pos[i * 2], pos[i * 2 + 1]) : outline.lineTo(pos[i * 2], pos[i * 2 + 1]);
       for (var i = 0; i <= cols; i++) {
         edge(i, i == 0);
       }
@@ -239,51 +251,80 @@ class StapledFlip {
           ..maskFilter = MaskFilter.blur(BlurStyle.normal, face.width * 0.035 * (0.3 + lifted)),
       );
     }
-    final tris = <(double, int)>[];
-    for (var j = 0; j < rows; j++) {
-      for (var i = 0; i < cols; i++) {
+    // triangles (two a cell), far first
+    final nTri = rows * cols * 2;
+    final depth = Float64List(nTri);
+    for (var j = 0, t = 0; j < rows; j++) {
+      for (var i = 0; i < cols; i++, t += 2) {
         final a0 = j * (cols + 1) + i, b0 = a0 + 1, c0 = a0 + cols + 1, d0 = c0 + 1;
-        tris.add(((zv[a0] + zv[b0] + zv[c0]) / 3, a0 * 2));
-        tris.add(((zv[b0] + zv[d0] + zv[c0]) / 3, a0 * 2 + 1));
+        depth[t] = zv[a0] + zv[b0] + zv[c0];
+        depth[t + 1] = zv[b0] + zv[d0] + zv[c0];
       }
     }
-    // (flat: one side, no order to keep)
-    if (curl != 0 || (phi != 0 && phi != math.pi)) tris.sort((p, q) => p.$1.compareTo(q.$1));
+    final order = List<int>.generate(nTri, (i) => i);
+    if (curl != 0 || (phi != 0 && phi != math.pi)) order.sort((p, q) => depth[p].compareTo(depth[q]));
     final shaders = [
       ImageShader(_front(b, page), TileMode.clamp, TileMode.clamp, Float64List.fromList(_identity)),
       ImageShader(_back(b, page), TileMode.clamp, TileMode.clamp, Float64List.fromList(_identity)),
     ];
-    var run = <int>[];
+    final run = Uint16List(nTri * 3);
+    var n = 0;
     int? runSide;
     void flush() {
-      if (run.isEmpty) return;
+      if (n == 0) return;
       c.drawVertices(
-        ui.Vertices(VertexMode.triangles, pos, textureCoordinates: tex, colors: col, indices: run),
+        ui.Vertices.raw(
+          VertexMode.triangles,
+          pos,
+          textureCoordinates: tex,
+          colors: col,
+          indices: Uint16List.sublistView(run, 0, n),
+        ),
         BlendMode.modulate,
         Paint()..shader = shaders[runSide!],
       );
-      run = [];
+      n = 0;
     }
 
-    for (final (_, code) in tris) {
-      final a0 = code ~/ 2;
-      final b0 = a0 + 1, c0 = a0 + cols + 1, d0 = c0 + 1;
-      final t = code.isEven ? [a0, b0, c0] : [b0, d0, c0];
+    for (final t in order) {
+      final cell = t >> 1, j = cell ~/ cols, i = cell % cols;
+      final a0 = j * (cols + 1) + i, b0 = a0 + 1, c0 = a0 + cols + 1, d0 = c0 + 1;
+      final t0 = t.isEven ? a0 : b0, t1 = t.isEven ? b0 : d0, t2 = c0;
       // which side faces us, from the triangle's turn on screen (a page
       // lying flat on the right winds clockwise): exact at the fold, where
       // the corners alone can disagree and the photo flashed on the back
-      final p0 = pos[t[0]], p1 = pos[t[1]], p2 = pos[t[2]];
-      final turn = (p1.dx - p0.dx) * (p2.dy - p0.dy) - (p1.dy - p0.dy) * (p2.dx - p0.dx);
+      final x0 = pos[t0 * 2], y0 = pos[t0 * 2 + 1];
+      final turn = (pos[t1 * 2] - x0) * (pos[t2 * 2 + 1] - y0) - (pos[t1 * 2 + 1] - y0) * (pos[t2 * 2] - x0);
       final side = turn.abs() > 1e-6
           ? (turn < 0 ? 1 : 0)
-          : (backV[t[0]] && backV[t[1]] && backV[t[2]] ? 1 : 0);
+          : (backV[t0] == 1 && backV[t1] == 1 && backV[t2] == 1 ? 1 : 0);
       if (side != runSide) {
         flush();
         runSide = side;
       }
-      run.addAll(t);
+      run[n++] = t0;
+      run[n++] = t1;
+      run[n++] = t2;
     }
     flush();
+  }
+
+  /// The top of the left pile: [page] face down, its back as the mesh draws
+  /// a page lying there (flat, unshaded), as one mirrored picture.
+  void _pileTop(Canvas c, _Booklet b, int page) {
+    final face = b.face, hinge = b.hinge;
+    final img = _back(b, page);
+    final tw = _PageTextures.scaleOf(b);
+    c.save();
+    c.translate(2 * hinge, 0);
+    c.scale(-1, 1);
+    c.drawImageRect(
+      img,
+      Rect.fromLTRB((hinge - face.left) * tw, 0, img.width.toDouble(), img.height.toDouble()),
+      Rect.fromLTRB(hinge, face.top, face.right, face.bottom),
+      Paint()..filterQuality = FilterQuality.medium,
+    );
+    c.restore();
   }
 
   static const _identity = <double>[1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];

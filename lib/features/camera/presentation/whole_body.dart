@@ -179,8 +179,18 @@ class WholeArt {
       final studio = j['studio'] as Map<String, dynamic>;
       final b = j[mode.name] as Map<String, dynamic>;
       final scenePath = '$root/${b['scene']}';
+      // each step's time, for the Performance Report's events (which one
+      // holds the app's thread up when the second camera loads)
+      final clock = Stopwatch()..start();
+      final steps = <String>[];
+      void step(String name) {
+        steps.add('$name ${clock.elapsedMilliseconds}');
+        clock.reset();
+      }
+
       final node = await fs.loadScene(scenePath);
       LaunchTimer.once('3D: model read');
+      step('read');
       body.live = LiveBody._(
         node,
         body,
@@ -192,12 +202,14 @@ class WholeArt {
         dist: dist,
         band: band,
       );
+      step('built');
       // The skin it's wearing, before it's first seen; then let go of the
       // loader's cached
       // copy of the file (we never make a second model from it).
       final live = body.live!;
       await live.wear(_skinOf?.call(mode));
       LaunchTimer.once('3D: skin on');
+      step('skin');
       unawaited(fs.releaseScene(scenePath));
       // Compile its shaders now, not on the first frame it's seen.
       try {
@@ -210,6 +222,8 @@ class WholeArt {
           ),
         ]);
       } catch (_) {}
+      step('warm');
+      PerfRecorder.event('3D ${mode.name} loaded (ms): ${steps.join(', ')}');
     } catch (e, s) {
       // (Both models come from the same pipeline: if the first loaded,
       // this one does too. Kept swappable rather than stuck.)

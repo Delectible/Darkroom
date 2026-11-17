@@ -1507,3 +1507,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 72.7 Digital with Auto Transfer (`autoSave`) on: the gallery
   button's review screen shows C:'s newest picture; "STORAGE EMPTY" when
   C: has none (still "SD EMPTY" otherwise).
+- [x] 72.8 From the owner's 2.3.17 report: the stapled page mesh built in
+  typed lists (no objects a vertex), 30 x 28 cells, the pile's top drawn as
+  one mirrored picture: ~4x less work a frame (maker preview was 40% slow,
+  UI up to 80 ms). Report: gap hitches / hiccups only while something
+  moves (idle Win98 showed seconds-long "gaps"); the second 3D camera's
+  load logs each step's ms (it held the thread 485 ms at 2.8 s: the
+  stutter after launch).

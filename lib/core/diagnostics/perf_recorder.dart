@@ -102,7 +102,12 @@ class PerfRecorder {
 
   /// Whether the frame of [vsync] was one drawn while something moved
   /// (matched to the nearest ms: the two clocks are the engine's).
+  /// Tests: every frame counts as drawn while something moved.
+  @visibleForTesting
+  static bool debugAllMoving = false;
+
   static bool _wasMoving(int vsync) {
+    if (debugAllMoving) return true;
     if (_moving.remove(vsync)) return true;
     for (final t in _moving) {
       if ((t - vsync).abs() < 1000) {
@@ -176,7 +181,9 @@ class PerfRecorder {
       // frames (the camera's own stream: 2.5x the usual gap, 50 ms+).
       final usual = _usualGap();
       final slow = build > budget * 2 || raster > budget * 2;
-      final hole = gap > 50 && gap < 3000 && usual > 0 && usual < 50 && gap > usual * 2.5;
+      // (only while something moves: a still screen draws nothing, and the
+      // gap before its next frame isn't a stutter)
+      final hole = moving && gap > 50 && gap < 3000 && usual > 0 && usual < 50 && gap > usual * 2.5;
       if (slow || hole) _hitch(f, usual);
       if (gap > 0 && gap < 1000) {
         _gaps.add(gap);
@@ -398,10 +405,14 @@ class PerfRecorder {
       for (final f in fs)
         if (f.gap > 0 && f.gap < 1000) f.gap,
     ]..sort();
+    final moving = [
+      for (final f in fs)
+        if (f.moving && f.gap > 0 && f.gap < 1000) f.gap,
+    ]..sort();
     if (gaps.length < 10) return (0, 0);
     final usual = gaps[gaps.length ~/ 2];
     if (usual >= 50) return (0, 0);
-    final big = gaps.where((g) => g > 50 && g > usual * 2.5).toList();
+    final big = moving.where((g) => g > 50 && g > usual * 2.5).toList();
     return (big.length, big.isEmpty ? 0 : big.last);
   }
 

@@ -22,7 +22,11 @@ void main() {
 
   test('report lists activities, hitches and events', () {
     PerfRecorder.start();
-    addTearDown(PerfRecorder.stop);
+    PerfRecorder.debugAllMoving = true;
+    addTearDown(() {
+      PerfRecorder.stop();
+      PerfRecorder.debugAllMoving = false;
+    });
     expect(PerfRecorder.report(), contains('No frames yet.'));
     // A steady 30 fps camera stream with one 150 ms hole and one slow frame.
     var t = 1000000;

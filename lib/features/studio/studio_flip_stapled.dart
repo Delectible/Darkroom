@@ -254,7 +254,14 @@ class StapledFlip {
       final a0 = code ~/ 2;
       final b0 = a0 + 1, c0 = a0 + cols + 1, d0 = c0 + 1;
       final t = code.isEven ? [a0, b0, c0] : [b0, d0, c0];
-      final side = backV[t[0]] && backV[t[1]] && backV[t[2]] ? 1 : 0;
+      // which side faces us, from the triangle's turn on screen (a page
+      // lying flat on the right winds clockwise): exact at the fold, where
+      // the corners alone can disagree and the photo flashed on the back
+      final p0 = pos[t[0]], p1 = pos[t[1]], p2 = pos[t[2]];
+      final turn = (p1.dx - p0.dx) * (p2.dy - p0.dy) - (p1.dy - p0.dy) * (p2.dx - p0.dx);
+      final side = turn.abs() > 1e-6
+          ? (turn < 0 ? 1 : 0)
+          : (backV[t[0]] && backV[t[1]] && backV[t[2]] ? 1 : 0);
       if (side != runSide) {
         flush();
         runSide = side;

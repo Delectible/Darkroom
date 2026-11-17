@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/audio/sfx.dart';
 import '../../core/db/media_repository.dart';
 import 'studio_flip_frames.dart';
 import 'studio_make.dart';
@@ -420,7 +421,9 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
     unawaited(_load());
     _tick = Timer.periodic(const Duration(milliseconds: 33), (_) {
       final now = _clock.elapsedMilliseconds;
+      final was = _pos * _pageMs;
       _pos += (now - _lastMs) / _pageMs;
+      _sounds(was, _pos * _pageMs);
       _lastMs = now;
       if (mounted) setState(() {});
     });
@@ -435,6 +438,9 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
       return;
     }
     setState(() => _photos = photos);
+    for (final s in [...Sfx.pageTurns, Sfx.flipRiffle]) {
+      unawaited(s.preload());
+    }
   }
 
   @override
@@ -445,6 +451,21 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
       p.dispose();
     }
     super.dispose();
+  }
+
+  /// The preview's page sounds between [from] and [to] ms (with the
+  /// speaker on, as the video will have them).
+  void _sounds(double from, double to) {
+    final photos = _photos;
+    if (!_sound || photos == null || !FlipFrames.hasSound(_style) || to <= from) return;
+    final f = FlipFrames(photos: photos, paper: _paper, style: _style, pageMs: _pageMs);
+    final total = f.totalMs.toDouble();
+    final la = from % total, lb = la + (to - from);
+    for (final (at, cue) in f.cues()) {
+      if (!((at > la && at <= lb) || (at + total > la && at + total <= lb))) continue;
+      if (cue == FlipCue.turn) Sfx.pageTurn();
+      if (cue == FlipCue.riffle) Sfx.flipRiffle.play();
+    }
   }
 
   /// Every photo in a strip, each as its page frames it: tap one to frame it.

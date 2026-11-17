@@ -1451,7 +1451,7 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
                           key: ValueKey(_replays),
                           work: _work,
                           riffle: Riffle.loop,
-                          sound: true,
+                          sound: !_work.silent,
                           cacheWidth: 1000,
                           face: _hasPages
                               ? null

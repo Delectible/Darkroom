@@ -1498,3 +1498,5 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   (as the strip / collage). The kept pages are saved cut to that framing
   (`copyStudioPhoto(aspect:, crop:)`), so the video and the Book need no
   more. Other styles show photos whole (a note says so).
+- [x] 72.5 The speaker button also governs the maker's preview (page
+  sounds as it plays when on) and the Book (a silent book plays silent).

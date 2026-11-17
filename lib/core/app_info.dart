@@ -9,8 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Flip books: tap the preview to frame each photo, a speaker button to leave the page sounds out '
-      'of the video, and a smoother riffle back. The page flip style is retired.';
+      'With the flash on, the screen now blinks when the photo is actually taken, not when you press. '
+      'Flip books: frame each photo, a speaker button for page sounds, a smoother riffle back.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

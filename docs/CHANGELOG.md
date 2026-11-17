@@ -1500,3 +1500,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   more. Other styles show photos whole (a note says so).
 - [x] 72.5 The speaker button also governs the maker's preview (page
   sounds as it plays when on) and the Book (a silent book plays silent).
+- [x] 72.6 With flash on / auto (and the screen flash), the viewfinder's
+  shutter blink waits for takePicture to return (the pre-flash metering
+  made the blink at the press read as done). Without flash it stays at
+  the press.

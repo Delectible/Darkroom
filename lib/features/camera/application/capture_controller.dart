@@ -211,9 +211,14 @@ class CaptureController extends Notifier<CaptureState> {
     final ctx = _context(c);
     final pressed = Stopwatch()..start();
     unawaited(Haptics.mediumImpact());
+    // The screen's shutter blink at the moment of the photo: at once without
+    // flash; with it (or the screen flash) the phone first meters with a
+    // pre-flash, up to a second or so, so the blink waits for the capture
+    // (a blink at the press read as "done" while it wasn't).
+    final later = ctx.flash != FlashSetting.off;
     state = state.copyWith(
       busy: true,
-      shutterCount: state.shutterCount + 1,
+      shutterCount: later ? state.shutterCount : state.shutterCount + 1,
       flashFired: ctx.flash == FlashSetting.on,
     );
     try {
@@ -229,6 +234,7 @@ class CaptureController extends Notifier<CaptureState> {
           : (ctx.flash == FlashSetting.off ? 'no flash' : 'flash ${ctx.flash.name}');
       final file = screenFlash ? await ScreenFlash.during(c.takePicture) : await c.takePicture();
       CameraLog.add('photo: ${pressed.elapsedMilliseconds} ms press to capture ($how)');
+      if (later) state = state.copyWith(shutterCount: state.shutterCount + 1);
       // Multiple exposure: the first is held (no frame used), the second
       // lands on it and the two go on as one capture.
       final path = file.path;

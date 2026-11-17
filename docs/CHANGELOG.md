@@ -1521,3 +1521,14 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   thread 485 ms): the next report's "3D ... loaded (ms)" event says which
   step; then move that step off the thread (owner chose this over loading
   it behind the curtain).
+
+## 73. From the 2.3.18 report (2026-11-17), 2.3.19
+- [x] 73.1 3D drawing buffers (~80 MB a camera; 157 MB with both) let go:
+  a camera's own when no view draws it (put away after a swap), all of
+  them 1.2 s after the camera screen is covered or the app leaves.
+- [x] 73.2 Report: a mark repeated while it holds (a drag's every move) is
+  one event (corkboard scroll flooded the 120 events, so the 3D load line
+  scrolled off); each 3D load step logs its end; the steps are kept in
+  the launch's times too.
+- [ ] 73.3 Still open: the 457 ms stall at ~2.5 s loading the second 3D
+  camera; the next report names the step.

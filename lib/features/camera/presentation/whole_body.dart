@@ -186,6 +186,8 @@ class WholeArt {
       void step(String name) {
         steps.add('$name ${clock.elapsedMilliseconds}');
         clock.reset();
+        // (each step's end on the report's clock: lines up with its stalls)
+        PerfRecorder.event('3D ${mode.name}: $name done');
       }
 
       final node = await fs.loadScene(scenePath);
@@ -224,6 +226,8 @@ class WholeArt {
       } catch (_) {}
       step('warm');
       PerfRecorder.event('3D ${mode.name} loaded (ms): ${steps.join(', ')}');
+      // (kept with the launch, so it can't scroll off the events)
+      LaunchTimer.after('3D ${mode.name} (ms): ${steps.join(', ')}');
     } catch (e, s) {
       // (Both models come from the same pipeline: if the first loaded,
       // this one does too. Kept swappable rather than stuck.)
@@ -897,10 +901,32 @@ class LiveBodyView extends StatefulWidget {
 class _LiveBodyViewState extends State<LiveBodyView> {
   int _version = 0;
 
+  /// How many views draw each body: one no longer drawn anywhere (the
+  /// camera put away after a swap) lets go of its drawing buffers.
+  static final _shown = <LiveBody, int>{};
+
+  static void _show(LiveBody b) => _shown[b] = (_shown[b] ?? 0) + 1;
+
+  static void _hide(LiveBody b) {
+    final n = (_shown[b] ?? 1) - 1;
+    if (n > 0) {
+      _shown[b] = n;
+      return;
+    }
+    _shown.remove(b);
+    // (after this frame, and only if it hasn't come back meanwhile)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_shown.containsKey(b) || b.scene.isDisposed) return;
+      // ignore: invalid_use_of_internal_member
+      b.scene.surface.shedViewRenderTargets();
+    });
+  }
+
   @override
   void initState() {
     super.initState();
     widget.body.addListener(_repaint);
+    _show(widget.body);
   }
 
   @override
@@ -909,12 +935,15 @@ class _LiveBodyViewState extends State<LiveBodyView> {
     if (old.body != widget.body) {
       old.body.removeListener(_repaint);
       widget.body.addListener(_repaint);
+      _show(widget.body);
+      _hide(old.body);
     }
   }
 
   @override
   void dispose() {
     widget.body.removeListener(_repaint);
+    _hide(widget.body);
     super.dispose();
   }
 

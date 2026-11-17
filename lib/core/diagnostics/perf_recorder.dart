@@ -50,9 +50,12 @@ class PerfRecorder {
   /// Cheap when not recording.
   static void mark(String label, {Duration hold = const Duration(milliseconds: 1200)}) {
     if (!_on) return;
+    final now = DateTime.now();
+    // (a mark repeated while it holds, a drag's every move, is one event)
+    final again = label == _label && now.isBefore(_labelUntil.add(const Duration(milliseconds: 300)));
     _label = label;
-    _labelUntil = DateTime.now().add(hold);
-    event(label);
+    _labelUntil = now.add(hold);
+    if (!again) event(label);
   }
 
   static void start() {

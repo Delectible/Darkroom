@@ -3,15 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.18';
+  static const version = '2.3.19';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Flip books: frame each photo, a speaker button for page sounds, a smoother riffle back, and a '
-      'smoother maker. With the flash on, the screen blinks when the photo is actually taken. With Auto '
-      'Transfer on, the review screen shows your newest picture on C:. Less memory used.';
+      'Uses less memory: the 3D cameras let go of their drawing memory when they\'re put away or the '
+      'camera is covered. Better diagnostics for the short stutter after launch.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

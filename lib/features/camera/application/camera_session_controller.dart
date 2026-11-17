@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_scene/scene.dart' as fs show releaseTransientRenderTargets;
 
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/device/device_memory.dart';
@@ -154,7 +155,20 @@ class CameraSessionController extends Notifier<CameraSessionState> {
   void setScreenVisible(bool visible) {
     if (visible != _screenVisible) CameraLog.add(visible ? 'screen shown' : 'screen covered');
     _screenVisible = visible;
+    if (!visible) _releaseLater();
     _kick();
+  }
+
+  /// The 3D cameras' drawing buffers (about 80 MB each on a Pixel 9 Pro):
+  /// let go once the camera screen has been covered a moment (after the
+  /// cover's slide, so they aren't made again mid-slide) or the app has left.
+  /// The next frame of a 3D camera makes them again.
+  void _releaseLater() {
+    Future<void>.delayed(const Duration(milliseconds: 1200), () {
+      if (_screenVisible && _appVisible) return;
+      final bytes = fs.releaseTransientRenderTargets();
+      if (bytes > 0) CameraLog.add('3D buffers let go (${bytes >> 20} MB)');
+    });
   }
 
   /// Whether the camera screen has asked for the camera (see [setScreenVisible]).
@@ -188,6 +202,7 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       case AppLifecycleState.detached:
         _appVisible = false;
         _wasBackgrounded = true;
+        _releaseLater();
     }
     _kick();
   }

@@ -1462,3 +1462,16 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   (unlisted, no ads, landscape canvas) as Play's promo video, which turns
   the 1024×500 feature graphic into the big banner at the top of the page.
   Optional: a fresh feature graphic / cover frame (2–3 options first).
+
+## 71. Sounds in the Studio; flip book look (2026-11-17), 2.3.17
+- [x] 71.1 Page turns in the Book: four recorded takes (CC0, OpenGameArt
+  "80 CC0 RPG SFX" book_01..04), round-robin players so quick taps
+  overlap; on each tap / queued turn, and when a dragged page goes over.
+- [x] 71.2 Studio snapshot: an old shutter's cha-chunk (CC0, OpenGameArt
+  "Camera") with the white flash after a strip / collage / scrapbook page
+  / flip book is made.
+- [ ] 71.3 Owner to pick by ear: page sets 1–3, shutters 1–4 (sent).
+- [ ] 71.4 Flip book: the stapled look as the default style, made more
+  real. Mockups A (stiff swing, lit), B (page bows over from the free
+  edge), C (corner first, like a thumb riffle); owner to pick.
+- [x] 71.5 Performance Report expanded (hitches, stalls, events, one clock).

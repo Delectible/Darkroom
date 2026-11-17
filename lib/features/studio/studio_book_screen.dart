@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../core/audio/sfx.dart';
 import '../../core/device/upright.dart';
 import '../../core/diagnostics/perf_recorder.dart';
 import 'studio_flip_booklet.dart';
@@ -97,6 +98,9 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
     super.initState();
     _wasScreen;
     PerfRecorder.screen = 'book';
+    for (final s in Sfx.pageTurns) {
+      unawaited(s.preload());
+    }
   }
 
   @override

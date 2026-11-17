@@ -592,6 +592,12 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   works); clips play in `Win98MediaPlayer` (|◀ ◀◀ ▶/❚❚ ■ ▶▶ ▶|, hold ◀◀/▶▶ to
   scan with VHS noise bars). The status bar shows the camera from EXIF
   (photos get Make/Model on export).
+- Recorded sounds (CC0, `tool/sfx/import_recorded.sh` downloads, trims and
+  levels them; sources in its header): the Book's page turns
+  (`Sfx.pageTurn()`, four takes on their own players in turn, so a burst of
+  taps overlaps instead of cutting off; played as a turn starts, and as a
+  dragged page is let go over) and the Studio snapshot (`Sfx.studioSnap`,
+  started with `popWithFlash`'s white). Everything else is synthesized.
 - Win98 sounds (`Sfx.w98*`, made by `tool/sfx/make_sfx.py`, all original,
   never Microsoft's): click on Win98Button / menu / Start items, error bong
   / warning ding from `showWin98MessageBox`, exit chime when the explorer

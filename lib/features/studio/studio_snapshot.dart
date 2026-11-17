@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/audio/sfx.dart';
 import '../../core/device/upright.dart';
 import '../../core/device/haptics.dart';
 import 'studio_flip_booklet.dart';
@@ -41,6 +42,8 @@ Future<void> popWithFlash(BuildContext context, StudioWork work) async {
     ),
   );
   overlay.insert(entry);
+  // (started with the flash: the player's own delay lands it at the white)
+  Sfx.studioSnap.play();
   unawaited(Haptics.lightImpact());
   const steps = 7;
   for (var i = 1; i <= steps; i++) {

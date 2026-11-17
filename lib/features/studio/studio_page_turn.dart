@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
+import '../../core/audio/sfx.dart';
 import '../../core/diagnostics/perf_recorder.dart';
 
 /// Pages you turn like paper: drag and the page folds back along a line
@@ -101,6 +102,7 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
       _at = _from;
     });
     widget.onTurning?.call(forward);
+    Sfx.pageTurn();
     _run(Duration(milliseconds: fast ? 300 : 640));
   }
 
@@ -145,6 +147,8 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
     _to = Offset(goLeft ? -w : w, cy);
     _arc = false;
     final dist = (_to - _from).distance / (2 * w);
+    // (the sound of it going over; a page laid back down is quiet)
+    if (over) Sfx.pageTurn();
     // (never a snap: even a small fold is laid back down gently)
     _run(Duration(milliseconds: (260 + 380 * dist).round()));
   }

@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../core/audio/sfx.dart';
 import '../../core/device/upright.dart';
 import '../../core/db/media_repository.dart';
 import '../../core/device/haptics.dart';
@@ -170,6 +171,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
     super.initState();
     _wasScreen;
     PerfRecorder.screen = 'studio';
+    unawaited(Sfx.studioSnap.preload());
   }
 
   @override

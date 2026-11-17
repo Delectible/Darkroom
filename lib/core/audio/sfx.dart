@@ -25,6 +25,18 @@ class Sfx {
   static final shutterFilm = Sfx._('assets/sfx/shutter_film.wav');
   static final shutterRun = Sfx._('assets/sfx/shutter_run.wav');
 
+  // Recorded (CC0, tool/sfx/import_recorded.sh): the Book's pages and the
+  // Studio's snapshot.
+
+  /// The Book's page turns: four takes, each its own player, played in
+  /// turn, so quick turns overlap instead of cutting each other off.
+  static final pageTurns = [for (var i = 1; i <= 4; i++) Sfx._('assets/sfx/page_turn_$i.wav')];
+  static int _nextPage = 0;
+  static void pageTurn() => pageTurns[_nextPage++ % pageTurns.length].play();
+
+  /// A Studio piece made: the old shutter's cha-chunk under the white flash.
+  static final studioSnap = Sfx._('assets/sfx/studio_snap.wav');
+
   // Windows 98 (made by tool/sfx/make_sfx.py; all original sounds).
   static final w98Click = Sfx._('assets/sfx/w98_click.wav');
   static final w98Ding = Sfx._('assets/sfx/w98_ding.wav');

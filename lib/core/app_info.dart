@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.16';
+  static const version = '2.3.17';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The camera keeps its best picture quality more of the time: other screens no longer make it turn '
-      'its quality down, and it gives up quality less readily.';
+      'The Book\'s pages make a soft paper sound as they turn, and a shutter clicks when you make a strip, '
+      'collage, scrapbook page or flip book. Fuller performance report for tracking down slowdowns.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

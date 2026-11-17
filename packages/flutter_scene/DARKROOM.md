@@ -6,13 +6,19 @@ A copy of [flutter_scene](https://pub.dev/packages/flutter_scene) 0.24.3
 left out; `resolution: workspace` and `screenshots:` are removed from its
 pubspec. The root `analysis_options.yaml` excludes `packages/**`.
 
-## The one change
+## The changes
 
 `lib/src/texture/compressed_texture.dart`, `_prepare`: on the uncompressed
 (rgba8) fallback, a texture 1024 px or wider loads from its half-size mip
 (a quarter of the memory). Marked `DARKROOM PATCH`. Only phones whose GPU
 driver reports no compressed formats take that path (a Pixel 9 Pro: 192 MB
 a 3D camera, ~48 after); iPhones and the tablet use ASTC and are untouched.
+
+`lib/src/fscene/realize/resource_realizer.dart`, `preload`: builds the
+document's geometry up front in ~6 ms slices, yielding to the event loop in
+between (marked `DARKROOM PATCH`). Upstream realizes every mesh at once,
+synchronously, after preload: loading the second 3D camera after launch
+froze the app ~450 ms (2.3.19 Performance Report). Same result, spread out.
 
 ## Updating / undoing
 

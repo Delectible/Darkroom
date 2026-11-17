@@ -3,14 +3,14 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.3.19';
+  static const version = '2.3.20';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Uses less memory: the 3D cameras let go of their drawing memory when they\'re put away or the '
-      'camera is covered. Better diagnostics for the short stutter after launch.';
+      'No more stutter a second after opening the app: the second 3D camera now loads in small steps '
+      'in the background. Uses less memory when the camera is covered.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -312,6 +312,20 @@ class ResourceRealizer {
     }
     await Future.wait(materials);
 
+    // DARKROOM PATCH: the meshes, built now a few milliseconds at a time with
+    // the event loop let through in between (frames go on being drawn).
+    // Otherwise the synchronous realize builds every one at once: a camera
+    // model held the UI thread ~450 ms on a Pixel 9 Pro.
+    final slice = Stopwatch()..start();
+    for (final resource in document.resources.values) {
+      if (resource is! GeometryResource || _geometries.containsKey(resource.id)) continue;
+      geometry(resource.id);
+      if (slice.elapsedMilliseconds >= 6) {
+        await Future<void>.delayed(Duration.zero);
+        slice.reset();
+      }
+    }
+
     // Environments are GPU-bound and async (they build prefilter cubes and may
     // load image assets), so realize them here and cache the result for the
     // synchronous component realize path.

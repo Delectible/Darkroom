@@ -1530,5 +1530,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   one event (corkboard scroll flooded the 120 events, so the 3D load line
   scrolled off); each 3D load step logs its end; the steps are kept in
   the launch's times too.
-- [ ] 73.3 Still open: the 457 ms stall at ~2.5 s loading the second 3D
-  camera; the next report names the step.
+- [x] 73.3 The stall after launch: the 2.3.19 report put it in the "read"
+  step (flutter_scene's loadScene: 428 ms busy at 2.0 s of 856). Its
+  realize builds every mesh at once, synchronously; our copy's preload now
+  builds them first in ~6 ms slices, yielding between (second patch,
+  packages/flutter_scene/DARKROOM.md), 2.3.20.
+- [x] 73.4 2.3.19 report: buffers let go as planned (78 MB twice; render
+  targets 0 MB in Win98).

@@ -9,8 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'No more stutter a second after opening the app: the second 3D camera now loads in small steps '
-      'in the background. Uses less memory when the camera is covered.';
+      'No more stutter a second after opening the app. The Book\'s page edges are thinner and grow and '
+      'shrink as you turn through it. Uses less memory when the camera is covered.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

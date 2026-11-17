@@ -78,7 +78,10 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
   int _at = 0;
   bool _saving = false;
   // (a page is up off the left, on its way back)
-  bool _lifted = false;
+  /// The turn under way: forward (true), back (false), none (null). The
+  /// blocks of pages change as it goes: the side a page lifts from at once,
+  /// the side it lands on once it's down.
+  bool? _turning;
 
   // The book arrives shut and its cover swings open once its pictures are
   // ready (0 shut .. 1 open).
@@ -261,7 +264,9 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                               animation: _open,
                               builder: (context, _) => _OpenBook(
                                 // (a page on its way back isn't lying there)
-                                leaves: open - (_lifted ? 1 : 0),
+                                leaves: open - (_turning == false ? 1 : 0),
+                                rightLeaves: turns - 1 - open - (_turning == true ? 1 : 0),
+                                totalLeaves: turns,
                                 pageWidth: pw,
                                 pageHeight: ph,
                                 left: left,
@@ -278,8 +283,7 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                                         onPage: (i) =>
                                             setState(() => _at = sideways ? math.min(2 * i, n - 1) : i),
                                         onTurning: (forward) {
-                                          final lifted = forward == false;
-                                          if (lifted != _lifted) setState(() => _lifted = lifted);
+                                          if (forward != _turning) setState(() => _turning = forward);
                                         },
                                         left: (context, i) {
                                           // (facing page one: the front board's
@@ -493,6 +497,8 @@ class _OpenBook extends StatelessWidget {
     required this.open,
     required this.pages,
     required this.leaves,
+    required this.rightLeaves,
+    required this.totalLeaves,
   });
 
   final double pageWidth, pageHeight;
@@ -504,6 +510,9 @@ class _OpenBook extends StatelessWidget {
 
   /// How many pages lie turned over on the left.
   final int leaves;
+
+  /// How many lie beneath the right page, and how many the book has.
+  final int rightLeaves, totalLeaves;
 
   @override
   Widget build(BuildContext context) {
@@ -554,7 +563,14 @@ class _OpenBook extends StatelessWidget {
           // gutter where the pages curve down into it, the headbands
           Positioned.fill(
             child: CustomPaint(
-              painter: _BookBody(spine: spine, pageWidth: pw, leaves: lying ? leaves : 0, open: open),
+              painter: _BookBody(
+                spine: spine,
+                pageWidth: pw,
+                leaves: lying ? leaves : 0,
+                rightLeaves: rightLeaves,
+                totalLeaves: totalLeaves,
+                open: open,
+              ),
             ),
           ),
           // the pages: the right one, and (once the book's open) the left.
@@ -658,13 +674,29 @@ class _PageShape extends CustomClipper<Path> {
 /// the top page's shadow on them), the dark of the gutter where the pages
 /// dip, and the headbands at the head and tail of the spine.
 class _BookBody extends CustomPainter {
-  const _BookBody({required this.spine, required this.pageWidth, required this.leaves, required this.open});
+  const _BookBody({
+    required this.spine,
+    required this.pageWidth,
+    required this.leaves,
+    required this.rightLeaves,
+    required this.totalLeaves,
+    required this.open,
+  });
 
   final double spine, pageWidth;
 
   /// How many pages lie on the left (the top one drawn by the pages' layer;
   /// the rest a block beneath it).
   final int leaves;
+
+  /// How many lie beneath the right page, and how many the whole book has:
+  /// each side's block is as deep as its share of the book's pages.
+  final int rightLeaves, totalLeaves;
+
+  /// The whole book's pages as an edge: a few pixels.
+  double get _fullDepth => (pageWidth * 0.018).clamp(2.5, 7.0);
+
+  double _depthOf(int pages) => pages <= 0 ? 0 : _fullDepth * pages / math.max(1, totalLeaves - 1);
 
   /// How far the front board has swung (1: down on the left).
   final double open;
@@ -699,26 +731,44 @@ class _BookBody extends CustomPainter {
     );
     canvas.restore();
 
-    void block(Rect page, int leaves, {required bool right}) {
-      for (var k = leaves; k >= 1; k--) {
-        final out = k * 1.25;
-        final r = right
-            ? Rect.fromLTRB(page.left, page.top + k * 0.5, page.right + out, page.bottom + out)
-            : Rect.fromLTRB(page.left - out, page.top + k * 0.5, page.right, page.bottom + out);
-        canvas.drawRRect(
-          RRect.fromRectAndCorners(
-            r,
-            topRight: right ? const Radius.circular(3) : Radius.zero,
-            bottomRight: right ? const Radius.circular(4) : Radius.zero,
-            topLeft: right ? Radius.zero : const Radius.circular(3),
-            bottomLeft: right ? Radius.zero : const Radius.circular(4),
-          ),
-          Paint()..color = k.isOdd ? const Color(0xFFE6DCC7) : const Color(0xFFCDBFA4),
-        );
+    void block(Rect page, double depth, {required bool right}) {
+      if (depth <= 0.05) return;
+      // the pages' edges: thin paper, a fine line a leaf or so
+      final r = right
+          ? Rect.fromLTRB(page.left, page.top + depth * 0.4, page.right + depth, page.bottom + depth)
+          : Rect.fromLTRB(page.left - depth, page.top + depth * 0.4, page.right, page.bottom + depth);
+      canvas.drawRRect(
+        RRect.fromRectAndCorners(
+          r,
+          topRight: right ? const Radius.circular(3) : Radius.zero,
+          bottomRight: right ? const Radius.circular(4) : Radius.zero,
+          topLeft: right ? Radius.zero : const Radius.circular(3),
+          bottomLeft: right ? Radius.zero : const Radius.circular(4),
+        ),
+        Paint()..color = const Color(0xFFE2D7C1),
+      );
+      final line = Paint()
+        ..color = const Color(0x2A6B5434)
+        ..strokeWidth = 0.6;
+      for (var k = 1.1; k < depth; k += 1.1) {
+        if (right) {
+          canvas.drawLine(Offset(page.left, page.bottom + k), Offset(page.right + k, page.bottom + k), line);
+          canvas.drawLine(
+            Offset(page.right + k, page.top + k * 0.4),
+            Offset(page.right + k, page.bottom + k),
+            line,
+          );
+        } else {
+          canvas.drawLine(Offset(page.left - k, page.bottom + k), Offset(page.right, page.bottom + k), line);
+          canvas.drawLine(
+            Offset(page.left - k, page.top + k * 0.4),
+            Offset(page.left - k, page.bottom + k),
+            line,
+          );
+        }
       }
       // the top page's shadow on the block's edges: a little, close under
       // it (paper still, not a grey line)
-      final depth = leaves * 1.25;
       canvas.drawRect(
         Rect.fromLTRB(
           page.left - (right ? 0 : depth),
@@ -745,10 +795,11 @@ class _BookBody extends CustomPainter {
       );
     }
 
-    block(Rect.fromLTRB(spine, 0, spine + pageWidth, h), 5, right: true);
-    // (the left block thickens a leaf a turn: as thick as the right after four)
+    // each side as deep as its share of the book (the right loses a page the
+    // moment it lifts; the left gains it once it's down, and back again)
+    block(Rect.fromLTRB(spine, 0, spine + pageWidth, h), _depthOf(rightLeaves), right: true);
     if (leaves > 0) {
-      block(Rect.fromLTRB(spine - pageWidth, 0, spine, h), math.min(leaves + 1, 5), right: false);
+      block(Rect.fromLTRB(spine - pageWidth, 0, spine, h), _depthOf(leaves - 1), right: false);
     }
 
     // the gutter: dark where the pages dip into the spine, head and tail
@@ -776,7 +827,7 @@ class _BookBody extends CustomPainter {
       final bandHeight = math.max(4.0, math.min(n * 0.9, 5.5));
       final band = RRect.fromRectAndRadius(
         Rect.fromCenter(
-          center: Offset(spine, top ? n * 0.5 - 1 : h + 5 * 1.25 + bandHeight / 2 - 1),
+          center: Offset(spine, top ? n * 0.5 - 1 : h + _fullDepth + bandHeight / 2 - 1),
           width: 20,
           height: bandHeight,
         ),
@@ -807,7 +858,12 @@ class _BookBody extends CustomPainter {
 
   @override
   bool shouldRepaint(_BookBody old) =>
-      old.spine != spine || old.pageWidth != pageWidth || old.leaves != leaves || old.open != open;
+      old.spine != spine ||
+      old.pageWidth != pageWidth ||
+      old.leaves != leaves ||
+      old.rightLeaves != rightLeaves ||
+      old.totalLeaves != totalLeaves ||
+      old.open != open;
 }
 
 /// The album's front cover: leather, a gold rule, its name stamped in gold.

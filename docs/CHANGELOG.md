@@ -1537,3 +1537,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   packages/flutter_scene/DARKROOM.md), 2.3.20.
 - [x] 73.4 2.3.19 report: buffers let go as planned (78 MB twice; render
   targets 0 MB in Win98).
+- [x] 73.5 The Book's page blocks like the flip book's: thin edges (fine
+  lines), each side as deep as its share of all the book's pages (full
+  book 2.5-7 px), the side a page lifts from losing it at once, the side
+  it lands on gaining it once down (`_turning`, both directions).

@@ -134,8 +134,11 @@ class PhotoCrop {
 
 /// The part of [image] that fills a frame shaped [aspect] (width / height)
 /// with [crop].
-Rect coverSource(ui.Image image, double aspect, [PhotoCrop crop = PhotoCrop.middle]) {
-  final iw = image.width.toDouble(), ih = image.height.toDouble();
+Rect coverSource(ui.Image image, double aspect, [PhotoCrop crop = PhotoCrop.middle]) =>
+    coverSourceOf(image.width.toDouble(), image.height.toDouble(), aspect, crop);
+
+/// [coverSource] for a picture [iw] x [ih].
+Rect coverSourceOf(double iw, double ih, double aspect, [PhotoCrop crop = PhotoCrop.middle]) {
   var sw = iw, sh = ih;
   if (iw / ih > aspect) {
     sw = ih * aspect;
@@ -510,19 +513,37 @@ Future<void> writeStudioPng(StudioPixels pixels, String path) {
 /// The photo at [from] as a JPEG at [to], at most [maxSide] on its longest
 /// side: read, sized and written on another core, never near the GPU (so
 /// it can't come out scrambled).
-Future<void> copyStudioPhoto(String from, String to, {int maxSide = 1200, int quality = 88}) =>
-    Isolate.run(() {
-      final decoded = img.decodeImage(File(from).readAsBytesSync());
-      if (decoded == null) throw StateError('Could not read $from');
-      final pic = img.bakeOrientation(decoded);
-      final s = math.min(1.0, maxSide / math.max(pic.width, pic.height));
-      final out = s < 1
-          ? img.copyResize(
-              pic,
-              width: math.max(1, (pic.width * s).round()),
-              height: math.max(1, (pic.height * s).round()),
-              interpolation: img.Interpolation.average,
-            )
-          : pic;
-      File(to).writeAsBytesSync(img.encodeJpg(out, quality: quality));
-    });
+///
+/// With [aspect], cut to that shape first, framed as [crop] says.
+Future<void> copyStudioPhoto(
+  String from,
+  String to, {
+  int maxSide = 1200,
+  int quality = 88,
+  double? aspect,
+  PhotoCrop crop = PhotoCrop.middle,
+}) => Isolate.run(() {
+  final decoded = img.decodeImage(File(from).readAsBytesSync());
+  if (decoded == null) throw StateError('Could not read $from');
+  var pic = img.bakeOrientation(decoded);
+  if (aspect != null) {
+    final r = coverSourceOf(pic.width.toDouble(), pic.height.toDouble(), aspect, crop);
+    pic = img.copyCrop(
+      pic,
+      x: r.left.round().clamp(0, pic.width - 1),
+      y: r.top.round().clamp(0, pic.height - 1),
+      width: math.max(1, math.min(r.width.round(), pic.width - r.left.round())),
+      height: math.max(1, math.min(r.height.round(), pic.height - r.top.round())),
+    );
+  }
+  final s = math.min(1.0, maxSide / math.max(pic.width, pic.height));
+  final out = s < 1
+      ? img.copyResize(
+          pic,
+          width: math.max(1, (pic.width * s).round()),
+          height: math.max(1, (pic.height * s).round()),
+          interpolation: img.Interpolation.average,
+        )
+      : pic;
+  File(to).writeAsBytesSync(img.encodeJpg(out, quality: quality));
+});

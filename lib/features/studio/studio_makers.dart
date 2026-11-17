@@ -402,6 +402,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
   StudioPaper _paper = StudioPaper.cream;
   FlipStyle _style = FlipStyle.standard;
   bool _sound = true;
+  late final List<PhotoCrop> _crops = List.filled(widget.prints.length, PhotoCrop.middle);
   int _pageMs = StudioMake.pageMsDefault;
   late final Timer _tick;
   final _clock = Stopwatch()..start();
@@ -446,6 +447,84 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
     super.dispose();
   }
 
+  /// Every photo in a strip, each as its page frames it: tap one to frame it.
+  Future<void> _framing() async {
+    final photos = _photos;
+    if (photos == null || _busy) return;
+    if (_style != FlipStyle.stapled) {
+      studioNote(context, '${_style.label} shows each photo whole');
+      return;
+    }
+    final aspect = StapledFlip.photoAspect;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: StudioInk.tableDark,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheet) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(0, 18, 0, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const StudioLabel('Frame the photos'),
+                const SizedBox(height: 4),
+                const Text(
+                  'Tap one to move or zoom it',
+                  style: TextStyle(color: StudioInk.muted, fontSize: 12),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  height: 150,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: photos.length,
+                    separatorBuilder: (_, _) => const SizedBox(width: 10),
+                    itemBuilder: (context, i) => GestureDetector(
+                      onTap: () async {
+                        final crop = await showModalBottomSheet<PhotoCrop>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: StudioInk.tableDark,
+                          builder: (context) => _CropSheet(photo: photos[i], aspect: aspect, crop: _crops[i]),
+                        );
+                        if (crop == null || !mounted) return;
+                        setState(() => _crops[i] = crop);
+                        setSheet(() {});
+                      },
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: AspectRatio(
+                              aspectRatio: aspect,
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: _crops[i].isMiddle ? StudioInk.card : StudioInk.brass,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ClipRect(
+                                  child: CustomPaint(painter: _CropPainter(photos[i], _crops[i])),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('${i + 1}', style: const TextStyle(color: StudioInk.muted, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _make() async {
     setState(() => _busy = true);
     try {
@@ -455,6 +534,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
         pageMs: _pageMs,
         style: _style,
         sound: _sound,
+        crops: _crops,
       );
       await ref.read(studioBookProvider.notifier).add(work);
       if (mounted) await popWithFlash(context, work);
@@ -473,7 +553,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
     // (the very frames the video will have: the same drawing)
     final frames = photos == null
         ? null
-        : FlipFrames(photos: photos, paper: _paper, style: _style, pageMs: _pageMs);
+        : FlipFrames(photos: photos, paper: _paper, style: _style, pageMs: _pageMs, crops: _crops);
     return _MakerScaffold(
       title: 'Flip Book',
       subtitle: '${widget.prints.length} pages',
@@ -485,7 +565,10 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
                 decoration: const BoxDecoration(
                   boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 10, offset: Offset(0, 6))],
                 ),
-                child: ClipRect(child: CustomPaint(painter: _FlipPreview(frames, _pos * _pageMs))),
+                child: GestureDetector(
+                  onTap: _framing,
+                  child: ClipRect(child: CustomPaint(painter: _FlipPreview(frames, _pos * _pageMs))),
+                ),
               ),
       ),
       options: [
@@ -493,7 +576,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'About ${seconds.toStringAsFixed(1)} s',
+              'About ${seconds.toStringAsFixed(1)} s${_style == FlipStyle.stapled ? ' · tap it to frame the photos' : ''}',
               style: const TextStyle(color: StudioInk.muted, fontSize: 12),
             ),
             // page sounds in the video (the styles that have them)
@@ -531,7 +614,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
         ),
         _Choices<FlipStyle>(
           label: 'Change',
-          values: FlipStyle.values,
+          values: FlipStyle.offered,
           name: (f) => f.label,
           value: _style,
           onPick: (f) => setState(() => _style = f),

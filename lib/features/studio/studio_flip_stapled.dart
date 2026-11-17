@@ -27,9 +27,19 @@ enum FlipCue {
 /// the left pile. The stacks' edges grow and shrink by a few pixels: the
 /// right loses a page as it lifts, the left gains it as it lands.
 class StapledFlip {
-  StapledFlip({required this.photos, required this.pageMs, required this.flipMs});
+  StapledFlip({required this.photos, required this.pageMs, required this.flipMs, this.crops});
 
   final List<ui.Image> photos;
+
+  /// Each photo's framing on its page (the maker's preview; a made book's
+  /// photos are kept already cut to it).
+  final List<PhotoCrop>? crops;
+
+  /// The shape (width / height) a photo fills on a page.
+  static final double photoAspect = () {
+    final r = _Booklet(const Size(1080, 1350)).photoRect;
+    return r.width / r.height;
+  }();
   final int pageMs;
 
   /// How long a page takes to turn (the end of its time).
@@ -134,8 +144,10 @@ class StapledFlip {
     _turn(c, b, page, phi, curl, tilt: 0.65 - 0.4 * e);
   }
 
-  ui.Image _front(_Booklet b, int page) => _PageTextures.of(photos[page], b, back: false);
-  ui.Image _back(_Booklet b, int page) => _PageTextures.of(photos[page], b, back: true);
+  PhotoCrop _cropOf(int page) => crops != null && page < crops!.length ? crops![page] : PhotoCrop.middle;
+  ui.Image _front(_Booklet b, int page) =>
+      _PageTextures.of(photos[page], b, back: false, crop: _cropOf(page));
+  ui.Image _back(_Booklet b, int page) => _PageTextures.of(photos[page], b, back: true, crop: _cropOf(page));
 
   /// [page] bent in its own plane (the free corner up by [curl], along a
   /// line leaning [tilt], nothing at the spine), then turned about the
@@ -413,10 +425,11 @@ class _PageTextures {
   /// Texture pixels per canvas unit (at most 900 px wide).
   static double scaleOf(_Booklet b) => math.min(2.0, 900 / b.face.width);
 
-  static ui.Image of(ui.Image photo, _Booklet b, {required bool back}) {
+  static ui.Image of(ui.Image photo, _Booklet b, {required bool back, PhotoCrop crop = PhotoCrop.middle}) {
     final s = scaleOf(b);
     final w = (b.face.width * s).round(), h = (b.face.height * s).round();
-    final key = '${identityHashCode(photo)}:${photo.width}x${photo.height}:$back:${w}x$h';
+    final key =
+        '${identityHashCode(photo)}:${photo.width}x${photo.height}:$back:${w}x$h:${crop.x},${crop.y},${crop.zoom}';
     final hit = _cache.remove(key);
     if (hit != null) return _cache[key] = hit;
     final rec = ui.PictureRecorder();
@@ -429,6 +442,7 @@ class _PageTextures {
       c,
       photo,
       b.photoRect,
+      crop: crop,
       paint: Paint()
         ..filterQuality = FilterQuality.medium
         ..color = back ? const Color(0x14000000) : const Color(0xFF000000),

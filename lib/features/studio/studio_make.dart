@@ -58,6 +58,7 @@ class StudioMake {
     int pageMs = pageMsDefault,
     FlipStyle style = FlipStyle.standard,
     bool sound = true,
+    List<PhotoCrop>? crops,
   }) async {
     final id = _id();
     final dir = await StudioBook.folder();
@@ -70,7 +71,15 @@ class StudioMake {
     for (var i = 0; i < from.length; i += 4) {
       await Future.wait([
         for (var j = i; j < from.length && j < i + 4; j++)
-          copyStudioPhoto(from[j], pages[j]).catchError((Object _) async {
+          copyStudioPhoto(
+            from[j],
+            pages[j],
+            // (stapled pages: cut to the page as framed in the maker)
+            aspect: style == FlipStyle.stapled && crops != null && j < crops.length && !crops[j].isMiddle
+                ? StapledFlip.photoAspect
+                : null,
+            crop: crops != null && j < crops.length ? crops[j] : PhotoCrop.middle,
+          ).catchError((Object _) async {
             // (a picture the copier can't read: through the GPU after all)
             final image = await loadStudioImage(from[j], maxSide: 1200);
             try {

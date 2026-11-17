@@ -1491,3 +1491,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 72.2 Speaker button in the flip book maker (styles with sounds):
   off = the video has no sound track (`StudioWork.silent`). The Book still
   plays page sounds as it plays.
+- [x] 72.3 Page flip style off the maker's list (`FlipStyle.offered`); old
+  books in it still play.
+- [x] 72.4 Framing a stapled flip book's photos: tap the preview for a
+  strip of every photo at the page's shape; tap one for the crop sheet
+  (as the strip / collage). The kept pages are saved cut to that framing
+  (`copyStudioPhoto(aspect:, crop:)`), so the video and the Book need no
+  more. Other styles show photos whole (a note says so).

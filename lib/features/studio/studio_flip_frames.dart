@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'studio_flip_stapled.dart';
 import 'studio_render.dart';
 
-export 'studio_flip_stapled.dart' show FlipCue, clearStapledTextures;
+export 'studio_flip_stapled.dart' show FlipCue, StapledFlip, clearStapledTextures;
 
 /// How a flip book goes from one photo to the next.
 enum FlipStyle {
@@ -33,13 +33,25 @@ enum FlipStyle {
 
   /// What a new flip book starts with.
   static const standard = FlipStyle.stapled;
+
+  /// The styles the maker offers (the page flip is kept for books made in it).
+  static const offered = [stapled, shutter, pile];
 }
 
 /// One flip book's moving picture, the same in the app as in the video: its
 /// [photos] at [pageMs] each, in [style], on [paper]. [paint] draws the
 /// moment [t] ms in; [keyframes] lists the moments the video needs.
 class FlipFrames {
-  FlipFrames({required this.photos, required this.paper, required this.style, required this.pageMs});
+  FlipFrames({
+    required this.photos,
+    required this.paper,
+    required this.style,
+    required this.pageMs,
+    this.crops,
+  });
+
+  /// The photos' framing (stapled pages; the maker's preview).
+  final List<PhotoCrop>? crops;
 
   final List<ui.Image> photos;
   final StudioPaper paper;
@@ -55,6 +67,7 @@ class FlipFrames {
     photos: photos,
     pageMs: pageMs,
     flipMs: math.min(pageMs * 0.6, 400.0).round(),
+    crops: crops,
   );
 
   /// Whether [style]'s videos have page sounds.

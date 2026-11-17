@@ -1550,3 +1550,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   reports its steps (`darkroomTrace`: textures, each upload, materials,
   meshes with their ms, realize) into the report's events; next report says
   which.
+
+## 74. Corkboard fast scroll (2026-11-17), 2.3.21
+- [x] 74.1 Prints that hadn't decoded showed blank paper in a fast scroll.
+  `BoardPhoto`: a 64 px copy of every print, decoded when the board opens
+  (~25 KB each), shown under the sharp one until it's decoded; the sharp
+  one decoded at the size shown (was always 420 px: ~1.7x the pixels a
+  portrait phone's tile needs).

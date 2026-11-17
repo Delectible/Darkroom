@@ -101,6 +101,9 @@ class CorkboardScreen extends ConsumerStatefulWidget {
 class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerProviderStateMixin {
   bool _saving = false;
 
+  /// Prints whose tiny copy has been asked for (BoardPhoto.warm).
+  final _previewed = <String>{};
+
   /// Wakes the board when the next print comes out of the darkroom (it used
   /// to be built again every second, a whole board for a clock's tick).
   Timer? _nextOut;
@@ -527,6 +530,17 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
       WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_reflow()));
     }
     final shown = _shown!;
+    // Every print's tiny copy, decoded ahead (see BoardPhoto): a fast
+    // scroll never meets a blank print.
+    final unseen = [
+      for (final m in developed)
+        if (m.thumbPath case final t? when _previewed.add(t)) t,
+    ];
+    if (unseen.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(BoardPhoto.warm(context, unseen));
+      });
+    }
     // Polaroids need their framed share file made: do it in the background
     // now, so holding one brings the share sheet up straight away.
     final cold = developed.where((m) => _warmed.add('${m.id}:${m.note}')).toList();
@@ -1296,18 +1310,7 @@ class PinnedPrint extends StatelessWidget {
                               final photo = Stack(
                                 fit: StackFit.expand,
                                 children: [
-                                  if (thumb != null)
-                                    Image.file(
-                                      File(thumb),
-                                      fit: BoxFit.cover,
-                                      cacheWidth: 420,
-                                      gaplessPlayback: true,
-                                      // Developing-paper tone until decoded, not a hole.
-                                      frameBuilder: (context, child, frame, sync) => frame == null && !sync
-                                          ? const ColoredBox(color: Color(0xFFE9E2D3))
-                                          : child,
-                                      errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
-                                    ),
+                                  if (thumb != null) BoardPhoto(path: thumb),
                                   // Glossy paper sheen.
                                   const DecoratedBox(
                                     decoration: BoxDecoration(
@@ -1418,16 +1421,7 @@ class PinnedInstant extends StatelessWidget {
                         ),
                         child: thumb == null
                             ? const ColoredBox(color: Colors.black12)
-                            : Image.file(
-                                File(thumb),
-                                fit: BoxFit.cover,
-                                cacheWidth: 420,
-                                gaplessPlayback: true,
-                                frameBuilder: (context, child, frame, sync) => frame == null && !sync
-                                    ? const ColoredBox(color: Color(0xFFE9E2D3))
-                                    : child,
-                                errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
-                              ),
+                            : BoardPhoto(path: thumb),
                       ),
                     ),
                     Positioned(
@@ -3015,5 +3009,62 @@ class SlowLoop extends ChangeNotifier implements ValueListenable<double> {
   void dispose() {
     _leave();
     super.dispose();
+  }
+}
+
+/// A print's photo on the board: a tiny copy first (decoded in a moment and
+/// kept for every print, [warm]), the sharp one over it once it's decoded.
+/// A fast scroll shows the real picture, soft for a moment, never blank paper.
+class BoardPhoto extends StatelessWidget {
+  const BoardPhoto({super.key, required this.path});
+
+  final String path;
+
+  /// The tiny copy's width (px): about 20 KB a print in memory.
+  static const previewWidth = 64;
+
+  static ImageProvider _preview(String path) => ResizeImage(FileImage(File(path)), width: previewWidth);
+
+  /// Decodes the tiny copies of [paths] ahead (a few at a time, in order).
+  static Future<void> warm(BuildContext context, Iterable<String> paths) async {
+    final todo = paths.toList();
+    for (var i = 0; i < todo.length; i += 4) {
+      if (!context.mounted) return;
+      await Future.wait([
+        for (final p in todo.skip(i).take(4)) precacheImage(_preview(p), context, onError: (_, _) {}),
+      ]);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      // decoded at the size it's shown (in steps, so a print keeps one size)
+      final px = box.maxWidth.isFinite ? box.maxWidth * MediaQuery.devicePixelRatioOf(context) : 420.0;
+      return _photo((px / 40).ceil().clamp(3, 12) * 40);
+    },
+  );
+
+  Widget _photo(int cacheWidth) {
+    final file = File(path);
+    return Image.file(
+      file,
+      fit: BoxFit.cover,
+      cacheWidth: cacheWidth,
+      gaplessPlayback: true,
+      frameBuilder: (context, child, frame, sync) => frame == null && !sync
+          ? Image(
+              image: _preview(path),
+              fit: BoxFit.cover,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.medium,
+              // Developing-paper tone until even that's decoded, not a hole.
+              frameBuilder: (context, child, frame, sync) =>
+                  frame == null && !sync ? const ColoredBox(color: Color(0xFFE9E2D3)) : child,
+              errorBuilder: (_, _, _) => const ColoredBox(color: Color(0xFFE9E2D3)),
+            )
+          : child,
+      errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
+    );
   }
 }

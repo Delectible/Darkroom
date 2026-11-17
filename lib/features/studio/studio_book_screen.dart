@@ -1452,7 +1452,7 @@ class _FlipBookViewerState extends ConsumerState<FlipBookViewer> {
                           work: _work,
                           riffle: Riffle.loop,
                           sound: !_work.silent,
-                          cacheWidth: 1000,
+                          cacheWidth: 800,
                           face: _hasPages
                               ? null
                               : (v != null && v.value.isInitialized

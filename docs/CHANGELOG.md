@@ -1514,3 +1514,10 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   moves (idle Win98 showed seconds-long "gaps"); the second 3D camera's
   load logs each step's ms (it held the thread 485 ms at 2.8 s: the
   stutter after launch).
+- [x] 72.9 A picture frozen through two reopens gets a third after a
+  1.5 s rest (camera list read afresh). Flip maker photos at 640 px (was
+  800), the Book's playing flip book at 800 (was 1000).
+- [ ] 72.10 The stutter after launch (second 3D camera's load held the
+  thread 485 ms): the next report's "3D ... loaded (ms)" event says which
+  step; then move that step off the thread (owner chose this over loading
+  it behind the curtain).

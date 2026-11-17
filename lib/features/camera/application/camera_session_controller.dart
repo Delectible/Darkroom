@@ -243,6 +243,11 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     }
     await _release();
     if (_dirty) return; // target moved while releasing; loop again
+    if (_restNext) {
+      _restNext = false;
+      await Future<void>.delayed(const Duration(milliseconds: 1500));
+      if (_dirty || !ref.mounted) return;
+    }
     await _acquire(want);
   }
 
@@ -411,6 +416,11 @@ class CameraSessionController extends Notifier<CameraSessionState> {
   /// Reopens for a frozen picture since frames last came (not forever).
   int _frozenReopens = 0;
 
+  /// The next open waits a moment first, with the camera list read afresh
+  /// (the last try for a picture that stayed frozen through two reopens:
+  /// after a trip to the background the Pixel's camera can need a rest).
+  bool _restNext = false;
+
   /// "Ready" only means the camera opened: check that the viewfinder is
   /// really getting frames, now and every few seconds while it's open (see
   /// [PreviewProbe]), log what it finds, and reopen a frozen camera.
@@ -446,9 +456,13 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       } else if (!frozen) {
         frozen = true;
         CameraLog.add('no frames: picture frozen ${ms()} ms after ready');
-        if (_frozenReopens < 2 && !c.value.isRecordingVideo) {
+        if (_frozenReopens < 3 && !c.value.isRecordingVideo) {
           _frozenReopens++;
-          CameraLog.add('reopening for the frozen picture');
+          if (_frozenReopens == 3) {
+            _restNext = true;
+            _cameras = null;
+          }
+          CameraLog.add('reopening for the frozen picture${_restNext ? ' (after a rest)' : ''}');
           _controllerConfig = null;
           _kick();
           return;

@@ -430,7 +430,7 @@ class _FlipMakerState extends ConsumerState<_FlipMaker> {
   }
 
   Future<void> _load() async {
-    final photos = await StudioMake.photos(widget.prints, maxSide: 800);
+    final photos = await StudioMake.photos(widget.prints, maxSide: 640);
     if (!mounted) {
       for (final p in photos) {
         p.dispose();

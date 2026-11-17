@@ -911,8 +911,9 @@ UI
   paused do. `CameraLog` keeps recent session events: Win98 Help > Debug.
   It's kept in a file across launches (Copy pastes it). "Ready" isn't
   "live": `PreviewProbe` compares two tiny reads of the raw preview texture
-  after each open and every 6 s, logs frozen pictures and reopens (twice at
-  most). A swipe's still only drops when no finger is down (`_dropWhenIdle`
+  after each open and every 6 s, logs frozen pictures and reopens (three times
+  at most; the third after a 1.5 s rest with the camera list read afresh:
+  2.3.17 report, a picture frozen through two reopens after a resume)). A swipe's still only drops when no finger is down (`_dropWhenIdle`
   waits for it).
 - Film lenses (`LensKind`, the tray in the viewfinder's top-left corner):
   `shaders/lens.frag` over the viewfinder (uCrop = the frame, so the lens

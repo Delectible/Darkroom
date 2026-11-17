@@ -9,9 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'With the flash on, the screen blinks when the photo is actually taken. With Auto Transfer on, the '
-      'digital camera\'s review screen shows your newest picture on C:. Flip books: frame each photo, a '
-      'speaker button for page sounds, a smoother riffle back.';
+      'Flip books: frame each photo, a speaker button for page sounds, a smoother riffle back, and a '
+      'smoother maker. With the flash on, the screen blinks when the photo is actually taken. With Auto '
+      'Transfer on, the review screen shows your newest picture on C:. Less memory used.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

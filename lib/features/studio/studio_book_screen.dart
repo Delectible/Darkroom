@@ -143,6 +143,15 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
               onError: (_, _) {},
             );
           }
+          // a flip book shut on the page: its first photo, ready before the
+          // page shows (drawn the moment it's there, no blank frame first)
+          if (mounted && w.kind == StudioKind.flipbook) {
+            if (w.pages.isNotEmpty) {
+              await StapledFlipBook.warm(w);
+            } else if (w.cover != null) {
+              await precacheImage(FileImage(File(w.cover!)), context, onError: (_, _) {});
+            }
+          }
           if (mounted) setState(() => _aspects[w.id] = a);
         }),
       );

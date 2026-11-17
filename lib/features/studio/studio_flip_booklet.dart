@@ -190,7 +190,24 @@ class StapledFlipBook extends StatefulWidget {
 
   @override
   State<StapledFlipBook> createState() => _StapledFlipBookState();
+
+  /// Decodes [work]'s first photo for a shut booklet, if it isn't already.
+  static Future<void> warm(StudioWork work) async {
+    final p = work.pages.firstOrNull;
+    if (p == null || _firstPhotos.containsKey(p)) return;
+    try {
+      final image = await loadStudioImage(p, maxSide: 900);
+      _firstPhotos[p] = image;
+      while (_firstPhotos.length > 24) {
+        _firstPhotos.remove(_firstPhotos.keys.first)!.dispose();
+      }
+    } catch (_) {}
+  }
 }
+
+/// The shut flip books' first photos, decoded ahead (the book warms the
+/// ones on its pages): a booklet whose photo is here draws it at once.
+final _firstPhotos = <String, ui.Image>{};
 
 class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProviderStateMixin {
   // Drawn again only while a page is flicking over (and once as it comes
@@ -214,6 +231,12 @@ class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProv
   @override
   void initState() {
     super.initState();
+    // (shut, its photo warmed: drawn from the first frame)
+    final warm = widget.still ? _firstPhotos[widget.work.pages.firstOrNull] : null;
+    if (warm != null) {
+      _photos = [warm.clone()];
+      return;
+    }
     unawaited(_load());
   }
 

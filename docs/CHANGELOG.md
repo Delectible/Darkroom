@@ -1541,3 +1541,7 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   lines), each side as deep as its share of all the book's pages (full
   book 2.5-7 px), the side a page lifts from losing it at once, the side
   it lands on gaining it once down (`_turning`, both directions).
+- [x] 73.6 Shut flip books on an album page no longer flash blank as the
+  page opens: their first photo is decoded with the page's other pieces
+  (`StapledFlipBook.warm`, kept for 24), drawn from the first frame; an
+  old one's cover is precached.

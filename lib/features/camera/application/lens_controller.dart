@@ -105,7 +105,9 @@ class Tele {
   /// so the phone never changes lens by itself.
   final String? mainId, wideId, teleId;
 
-  bool get pinnable => mainId != null;
+  // The pin is ignored on the Pixel 9 Pro (2.3.24: same view, still
+  // switches): off until a pin that holds; zoom limits meanwhile.
+  bool get pinnable => false;
 
   /// The physical lens [lens] streams from.
   String? idFor(LensKind lens) => switch (lens) {

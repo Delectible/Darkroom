@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'camera_log.dart';
 import 'camera_session_controller.dart';
 import 'camera_ui_state.dart';
 import 'lens_controller.dart';
@@ -78,6 +79,8 @@ class ZoomController extends Notifier<ZoomState> {
       final hwMin = await c.getMinZoomLevel();
       final hwMax = await c.getMaxZoomLevel();
       if (!ref.mounted || !identical(_controller, c)) return;
+      // (which lens it really is shows in its range: pinned lenses differ)
+      CameraLog.add('zoom range ${hwMin.toStringAsFixed(2)}-${hwMax.toStringAsFixed(1)}x');
       _hwMin = hwMin;
       // Android: a back camera that zooms below 1x has an ultra-wide behind
       // it (iPhone: the session knows from the list of cameras).

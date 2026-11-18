@@ -231,6 +231,17 @@ class FlipFrames {
 
   // ---- pile: each print dropped onto the last ----
 
+  /// The whole pile lying still, no table under it (the book shows shutter
+  /// and pile flip books this way): [photos] are the top few, last on top;
+  /// [first] is the index of photos[0] in the book (keeps each one's lie).
+  void paintPile(Canvas c, Size size, {int first = 0}) {
+    final centre = size.center(Offset.zero);
+    for (var i = 0; i < length; i++) {
+      final k = first + i;
+      _card(c, size, photos[i], centre + _pileShift(k, size), turn: _pileTurn(k), fill: 0.78);
+    }
+  }
+
   double _pileTurn(int i) => (math.Random(i * 7919 + 13).nextDouble() - 0.5) * 0.22;
 
   Offset _pileShift(int i, Size size) {

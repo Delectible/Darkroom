@@ -228,9 +228,22 @@ class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProv
   int _rest = -2;
   List<ui.Image>? _photos;
 
+  /// Shutter and pile flip books lie in the book as a pile of their prints
+  /// (the top few), not a stapled book.
+  bool get _pile =>
+      widget.still &&
+      widget.work.pages.isNotEmpty &&
+      FlipStyle.named(widget.work.flipStyle) != FlipStyle.stapled;
+  int get _pileFrom => math.max(0, widget.work.pages.length - _pileCount);
+  static const _pileCount = 5;
+
   @override
   void initState() {
     super.initState();
+    if (_pile) {
+      unawaited(_load());
+      return;
+    }
     // (shut, its photo warmed: drawn from the first frame)
     final warm = widget.still ? _firstPhotos[widget.work.pages.firstOrNull] : null;
     if (warm != null) {
@@ -243,7 +256,12 @@ class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProv
   Future<void> _load() async {
     final images = <ui.Image>[];
     try {
-      for (final p in widget.still ? widget.work.pages.take(1) : widget.work.pages) {
+      final pages = _pile
+          ? widget.work.pages.skip(_pileFrom)
+          : widget.still
+          ? widget.work.pages.take(1)
+          : widget.work.pages;
+      for (final p in pages) {
         images.add(await loadStudioImage(p, maxSide: widget.still ? 900 : 500));
       }
     } catch (_) {
@@ -256,6 +274,7 @@ class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProv
       return;
     }
     setState(() => _photos = images);
+    if (_pile) return;
     if (images.length > 1) unawaited(_ticker.start());
   }
 
@@ -277,6 +296,18 @@ class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProv
           ? FlipBooklet(work: widget.work, riffle: Riffle.still)
           : const AspectRatio(aspectRatio: 4 / 5);
     }
+    if (_pile) {
+      final frames = FlipFrames(
+        photos: photos,
+        paper: StudioPaper.values.first,
+        style: FlipStyle.pile,
+        pageMs: widget.work.pageMs ?? 360,
+      );
+      return AspectRatio(
+        aspectRatio: 4 / 5,
+        child: CustomPaint(painter: _PilePainter(frames, _pileFrom)),
+      );
+    }
     return AspectRatio(
       aspectRatio: 4 / 5,
       child: RepaintBoundary(
@@ -286,6 +317,19 @@ class _StapledFlipBookState extends State<StapledFlipBook> with SingleTickerProv
       ),
     );
   }
+}
+
+class _PilePainter extends CustomPainter {
+  _PilePainter(this.frames, this.first);
+
+  final FlipFrames frames;
+  final int first;
+
+  @override
+  void paint(Canvas canvas, Size size) => frames.paintPile(canvas, size, first: first);
+
+  @override
+  bool shouldRepaint(_PilePainter old) => !identical(old.frames.photos, frames.photos);
 }
 
 class _StapledPainter extends CustomPainter {

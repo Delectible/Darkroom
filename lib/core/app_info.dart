@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The Tele lens now uses the real telephoto lens on Pixels (not a cropped mode). Smoother start.'; Darkroom 98 thumbnails show at once on a fast scroll.';
+      'The Tele lens now uses the real telephoto lens on Pixels (not a cropped mode). Smoother start.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

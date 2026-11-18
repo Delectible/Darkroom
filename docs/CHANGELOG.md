@@ -1557,3 +1557,14 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   (~25 KB each), shown under the sharp one until it's decoded; the sharp
   one decoded at the size shown (was always 420 px: ~1.7x the pixels a
   portrait phone's tile needs).
+
+## 75. The stall after launch, found (2026-11-18), 2.3.22
+- [x] 75.1 2.3.21 report: the 500 ms stall loading a 3D camera sat
+  between "document read" and the first texture upload. Each texture's
+  bytes were a view into the whole scene file, and sending a view to an
+  isolate copies its whole buffer: nine ~50 MB copies on the UI thread.
+  Now a `TransferableTypedData` of the texture alone (flutter_scene patch
+  3). Measured on desktop: 9 sends 240-260 ms -> 22-30 ms. Same at launch
+  (the 354 ms stall behind the curtain).
+- [ ] 75.2 Owner: "the glance view in full screen has the text overlap the
+  controls in landscape": which screen? (asked)

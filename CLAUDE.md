@@ -58,9 +58,10 @@ matching section of **`docs/NOTES.md`** before changing an area
 
 ## Our copy of flutter_scene
 
-`packages/flutter_scene` is flutter_scene 0.24.3 with two patches (half-size
-textures where the GPU can't compress them; meshes built in slices so a
-model load doesn't freeze the app; `packages/flutter_scene/DARKROOM.md`). Now and then check pub.dev for a newer version: if it handles
+`packages/flutter_scene` is flutter_scene 0.24.3 with three patches (half-size
+textures where the GPU can't compress them; meshes built in slices; texture
+bytes handed to workers without copying the whole scene file) and a load
+trace hook (`packages/flutter_scene/DARKROOM.md`). Now and then check pub.dev for a newer version: if it handles
 this itself, go back to the hosted package; else move the patches over.
 
 ## Checks

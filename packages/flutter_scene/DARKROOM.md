@@ -20,6 +20,12 @@ between (marked `DARKROOM PATCH`). Upstream realizes every mesh at once,
 synchronously, after preload: loading the second 3D camera after launch
 froze the app ~450 ms (2.3.19 Performance Report). Same result, spread out.
 
+`lib/src/texture/compressed_texture.dart`, `gpuTextureFromKtx2Async`: the
+texture's bytes go to the worker as a `TransferableTypedData` (marked
+`DARKROOM PATCH`). They were a view into the whole scene file, which Dart
+copies whole into each worker: nine copies of ~50 MB on the UI thread, a
+~500 ms freeze loading a 3D camera (found with the trace below, 2.3.21).
+
 `lib/src/darkroom_trace.dart` (exported): `darkroomTrace`, called by the
 loader at its steps (document read, textures in, each texture upload of 5 ms+,
 materials in, meshes built, realized). Diagnostics only; the app sends them to

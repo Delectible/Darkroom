@@ -14,6 +14,7 @@
 // textures sample with proper minification.
 
 import 'package:flutter_scene/src/darkroom_trace.dart';
+import 'dart:isolate' show TransferableTypedData;
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -58,8 +59,13 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
   _logFamiliesOnce();
   final mode = _selectMode();
   final mips = uploadableMipChains;
-  final prepared = await compute(_prepareFromBytes, (
-    ktx2: bytes,
+  // DARKROOM PATCH: [bytes] is usually a view into the whole scene file;
+  // sent as is, Dart copies that entire file into each worker (nine textures:
+  // nine copies of ~50 MB on the UI thread, ~500 ms on a Pixel 9 Pro). Only
+  // this texture's bytes go, copied once and handed over without another.
+  final handed = TransferableTypedData.fromList([bytes]);
+  final prepared = await compute(_prepareFromHanded, (
+    ktx2: handed,
     mode: mode,
     mips: mips,
   ));
@@ -104,8 +110,8 @@ int _selectMode() {
 }
 
 /// Isolate entry point: parse and transcode. Pure Dart, no GPU.
-_Prepared _prepareFromBytes(({Uint8List ktx2, int mode, bool mips}) input) =>
-    _prepare(readKtx2(input.ktx2), input.mode, mips: input.mips);
+_Prepared _prepareFromHanded(({TransferableTypedData ktx2, int mode, bool mips}) input) =>
+    _prepare(readKtx2(input.ktx2.materialize().asUint8List()), input.mode, mips: input.mips);
 
 /// DARKROOM PATCH: big textures load at half size where they can't be
 /// compressed on the GPU (the rgba8 fallback).

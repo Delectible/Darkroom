@@ -61,6 +61,16 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
   _logFamiliesOnce();
   final mode = _selectMode();
   final mips = uploadableMipChains;
+  // DARKROOM PATCH: transcoded last launch? Straight up from the cache.
+  final key = '${_hash(bytes)}-$mode-${mips ? 1 : 0}';
+  final read = darkroomCacheRead;
+  if (read != null) {
+    try {
+      final cached = await read(key);
+      final p = cached == null ? null : _unpack(cached);
+      if (p != null) return _upload(p);
+    } catch (_) {}
+  }
   // DARKROOM PATCH: [bytes] is usually a view into the whole scene file;
   // sent as is, Dart copies that entire file into each worker (nine textures:
   // nine copies of ~50 MB on the UI thread, ~500 ms on a Pixel 9 Pro). Only
@@ -73,11 +83,7 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
     await _workerFreed.future;
   }
   _workers++;
-  final preparing = compute(_prepareFromHanded, (
-    ktx2: handed,
-    mode: mode,
-    mips: mips,
-  ));
+  final preparing = compute(_prepareFromHanded, (ktx2: handed, mode: mode, mips: mips));
   if (handing.elapsedMilliseconds >= 3) {
     darkroomTrace?.call('texture handed over ${handing.elapsedMilliseconds} ms');
   }
@@ -90,14 +96,84 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
     _workerFreed = Completer<void>();
     freed.complete();
   }
-  return _upload(prepared);
+  final texture = _upload(prepared);
+  final write = darkroomCacheWrite;
+  if (write != null) {
+    try {
+      write(key, _pack(prepared));
+    } catch (_) {}
+  }
+  return texture;
+}
+
+/// DARKROOM PATCH: names a texture's bytes for the cache: its length and an
+/// FNV-1a over its first 64 KB and 4 KB samples through the rest (cheap on
+/// the UI thread; textures differ long before that).
+String _hash(Uint8List b) {
+  var h = 0x811c9dc5;
+  void add(int v) => h = ((h ^ v) * 0x01000193) & 0xffffffff;
+  final head = math.min(b.length, 65536);
+  for (var i = 0; i < head; i++) {
+    add(b[i]);
+  }
+  for (var i = head; i < b.length; i += 4096) {
+    final end = math.min(b.length, i + 64);
+    for (var j = i; j < end; j++) {
+      add(b[j]);
+    }
+  }
+  return '${b.length.toRadixString(16)}${h.toRadixString(16).padLeft(8, '0')}';
+}
+
+const int _packMagic = 0x44524b31; // "DRK1"
+
+/// [p] as one block of bytes: magic, mode, width, height, level count, each
+/// level's length, then the levels.
+Uint8List _pack(_Prepared p) {
+  final head = 5 + p.levels.length;
+  var size = head * 4;
+  for (final l in p.levels) {
+    size += l.length;
+  }
+  final out = Uint8List(size);
+  final d = ByteData.sublistView(out);
+  d.setUint32(0, _packMagic);
+  d.setUint32(4, p.mode);
+  d.setUint32(8, p.width);
+  d.setUint32(12, p.height);
+  d.setUint32(16, p.levels.length);
+  var at = head * 4;
+  for (var i = 0; i < p.levels.length; i++) {
+    d.setUint32(20 + i * 4, p.levels[i].length);
+    out.setRange(at, at + p.levels[i].length, p.levels[i]);
+    at += p.levels[i].length;
+  }
+  return out;
+}
+
+/// The other way; null if [b] isn't whole.
+_Prepared? _unpack(Uint8List b) {
+  if (b.length < 20) return null;
+  final d = ByteData.sublistView(b);
+  if (d.getUint32(0) != _packMagic) return null;
+  final n = d.getUint32(16);
+  if (n < 1 || n > 20 || b.length < (5 + n) * 4) return null;
+  var at = (5 + n) * 4;
+  final levels = <Uint8List>[];
+  for (var i = 0; i < n; i++) {
+    final len = d.getUint32(20 + i * 4);
+    if (at + len > b.length) return null;
+    levels.add(Uint8List.sublistView(b, at, at + len));
+    at += len;
+  }
+  if (at != b.length) return null;
+  return (levels: levels, mode: d.getUint32(4), width: d.getUint32(8), height: d.getUint32(12));
 }
 
 /// Synchronous variant: transcodes on the calling (usually main) thread. Heavy
 /// for large textures; prefer [gpuTextureFromKtx2Async]. Kept for the sync
 /// realize path.
-gpu.Texture gpuTextureFromKtx2(Uint8List bytes) =>
-    gpuTextureFromKtx2Texture(readKtx2(bytes));
+gpu.Texture gpuTextureFromKtx2(Uint8List bytes) => gpuTextureFromKtx2Texture(readKtx2(bytes));
 
 /// As [gpuTextureFromKtx2], for an already-parsed [texture].
 gpu.Texture gpuTextureFromKtx2Texture(Ktx2Texture texture) {
@@ -107,8 +183,7 @@ gpu.Texture gpuTextureFromKtx2Texture(Ktx2Texture texture) {
 
 /// Whether a hand-uploaded mip chain is worth transcoding and uploading: the
 /// backend must accept one, and the device must actually sample it.
-bool get uploadableMipChains =>
-    gpu.gpuContext.doesSupportManuallyMippedTextures && mipChainsAreSampled;
+bool get uploadableMipChains => gpu.gpuContext.doesSupportManuallyMippedTextures && mipChainsAreSampled;
 
 /// Picks the transcode target for the current device.
 int _selectMode() {
@@ -150,9 +225,7 @@ _Prepared _prepare(Ktx2Texture texture, int mode, {required bool mips}) {
   // The container may carry fewer levels than the allocator's chain (a
   // base-only file) or more (a chain reaching 1x1); clamp to what
   // `createTexture(mipLevelCount:)` accepts.
-  final levelCount = mips
-      ? math.min(texture.levels.length, engineMipLevelCount(width, height))
-      : 1;
+  final levelCount = mips ? math.min(texture.levels.length, engineMipLevelCount(width, height)) : 1;
   // A texture marked as carrying alpha upgrades to the family's alpha
   // format. ASTC needs no upgrade: its transcoder switches non-opaque blocks
   // to the RGBA color endpoint mode within the same 16-byte format.
@@ -170,8 +243,7 @@ _Prepared _prepare(Ktx2Texture texture, int mode, {required bool mips}) {
     final skip = halfSizeUncompressed && texture.levels.length > 1 && width >= 1024 ? 1 : 0;
     final count = mips ? levelCount - skip : 1;
     final levels = [
-      for (var level = skip; level < skip + count; level++)
-        decodeKtx2Level(texture, level: level).rgba,
+      for (var level = skip; level < skip + count; level++) decodeKtx2Level(texture, level: level).rgba,
     ];
     final base = mipSize(width, height, skip);
     return (levels: levels, mode: _modeRgba8, width: base.width, height: base.height);

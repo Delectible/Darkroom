@@ -41,3 +41,15 @@ its Performance Report. Calls marked `darkroomTrace?.call`.
 - New version: check https://pub.dev/packages/flutter_scene/changelog. If
   it sizes uncompressed textures itself (or exposes a setting), drop the copy.
   Otherwise copy the new version here the same way and reapply the patch.
+
+## Texture cache
+
+`gpuTextureFromKtx2Async` names each texture by a hash of its bytes plus the
+target format, and asks `darkroomCacheRead` (exported from
+`darkroom_trace.dart`) for that texture as it was transcoded before. Found:
+uploaded straight away, no worker. Not found: transcoded as usual, then
+handed to `darkroomCacheWrite`. The app keeps them in files
+(`lib/features/camera/presentation/texture_cache.dart`). Only the first
+launch after install, or after a model or skin changes, transcodes; every
+launch after that has no workers, so no 1.5 s of transcoding and no
+garbage-collection pauses from them.

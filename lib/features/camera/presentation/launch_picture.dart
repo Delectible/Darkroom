@@ -54,7 +54,10 @@ class LaunchPicture {
       final json = _json!, png = _png!;
       if (!json.existsSync() || !png.existsSync()) return;
       final meta = (jsonDecode(await json.readAsString()) as Map).cast<String, Object?>();
-      if (meta['version'] != AppInfo.version) return;
+      if (meta['version'] != AppInfo.version) {
+        LaunchTimer.once('launch picture: from ${meta['version']}');
+        return;
+      }
       final codec = await ui.instantiateImageCodec(await png.readAsBytes());
       _image = (await codec.getNextFrame()).image;
       _meta = meta;
@@ -86,7 +89,10 @@ class LaunchPicture {
     final m = _meta;
     if (m == null || w.isEmpty) return false;
     for (final e in w.entries) {
-      if ('${m[e.key]}' != '${e.value}') return false;
+      if ('${m[e.key]}' != '${e.value}') {
+        LaunchTimer.once('launch picture: ${e.key} was ${m[e.key]}, now ${e.value}');
+        return false;
+      }
     }
     return true;
   }
@@ -105,7 +111,12 @@ class LaunchPicture {
   static ui.Image? forBox(AppMode mode, Size px) {
     final image = _image;
     if (image == null || !covers(mode)) return null;
-    if ((image.width - px.width).abs() > 2 || (image.height - px.height).abs() > 2) return null;
+    if ((image.width - px.width).abs() > 2 || (image.height - px.height).abs() > 2) {
+      LaunchTimer.once(
+        'launch picture: ${image.width}x${image.height}, box ${px.width.round()}x${px.height.round()}',
+      );
+      return null;
+    }
     if (!_shown) {
       _shown = true;
       LaunchTimer.once('launch picture up');
@@ -119,7 +130,14 @@ class LaunchPicture {
   /// Whether the launch curtain can lift on it: on show, and the body's
   /// moving parts ([poses]: WholeBody.poses; flash tab, dials, buttons up)
   /// are where they were in it. Else the curtain waits for the model.
-  static bool liftOn(String poses) => shown && poses.isNotEmpty && _meta?['poses'] == poses;
+  static bool liftOn(String poses) {
+    if (!shown) return false;
+    if (poses.isNotEmpty && _meta?['poses'] == poses) return true;
+    LaunchTimer.once(
+      poses.isEmpty ? 'launch picture: controls not placed yet' : 'launch picture: controls moved',
+    );
+    return false;
+  }
 
   /// The picture fading out over the model that just landed (null when
   /// there's nothing to fade).

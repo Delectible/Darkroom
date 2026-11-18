@@ -33,6 +33,7 @@ import 'features/corkboard/presentation/print_frames.dart';
 import 'features/camera/application/camera_session_controller.dart';
 import 'features/camera/application/camera_ui_state.dart';
 import 'features/camera/presentation/launch_picture.dart';
+import 'features/camera/presentation/texture_cache.dart';
 import 'features/camera/presentation/whole_body.dart';
 import 'features/settings/application/settings_controllers.dart';
 
@@ -88,6 +89,8 @@ Future<void> _start() async {
   unawaited(DeviceMemory.apply().then((_) => GlobalSettingsNotifier.reapply()));
   // The picture of the camera from last time (opens on it if it matches).
   LaunchPicture.init(paths.supportDir);
+  // The 3D textures as transcoded last time (no workers after the first).
+  TextureCache.init(paths.supportDir);
   CameraLog.init(paths.supportDir);
   // (it judges only once the launch curtain has gone)
   unawaited(

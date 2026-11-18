@@ -24,7 +24,7 @@
 library;
 
 export 'src/animation.dart' show Animation, AnimationClip, AnimationPlayer;
-export 'src/darkroom_trace.dart' show darkroomTrace;
+export 'src/darkroom_trace.dart' show darkroomTrace, darkroomCacheRead, darkroomCacheWrite;
 
 export 'src/geometry/billboard_geometry.dart'
     show BillboardFacing, BillboardGeometry;

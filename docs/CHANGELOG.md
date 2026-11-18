@@ -1628,3 +1628,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 80.2 The stall after launch down to 279 ms (was 403); it starts as the
   nine texture workers start. They share the app's heap: run one at a time
   now (flutter_scene `_workerQueue`), so GC pauses come short and spread.
+- [x] 81. Launch slower in 2.3.24 (one worker at a time: +1.4 s). Instead:
+  textures kept on disk as transcoded for the GPU (`TextureCache`); only the
+  first launch transcodes (three workers at a time), later ones upload from
+  disk with no workers. Launch Timing says why the launch picture is unused.
+- [x] 82. Lens pinning off on Android (the Pixel ignored it); zoom limits again.
+- [x] 83. Shutter and pile flip books lie in The Book as a still pile.

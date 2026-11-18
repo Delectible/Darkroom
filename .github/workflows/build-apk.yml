@@ -90,6 +90,16 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      # Apple (ITMS-90725): from April 2027 uploads must be built with the
+      # iOS 27 SDK (Xcode 27) or later. Says so on every run until it is.
+      - name: Check the iOS SDK
+        run: |
+          xcodebuild -version
+          sdk=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "iOS SDK $sdk"
+          if [ "${sdk%%.*}" -lt 27 ]; then
+            echo "::warning::Built with the iOS $sdk SDK: from April 2027 App Store uploads need the iOS 27 SDK (Xcode 27). Pick Xcode 27 here (sudo xcode-select -s /Applications/Xcode_27*.app) once the runner has it."
+          fi
       - uses: subosito/flutter-action@v2
         with: { channel: stable, flutter-version: 3.50.0, cache: true }
       - name: Fill in the Xcode project

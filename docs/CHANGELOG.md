@@ -1579,3 +1579,11 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   copy (blocky, fits the 9x look) at once, decoded for every file when the
   folder shows (`_Thumb.warm`), the real one over it once decoded; the grid
   builds 1.5 screens ahead.
+
+## 77. Apple SDK deadline (2026-11-18)
+- [x] 77.1 Apple's ITMS-90725 (on the owner's other app, Duel): from April
+  2027 uploads need the iOS 27 SDK / Xcode 27. The `ios` job now prints its
+  Xcode / SDK and warns while it's under 27; CLAUDE.md says to select
+  Xcode 27 in that job before then. Passed on to the Duel, Roadie and
+  Sisyphus sessions.
+- [ ] 77.2 Before April 2027: select Xcode 27 in the `ios` job.

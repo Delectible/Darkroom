@@ -41,6 +41,9 @@ matching section of **`docs/NOTES.md`** before changing an area
 - `appstore-release.yml` on "publish" or "release to iPhone", after
   checking App Store Connect; never cancel a submission in review.
 - Never run `play-listing.yml` unless asked (the Play Console is the copy).
+- Apple (ITMS-90725): from **April 2027** uploads must be built with the
+  iOS 27 SDK (Xcode 27). The `ios` job warns while it isn't; before then,
+  select Xcode 27 in that job (not just `macos-latest`'s default).
 
 ## Never
 

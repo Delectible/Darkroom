@@ -165,6 +165,47 @@ class MainActivity : FlutterActivity() {
     private var strongVote = false
 
     /// Speed test: what the phone is doing that can hold an app back.
+    /**
+     * The back camera's lenses, from the logical camera CameraX opens (the
+     * first back camera listed): each physical lens's 35 mm-equivalent focal
+     * length. The main one is the one nearest 25 mm; a
+     * telephoto is one at least 1.8x longer, and its zoom ratio is how much
+     * longer. Null fields where there's none (or before Android 9).
+     */
+    private fun teleInfo(): Map<String, Any?> {
+        val out = mutableMapOf<String, Any?>("ratio" to null, "lenses" to "")
+        try {
+            val cm = getSystemService(CAMERA_SERVICE) as android.hardware.camera2.CameraManager
+            fun eq(c: android.hardware.camera2.CameraCharacteristics): Double? {
+                val f = c.get(android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.minOrNull() ?: return null
+                val s = c.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE) ?: return null
+                val diag = Math.hypot(s.width.toDouble(), s.height.toDouble())
+                return if (diag > 0) f * 43.27 / diag else null
+            }
+            val back = cm.cameraIdList.firstOrNull {
+                cm.getCameraCharacteristics(it).get(android.hardware.camera2.CameraCharacteristics.LENS_FACING) ==
+                    android.hardware.camera2.CameraCharacteristics.LENS_FACING_BACK
+            } ?: return out
+            val logical = cm.getCameraCharacteristics(back)
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return out
+            val lenses = logical.physicalCameraIds.mapNotNull { id -> eq(cm.getCameraCharacteristics(id)) }
+            // the main lens: the one nearest a phone main camera's ~25 mm (a
+            // logical camera may report every lens's focal length as its own)
+            val main = lenses.minByOrNull { abs(it - 25.0) } ?: eq(logical) ?: return out
+            out["lenses"] = lenses.sorted().joinToString(", ") { "%.0f mm".format(it) } + " (main %.0f mm)".format(main)
+            val tele = lenses.maxOrNull() ?: return out
+            val ratio = tele / main
+            // (its zoom must be reachable on the logical camera too)
+            val reach = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                logical.get(android.hardware.camera2.CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)?.upper?.toDouble()
+            } else null
+            if (ratio >= 1.8 && (reach == null || reach >= ratio)) out["ratio"] = ratio
+        } catch (e: Exception) {
+            out["error"] = e.toString()
+        }
+        return out
+    }
+
     private fun deviceState(): Map<String, Any?> {
         val power = getSystemService(POWER_SERVICE) as android.os.PowerManager
         val am = getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager
@@ -307,6 +348,10 @@ class MainActivity : FlutterActivity() {
                     }
                     // the phone's maker and model (speed test results)
                     "device" -> result.success("${Build.MANUFACTURER} ${Build.MODEL}")
+                    // the back camera's telephoto, if it has one: the zoom at
+                    // which the phone's own camera switches to it (the film
+                    // lenses' TELE), and what it found (Camera Log)
+                    "tele" -> result.success(teleInfo())
                     // Launch Timing's breakdown of the time before Dart's main
                     "startTimes" -> result.success(
                         mapOf(

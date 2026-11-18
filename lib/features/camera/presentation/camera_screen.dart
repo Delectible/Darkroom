@@ -908,7 +908,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
         presetFor(prev) != presetFor(next) ||
         // (a wide or fish-eye lens on one and not the other: the phone
         // changes camera, the ultra-wide to the main one or back)
-        takesWidest(lenses.lensFor(prev)) != takesWidest(lenses.lensFor(next)) ||
+        changesCamera(lenses.lensFor(prev), lenses.lensFor(next)) ||
         (prev.film?.gate ?? 0) != (next.film?.gate ?? 0) ||
         prev.landscapeOnly != next.landscapeOnly;
     if (!differs || !_canHoldForChange) return;

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:darkroom/core/processing/lens_renderer.dart';
 import 'package:darkroom/features/cameras/domain/camera_catalog.dart';
 import 'package:darkroom/features/cameras/domain/camera_spec.dart';
+import 'package:darkroom/features/camera/application/lens_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 
@@ -23,13 +24,26 @@ void main() {
       final clock = Stopwatch()..start();
       LensRenderer(lens).render(data, w, h);
       expect(data.length, src.length);
-      if (lens != LensKind.standard) expect(data, isNot(equals(src)), reason: lens.name);
+      if (!lens.plain) expect(data, isNot(equals(src)), reason: lens.name);
       expect(clock.elapsed, lessThan(const Duration(seconds: 10)), reason: '${lens.name} too slow');
       if (shots != null) {
         final out = img.Image.fromBytes(width: w, height: h, bytes: data.buffer, numChannels: 3);
         File('$shots/lens_${lens.name}.jpg').writeAsBytesSync(img.encodeJpg(out, quality: 88));
       }
     }
+  });
+
+  test('the tele converter: right after the fish-eye, only with a telephoto; no tilt-shift', () {
+    for (final c in [...CameraCatalog.film, ...CameraCatalog.digital]) {
+      expect(c.lenses, isNot(contains(LensKind.tiltShift)), reason: c.id);
+      if (!c.lenses.contains(LensKind.tele)) continue;
+      expect(c.lenses.indexOf(LensKind.tele), c.lenses.indexOf(LensKind.fisheye) + 1, reason: c.id);
+      expect(lensesFor(c, true), isNot(contains(LensKind.tele)), reason: c.id);
+      expect(lensesFor(c, true, tele: true), contains(LensKind.tele), reason: c.id);
+    }
+    expect(LensKind.tele.plain, isTrue);
+    expect(changesCamera(LensKind.standard, LensKind.tele), isTrue);
+    expect(changesCamera(LensKind.soft, LensKind.swirl), isFalse);
   });
 
   test('soft focus only where the plastic lens is not; every lens camera starts standard', () {
@@ -85,9 +99,11 @@ void main() {
     expect(RegExp(r'^uniform sampler2D', multiLine: true).allMatches(src).length, 1);
     expect(src, isNot(contains('IMPELLER_TARGET_OPENGLES')));
     // every lens the app knows has its branch
-    for (final l in LensKind.values.skip(1)) {
-      expect(src, contains('lens == ${l.index}'), reason: l.name);
+    for (final l in LensKind.values) {
+      if (!l.plain) expect(src, contains('lens == ${l.index}'), reason: l.name);
     }
     expect(src, isNot(contains('lens == ${LensKind.values.length}')));
+    // the plain ones draw nothing: the shader's last branch (the plain picture)
+    expect(src, isNot(contains('lens == ${LensKind.tele.index}')));
   });
 }

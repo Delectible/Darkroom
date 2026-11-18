@@ -15,7 +15,7 @@ class LensRenderer {
   final LensKind lens;
 
   void render(Uint8List data, int w, int h) {
-    if (lens == LensKind.standard) return;
+    if (lens.plain) return;
     final src = Uint8List.fromList(data);
     final small = _Small.of(src, w, h);
     final aspect = w / h;
@@ -130,6 +130,7 @@ class LensRenderer {
             }
             final ov = math.sqrt(dx * dx * 4 + dy * dy * 9);
             _scale(out, 1 - 0.3 * math.pow((ov - 0.5).clamp(0.0, 1.0), 1.5));
+          case LensKind.tele:
           case LensKind.standard:
             _read(src, i, out);
         }

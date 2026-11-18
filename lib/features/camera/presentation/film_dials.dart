@@ -354,7 +354,11 @@ class _FilmDialsState extends ConsumerState<FilmDials> with TickerProviderStateM
                         padding: const EdgeInsets.symmetric(horizontal: 10),
                         child: Row(
                           children: [
-                            for (final l in lensesFor(widget.spec, ref.watch(ultraWideProvider)))
+                            for (final l in lensesFor(
+                              widget.spec,
+                              ref.watch(ultraWideProvider),
+                              tele: ref.watch(teleProvider)?.has == true,
+                            ))
                               TurnFade(
                                 quarterTurns: q,
                                 child: LensCap(
@@ -832,6 +836,15 @@ class _CapPainter extends CustomPainter {
         _petals(canvas, c, r, _black);
         _ring(canvas, c, r * 0.80, const Color(0x55FFFFFF), 0.8);
         _glass(canvas, c, r * 0.76, const Color(0xFF1E2C40), coat: const Color(0xFFB27BE8));
+      case LensKind.tele:
+        // a long tele converter seen end on: rings stepping down a deep
+        // barrel to a small, far glass
+        _barrel(canvas, c, r, _black);
+        _knurl(canvas, c, r - 1.5, 36, const Color(0x33FFFFFF));
+        _ring(canvas, c, r * 0.82, _silver.withValues(alpha: 0.6), 1.0);
+        _ring(canvas, c, r * 0.66, const Color(0x44FFFFFF), 0.8);
+        _ring(canvas, c, r * 0.54, const Color(0x33FFFFFF), 0.8);
+        _glass(canvas, c, r * 0.44, const Color(0xFF1A2536), coat: const Color(0xFFE88A5A));
       case LensKind.fisheye:
         // a dome of glass bulging out of a short barrel
         _barrel(canvas, c, r, _black);

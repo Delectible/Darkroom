@@ -922,7 +922,16 @@ UI
   rim and halo redrawn). The fish-eye's numbers (`FISH_*` / `fish*`) must
   match; a test checks. Wide only where the back has an ultra-wide
   (`ultraWideProvider`; Android: zoom below 1x, iPhone: listed), and wide /
-  fish-eye are the only way to it. A lens change shuts the viewfinder
+  fish-eye are the only way to it. TELE (2.3.23, `LensKind.tele`, last in
+  the enum so no uLens moves; `plain`: no shader branch, nothing drawn)
+  the only way to the telephoto, offered only where there is one
+  (`teleProvider`): iPhone opens the listed telephoto camera (`_Config.tele`);
+  Android's back camera is one logical camera that changes lens by zoom, so
+  `MainActivity.teleInfo` reads its physical lenses (35 mm equivalents, main
+  = nearest 25 mm, tele = longest if 1.8x+; Camera Log "back lenses") and
+  ZoomController puts TELE at 1.04x that ratio and caps every other lens at
+  0.9x it, so the phone never switches by itself. Tilt-shift is off the
+  lens lists (kept in code and shader). A lens change shuts the viewfinder
   (`LensChange` -> `_changeLens`), waits for the camera's zoom / switch,
   then opens. A new camera of the same kind whose viewfinder differs
   (shape, sensor mode) holds the old layout while it shuts

@@ -60,6 +60,8 @@ class ZoomController extends Notifier<ZoomState> {
     // Wide and fish-eye lenses take the phone's widest camera (below 1x, where
     // the phone switches to its ultra-wide itself); others go back.
     ref.listen(filmLensProvider, (_, lens) => _lensChanged(lens));
+    // (the telephoto found: the zoom range keeps below it, or takes it)
+    ref.listen(teleProvider, (_, _) => unawaited(_attach(_controller)));
     ref.onDispose(() => _tick?.cancel());
     Future.microtask(() => _attach(ref.read(cameraSessionProvider).controller));
     return const ZoomState();
@@ -87,14 +89,21 @@ class ZoomController extends Notifier<ZoomState> {
           c.description.lensDirection == CameraLensDirection.back &&
           _wantsWidest(ref.read(filmLensProvider)) &&
           hwMin < 1;
-      final lo = widest ? hwMin : math.max(1.0, hwMin);
+      // Android's back camera changes to its telephoto by itself at that
+      // lens's zoom: the tele converter goes straight there (a touch past,
+      // to be sure it's the telephoto); every other lens stays well below,
+      // so the phone never changes camera on its own.
+      final teleAt = _teleAt(c);
+      final tele = teleAt != null && ref.read(filmLensProvider) == LensKind.tele;
+      final lo = tele ? math.min(teleAt * 1.04, hwMax) : (widest ? hwMin : math.max(1.0, hwMin));
       // Film bodies (no ZoomSpec) are fixed at 1x, even if the session was
       // left zoomed by a digital body that shared it.
-      final hi = zoom == null ? lo : math.max(lo, math.min(zoom.max, hwMax));
+      var hi = zoom == null ? lo : math.max(lo, math.min(zoom.max, hwMax));
+      if (teleAt != null && !tele) hi = math.max(lo, math.min(hi, teleAt * 0.9));
       // Film: the same zoom (magnification) as the stock before, if this lens
       // goes that far; else as far as it does (2.1.4).
       final kept = _filmLevel;
-      final level = widest ? lo : (zoom?.wideMm != null && kept != null ? kept.clamp(lo, hi) : lo);
+      final level = widest || tele ? lo : (zoom?.wideMm != null && kept != null ? kept.clamp(lo, hi) : lo);
       state = ZoomState(level: level, min: lo, max: hi);
       await c.setZoomLevel(level);
     } catch (_) {
@@ -110,11 +119,30 @@ class ZoomController extends Notifier<ZoomState> {
 
   static bool _wantsWidest(LensKind l) => l == LensKind.wide || l == LensKind.fisheye;
 
+  /// Android, back camera: the zoom at which it changes to its telephoto
+  /// (null: none, or not Android's switching kind of camera).
+  double? _teleAt(CameraController c) =>
+      defaultTargetPlatform == TargetPlatform.android &&
+          c.description.lensDirection == CameraLensDirection.back
+      ? ref.read(teleProvider)?.ratio
+      : null;
+
+  /// The lens before the last change (the tele converter on or off).
+  LensKind? _lastLens;
+
   /// Where the ring was before a wide lens went on (back to it after).
   double? _beforeWide;
 
   void _lensChanged(LensKind lens) {
     lensMove = null;
+    final was = _lastLens;
+    _lastLens = lens;
+    // On or off the tele converter (Android): the range itself changes.
+    final c0 = _controller;
+    if (c0 != null && _teleAt(c0) != null && (lens == LensKind.tele || was == LensKind.tele)) {
+      lensMove = _attach(c0);
+      return;
+    }
     final min = _hwMin;
     final c = _controller;
     if (min == null || min >= 1 || c == null || !c.value.isInitialized) return;

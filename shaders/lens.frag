@@ -2,7 +2,8 @@
 // The lens on the film camera, over the live viewfinder (ImageFilter.shader;
 // the photo gets the same in Dart, lens_renderer.dart). One lens at a time
 // by uLens: 1 wide adapter, 2 fish-eye, 3 plastic, 4 soft focus, 5 swirl,
-// 6 tilt-shift, 7 pinhole, 8 mist, 9 anamorphic (0: none, the plain picture). uCrop is the
+// 6 tilt-shift, 7 pinhole, 8 mist, 9 anamorphic (0 and 10, the tele converter:
+// none, the plain picture). uCrop is the
 // frame that's seen (the photo) in the picture, so the lens sits on it.
 // No y-flip: see the contract test.
 #include <flutter/runtime_effect.glsl>

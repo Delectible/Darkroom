@@ -57,7 +57,7 @@ class CameraSessionState {
 
 @immutable
 class _Config {
-  const _Config(this.lens, this.preset, {this.ultraWide = false});
+  const _Config(this.lens, this.preset, {this.ultraWide = false, this.tele = false});
 
   final CameraLensDirection lens;
   final ResolutionPreset preset;
@@ -66,12 +66,20 @@ class _Config {
   /// Android reaches it by zooming below 1x, iOS's plugin offers it apart).
   final bool ultraWide;
 
-  @override
-  bool operator ==(Object other) =>
-      other is _Config && other.lens == lens && other.preset == preset && other.ultraWide == ultraWide;
+  /// iPhone: the telephoto camera (the tele converter; Android reaches it by
+  /// zooming to its ratio, see ZoomController).
+  final bool tele;
 
   @override
-  int get hashCode => Object.hash(lens, preset, ultraWide);
+  bool operator ==(Object other) =>
+      other is _Config &&
+      other.lens == lens &&
+      other.preset == preset &&
+      other.ultraWide == ultraWide &&
+      other.tele == tele;
+
+  @override
+  int get hashCode => Object.hash(lens, preset, ultraWide, tele);
 }
 
 /// Owns the one-and-only [CameraController].
@@ -207,6 +215,25 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     _kick();
   }
 
+  bool _askedTele = false;
+
+  /// Android: whether the back camera has a telephoto, and its zoom (asked of
+  /// the phone once; logged with the lenses it found).
+  Future<void> _readTele() async {
+    try {
+      final m = await const MethodChannel('darkroom/display').invokeMapMethod<String, Object?>('tele');
+      final ratio = (m?['ratio'] as num?)?.toDouble();
+      CameraLog.add(
+        'back lenses: ${m?['lenses'] ?? '?'}; tele ${ratio == null ? 'none' : 'at ${ratio.toStringAsFixed(1)}x'}'
+        '${m?['error'] == null ? '' : ' (${m!['error']})'}',
+      );
+      if (ref.mounted) ref.read(teleProvider.notifier).set(Tele(ratio != null, ratio));
+    } catch (e) {
+      CameraLog.add('back lenses unreadable: $e');
+      if (ref.mounted) ref.read(teleProvider.notifier).set(const Tele(false));
+    }
+  }
+
   bool get _wantActive => _screenVisible && _appVisible && !_permissionBlocked;
 
   _Config get _wantConfig {
@@ -218,7 +245,12 @@ class CameraSessionController extends Notifier<CameraSessionState> {
         direction == CameraLensDirection.back &&
         (lens == LensKind.wide || lens == LensKind.fisheye) &&
         (_cameras?.any((c) => c.lensType == CameraLensType.ultraWide) ?? true);
-    return _Config(direction, presetFor(spec), ultraWide: ultraWide);
+    final tele =
+        defaultTargetPlatform == TargetPlatform.iOS &&
+        direction == CameraLensDirection.back &&
+        lens == LensKind.tele &&
+        (_cameras?.any((c) => c.lensType == CameraLensType.telephoto) ?? false);
+    return _Config(direction, presetFor(spec), ultraWide: ultraWide, tele: tele);
   }
 
   // ---- reconcile loop --------------------------------------------------------
@@ -279,6 +311,18 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     final cams = _cameras!;
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       ref.read(ultraWideProvider.notifier).set(cams.any((c) => c.lensType == CameraLensType.ultraWide));
+      ref
+          .read(teleProvider.notifier)
+          .set(
+            Tele(
+              cams.any(
+                (c) => c.lensDirection == CameraLensDirection.back && c.lensType == CameraLensType.telephoto,
+              ),
+            ),
+          );
+    } else if (defaultTargetPlatform == TargetPlatform.android && !_askedTele) {
+      _askedTele = true;
+      unawaited(_readTele());
     }
     if (cams.isEmpty) {
       state = state.copyWith(status: SessionStatus.noCamera, message: 'No camera found');
@@ -287,7 +331,9 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     // The main camera that way (iOS lists its ultra-wide and tele apart:
     // never one of those by accident), or the ultra-wide when asked.
     final facing = cams.where((c) => c.lensDirection == cfg.lens).toList();
-    final desc = cfg.ultraWide && facing.any((c) => c.lensType == CameraLensType.ultraWide)
+    final desc = cfg.tele && facing.any((c) => c.lensType == CameraLensType.telephoto)
+        ? facing.firstWhere((c) => c.lensType == CameraLensType.telephoto)
+        : cfg.ultraWide && facing.any((c) => c.lensType == CameraLensType.ultraWide)
         ? facing.firstWhere((c) => c.lensType == CameraLensType.ultraWide)
         : facing.firstWhere(
             (c) => c.lensType == CameraLensType.wide,

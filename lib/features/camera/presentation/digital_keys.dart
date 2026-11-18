@@ -38,7 +38,11 @@ class _DigitalKeysState extends ConsumerState<DigitalKeys> {
   Widget build(BuildContext context) {
     final palette = RetroPalette.of(context);
     final lens = ref.watch(filmLensProvider);
-    final lenses = lensesFor(widget.spec, ref.watch(ultraWideProvider));
+    final lenses = lensesFor(
+      widget.spec,
+      ref.watch(ultraWideProvider),
+      tele: ref.watch(teleProvider)?.has == true,
+    );
     final chip = CameraSpecials.chip(ref, widget.spec);
     final recording = ref.watch(captureControllerProvider.select((s) => s.isRecording));
     // Held sideways or upside down the keys stay put and their words turn

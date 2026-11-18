@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show immutable;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
@@ -24,6 +25,10 @@ class FilmLensController extends Notifier<LensKind> {
     ref.listen<bool?>(ultraWideProvider, (_, has) {
       if (has != true && state == LensKind.wide) state = LensKind.standard;
     });
+    // (no telephoto after all: the tele converter comes off)
+    ref.listen<Tele?>(teleProvider, (_, t) {
+      if (t?.has != true && state == LensKind.tele) state = LensKind.standard;
+    });
     unawaited(_restore());
     return _for(ref.read(activeSpecProvider));
   }
@@ -44,12 +49,15 @@ class FilmLensController extends Notifier<LensKind> {
 
   LensKind _for(CameraSpec spec) {
     final l = _byCamera[spec.id];
-    return l != null && lensesFor(spec, ref.read(ultraWideProvider)).contains(l) ? l : spec.lenses.first;
+    return l != null && _offered(spec).contains(l) ? l : spec.lenses.first;
   }
+
+  List<LensKind> _offered(CameraSpec spec) =>
+      lensesFor(spec, ref.read(ultraWideProvider), tele: ref.read(teleProvider)?.has == true);
 
   void set(LensKind lens) {
     final spec = ref.read(activeSpecProvider);
-    if (!lensesFor(spec, ref.read(ultraWideProvider)).contains(lens)) return;
+    if (!_offered(spec).contains(lens)) return;
     _byCamera[spec.id] = lens;
     state = lens;
     Remembered.write(ref, Remembered.lensKey, {for (final e in _byCamera.entries) e.key: e.value.name});
@@ -60,19 +68,49 @@ class FilmLensController extends Notifier<LensKind> {
 /// it has one): changing to or from one is a camera change.
 bool takesWidest(LensKind lens) => lens == LensKind.wide || lens == LensKind.fisheye;
 
+/// Whether [lens] takes the phone's telephoto camera.
+bool takesTele(LensKind lens) => lens == LensKind.tele;
+
+/// Whether going from lens [a] to [b] changes the phone's camera.
+bool changesCamera(LensKind a, LensKind b) =>
+    takesWidest(a) != takesWidest(b) || takesTele(a) != takesTele(b);
+
 /// The lenses [spec] offers on this phone: the wide adapter only where it
 /// has an ultra-wide camera to open (it's the one way to reach it); the
 /// fish-eye everywhere (with the main camera where there's no ultra-wide).
-List<LensKind> lensesFor(CameraSpec spec, bool? ultraWide) => ultraWide == true
-    ? spec.lenses
-    : [
-        for (final l in spec.lenses)
-          if (l != LensKind.wide) l,
-      ];
+/// The tele converter only where it has a telephoto camera ([tele]).
+List<LensKind> lensesFor(CameraSpec spec, bool? ultraWide, {bool tele = false}) => [
+  for (final l in spec.lenses)
+    if ((l != LensKind.wide || ultraWide == true) && (l != LensKind.tele || tele)) l,
+];
 
 /// Whether the phone's back has an ultra-wide camera (null: not known yet;
 /// Android: the back camera zooms below 1x; iPhone: one is listed).
 final ultraWideProvider = NotifierProvider<UltraWide, bool?>(UltraWide.new);
+
+/// The phone's back telephoto camera: whether it has one and (Android) the
+/// zoom at which its own camera switches to it. Null: not known yet.
+@immutable
+class Tele {
+  const Tele(this.has, [this.ratio]);
+
+  final bool has;
+
+  /// Android: the telephoto's zoom on the back camera (e.g. 5 on a Pixel 9
+  /// Pro). Other lenses stay below it, so the phone never switches by itself.
+  final double? ratio;
+}
+
+final teleProvider = NotifierProvider<TeleLens, Tele?>(TeleLens.new);
+
+class TeleLens extends Notifier<Tele?> {
+  @override
+  Tele? build() => null;
+
+  void set(Tele t) {
+    if (state?.has != t.has || state?.ratio != t.ratio) state = t;
+  }
+}
 
 class UltraWide extends Notifier<bool?> {
   @override

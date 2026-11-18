@@ -62,7 +62,7 @@ class _LensFilterState extends State<LensFilter> {
     final shader = _shader;
     // (a still child either way: switching lens doesn't rebuild the picture)
     final child = KeyedSubtree(key: const ValueKey('picture'), child: widget.child);
-    if (shader == null || lens == LensKind.standard) {
+    if (shader == null || lens.plain) {
       return ImageFiltered(enabled: false, imageFilter: _none, child: child);
     }
     // uniforms: 0-1 the size (the engine's), 2 the lens, 3-6 the frame

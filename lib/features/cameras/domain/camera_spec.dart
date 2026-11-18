@@ -131,10 +131,17 @@ enum LensKind {
   mist('Mist', 'MIST'),
 
   /// Long blue streaks off bright lights, an oval falloff.
-  anamorphic('Anamorphic', 'ANAM');
+  anamorphic('Anamorphic', 'ANAM'),
+
+  /// A tele converter: the phone's telephoto camera, nothing drawn over it
+  /// (only where the phone has one). Last, so no other lens's index moves.
+  tele('Tele', 'TELE');
 
   const LensKind(this.label, this.mark);
   final String label, mark;
+
+  /// Draws nothing over the picture (the shader has no branch for it).
+  bool get plain => this == standard || this == tele;
 }
 
 /// A camera's one special, on the button that changes per camera (film:

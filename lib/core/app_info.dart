@@ -9,8 +9,9 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'The camera never shows up half-drawn as the app opens. Darkroom 98\'s thumbnails show at once '
-      'when you scroll fast.';
+      'New Tele lens, after the fish-eye: uses your phone\'s telephoto camera, on phones that have one. '
+      'Otherwise the camera stays on the main lens and never switches by itself. Tilt-shift is retired. '
+      'The camera never shows up half-drawn as the app opens; Darkroom 98 thumbnails show at once on a fast scroll.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

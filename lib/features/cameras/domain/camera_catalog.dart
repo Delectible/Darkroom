@@ -25,9 +25,9 @@ class CameraCatalog {
     LensKind.standard,
     LensKind.wide,
     LensKind.fisheye,
+    LensKind.tele,
     LensKind.plastic,
     LensKind.swirl,
-    LensKind.tiltShift,
     LensKind.pinhole,
   ];
 
@@ -37,21 +37,27 @@ class CameraCatalog {
     LensKind.standard,
     LensKind.wide,
     LensKind.fisheye,
+    LensKind.tele,
     LensKind.soft,
     LensKind.swirl,
-    LensKind.tiltShift,
   ];
 
   /// The movie cameras' (film and tape): the lenses that make a film look
   /// like a film (the skate-video fish-eye, a mist filter, anamorphic).
-  static const _lensesMovie = [LensKind.standard, LensKind.fisheye, LensKind.mist, LensKind.anamorphic];
+  static const _lensesMovie = [
+    LensKind.standard,
+    LensKind.fisheye,
+    LensKind.tele,
+    LensKind.mist,
+    LensKind.anamorphic,
+  ];
   static const _lensesInstant = [
     LensKind.standard,
     LensKind.wide,
     LensKind.fisheye,
+    LensKind.tele,
     LensKind.soft,
     LensKind.swirl,
-    LensKind.tiltShift,
     LensKind.pinhole,
   ];
 

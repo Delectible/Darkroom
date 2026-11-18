@@ -1597,3 +1597,15 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   undressed and the launch picture let go. The model is now kept local till
   dressed and warmed, then set in one go (a skin that fails to load no
   longer drops the body either).
+
+## 79. Tele lens (2026-11-18), 2.3.23
+- [x] 79.1 TELE after the fish-eye in every lens list, only where the back
+  has a telephoto: the one way to it. iPhone: opens the telephoto camera.
+  Android: the back camera's physical lenses read once (MainActivity
+  `teleInfo`); TELE zooms to the telephoto's ratio (+4%), every other lens
+  is capped at 90% of it, so the phone never changes camera by itself.
+- [x] 79.2 Tilt-shift off the lens lists (enum, renderer and shader kept, so
+  no lens index moves).
+- [ ] 79.3 On the Pixel: Debug > Camera Log should say "back lenses: ...;
+  tele at ~5x"; check TELE really is the telephoto (sharper far detail than
+  a digital zoom), and a digital body's zoom stops before it.

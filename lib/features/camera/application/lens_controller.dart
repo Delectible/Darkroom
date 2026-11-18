@@ -92,13 +92,27 @@ final ultraWideProvider = NotifierProvider<UltraWide, bool?>(UltraWide.new);
 /// zoom at which its own camera switches to it. Null: not known yet.
 @immutable
 class Tele {
-  const Tele(this.has, [this.ratio]);
+  const Tele(this.has, [this.ratio, this.mainId, this.wideId, this.teleId]);
 
   final bool has;
 
   /// Android: the telephoto's zoom on the back camera (e.g. 5 on a Pixel 9
-  /// Pro). Other lenses stay below it, so the phone never switches by itself.
+  /// Pro): where lenses can't be pinned, the others stay below it.
   final double? ratio;
+
+  /// Android: the back camera's physical lenses (ids inside its logical
+  /// camera). With them each lens pins its own (our camera plugin's patch),
+  /// so the phone never changes lens by itself.
+  final String? mainId, wideId, teleId;
+
+  bool get pinnable => mainId != null;
+
+  /// The physical lens [lens] streams from.
+  String? idFor(LensKind lens) => switch (lens) {
+    LensKind.wide || LensKind.fisheye => wideId ?? mainId,
+    LensKind.tele => teleId ?? mainId,
+    _ => mainId,
+  };
 }
 
 final teleProvider = NotifierProvider<TeleLens, Tele?>(TeleLens.new);
@@ -108,7 +122,7 @@ class TeleLens extends Notifier<Tele?> {
   Tele? build() => null;
 
   void set(Tele t) {
-    if (state?.has != t.has || state?.ratio != t.ratio) state = t;
+    if (state?.has != t.has || state?.ratio != t.ratio || state?.mainId != t.mainId) state = t;
   }
 }
 

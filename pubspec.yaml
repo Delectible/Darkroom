@@ -68,6 +68,9 @@ dependencies:
 # builds (its JNI calls stripped by R8). Move up only after a phone test.
 dependency_overrides:
   shared_preferences_android: 2.4.28
+  # Our copy: the back camera pinned to one physical lens (packages/camera_android_camerax/DARKROOM.md).
+  camera_android_camerax:
+    path: packages/camera_android_camerax
 
 dev_dependencies:
   flutter_test:

@@ -930,7 +930,14 @@ UI
   `MainActivity.teleInfo` reads its physical lenses (35 mm equivalents, main
   = nearest 25 mm, tele = longest if 1.8x+; Camera Log "back lenses") and
   ZoomController puts TELE at 1.04x that ratio and caps every other lens at
-  0.9x it, so the phone never switches by itself. Tilt-shift is off the
+  0.9x it (the fallback). Pinned (2.3.23, `packages/camera_android_camerax`,
+  DARKROOM.md): the lenses' physical ids too (`Tele.mainId/wideId/teleId`,
+  read before the camera first opens), `_Config.physical` per lens and
+  `pinLens` before each open, so every stream comes from one physical lens
+  (CameraX `setPhysicalCameraId`): no switching at all (zoom, low light,
+  close focus). Each lens zooms from 1x; a lens change restarts the camera
+  behind the viewfinder's shut (`lensChangeRestarts`). Refused at open, or
+  frozen twice running, it unpins for the session (Camera Log says so). Tilt-shift is off the
   lens lists (kept in code and shader). A lens change shuts the viewfinder
   (`LensChange` -> `_changeLens`), waits for the camera's zoom / switch,
   then opens. A new camera of the same kind whose viewfinder differs

@@ -856,7 +856,18 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with TickerProvider
     final run = ++_changeRun;
     CameraLog.add('lens ${lens.name}');
     if (!await _shutThen(run)) return lenses.set(lens);
+    final was = ref.read(filmLensProvider);
     lenses.set(lens);
+    // Another of the phone's cameras, opened afresh (iPhone; Android with its
+    // lenses pinned): it stops, then comes back; the viewfinder opens on it.
+    if (changesCamera(was, lens) && ref.read(cameraSessionProvider.notifier).lensChangeRestarts) {
+      for (var i = 0; i < 20 && mounted && ref.read(cameraSessionProvider).isReady; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+      if (!mounted || run != _changeRun) return;
+      _dropWhenLive();
+      return;
+    }
     // The zoom it asked for (Android: across to the ultra-wide or back),
     // then a beat for the camera's own switch and the first frames.
     final move = ref.read(zoomProvider.notifier).lensMove;

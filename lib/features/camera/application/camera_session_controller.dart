@@ -57,7 +57,7 @@ class CameraSessionState {
 
 @immutable
 class _Config {
-  const _Config(this.lens, this.preset, {this.ultraWide = false, this.tele = false});
+  const _Config(this.lens, this.preset, {this.ultraWide = false, this.tele = false, this.physical});
 
   final CameraLensDirection lens;
   final ResolutionPreset preset;
@@ -70,16 +70,21 @@ class _Config {
   /// zooming to its ratio, see ZoomController).
   final bool tele;
 
+  /// Android: the physical lens the back camera is pinned to (main,
+  /// ultra-wide or telephoto, by the film lens), or null (as the phone likes).
+  final String? physical;
+
   @override
   bool operator ==(Object other) =>
       other is _Config &&
       other.lens == lens &&
       other.preset == preset &&
       other.ultraWide == ultraWide &&
-      other.tele == tele;
+      other.tele == tele &&
+      other.physical == physical;
 
   @override
-  int get hashCode => Object.hash(lens, preset, ultraWide, tele);
+  int get hashCode => Object.hash(lens, preset, ultraWide, tele, physical);
 }
 
 /// Owns the one-and-only [CameraController].
@@ -217,22 +222,43 @@ class CameraSessionController extends Notifier<CameraSessionState> {
 
   bool _askedTele = false;
 
+  /// Lens pinning given up on (the phone refused it): the lenses known, but
+  /// not pinnable.
+  void _unpin() {
+    final t = ref.read(teleProvider);
+    if (t == null) return;
+    ref.read(teleProvider.notifier).set(Tele(t.ratio != null, t.ratio));
+  }
+
   /// Android: whether the back camera has a telephoto, and its zoom (asked of
   /// the phone once; logged with the lenses it found).
   Future<void> _readTele() async {
     try {
       final m = await const MethodChannel('darkroom/display').invokeMapMethod<String, Object?>('tele');
       final ratio = (m?['ratio'] as num?)?.toDouble();
+      final mainId = m?['mainId'] as String?,
+          wideId = m?['wideId'] as String?,
+          teleId = m?['teleId'] as String?;
       CameraLog.add(
         'back lenses: ${m?['lenses'] ?? '?'}; tele ${ratio == null ? 'none' : 'at ${ratio.toStringAsFixed(1)}x'}'
+        '; ${mainId == null ? 'not pinnable (zoom limits)' : 'pinned: main $mainId, wide ${wideId ?? '-'}, tele ${teleId ?? '-'}'}'
         '${m?['error'] == null ? '' : ' (${m!['error']})'}',
       );
-      if (ref.mounted) ref.read(teleProvider.notifier).set(Tele(ratio != null, ratio));
+      if (!ref.mounted) return;
+      final has = mainId != null ? teleId != null : ratio != null;
+      ref.read(teleProvider.notifier).set(Tele(has, ratio, mainId, wideId, teleId));
+      // (pinned, the main lens zooms from 1x: the ultra-wide is known from here)
+      if (mainId != null) ref.read(ultraWideProvider.notifier).set(wideId != null);
     } catch (e) {
       CameraLog.add('back lenses unreadable: $e');
       if (ref.mounted) ref.read(teleProvider.notifier).set(const Tele(false));
     }
   }
+
+  /// Whether a lens that changes the phone's camera restarts it (iPhone, and
+  /// Android pinned): the lens change waits for the restart, not a zoom.
+  bool get lensChangeRestarts =>
+      defaultTargetPlatform == TargetPlatform.iOS || (ref.read(teleProvider)?.pinnable ?? false);
 
   bool get _wantActive => _screenVisible && _appVisible && !_permissionBlocked;
 
@@ -250,7 +276,15 @@ class CameraSessionController extends Notifier<CameraSessionState> {
         direction == CameraLensDirection.back &&
         lens == LensKind.tele &&
         (_cameras?.any((c) => c.lensType == CameraLensType.telephoto) ?? false);
-    return _Config(direction, presetFor(spec), ultraWide: ultraWide, tele: tele);
+    final lenses = ref.read(teleProvider);
+    final physical =
+        defaultTargetPlatform == TargetPlatform.android &&
+            direction == CameraLensDirection.back &&
+            lenses != null &&
+            lenses.pinnable
+        ? lenses.idFor(lens)
+        : null;
+    return _Config(direction, presetFor(spec), ultraWide: ultraWide, tele: tele, physical: physical);
   }
 
   // ---- reconcile loop --------------------------------------------------------
@@ -282,6 +316,13 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     if (!_wantActive) {
       await _release();
       return;
+    }
+    // Android: the back camera's lenses, known before it first opens (so it
+    // opens pinned to the right one, not opened twice).
+    if (defaultTargetPlatform == TargetPlatform.android && !_askedTele) {
+      _askedTele = true;
+      await _readTele();
+      if (!ref.mounted) return;
     }
     final want = _wantConfig;
     final c = _controller;
@@ -320,9 +361,6 @@ class CameraSessionController extends Notifier<CameraSessionState> {
               ),
             ),
           );
-    } else if (defaultTargetPlatform == TargetPlatform.android && !_askedTele) {
-      _askedTele = true;
-      unawaited(_readTele());
     }
     if (cams.isEmpty) {
       state = state.copyWith(status: SessionStatus.noCamera, message: 'No camera found');
@@ -349,6 +387,14 @@ class CameraSessionController extends Notifier<CameraSessionState> {
     );
     final hasFront = cams.any((c) => c.lensDirection == CameraLensDirection.front);
 
+    // Android: pin the back camera to the lens it wants (our camera plugin's
+    // patch reads it as the camera opens); null lets the phone choose.
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      try {
+        await const MethodChannel('darkroom/display').invokeMethod<void>('pinLens', cfg.physical);
+        if (cfg.physical != null) CameraLog.add('lens pinned: ${cfg.physical}');
+      } catch (_) {}
+    }
     const maxAttempts = 4;
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       if (!ref.mounted || _dirty || !_wantActive) return;
@@ -370,6 +416,14 @@ class CameraSessionController extends Notifier<CameraSessionState> {
           // Keep shooting: videos will simply be silent.
           _audioDenied = true;
           continue;
+        }
+        // A phone that won't stream from one lens alone: unpinned from here
+        // on (zoom limits keep it off the other lenses, as before pinning).
+        if (cfg.physical != null && attempt == 1) {
+          CameraLog.add('pinned lens refused: zoom limits instead');
+          _unpin();
+          _dirty = true;
+          return;
         }
         if (attempt < maxAttempts - 1) {
           // Most likely the HAL hasn't released the previous session yet.
@@ -517,6 +571,12 @@ class CameraSessionController extends Notifier<CameraSessionState> {
       } else if (!frozen) {
         frozen = true;
         CameraLog.add('no frames: picture frozen ${ms()} ms after ready');
+        // (pinned to one lens and frozen twice running: perhaps the phone
+        // won't stream from that lens alone; unpinned from here on)
+        if (_controllerConfig?.physical != null && _frozenReopens == 1 && !c.value.isRecordingVideo) {
+          CameraLog.add('pinned lens gave no frames: zoom limits instead');
+          _unpin();
+        }
         if (_frozenReopens < 3 && !c.value.isRecordingVideo) {
           _frozenReopens++;
           if (_frozenReopens == 3) {

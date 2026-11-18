@@ -188,11 +188,21 @@ class MainActivity : FlutterActivity() {
             } ?: return out
             val logical = cm.getCameraCharacteristics(back)
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return out
-            val lenses = logical.physicalCameraIds.mapNotNull { id -> eq(cm.getCameraCharacteristics(id)) }
+            val byId = logical.physicalCameraIds.mapNotNull { id ->
+                eq(cm.getCameraCharacteristics(id))?.let { id to it }
+            }
+            val lenses = byId.map { it.second }
             // the main lens: the one nearest a phone main camera's ~25 mm (a
             // logical camera may report every lens's focal length as its own)
-            val main = lenses.minByOrNull { abs(it - 25.0) } ?: eq(logical) ?: return out
-            out["lenses"] = lenses.sorted().joinToString(", ") { "%.0f mm".format(it) } + " (main %.0f mm)".format(main)
+            val mainLens = byId.minByOrNull { abs(it.second - 25.0) }
+            val main = mainLens?.second ?: eq(logical) ?: return out
+            out["lenses"] = byId.sortedBy { it.second }.joinToString(", ") { "%s %.0f mm".format(it.first, it.second) } +
+                " (main %.0f mm)".format(main)
+            // the physical lenses' ids, for pinning one (pinLens)
+            out["mainId"] = mainLens?.first
+            byId.minByOrNull { it.second }?.takeIf { it.second < main * 0.75 }?.let { out["wideId"] = it.first }
+            val longest = byId.maxByOrNull { it.second }
+            if (longest != null && longest.second >= main * 1.8) out["teleId"] = longest.first
             val tele = lenses.maxOrNull() ?: return out
             val ratio = tele / main
             // (its zoom must be reachable on the logical camera too)
@@ -352,6 +362,12 @@ class MainActivity : FlutterActivity() {
                     // which the phone's own camera switches to it (the film
                     // lenses' TELE), and what it found (Camera Log)
                     "tele" -> result.success(teleInfo())
+                    // the back camera pinned to one physical lens (null: as
+                    // the phone likes); the camera opened next takes it
+                    "pinLens" -> {
+                        io.flutter.plugins.camerax.DarkroomLens.physicalId = call.arguments as? String
+                        result.success(null)
+                    }
                     // Launch Timing's breakdown of the time before Dart's main
                     "startTimes" -> result.success(
                         mapOf(

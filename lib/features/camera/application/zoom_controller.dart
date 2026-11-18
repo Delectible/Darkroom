@@ -81,11 +81,15 @@ class ZoomController extends Notifier<ZoomState> {
       _hwMin = hwMin;
       // Android: a back camera that zooms below 1x has an ultra-wide behind
       // it (iPhone: the session knows from the list of cameras).
+      // (pinned to one lens, there's nothing below 1x: known from the lenses)
+      final pinned = _pinned(c);
       if (defaultTargetPlatform == TargetPlatform.android &&
-          c.description.lensDirection == CameraLensDirection.back) {
+          c.description.lensDirection == CameraLensDirection.back &&
+          !pinned) {
         ref.read(ultraWideProvider.notifier).set(hwMin < 1);
       }
       final widest =
+          !pinned &&
           c.description.lensDirection == CameraLensDirection.back &&
           _wantsWidest(ref.read(filmLensProvider)) &&
           hwMin < 1;
@@ -123,9 +127,17 @@ class ZoomController extends Notifier<ZoomState> {
   /// (null: none, or not Android's switching kind of camera).
   double? _teleAt(CameraController c) =>
       defaultTargetPlatform == TargetPlatform.android &&
-          c.description.lensDirection == CameraLensDirection.back
+          c.description.lensDirection == CameraLensDirection.back &&
+          !_pinned(c)
       ? ref.read(teleProvider)?.ratio
       : null;
+
+  /// Android's back camera pinned to one physical lens (each lens its own,
+  /// from 1x; a lens change restarts the camera rather than zooming).
+  bool _pinned(CameraController c) =>
+      defaultTargetPlatform == TargetPlatform.android &&
+      c.description.lensDirection == CameraLensDirection.back &&
+      (ref.read(teleProvider)?.pinnable ?? false);
 
   /// The lens before the last change (the tele converter on or off).
   LensKind? _lastLens;
@@ -145,6 +157,8 @@ class ZoomController extends Notifier<ZoomState> {
     }
     final min = _hwMin;
     final c = _controller;
+    // (pinned: the camera restarts on the new lens; its controller starts afresh)
+    if (c != null && _pinned(c)) return;
     if (min == null || min >= 1 || c == null || !c.value.isInitialized) return;
     if (c.description.lensDirection != CameraLensDirection.back) return;
     // (a camera without a zoom stays fixed: at the ultra-wide, or at 1x)

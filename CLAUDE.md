@@ -67,6 +67,13 @@ bytes handed to workers without copying the whole scene file) and a load
 trace hook (`packages/flutter_scene/DARKROOM.md`). Now and then check pub.dev for a newer version: if it handles
 this itself, go back to the hosted package; else move the patches over.
 
+## Our copy of camera_android_camerax
+
+`packages/camera_android_camerax` is 0.7.6+1 with one patch: the back camera
+pinned to one physical lens (`DarkroomLens`, set by MainActivity `pinLens`;
+`packages/camera_android_camerax/DARKROOM.md`). On a plugin update, move the
+patch over unless the plugin can choose a physical camera itself.
+
 ## Checks
 
 `flutter analyze lib test`, `flutter test` (SDK may be at

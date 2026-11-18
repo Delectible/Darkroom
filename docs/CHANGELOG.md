@@ -1609,3 +1609,12 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [ ] 79.3 On the Pixel: Debug > Camera Log should say "back lenses: ...;
   tele at ~5x"; check TELE really is the telephoto (sharper far detail than
   a digital zoom), and a digital body's zoom stops before it.
+- [x] 79.4 Reliable lens choice on Android: our copy of the CameraX camera
+  plugin pins the back camera to one physical lens (CameraX
+  `setPhysicalCameraId`), main for most lenses, ultra-wide for wide /
+  fish-eye, telephoto for TELE: the phone never changes lens by itself.
+  Lens changes restart the camera behind the viewfinder's shut. Falls back
+  to the zoom limits if a phone refuses (at open, or frozen twice).
+- [ ] 79.5 On the Pixel: Camera Log "back lenses: ... pinned: main ...", and
+  "lens pinned: N" on each open; TELE sharp far away; WIDE wide; the zoom on
+  a digital body still works on the main lens (pinned lenses zoom by crop).

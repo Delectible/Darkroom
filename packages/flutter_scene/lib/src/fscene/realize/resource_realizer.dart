@@ -289,6 +289,7 @@ class ResourceRealizer {
     // Textures first: an fmat material's parameter overrides may reference a
     // texture resource, which must be decoded before the override resolves it.
     final textures = <Future<void>>[];
+    final starting = Stopwatch()..start();
     for (final resource in document.resources.values) {
       // Every texture preloads, not only the ones the sync path cannot do at
       // all: an rgba8 payload realizes synchronously but builds its mip chain
@@ -298,6 +299,7 @@ class ResourceRealizer {
         textures.add(_preloadTexture(resource));
       }
     }
+    darkroomTrace?.call('texture loads started ${starting.elapsedMilliseconds} ms');
     await Future.wait(textures);
     darkroomTrace?.call('textures in (${textures.length})');
 

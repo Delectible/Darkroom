@@ -56,6 +56,7 @@ typedef _Prepared = ({List<Uint8List> levels, int mode, int width, int height});
 /// isolate, and uploads the result. Use this from async load paths so large
 /// textures do not block the UI.
 Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
+  final handing = Stopwatch()..start();
   _logFamiliesOnce();
   final mode = _selectMode();
   final mips = uploadableMipChains;
@@ -64,11 +65,15 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
   // nine copies of ~50 MB on the UI thread, ~500 ms on a Pixel 9 Pro). Only
   // this texture's bytes go, copied once and handed over without another.
   final handed = TransferableTypedData.fromList([bytes]);
-  final prepared = await compute(_prepareFromHanded, (
+  final preparing = compute(_prepareFromHanded, (
     ktx2: handed,
     mode: mode,
     mips: mips,
   ));
+  if (handing.elapsedMilliseconds >= 3) {
+    darkroomTrace?.call('texture handed over ${handing.elapsedMilliseconds} ms');
+  }
+  final prepared = await preparing;
   return _upload(prepared);
 }
 

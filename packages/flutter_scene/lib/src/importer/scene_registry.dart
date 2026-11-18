@@ -355,8 +355,11 @@ final class SceneRegistry {
       final seen = <String>{key};
       final document = await readComposed(seen);
       darkroomTrace?.call('document read');
+      final making = Stopwatch()..start();
       final resources = ResourceRealizer(document, bundle: assetBundle);
-      await resources.preload();
+      final preloading = resources.preload();
+      darkroomTrace?.call('preload started ${making.elapsedMilliseconds} ms');
+      await preloading;
       darkroomTrace?.call('preloaded');
       return _SceneTemplate(document, resources, seen);
     }
@@ -548,11 +551,17 @@ final class SceneRegistry {
     // Evict so a hot reload re-reads the changed asset.
     bundle.evict(key);
     final data = await bundle.load(key);
+    darkroomTrace?.call('asset in (${data.lengthInBytes >> 20} MB)');
+    final handing = Stopwatch()..start();
     // Inflating a texture-heavy container takes hundreds of milliseconds, so
     // keep it off the frames on screen.
-    return readFscenebAsync(
+    final reading = readFscenebAsync(
       data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
     );
+    darkroomTrace?.call('asset handed to the reader ${handing.elapsedMilliseconds} ms');
+    final document = await reading;
+    darkroomTrace?.call('reader done');
+    return document;
   }
 
   SceneDocument _resolveRefs(SceneDocument document, String hostKey) {

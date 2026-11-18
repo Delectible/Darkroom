@@ -1568,3 +1568,8 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   (the 354 ms stall behind the curtain).
 - [-] 75.2 Text over the controls in landscape: meant for another thread
   (not this app).
+- [ ] 75.3 2.3.22 report: the stall is still there (403 ms at 1.9 s,
+  around "document read" to the first upload), so the view copy wasn't the
+  main cost (kept: it's cheaper). Isolate spawns ruled out (cheap with a big
+  heap, tested). Finer trace now: asset in (size), handing it to the reader,
+  reader done, preload start, texture loads started, each hand-over of 3 ms+.

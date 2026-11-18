@@ -1588,3 +1588,12 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   Sisyphus sessions.
 - [x] 77.2 The `ios` job selects Xcode 27 by itself once the runner has it
   (as Sisyphus did). Watch for the warning going away before April 2027.
+
+## 78. Digital body shown undressed at launch (2026-11-18), 2.3.23
+- [x] 78.1 The owner saw the digital body not fully drawn as the curtain
+  lifted. `body.live` was set before the skin was on (digital skins take
+  200-480 ms; film's classic none), and the screen draws any body whose
+  `live` is set: a rebuild in that window (the camera opening) drew it
+  undressed and the launch picture let go. The model is now kept local till
+  dressed and warmed, then set in one go (a skin that fails to load no
+  longer drops the body either).

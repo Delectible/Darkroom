@@ -195,7 +195,10 @@ class WholeArt {
       final node = await fs.loadScene(scenePath);
       LaunchTimer.once('3D: model read');
       step('read');
-      body.live = LiveBody._(
+      // (kept to ourselves till it's dressed and warmed: the screen draws a
+      // body as soon as `live` is set, and the digital one drew undressed,
+      // its skin still loading, as the curtain lifted)
+      final live = LiveBody._(
         node,
         body,
         _env!,
@@ -208,16 +211,18 @@ class WholeArt {
       );
       step('built');
       // The skin it's wearing, before it's first seen; then let go of the
-      // loader's cached
-      // copy of the file (we never make a second model from it).
-      final live = body.live!;
-      await live.wear(_skinOf?.call(mode));
+      // loader's cached copy of the file (we never make a second model from it).
+      try {
+        await live.wear(_skinOf?.call(mode));
+      } catch (e) {
+        debugPrint('3D body $mode skin unavailable: $e');
+      }
       LaunchTimer.once('3D: skin on');
       step('skin');
       unawaited(fs.releaseScene(scenePath));
       // Compile its shaders now, not on the first frame it's seen.
       try {
-        await body.live!.scene.warmUp([
+        await live.scene.warmUp([
           fs.RenderView(
             camera: fs.PerspectiveCamera(
               position: vm.Vector3(0, 0, -(d['dist'] as num).toDouble()),
@@ -226,6 +231,7 @@ class WholeArt {
           ),
         ]);
       } catch (_) {}
+      body.live = live;
       step('warm');
       PerfRecorder.event('3D ${mode.name} loaded (ms): ${steps.join(', ')}');
       // (kept with the launch, so it can't scroll off the events)

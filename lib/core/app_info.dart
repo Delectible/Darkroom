@@ -9,7 +9,8 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98\'s picture thumbnails show at once when you scroll fast, sharpening a moment later.';
+      'The camera never shows up half-drawn as the app opens. Darkroom 98\'s thumbnails show at once '
+      'when you scroll fast.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

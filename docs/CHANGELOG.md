@@ -1586,4 +1586,5 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   Xcode / SDK and warns while it's under 27; CLAUDE.md says to select
   Xcode 27 in that job before then. Passed on to the Duel, Roadie and
   Sisyphus sessions.
-- [ ] 77.2 Before April 2027: select Xcode 27 in the `ios` job.
+- [x] 77.2 The `ios` job selects Xcode 27 by itself once the runner has it
+  (as Sisyphus did). Watch for the warning going away before April 2027.

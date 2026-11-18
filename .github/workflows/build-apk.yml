@@ -94,11 +94,14 @@ jobs:
       # iOS 27 SDK (Xcode 27) or later. Says so on every run until it is.
       - name: Check the iOS SDK
         run: |
+          # (Xcode 27 the moment the runner has it)
+          x=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$x" ]; then sudo xcode-select -s "$x"; fi
           xcodebuild -version
           sdk=$(xcrun --sdk iphoneos --show-sdk-version)
           echo "iOS SDK $sdk"
           if [ "${sdk%%.*}" -lt 27 ]; then
-            echo "::warning::Built with the iOS $sdk SDK: from April 2027 App Store uploads need the iOS 27 SDK (Xcode 27). Pick Xcode 27 here (sudo xcode-select -s /Applications/Xcode_27*.app) once the runner has it."
+            echo "::warning::Built with the iOS $sdk SDK: from April 2027 App Store uploads need the iOS 27 SDK (Xcode 27). No Xcode 27 on the runner yet (picked automatically once there is)."
           fi
       - uses: subosito/flutter-action@v2
         with: { channel: stable, flutter-version: 3.50.0, cache: true }

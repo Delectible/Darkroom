@@ -106,8 +106,15 @@ class ExplorerFilePane extends StatelessWidget {
 
     switch (view) {
       case ExplorerView.largeIcons:
+        // every thumbnail's tiny copy, decoded ahead (see _Thumb)
+        _Thumb.warm(context, [
+          for (final m in items)
+            if (m.isReady) ?m.thumbPath,
+        ]);
         return GridView.builder(
           controller: controller,
+          // (built, and decoded, well before they scroll into view)
+          scrollCacheExtent: const ScrollCacheExtent.viewport(1.5),
           padding: const EdgeInsets.all(6),
           gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
             maxCrossAxisExtent: 96,
@@ -378,14 +385,7 @@ class _LargeIcon extends StatelessWidget {
               fit: StackFit.expand,
               children: [
                 if (item.isReady && thumb != null)
-                  Image.file(
-                    File(thumb),
-                    fit: BoxFit.contain,
-                    cacheWidth: 160,
-                    filterQuality: FilterQuality.none,
-                    errorBuilder: (_, _, _) =>
-                        const Center(child: PixelIconView(PixelIcon.imageFile, size: 32)),
-                  )
+                  _Thumb(path: thumb)
                 else
                   Center(
                     child: PixelIconView(
@@ -642,4 +642,54 @@ class ExplorerStatusBar extends StatelessWidget {
       ],
     );
   }
+}
+
+/// A Large Icons thumbnail: a tiny copy first (decoded in a moment and kept
+/// for every file, [warm]; blocky, as a 9x thumbnail loading would be), the
+/// real one over it once decoded. A fast scroll never shows empty frames.
+class _Thumb extends StatelessWidget {
+  const _Thumb({required this.path});
+
+  final String path;
+
+  static const _previewWidth = 32;
+  static final _warmed = <String>{};
+
+  static ImageProvider _preview(String path) => ResizeImage(FileImage(File(path)), width: _previewWidth);
+
+  /// Decodes the tiny copies of [paths] not yet asked for, a few at a time.
+  static void warm(BuildContext context, List<String> paths) {
+    final todo = [
+      for (final p in paths)
+        if (_warmed.add(p)) p,
+    ];
+    if (todo.isEmpty) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      for (var i = 0; i < todo.length; i += 6) {
+        if (!context.mounted) return;
+        await Future.wait([
+          for (final p in todo.skip(i).take(6)) precacheImage(_preview(p), context, onError: (_, _) {}),
+        ]);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => Image.file(
+    File(path),
+    fit: BoxFit.contain,
+    cacheWidth: 160,
+    filterQuality: FilterQuality.none,
+    gaplessPlayback: true,
+    frameBuilder: (context, child, frame, sync) => frame == null && !sync
+        ? Image(
+            image: _preview(path),
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.none,
+            gaplessPlayback: true,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          )
+        : child,
+    errorBuilder: (_, _, _) => const Center(child: PixelIconView(PixelIcon.imageFile, size: 32)),
+  );
 }

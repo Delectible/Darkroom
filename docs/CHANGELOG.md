@@ -1573,3 +1573,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   main cost (kept: it's cheaper). Isolate spawns ruled out (cheap with a big
   heap, tested). Finer trace now: asset in (size), handing it to the reader,
   reader done, preload start, texture loads started, each hand-over of 3 ms+.
+
+## 76. Darkroom 98 thumbnails on a fast scroll (2026-11-18), 2.3.23
+- [x] 76.1 As the corkboard (74.1): Large Icons thumbnails show a 32 px
+  copy (blocky, fits the 9x look) at once, decoded for every file when the
+  folder shows (`_Thumb.warm`), the real one over it once decoded; the grid
+  builds 1.5 screens ahead.

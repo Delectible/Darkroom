@@ -1566,5 +1566,5 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   Now a `TransferableTypedData` of the texture alone (flutter_scene patch
   3). Measured on desktop: 9 sends 240-260 ms -> 22-30 ms. Same at launch
   (the 354 ms stall behind the curtain).
-- [ ] 75.2 Owner: "the glance view in full screen has the text overlap the
-  controls in landscape": which screen? (asked)
+- [-] 75.2 Text over the controls in landscape: meant for another thread
+  (not this app).

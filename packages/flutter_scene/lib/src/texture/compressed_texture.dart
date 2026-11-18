@@ -66,13 +66,13 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
   // nine copies of ~50 MB on the UI thread, ~500 ms on a Pixel 9 Pro). Only
   // this texture's bytes go, copied once and handed over without another.
   final handed = TransferableTypedData.fromList([bytes]);
-  // DARKROOM PATCH: one texture's worker at a time. Workers share the app's
-  // heap: nine at once made garbage collections that held the UI thread
-  // ~280 ms together; one by one, the pauses are short and spread out.
-  final turn = _workerQueue;
-  final done = Completer<void>();
-  _workerQueue = done.future;
-  await turn;
+  // DARKROOM PATCH: three textures' workers at a time. Workers share the
+  // app's heap: nine at once made garbage collections that held the UI
+  // thread ~280 ms together; one at a time cost 1.4 s of launch.
+  while (_workers >= 3) {
+    await _workerFreed.future;
+  }
+  _workers++;
   final preparing = compute(_prepareFromHanded, (
     ktx2: handed,
     mode: mode,
@@ -85,7 +85,10 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
   try {
     prepared = await preparing;
   } finally {
-    done.complete();
+    _workers--;
+    final freed = _workerFreed;
+    _workerFreed = Completer<void>();
+    freed.complete();
   }
   return _upload(prepared);
 }
@@ -128,7 +131,8 @@ int _selectMode() {
 }
 
 /// Isolate entry point: parse and transcode. Pure Dart, no GPU.
-Future<void> _workerQueue = Future<void>.value();
+int _workers = 0;
+Completer<void> _workerFreed = Completer<void>();
 
 _Prepared _prepareFromHanded(({TransferableTypedData ktx2, int mode, bool mips}) input) =>
     _prepare(readKtx2(input.ktx2.materialize().asUint8List()), input.mode, mips: input.mips);

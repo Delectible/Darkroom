@@ -14,6 +14,7 @@
 // textures sample with proper minification.
 
 import 'package:flutter_scene/src/darkroom_trace.dart';
+import 'dart:async';
 import 'dart:isolate' show TransferableTypedData;
 import 'dart:math' as math;
 
@@ -65,6 +66,13 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
   // nine copies of ~50 MB on the UI thread, ~500 ms on a Pixel 9 Pro). Only
   // this texture's bytes go, copied once and handed over without another.
   final handed = TransferableTypedData.fromList([bytes]);
+  // DARKROOM PATCH: one texture's worker at a time. Workers share the app's
+  // heap: nine at once made garbage collections that held the UI thread
+  // ~280 ms together; one by one, the pauses are short and spread out.
+  final turn = _workerQueue;
+  final done = Completer<void>();
+  _workerQueue = done.future;
+  await turn;
   final preparing = compute(_prepareFromHanded, (
     ktx2: handed,
     mode: mode,
@@ -73,7 +81,12 @@ Future<gpu.Texture> gpuTextureFromKtx2Async(Uint8List bytes) async {
   if (handing.elapsedMilliseconds >= 3) {
     darkroomTrace?.call('texture handed over ${handing.elapsedMilliseconds} ms');
   }
-  final prepared = await preparing;
+  final _Prepared prepared;
+  try {
+    prepared = await preparing;
+  } finally {
+    done.complete();
+  }
   return _upload(prepared);
 }
 
@@ -115,6 +128,8 @@ int _selectMode() {
 }
 
 /// Isolate entry point: parse and transcode. Pure Dart, no GPU.
+Future<void> _workerQueue = Future<void>.value();
+
 _Prepared _prepareFromHanded(({TransferableTypedData ktx2, int mode, bool mips}) input) =>
     _prepare(readKtx2(input.ktx2.materialize().asUint8List()), input.mode, mips: input.mips);
 

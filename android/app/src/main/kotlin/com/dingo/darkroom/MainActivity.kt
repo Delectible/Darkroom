@@ -172,6 +172,9 @@ class MainActivity : FlutterActivity() {
      * telephoto is one at least 1.8x longer, and its zoom ratio is how much
      * longer. Null fields where there's none (or before Android 9).
      */
+    /** One physical lens of the back camera (teleInfo). */
+    private data class PhysLens(val id: String, val focal: Float, val sensor: Double, val eq: Double)
+
     private fun teleInfo(): Map<String, Any?> {
         val out = mutableMapOf<String, Any?>("ratio" to null, "lenses" to "")
         try {
@@ -188,16 +191,27 @@ class MainActivity : FlutterActivity() {
             } ?: return out
             val logical = cm.getCameraCharacteristics(back)
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return out
-            val byId = logical.physicalCameraIds.mapNotNull { id ->
-                eq(cm.getCameraCharacteristics(id))?.let { id to it }
+            // each physical id: its real focal length, sensor size and 35 mm
+            // equivalent. A phone lists crops of a lens as more ids (same real
+            // focal length, less of the sensor: a Pixel's "49 mm" and "220 mm"):
+            // only the uncropped one of each focal length is a lens.
+            val all = logical.physicalCameraIds.mapNotNull { id ->
+                val c = cm.getCameraCharacteristics(id)
+                val f = c.get(android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.minOrNull()
+                val sz = c.get(android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE)
+                val e = eq(c)
+                if (f == null || sz == null || e == null) null
+                else PhysLens(id, f, Math.hypot(sz.width.toDouble(), sz.height.toDouble()), e)
             }
+            val real = all.groupBy { Math.round(it.focal * 10) }.values.map { same -> same.maxByOrNull { it.sensor }!! }
+            val byId = real.map { it.id to it.eq }
             val lenses = byId.map { it.second }
-            // the main lens: the one nearest a phone main camera's ~25 mm (a
-            // logical camera may report every lens's focal length as its own)
+            // the main lens: the one nearest a phone main camera's ~25 mm
             val mainLens = byId.minByOrNull { abs(it.second - 25.0) }
             val main = mainLens?.second ?: eq(logical) ?: return out
-            out["lenses"] = byId.sortedBy { it.second }.joinToString(", ") { "%s %.0f mm".format(it.first, it.second) } +
-                " (main %.0f mm)".format(main)
+            out["lenses"] = all.sortedBy { it.eq }.joinToString(", ") {
+                "%s %.0f mm%s".format(it.id, it.eq, if (real.contains(it)) "" else " (crop)")
+            } + " (main %.0f mm)".format(main)
             // the physical lenses' ids, for pinning one (pinLens)
             out["mainId"] = mainLens?.first
             byId.minByOrNull { it.second }?.takeIf { it.second < main * 0.75 }?.let { out["wideId"] = it.first }

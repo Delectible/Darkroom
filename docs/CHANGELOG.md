@@ -1618,3 +1618,13 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [ ] 79.5 On the Pixel: Camera Log "back lenses: ... pinned: main ...", and
   "lens pinned: N" on each open; TELE sharp far away; WIDE wide; the zoom on
   a digital body still works on the main lens (pinned lenses zoom by crop).
+
+## 80. From the 2.3.23 report (2026-11-18), 2.3.24
+- [x] 80.1 Pinning works on the Pixel ("lens pinned: 9", frames ok). But it
+  lists 6 back ids (12, 24, 25, 49, 110, 220 mm): crops of real lenses
+  (same real focal length, less sensor). TELE took the 220 mm crop. Now
+  only the uncropped id of each real focal length counts (Camera Log marks
+  the crops).
+- [x] 80.2 The stall after launch down to 279 ms (was 403); it starts as the
+  nine texture workers start. They share the app's heap: run one at a time
+  now (flutter_scene `_workerQueue`), so GC pauses come short and spread.

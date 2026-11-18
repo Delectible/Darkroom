@@ -25,6 +25,9 @@ texture's bytes go to the worker as a `TransferableTypedData` (marked
 `DARKROOM PATCH`). They were a view into the whole scene file, which Dart
 copies whole into each worker: nine copies of ~50 MB on the UI thread, a
 ~500 ms freeze loading a 3D camera (found with the trace below, 2.3.21).
+The workers also run one at a time (`_workerQueue`): they share the app's
+heap, and nine at once made garbage collections that held the UI thread
+~280 ms (2.3.23 report).
 
 `lib/src/darkroom_trace.dart` (exported): `darkroomTrace`, called by the
 loader at its steps (document read, textures in, each texture upload of 5 ms+,

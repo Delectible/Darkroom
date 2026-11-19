@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.4.1';
+  static const version = '2.4.2';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Save either page of The Book on its own (sideways). The digital review screen shows only real photos. Fixes.';
+      'Your name on The Book\'s cover, page numbers on scrapbook pages, smoother page turns, thinner page edges in small books.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

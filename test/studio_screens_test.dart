@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/settings/settings_repository.dart';
+import 'package:darkroom/features/camera/application/camera_ui_state.dart';
 import 'package:darkroom/features/studio/studio_book_screen.dart';
 import 'package:darkroom/features/studio/studio_flip_frames.dart';
 import 'package:darkroom/features/studio/studio_makers.dart';
@@ -260,6 +261,8 @@ void main() {
               overrides: [
                 initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
                 studioBookProvider.overrideWith(() => _Book(works)),
+                // (a long name: shrinks to fit the cover)
+                userNameProvider.overrideWith(() => _Name('Bartholomew Featherstonehaugh-Smythe')),
               ],
               child: RepaintBoundary(
                 key: boundary,
@@ -275,6 +278,7 @@ void main() {
           }
         });
         expect(find.text('page 1 of 2'), findsOneWidget);
+        await shoot(tester, 'book_shut');
         // the cover swinging open, then open
         await tester.pump(const Duration(milliseconds: 280));
         await tester.pump(const Duration(milliseconds: 380));
@@ -302,6 +306,22 @@ void main() {
           await tester.pump();
         }
         await shoot(tester, 'book_scrapbook');
+        // an empty book
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+              studioBookProvider.overrideWith(() => _Book(const [])),
+            ],
+            child: RepaintBoundary(
+              key: boundary,
+              child: const MaterialApp(debugShowCheckedModeBanner: false, home: StudioBookScreen()),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 1600));
+        await shoot(tester, 'book_empty');
         // the flip book, held big
         await tester.pumpWidget(
           ProviderScope(
@@ -367,6 +387,15 @@ class _Studio extends StudioNotifier {
 
   @override
   List<String> build() => ids;
+}
+
+class _Name extends UserNameNotifier {
+  _Name(this.name);
+
+  final String name;
+
+  @override
+  String? build() => name;
 }
 
 class _Book extends StudioBook {

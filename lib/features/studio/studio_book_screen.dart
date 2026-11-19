@@ -13,6 +13,7 @@ import 'package:video_player/video_player.dart';
 import '../../core/audio/sfx.dart';
 import '../../core/device/upright.dart';
 import '../../core/diagnostics/perf_recorder.dart';
+import '../camera/application/camera_ui_state.dart' show userNameProvider;
 import 'studio_flip_booklet.dart';
 import 'studio_layout.dart';
 import 'studio_make.dart';
@@ -72,10 +73,12 @@ class StudioBookScreen extends ConsumerStatefulWidget {
 
 class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with SingleTickerProviderStateMixin {
   final _turn = GlobalKey<PageTurnState>();
-  final _shot = GlobalKey();
 
-  /// Sideways with both pages showing: the left one (saved on its own).
-  final _shotLeft = GlobalKey();
+  /// Each page's own boundary (what Save takes), kept as the page moves so
+  /// nothing on it is built again when a turn ends (a flip book on it
+  /// changed its picture). Left and right apart: one page can be both
+  /// while a leaf is turning.
+  final _leftShots = <int, GlobalKey>{}, _rightShots = <int, GlobalKey>{};
   final _aspects = <String, double>{};
   final _asking = <String>{};
   int _at = 0;
@@ -161,8 +164,8 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
     }
   }
 
-  Future<void> _savePage(double width, [GlobalKey? which]) async {
-    final box = (which ?? _shot).currentContext?.findRenderObject();
+  Future<void> _savePage(double width, GlobalKey? which) async {
+    final box = which?.currentContext?.findRenderObject();
     if (box is! RenderRepaintBoundary) return;
     setState(() => _saving = true);
     String? error;
@@ -316,11 +319,10 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                                           );
                                           return ClipPath(
                                             clipper: const _PageShape(left: true),
-                                            child: c == shown
-                                                ? RepaintBoundary(key: _shot, child: page)
-                                                : c == 2 * open - 1
-                                                ? RepaintBoundary(key: _shotLeft, child: page)
-                                                : page,
+                                            child: RepaintBoundary(
+                                              key: _leftShots.putIfAbsent(c, GlobalKey.new),
+                                              child: page,
+                                            ),
                                           );
                                         },
                                         builder: (context, i) {
@@ -336,9 +338,10 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                                           );
                                           return ClipPath(
                                             clipper: const _PageShape(),
-                                            child: c == shown
-                                                ? RepaintBoundary(key: _shot, child: page)
-                                                : page,
+                                            child: RepaintBoundary(
+                                              key: _rightShots.putIfAbsent(c, GlobalKey.new),
+                                              child: page,
+                                            ),
                                           );
                                         },
                                       ),
@@ -356,23 +359,26 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                           icon: Icons.chevron_right,
                           onTap: !opened || open >= turns - 1 ? null : () => _turn.currentState?.next(),
                         );
-                        Widget saveOne(String label, VoidCallback onSave) => FilledButton(
-                          onPressed: _saving || !opened ? null : onSave,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: StudioInk.brass,
-                            foregroundColor: const Color(0xFF22150B),
-                            minimumSize: const Size(0, 44),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            textStyle: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          child: Text(
-                            _saving ? 'Saving…' : label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
                         final save = FilledButton(
-                          onPressed: _saving || !opened ? null : () => _savePage(pw),
+                          onPressed: _saving || !opened
+                              ? null
+                              : () async {
+                                  // sideways, both pages showing: which one
+                                  if (sideways && open > 0 && 2 * open < n) {
+                                    final pick = await studioChoose(
+                                      context,
+                                      title: 'Save which page?',
+                                      options: const ['Left Page', 'Right Page'],
+                                    );
+                                    if (pick == null) return;
+                                    return _savePage(
+                                      pw,
+                                      pick == 0 ? _leftShots[2 * open - 1] : _rightShots[2 * open],
+                                    );
+                                  }
+                                  final left = sideways && shown.isOdd;
+                                  return _savePage(pw, left ? _leftShots[shown] : _rightShots[shown]);
+                                },
                           style: FilledButton.styleFrom(
                             backgroundColor: StudioInk.brass,
                             foregroundColor: const Color(0xFF22150B),
@@ -400,22 +406,7 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                                       children: [prev, const SizedBox(width: 12), next],
                                     ),
                                     const SizedBox(height: 12),
-                                    if (open > 0 && 2 * open < n) ...[
-                                      // both pages showing: each saved on its own
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                                        child: saveOne('Save left page', () => _savePage(pw, _shotLeft)),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                                        child: saveOne('Save right page', () => _savePage(pw)),
-                                      ),
-                                    ] else
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                                        child: save,
-                                      ),
+                                    Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: save),
                                   ],
                                 ),
                               ),
@@ -740,7 +731,12 @@ class _BookBody extends CustomPainter {
   /// The whole book's pages as an edge: a few pixels.
   double get _fullDepth => (pageWidth * 0.018).clamp(2.5, 7.0);
 
-  double _depthOf(int pages) => pages <= 0 ? 0 : _fullDepth * pages / math.max(1, totalLeaves - 1);
+  /// One leaf's share of that, but never more than a thin step (a book of
+  /// a few leaves grew a lump with each turn).
+  double get _step =>
+      math.min(_fullDepth / math.max(1, totalLeaves - 1), (pageWidth * 0.0012).clamp(0.3, 0.7));
+
+  double _depthOf(int pages) => pages <= 0 ? 0 : _step * pages;
 
   /// How far the front board has swung (1: down on the left).
   final double open;
@@ -911,57 +907,83 @@ class _BookBody extends CustomPainter {
 }
 
 /// The album's front cover: leather, a gold rule, its name stamped in gold.
-class _FrontCover extends StatelessWidget {
+class _FrontCover extends ConsumerWidget {
   const _FrontCover();
 
   @override
-  Widget build(BuildContext context) => Stack(
-    fit: StackFit.expand,
-    children: [
-      const _Board(stitchRight: true),
-      LayoutBuilder(
-        builder: (context, box) {
-          final u = box.maxWidth;
-          const gold = Color(0xFFD9B26A);
-          return Padding(
-            padding: EdgeInsets.all(u * 0.08),
-            child: DecoratedBox(
-              decoration: BoxDecoration(border: Border.all(color: gold.withValues(alpha: 0.7), width: 1.5)),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'DARKROOM',
-                      style: TextStyle(
-                        fontFamily: 'BookSerif',
-                        color: gold,
-                        fontSize: u * 0.085,
-                        letterSpacing: u * 0.02,
-                        shadows: const [Shadow(color: Color(0x99000000), offset: Offset(1, 1.5))],
+  Widget build(BuildContext context, WidgetRef ref) {
+    final owner = ref.watch(userNameProvider)?.trim() ?? '';
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const _Board(stitchRight: true),
+        LayoutBuilder(
+          builder: (context, box) {
+            final u = box.maxWidth;
+            const gold = Color(0xFFD9B26A);
+            return Padding(
+              padding: EdgeInsets.all(u * 0.08),
+              child: DecoratedBox(
+                decoration: BoxDecoration(border: Border.all(color: gold.withValues(alpha: 0.7), width: 1.5)),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'DARKROOM',
+                        style: TextStyle(
+                          fontFamily: 'BookSerif',
+                          color: gold,
+                          fontSize: u * 0.085,
+                          letterSpacing: u * 0.02,
+                          shadows: const [Shadow(color: Color(0x99000000), offset: Offset(1, 1.5))],
+                        ),
                       ),
-                    ),
-                    SizedBox(height: u * 0.03),
-                    Container(width: u * 0.3, height: 1.2, color: gold.withValues(alpha: 0.7)),
-                    SizedBox(height: u * 0.03),
-                    Text(
-                      'photographs',
-                      style: TextStyle(
-                        fontFamily: 'BookSerif',
-                        fontStyle: FontStyle.italic,
-                        color: gold.withValues(alpha: 0.85),
-                        fontSize: u * 0.045,
+                      SizedBox(height: u * 0.03),
+                      Container(width: u * 0.3, height: 1.2, color: gold.withValues(alpha: 0.7)),
+                      SizedBox(height: u * 0.03),
+                      Text(
+                        'photographs',
+                        style: TextStyle(
+                          fontFamily: 'BookSerif',
+                          fontStyle: FontStyle.italic,
+                          color: gold.withValues(alpha: 0.85),
+                          fontSize: u * 0.045,
+                        ),
                       ),
-                    ),
-                  ],
+                      if (owner.isNotEmpty) ...[
+                        SizedBox(height: u * 0.09),
+                        // stamped like the title; a long name shrinks to fit
+                        // the frame (never wraps or runs off)
+                        SizedBox(
+                          width: u * 0.7,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              owner.toUpperCase(),
+                              maxLines: 1,
+                              softWrap: false,
+                              style: TextStyle(
+                                fontFamily: 'BookSerif',
+                                color: gold,
+                                fontSize: u * 0.05,
+                                letterSpacing: u * 0.012,
+                                shadows: const [Shadow(color: Color(0x99000000), offset: Offset(1, 1.5))],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
-      ),
-    ],
-  );
+            );
+          },
+        ),
+      ],
+    );
+  }
 }
 
 /// The inside of the front board: the leather turned in round its outer
@@ -1203,6 +1225,17 @@ class _AlbumPage extends StatelessWidget {
                   gaplessPlayback: true,
                   frameBuilder: studioFadeIn,
                 ),
+                // its page number, faint on the paper; its pieces over it
+                // (pages from before: the number lies on top)
+                _number(u, faint: true),
+                if (w.layer != null)
+                  Image.file(
+                    File(w.layer!),
+                    fit: BoxFit.cover,
+                    cacheWidth: 700,
+                    gaplessPlayback: true,
+                    errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                  ),
                 IgnorePointer(child: CustomPaint(painter: left ? const _LeftSpine() : const _SpinePainter())),
               ],
             ),
@@ -1214,27 +1247,32 @@ class _AlbumPage extends StatelessWidget {
           children: [
             _PaperPage(left: left),
             for (var i = 0; i < works.length; i++) _placed(context, works[i], rects[i], u, i, works.length),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: u * 0.025,
-              child: Text(
-                '— $number —',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Georgia',
-                  fontFamilyFallback: const ['serif', 'Times New Roman'],
-                  fontStyle: FontStyle.italic,
-                  color: _Album.number,
-                  fontSize: math.max(11, u * 0.034),
-                ),
-              ),
-            ),
+            _number(u),
           ],
         );
       },
     );
   }
+
+  /// "— 3 —" at the page's foot ([faint]: over a picture, barely there).
+  Widget _number(double u, {bool faint = false}) => Positioned(
+    left: 0,
+    right: 0,
+    bottom: u * 0.025,
+    child: IgnorePointer(
+      child: Text(
+        '— $number —',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontFamily: 'Georgia',
+          fontFamilyFallback: const ['serif', 'Times New Roman'],
+          fontStyle: FontStyle.italic,
+          color: faint ? _Album.number.withValues(alpha: 0.45) : _Album.number,
+          fontSize: math.max(11, u * 0.034),
+        ),
+      ),
+    ),
+  );
 
   Widget _placed(BuildContext context, StudioWork w, Rect unit, double u, int index, int count) {
     final rnd = math.Random(w.id.hashCode);

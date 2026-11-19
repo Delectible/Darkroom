@@ -85,6 +85,7 @@ class StudioWork {
     this.pageMs,
     this.flipStyle,
     this.silent = false,
+    this.layer,
   });
 
   final String id;
@@ -112,6 +113,11 @@ class StudioWork {
   /// A flip book whose video was asked for without its page sounds.
   final bool silent;
 
+  /// A scrapbook page's pieces alone on clear ground (a PNG): the book
+  /// draws its page number between the page and these, so the pieces lie
+  /// over the number. None on pages made before.
+  final String? layer;
+
   StudioWork copyWith({String? path, String? cover, int? pageMs}) => StudioWork(
     id: id,
     kind: kind,
@@ -123,6 +129,7 @@ class StudioWork {
     pageMs: pageMs ?? this.pageMs,
     flipStyle: flipStyle,
     silent: silent,
+    layer: layer,
   );
 
   bool get isVideo => kind == StudioKind.flipbook;
@@ -138,6 +145,7 @@ class StudioWork {
     'pageMs': ?pageMs,
     'flipStyle': ?flipStyle,
     if (silent) 'silent': true,
+    'layer': ?layer,
   };
 
   static StudioWork? fromJson(Object? j) {
@@ -160,6 +168,7 @@ class StudioWork {
       pageMs: j['pageMs'] as int?,
       flipStyle: j['flipStyle'] as String?,
       silent: j['silent'] == true,
+      layer: j['layer'] as String?,
     );
   }
 }
@@ -218,7 +227,7 @@ class StudioBook extends AsyncNotifier<List<StudioWork>> {
     ];
     state = AsyncData(now);
     await _save(now);
-    for (final p in [w.path, w.cover, ...w.pages]) {
+    for (final p in [w.path, w.cover, w.layer, ...w.pages]) {
       if (p == null) continue;
       try {
         await File(p).delete();

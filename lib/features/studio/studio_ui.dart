@@ -223,6 +223,34 @@ Future<bool?> studioAsk(
   ),
 );
 
+/// A pick between [options] in the Studio's dialog, one box each, stacked;
+/// the index, or null if cancelled.
+Future<int?> studioChoose(BuildContext context, {required String title, required List<String> options}) =>
+    showDialog<int>(
+      context: context,
+      builder: (context) => Theme(
+        data: _dialogTheme(context),
+        child: AlertDialog(
+          title: Text(title.toUpperCase()),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < options.length; i++) ...[
+                if (i > 0) const SizedBox(height: 10),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, i),
+                  style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+                  child: Text(options[i]),
+                ),
+              ],
+            ],
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))],
+        ),
+      ),
+    );
+
 /// A line or two of writing in the Studio's dialog; null if cancelled.
 Future<String?> studioWrite(BuildContext context, String title, String initial, {int max = 80}) =>
     showDialog<String>(

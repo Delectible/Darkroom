@@ -106,14 +106,20 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
     _run(Duration(milliseconds: fast ? 300 : 640));
   }
 
+  // A drag that began while a page was still going over is ignored to its
+  // end (its start point is stale: picked up later, it threw the page or
+  // turned two).
+  bool _dragging = false;
+
   void _dragStart(DragStartDetails d) {
-    if (turning) return;
+    _dragging = !turning;
+    if (!_dragging) return;
     _start = d.localPosition;
     _t.value = 0;
   }
 
   void _dragUpdate(DragUpdateDetails d) {
-    if (_t.isAnimating || _size.isEmpty) return;
+    if (!_dragging || _t.isAnimating || _size.isEmpty) return;
     final w = _size.width, h = _size.height;
     final move = d.localPosition - _start;
     if (_forward == null) {
@@ -137,6 +143,14 @@ class PageTurnState extends State<PageTurn> with SingleTickerProviderStateMixin 
   }
 
   void _dragEnd(DragEndDetails d) {
+    final mine = _dragging;
+    _dragging = false;
+    if (!mine) {
+      // (a swipe made while a page was turning: the next one, queued)
+      final v = d.velocity.pixelsPerSecond.dx;
+      if (turning && v.abs() > 300) _ask(v < 0 ? 1 : -1);
+      return;
+    }
     if (_forward == null || _t.isAnimating) return;
     final v = d.velocity.pixelsPerSecond.dx;
     final w = _size.width, h = _size.height;

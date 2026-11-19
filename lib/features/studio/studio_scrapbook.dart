@@ -86,6 +86,9 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
   final _page = GlobalKey();
   final _bits = <_Bit>[];
   StudioPaper _paper = StudioPaper.kraft;
+
+  /// Saving: the page drawn without its paper, for a moment.
+  bool _piecesOnly = false;
   _Bit? _picked;
   _Bit? _moving;
   double _startScale = 1, _startTurn = 0;
@@ -249,8 +252,15 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
     try {
       // a large picture: 2400 px across
       final image = await box.toImage(pixelRatio: 2400 / _width);
-      final work = await StudioMake.saveImage(image, StudioKind.scrapbook);
+      // and the pieces alone (the book puts its page number under them),
+      // smaller: it only has to cover the number
+      setState(() => _piecesOnly = true);
+      await WidgetsBinding.instance.endOfFrame;
+      final layer = await box.toImage(pixelRatio: 1200 / _width);
+      if (mounted) setState(() => _piecesOnly = false);
+      final work = await StudioMake.saveImage(image, StudioKind.scrapbook, layer: layer);
       image.dispose();
+      layer.dispose();
       await ref.read(studioBookProvider.notifier).add(work);
       if (mounted) await popWithFlash(context, work);
     } catch (e) {
@@ -682,7 +692,7 @@ class _ScrapbookEditorState extends ConsumerState<ScrapbookEditor> {
                                 child: Stack(
                                   clipBehavior: Clip.none,
                                   children: [
-                                    Positioned.fill(child: StudioPaperView(paper: _paper)),
+                                    if (!_piecesOnly) Positioned.fill(child: StudioPaperView(paper: _paper)),
                                     if (_laid)
                                       for (final b in _bits)
                                         Positioned(

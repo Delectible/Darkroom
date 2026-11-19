@@ -35,11 +35,20 @@ class StudioMake {
     for (final m in prints) ?(await exportPathFor(m) ?? m.outputPath),
   ];
 
-  static Future<StudioWork> saveImage(ui.Image image, StudioKind kind) async {
+  static Future<StudioWork> saveImage(ui.Image image, StudioKind kind, {ui.Image? layer}) async {
     final id = _id();
-    final path = '${(await StudioBook.folder()).path}/${kind.name}_$id.jpg';
+    final dir = (await StudioBook.folder()).path;
+    final path = '$dir/${kind.name}_$id.jpg';
     await writeStudioJpeg(image, path);
-    return StudioWork(id: id, kind: kind, path: path, createdAt: DateTime.now());
+    String? layerPath;
+    if (layer != null) {
+      final png = await layer.toByteData(format: ui.ImageByteFormat.png);
+      if (png != null) {
+        layerPath = '$dir/${kind.name}_${id}_layer.png';
+        await File(layerPath).writeAsBytes(png.buffer.asUint8List(png.offsetInBytes, png.lengthInBytes));
+      }
+    }
+    return StudioWork(id: id, kind: kind, path: path, createdAt: DateTime.now(), layer: layerPath);
   }
 
   /// A page's time: the speed slider's range and starting point.

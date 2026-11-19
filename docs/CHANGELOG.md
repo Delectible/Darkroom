@@ -1639,3 +1639,11 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 86. Photo Room WordArt default: "Happy Anniversary!".
 - [x] 87. The Book sideways: Save left page / Save right page.
 - [x] 88. Pile flip books warmed ahead: no flash as their page opens.
+- [x] 89. (2.4.2) Book: each page keeps its own boundary (a flip book on it no longer changes picture when a turn ends).
+- [x] 90. Page turns: a swipe begun mid-turn is ignored (or queued as a turn), no double flips.
+- [x] 91. Save page sideways: one button, a Left Page / Right Page dialog.
+- [x] 92. Page edge step capped (books of few pages grew too much a turn).
+- [x] 93. Scrapbook pages show their page number, under their pieces (pieces saved as a layer; older pages: faint on top).
+- [x] 94. The owner's name on The Book's cover, shrinks to fit.
+- [ ] 95. Empty book: only a line of text now (no book shown).
+- [ ] 96. Studio visual refresh: mockups A desk/felt box, B cutting mat/linen, C safelight/tray.

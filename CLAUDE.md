@@ -7,8 +7,10 @@ matching section of **`docs/NOTES.md`** before changing an area
 ## How we work
 
 - The owner tests on a Pixel 9 Pro and an iPhone, from his phone, often low
-  on usage: short plain replies, stay focused, batch tweaks, run only the
-  tests that matter (full suite once before committing a batch).
+  on usage: short plain replies, stay focused, batch tweaks.
+- Tests: while iterating, only `flutter analyze` plus a screenshot test when
+  a look needs checking. The full suite (~4 min) runs once, on "push",
+  before it goes to main (CI runs it again anyway).
 - Big changes: ask first. Open-ended visual changes: show 2–3 screenshot
   options before building.
 - Work on the session branch; commit freely. **"push"** (unless he says

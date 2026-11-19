@@ -7,6 +7,11 @@ name: Play Store listing
 # own. App builds are not touched.
 on:
   workflow_dispatch:
+    inputs:
+      languages:
+        description: 'Only these listing languages, space-separated (e.g. "es-ES fr-FR"). Empty = all, English included.'
+        required: false
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -25,8 +30,17 @@ jobs:
       - uses: actions/checkout@v4
       - run: sudo gem install fastlane --no-document --quiet
       - name: Upload the listing
+        env:
+          LANGS: ${{ inputs.languages }}
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/play.json"
+          # only the languages asked for: the others (English above all, which
+          # the owner keeps in the Play Console) are left as they are
+          if [ -n "$LANGS" ]; then
+            mkdir -p "$RUNNER_TEMP/meta"
+            for l in $LANGS; do cp -r "fastlane/metadata/android/$l" "$RUNNER_TEMP/meta/"; done
+            rm -rf fastlane/metadata/android && mv "$RUNNER_TEMP/meta" fastlane/metadata/android
+          fi
           # supply attaches the listing to a track's release; production has
           # none yet, so point it at internal testing.
           fastlane run supply \
@@ -38,4 +52,5 @@ jobs:
             skip_upload_aab:true \
             skip_upload_changelogs:true \
             skip_upload_screenshots:true \
-            sync_image_upload:true
+            sync_image_upload:true \
+            skip_upload_images:${{ inputs.languages != '' }}

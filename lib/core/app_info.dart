@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Your name on The Book\'s cover, page numbers on scrapbook pages, smoother page turns, thinner page edges in small books.';
+      'A new look for the Studio. Your name on your book, page numbers on scrapbook pages, smoother page turns. Corkboard: back to top, worn folded corners. No zoom with the fish-eye.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

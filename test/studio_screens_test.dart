@@ -313,6 +313,7 @@ void main() {
             overrides: [
               initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
               studioBookProvider.overrideWith(() => _Book(const [])),
+              userNameProvider.overrideWith(() => _Name('Luca')),
             ],
             child: RepaintBoundary(
               key: boundary,
@@ -328,6 +329,7 @@ void main() {
             overrides: [
               initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
               studioBookProvider.overrideWith(() => _Book(works)),
+              userNameProvider.overrideWith(() => _Name('Luca')),
             ],
             child: RepaintBoundary(
               key: boundary,

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -96,7 +97,8 @@ class _HousePainter extends CustomPainter {
   bool shouldRepaint(_HousePainter old) => old.color != color;
 }
 
-/// The table's wood: a warm grain and the lamp's pool of light.
+/// The table: walnut boards under a desk lamp, its hard-edged pool of
+/// warm light up near the tray, the room falling dark beyond it.
 class StudioTable extends StatelessWidget {
   const StudioTable({super.key, required this.child});
 
@@ -105,34 +107,122 @@ class StudioTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: const BoxDecoration(color: StudioInk.table),
-    child: CustomPaint(painter: const _Grain(), child: child),
+    child: CustomPaint(painter: Baked('studio table', const _Walnut().paint), child: child),
   );
 }
 
-class _Grain extends CustomPainter {
-  const _Grain();
+class _Walnut extends CustomPainter {
+  const _Walnut();
 
   @override
   void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
     final rnd = math.Random(7);
-    final line = Paint()..strokeWidth = 1;
-    for (var x = 0.0; x < size.width; x += 6 + rnd.nextDouble() * 8) {
-      line.color = Color.fromRGBO(0, 0, 0, 0.08 + rnd.nextDouble() * 0.1);
-      canvas.drawLine(Offset(x, 0), Offset(x + 10, size.height), line);
+    // the boards, each its own shade, joined edge to edge
+    final board = math.max(70.0, w / 4.6);
+    var x = -rnd.nextDouble() * board * 0.5;
+    var k = 0;
+    while (x < w) {
+      final bw = board * (0.85 + rnd.nextDouble() * 0.3);
+      final r = Rect.fromLTWH(x, 0, bw, h);
+      final tone = rnd.nextDouble();
+      canvas.drawRect(
+        r,
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Color.lerp(const Color(0xFF4A2E19), const Color(0xFF5C3A20), tone)!,
+              Color.lerp(const Color(0xFF3E2614), const Color(0xFF52331C), tone)!,
+              Color.lerp(const Color(0xFF4A2E19), const Color(0xFF5A381F), tone)!,
+            ],
+            stops: const [0, 0.55, 1],
+          ).createShader(r),
+      );
+      // the grain: long wavering lines, closer and darker in places
+      canvas.save();
+      canvas.clipRect(r);
+      final seed = math.Random(k * 31 + 5);
+      final lines = (bw / 3.2).round();
+      for (var i = 0; i < lines; i++) {
+        final gx = x + seed.nextDouble() * bw;
+        final amp = 1.5 + seed.nextDouble() * 4;
+        final len = 120 + seed.nextDouble() * 260;
+        final phase = seed.nextDouble() * math.pi * 2;
+        final path = Path()..moveTo(gx, -10);
+        for (var y = 0.0; y <= h + 10; y += 12) {
+          path.lineTo(gx + math.sin(y / len * math.pi * 2 + phase) * amp, y);
+        }
+        canvas.drawPath(
+          path,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.6 + seed.nextDouble() * 1.2
+            ..color = seed.nextDouble() < 0.7
+                ? Color.fromRGBO(20, 10, 4, 0.10 + seed.nextDouble() * 0.16)
+                : Color.fromRGBO(255, 214, 160, 0.04 + seed.nextDouble() * 0.05),
+        );
+      }
+      // now and then a knot, the grain swirling round it
+      if (seed.nextDouble() < 0.5) {
+        final c = Offset(x + bw * (0.3 + seed.nextDouble() * 0.4), h * seed.nextDouble());
+        for (var ring = 0; ring < 6; ring++) {
+          canvas.drawOval(
+            Rect.fromCenter(center: c, width: 6.0 + ring * 5, height: 16.0 + ring * 13),
+            Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 0.9
+              ..color = Color.fromRGBO(20, 10, 4, 0.22 - ring * 0.03),
+          );
+        }
+      }
+      canvas.restore();
+      // the joint: a dark seam, a lit edge beside it
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, h),
+        Paint()
+          ..color = const Color(0xAA140A04)
+          ..strokeWidth = 1.6,
+      );
+      canvas.drawLine(
+        Offset(x + 1.6, 0),
+        Offset(x + 1.6, h),
+        Paint()
+          ..color = const Color(0x22FFD9A0)
+          ..strokeWidth = 1,
+      );
+      x += bw;
+      k++;
     }
-    // the lamp's pool, up near the tray
+    // the lamp: a pool with a hard rim, warm, over the tray...
+    final lamp = Offset(w * 0.5, h * 0.2);
+    final reach = math.max(w * 0.78, 260.0);
     canvas.drawCircle(
-      Offset(size.width * 0.6, size.height * 0.22),
-      size.width * 0.75,
+      lamp,
+      reach,
       Paint()
-        ..shader = const RadialGradient(colors: [Color(0x33FFCE82), Color(0x00FFCE82)]).createShader(
-          Rect.fromCircle(center: Offset(size.width * 0.6, size.height * 0.22), radius: size.width * 0.75),
+        ..shader = ui.Gradient.radial(
+          lamp,
+          reach,
+          const [Color(0x58FFD08A), Color(0x44FFC878), Color(0x0AFFB060), Color(0x00FFB060)],
+          const [0, 0.64, 0.7, 1],
+        ),
+    );
+    // ...and the room beyond it falling into the dark
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader = ui.Gradient.radial(
+          lamp,
+          math.max(w, h) * 0.95,
+          const [Color(0x00000000), Color(0x00000000), Color(0x8C000000)],
+          const [0, 0.42, 1],
         ),
     );
   }
 
   @override
-  bool shouldRepaint(_Grain old) => false;
+  bool shouldRepaint(_Walnut old) => false;
 }
 
 /// The Studio: the prints sent from the corkboard lie on the table, and
@@ -535,28 +625,45 @@ class _MakeCard extends StatelessWidget {
       enabled: ready,
       label: '$name, ${needs.label}, $note',
       child: Material(
-        color: ready ? StudioInk.paper : StudioInk.card,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: ready ? onTap : null,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, color: fg, size: 28),
-                const Spacer(),
-                Text(
-                  name,
-                  style: TextStyle(color: fg, fontWeight: FontWeight.w800, fontSize: 16),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '${needs.label} · $note',
-                  style: TextStyle(color: ready ? const Color(0xFF6A5340) : StudioInk.muted, fontSize: 12),
-                ),
-              ],
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: ready
+                ? const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFFF7EEDC), Color(0xFFE6D8BD)],
+                  )
+                : null,
+            color: ready ? null : StudioInk.card,
+            border: Border.all(color: ready ? const Color(0xFFC9A87A) : const Color(0x22FFE0B0)),
+            boxShadow: ready
+                ? const [BoxShadow(color: Color(0x73000000), blurRadius: 12, offset: Offset(0, 6))]
+                : null,
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: ready ? onTap : null,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(icon, color: fg, size: 28),
+                  const Spacer(),
+                  Text(
+                    name,
+                    style: TextStyle(color: fg, fontWeight: FontWeight.w800, fontSize: 16),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    '${needs.label} · $note',
+                    style: TextStyle(color: ready ? const Color(0xFF6A5340) : StudioInk.muted, fontSize: 12),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -659,73 +766,226 @@ class _PickPrintsState extends State<PickPrints> {
   }
 }
 
-/// The tray the prints lie in: green felt inside a raised wooden rim.
+/// The tray the prints lie in: a wooden photo box, brass at its corners,
+/// lined with green felt that catches the lamp.
 class _FeltTray extends StatelessWidget {
   const _FeltTray({required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(9),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(10),
-      gradient: const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFF94623A), Color(0xFF6B4423), Color(0xFF55351B)],
+  Widget build(BuildContext context) => Stack(
+    clipBehavior: Clip.none,
+    children: [
+      Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: const [
+            BoxShadow(color: Color(0xAA000000), blurRadius: 22, offset: Offset(0, 14)),
+            BoxShadow(color: Color(0x55000000), blurRadius: 4, offset: Offset(0, 2)),
+          ],
+        ),
+        foregroundDecoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0x33FFE0B0)),
+        ),
+        child: CustomPaint(
+          painter: Baked('studio box rim', const _BoxRim().paint),
+          child: Container(
+            margin: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              boxShadow: [BoxShadow(color: Color(0x66FFE0B0), offset: Offset(0, 1))],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: CustomPaint(
+                painter: Baked('studio felt', const _Felt().paint),
+                foregroundPainter: const _FeltShade(),
+                child: child,
+              ),
+            ),
+          ),
+        ),
       ),
-      boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 14, offset: Offset(0, 7))],
+      for (final a in const [
+        Alignment.topLeft,
+        Alignment.topRight,
+        Alignment.bottomLeft,
+        Alignment.bottomRight,
+      ])
+        Positioned.fill(
+          child: Align(
+            alignment: a,
+            child: Transform.translate(offset: Offset(a.x * 3, a.y * 3), child: const _BrassCorner()),
+          ),
+        ),
+    ],
+  );
+}
+
+/// The box's rim: walnut, its grain running round, lit from the lamp above.
+class _BoxRim extends CustomPainter {
+  const _BoxRim();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(8));
+    canvas.drawRRect(
+      r,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFF8E5E36), Color(0xFF6A4224), Color(0xFF4E2F17)],
+        ).createShader(Offset.zero & size),
+    );
+    final rnd = math.Random(3);
+    canvas.save();
+    canvas.clipRRect(r);
+    for (var i = 0; i < 70; i++) {
+      final y = rnd.nextDouble() * size.height;
+      final path = Path()..moveTo(-5, y);
+      for (var x = 0.0; x <= size.width + 10; x += 14) {
+        path.lineTo(x, y + math.sin(x / 90 + i) * 1.4);
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.6 + rnd.nextDouble()
+          ..color = Color.fromRGBO(30, 14, 5, 0.12 + rnd.nextDouble() * 0.14),
+      );
+    }
+    canvas.restore();
+    // a lit top edge
+    canvas.drawRRect(
+      r.deflate(1),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x66FFDDAA), Color(0x00FFDDAA)],
+          stops: [0, 0.35],
+        ).createShader(Offset.zero & size),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_BoxRim old) => false;
+}
+
+/// A little brass corner cap, a nail in it.
+class _BrassCorner extends StatelessWidget {
+  const _BrassCorner();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 20,
+    height: 20,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(3),
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Color(0xFFF6DD9C), Color(0xFFC9A04F), Color(0xFF8C6A28)],
+      ),
+      boxShadow: const [BoxShadow(color: Color(0x88000000), blurRadius: 3, offset: Offset(1, 2))],
     ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(4),
-      child: CustomPaint(painter: const _Felt(), child: child),
+    child: Center(
+      child: Container(
+        width: 5,
+        height: 5,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            center: Alignment(-0.4, -0.4),
+            colors: [Color(0xFFFFF0C8), Color(0xFF7A5A20)],
+          ),
+        ),
+      ),
     ),
   );
 }
 
+/// The felt: green baize, its nap in short fibres, a little mottled.
 class _Felt extends CustomPainter {
   const _Felt();
 
   @override
   void paint(Canvas canvas, Size size) {
     final r = Offset.zero & size;
-    canvas.drawRect(r, Paint()..color = const Color(0xFF2E5842));
-    // the nap: fine light and dark fibres
+    canvas.drawRect(r, Paint()..color = const Color(0xFF2B5640));
     final rnd = math.Random(11);
-    final dot = Paint();
-    final n = (size.width * size.height / 9).round().clamp(500, 30000);
-    for (var i = 0; i < n; i++) {
-      dot.color = rnd.nextBool() ? const Color(0x16000000) : const Color(0x0EFFFFFF);
+    // soft mottling: the nap lying different ways
+    for (var i = 0; i < 26; i++) {
+      final c = Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height);
+      final rad = 20 + rnd.nextDouble() * 60;
       canvas.drawCircle(
-        Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height),
-        0.4 + rnd.nextDouble() * 0.8,
-        dot,
+        c,
+        rad,
+        Paint()
+          ..color = rnd.nextBool() ? const Color(0x0C000000) : const Color(0x0AB8F0C8)
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, rad * 0.6),
       );
     }
-    // sunk below the rim: shadow along the top and sides
+    // the fibres: short strokes every way
+    final f = Paint()..strokeCap = StrokeCap.round;
+    final n = (size.width * size.height / 7).round().clamp(800, 40000);
+    for (var i = 0; i < n; i++) {
+      final p = Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height);
+      final a = rnd.nextDouble() * math.pi;
+      final len = 0.8 + rnd.nextDouble() * 1.8;
+      f
+        ..strokeWidth = 0.5 + rnd.nextDouble() * 0.5
+        ..color = rnd.nextDouble() < 0.55 ? const Color(0x1A001408) : const Color(0x14D8FFE4);
+      canvas.drawLine(p, p + Offset(math.cos(a) * len, math.sin(a) * len), f);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Felt old) => false;
+}
+
+/// Over the felt and the prints on it: sunk below the rim (shadow round
+/// its edges), the lamp's light falling across it.
+class _FeltShade extends CustomPainter {
+  const _FeltShade();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final r = Offset.zero & size;
+    canvas.drawRect(
+      r,
+      Paint()
+        ..shader = ui.Gradient.radial(Offset(size.width * 0.5, -size.height * 0.2), size.width * 0.85, const [
+          Color(0x22FFE6B0),
+          Color(0x00FFE6B0),
+        ]),
+    );
     canvas.drawRect(
       r,
       Paint()
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0x80000000), Color(0x00000000), Color(0x00000000), Color(0x30000000)],
-          stops: [0, 0.16, 0.85, 1],
+          colors: [Color(0x8C000000), Color(0x00000000), Color(0x00000000), Color(0x33000000)],
+          stops: [0, 0.14, 0.86, 1],
         ).createShader(r),
     );
     canvas.drawRect(
       r,
       Paint()
         ..shader = const LinearGradient(
-          colors: [Color(0x40000000), Color(0x00000000), Color(0x00000000), Color(0x40000000)],
+          colors: [Color(0x55000000), Color(0x00000000), Color(0x00000000), Color(0x55000000)],
           stops: [0, 0.05, 0.95, 1],
         ).createShader(r),
     );
   }
 
   @override
-  bool shouldRepaint(_Felt old) => false;
+  bool shouldRepaint(_FeltShade old) => false;
 }
 
 /// The book's button: a little open album and how many pieces are in it.
@@ -738,7 +998,7 @@ class _BookButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
-    label: 'The book, $works pieces',
+    label: 'Your book, $works pieces',
     child: Material(
       color: const Color(0xFF5A3A24),
       borderRadius: BorderRadius.circular(14),

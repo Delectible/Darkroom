@@ -222,7 +222,7 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                 icon: const Icon(Icons.arrow_back, color: StudioInk.ink),
               );
               const title = Text(
-                'THE BOOK',
+                'YOUR BOOK',
                 style: TextStyle(
                   color: StudioInk.label,
                   fontWeight: FontWeight.w900,
@@ -247,17 +247,7 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                       style: const TextStyle(color: StudioInk.muted, fontSize: 12),
                     );
               final Widget content = works.isEmpty
-                  ? const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(40),
-                        child: Text(
-                          'The book is empty. Strips, collages, scrapbook pages and flip books you make in the '
-                          'Studio go here.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: StudioInk.muted, height: 1.4),
-                        ),
-                      ),
-                    )
+                  ? const _EmptyBook()
                   : LayoutBuilder(
                       builder: (context, box) {
                         _openWhenReady(ready);
@@ -906,6 +896,88 @@ class _BookBody extends CustomPainter {
       old.open != open;
 }
 
+/// No pieces yet: the book lying shut, a note on a lined card below it.
+class _EmptyBook extends StatelessWidget {
+  const _EmptyBook();
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final w = math.min(box.maxWidth * 0.6, box.maxHeight * 0.5 * bookPageAspect);
+      final note = math.min(box.maxWidth * 0.78, 320.0);
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                boxShadow: [BoxShadow(color: Color(0x99000000), blurRadius: 18, offset: Offset(4, 10))],
+              ),
+              child: SizedBox(width: w, height: w / bookPageAspect, child: const _FrontCover()),
+            ),
+            SizedBox(height: w * 0.16),
+            Transform.rotate(angle: -0.035, child: _NoteCard(width: note)),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+/// A little lined index card, written on by hand.
+class _NoteCard extends StatelessWidget {
+  const _NoteCard({required this.width});
+
+  final double width;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: width,
+    padding: EdgeInsets.fromLTRB(width * 0.1, width * 0.05, width * 0.06, width * 0.06),
+    decoration: const BoxDecoration(
+      color: Color(0xFFF8F3E6),
+      boxShadow: [BoxShadow(color: Color(0x80000000), blurRadius: 8, offset: Offset(2, 4))],
+    ),
+    child: CustomPaint(
+      painter: _CardLines(),
+      child: Text(
+        'Create some projects to start collecting them in your book',
+        textAlign: TextAlign.left,
+        style: TextStyle(
+          fontFamily: 'Caveat',
+          color: const Color(0xFF2B3A67),
+          fontSize: width * 0.075,
+          height: 1.25,
+        ),
+      ),
+    ),
+  );
+}
+
+class _CardLines extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // ruled lines under the writing, the red margin down the left
+    final line = Paint()
+      ..color = const Color(0x557A9CC6)
+      ..strokeWidth = 1;
+    final step = size.width * 0.075 * 1.25;
+    for (var y = step * 0.98; y < size.height + step * 0.5; y += step) {
+      canvas.drawLine(Offset(-size.width * 0.06, y), Offset(size.width * 1.04, y), line);
+    }
+    canvas.drawLine(
+      Offset(-size.width * 0.04, -size.width * 0.05),
+      Offset(-size.width * 0.04, size.height + size.width * 0.06),
+      Paint()
+        ..color = const Color(0x77D0605A)
+        ..strokeWidth = 1.2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_CardLines old) => false;
+}
+
 /// The album's front cover: leather, a gold rule, its name stamped in gold.
 class _FrontCover extends ConsumerWidget {
   const _FrontCover();
@@ -960,7 +1032,9 @@ class _FrontCover extends ConsumerWidget {
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             child: Text(
-                              owner.toUpperCase(),
+                              owner.toUpperCase().endsWith('S')
+                                  ? "${owner.toUpperCase()}'"
+                                  : "${owner.toUpperCase()}'S",
                               maxLines: 1,
                               softWrap: false,
                               style: TextStyle(

@@ -715,6 +715,40 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                           ),
                         ),
                       ),
+                      // More than a screen down: a tag pinned at the foot
+                      // takes you back up.
+                      Positioned(
+                        left: 14 + leftInset,
+                        bottom: 12 + bottomInset,
+                        child: AnimatedBuilder(
+                          animation: _scroll,
+                          builder: (context, _) {
+                            final far =
+                                _scroll.hasClients &&
+                                _scroll.position.hasViewportDimension &&
+                                _scroll.offset > _scroll.position.viewportDimension;
+                            return IgnorePointer(
+                              ignoring: !far,
+                              child: AnimatedSlide(
+                                offset: far ? Offset.zero : const Offset(0, 1.6),
+                                duration: const Duration(milliseconds: 260),
+                                curve: far ? Curves.easeOutBack : Curves.easeIn,
+                                child: _BackToTop(
+                                  onTap: () => unawaited(
+                                    _scroll.animateTo(
+                                      0,
+                                      duration: Duration(
+                                        milliseconds: (300 + _scroll.offset / 6).clamp(300, 900).round(),
+                                      ),
+                                      curve: Curves.easeInOutCubic,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                       // A note tucked in the corner of the frame: the shake.
                       if (developed.isNotEmpty)
                         Positioned(
@@ -1303,6 +1337,7 @@ class PinnedPrint extends StatelessWidget {
                     children: [
                       Positioned.fill(
                         child: _FlipCard(
+                          seed: item.id.hashCode,
                           back: _PrintBack(item: item),
                           // (a frame chosen in the viewer, else the lab's white border)
                           front: Consumer(
@@ -1409,6 +1444,8 @@ class PinnedInstant extends StatelessWidget {
                   clipBehavior: Clip.none,
                   children: [
                     _FlipCard(
+                      seed: item.id.hashCode,
+                      instant: true,
                       back: _PrintBack(item: item, instant: true),
                       front: Consumer(
                         builder: (context, ref, child) => InstantPrint(
@@ -2336,10 +2373,16 @@ class _FallingState extends State<_Falling> with SingleTickerProviderStateMixin 
 /// turns over to show the lab's stamp on the back; tap the back to turn it
 /// round again.
 class _FlipCard extends StatefulWidget {
-  const _FlipCard({required this.front, required this.back});
+  const _FlipCard({required this.front, required this.back, required this.seed, this.instant = false});
 
   final Widget front;
   final Widget back;
+
+  /// Each print's own fold (size, slant, curl), the same every time.
+  final int seed;
+
+  /// An instant print: black backing (the flap on the front shows it).
+  final bool instant;
 
   @override
   State<_FlipCard> createState() => _FlipCardState();
@@ -2375,6 +2418,11 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
       builder: (context, _) {
         final a = Curves.easeInOut.transform(_flip.value) * math.pi;
         final showBack = a > math.pi / 2;
+        final ear = _Ear.of(widget.seed);
+        // the flap shows the paper's other side: the back's from the
+        // front, the picture side's (its border) from the back
+        final backPaper = widget.instant ? const Color(0xFF222222) : const Color(0xFFE9E3D6);
+        const frontPaper = Color(0xFFF7F5F0);
         return Transform(
           alignment: Alignment.center,
           transform: Matrix4.identity()
@@ -2391,9 +2439,7 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                 maintainAnimation: true,
                 maintainState: true,
                 // (the folded corner cut away, so the cork shows under the fold)
-                child: showBack
-                    ? widget.front
-                    : ClipPath(clipper: const _CornerCut(_earSize), child: widget.front),
+                child: showBack ? widget.front : ClipPath(clipper: _CornerCut(ear), child: widget.front),
               ),
               if (!showBack) ...[
                 // The folded corner: the tap target for the easter egg.
@@ -2405,12 +2451,12 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                     onTap: _toggle,
                     // Generous target round a small corner: easy to hit
                     // without the fold itself getting bigger.
-                    child: const SizedBox(
+                    child: SizedBox(
                       width: 46,
                       height: 46,
                       child: Align(
                         alignment: Alignment.bottomRight,
-                        child: CustomPaint(size: Size(_earSize, _earSize), painter: _DogEar()),
+                        child: CustomPaint(size: Size.square(ear.box), painter: _DogEar(ear, backPaper)),
                       ),
                     ),
                   ),
@@ -2424,7 +2470,26 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: _toggle,
-                      child: widget.back,
+                      // the same corner, seen from behind: cut the same, its
+                      // flap showing the picture side
+                      child: Stack(
+                        fit: StackFit.passthrough,
+                        children: [
+                          ClipPath(clipper: _CornerCut(ear, mirrored: true), child: widget.back),
+                          Positioned(
+                            left: 0,
+                            bottom: 0,
+                            child: Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.identity()..rotateY(math.pi),
+                              child: CustomPaint(
+                                size: Size.square(ear.box),
+                                painter: _DogEar(ear, frontPaper),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -2436,79 +2501,165 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
   }
 }
 
-const double _earSize = 12;
+/// One print's dog-ear: how far the fold runs up the side ([up]) and
+/// along the foot ([along]), so the crease slants its own way; how much it
+/// curls ([curl]) and how worn its tip is ([wear]). From the print's id:
+/// each its own, never formulaic, the same every time.
+class _Ear {
+  _Ear._(this.up, this.along, this.curl, this.wear);
 
-/// Everything round a print (its shadow too) but the bottom-right corner
-/// that's folded over.
+  factory _Ear.of(int seed) => _made.putIfAbsent(seed, () => _Ear._make(seed));
+
+  static final _made = <int, _Ear>{};
+
+  factory _Ear._make(int seed) {
+    final r = math.Random(seed ^ 0x5eed);
+    final size = 9 + r.nextDouble() * 9; // 9-18 px
+    final slant = 0.6 + r.nextDouble() * 0.8; // up : along
+    return _Ear._(
+      size * math.sqrt(slant),
+      size / math.sqrt(slant),
+      (r.nextDouble() - 0.3) * 0.35,
+      r.nextDouble(),
+    );
+  }
+
+  final double up, along, curl, wear;
+
+  /// The painted box (the folded flap reaches no further than this).
+  double get box => math.max(up, along) * 1.15;
+
+  /// In a box [b] with the corner at its bottom right: the crease's ends,
+  /// and the corner folded over it.
+  (Offset, Offset, Offset) points(double b) {
+    final c = Offset(b, b);
+    final p1 = Offset(b, b - up), p2 = Offset(b - along, b);
+    // the corner reflected across the crease, drawn back a touch (paper
+    // doesn't lie perfectly flat once folded)
+    final d = p2 - p1;
+    final t = ((c - p1).dx * d.dx + (c - p1).dy * d.dy) / (d.dx * d.dx + d.dy * d.dy);
+    final foot = p1 + d * t;
+    final tip = Offset.lerp(c, foot * 2 - c, 0.9 - 0.08 * wear)!;
+    return (p1, p2, tip);
+  }
+}
+
+/// Everything round a print (its shadow too) but the folded corner:
+/// bottom right, or bottom left [mirrored] (the back).
 class _CornerCut extends CustomClipper<Path> {
-  const _CornerCut(this.ear);
+  const _CornerCut(this.ear, {this.mirrored = false});
 
-  final double ear;
+  final _Ear ear;
+  final bool mirrored;
 
   @override
   Path getClip(Size size) {
     final w = size.width, h = size.height;
-    return Path.combine(
-      PathOperation.difference,
-      Path()..addRect((Offset.zero & size).inflate(40)),
-      Path()
-        ..moveTo(w, h - ear)
-        ..lineTo(w + 40, h - ear)
-        ..lineTo(w + 40, h + 40)
-        ..lineTo(w - ear, h + 40)
-        ..lineTo(w - ear, h)
-        ..close(),
-    );
+    final cut = mirrored
+        ? (Path()
+            ..moveTo(0, h - ear.up)
+            ..lineTo(-40, h - ear.up)
+            ..lineTo(-40, h + 40)
+            ..lineTo(ear.along, h + 40)
+            ..lineTo(ear.along, h)
+            ..close())
+        : (Path()
+            ..moveTo(w, h - ear.up)
+            ..lineTo(w + 40, h - ear.up)
+            ..lineTo(w + 40, h + 40)
+            ..lineTo(w - ear.along, h + 40)
+            ..lineTo(w - ear.along, h)
+            ..close());
+    return Path.combine(PathOperation.difference, Path()..addRect((Offset.zero & size).inflate(40)), cut);
   }
 
   @override
-  bool shouldReclip(_CornerCut old) => old.ear != ear;
+  bool shouldReclip(_CornerCut old) => old.ear != ear || old.mirrored != mirrored;
 }
 
-/// A turned-up paper corner: the flap folded over onto the print, its soft
-/// shadow on the cork where the corner was.
+/// A turned-up paper corner: the flap folded over onto the print (a little
+/// curled, its tip worn soft), its shadow on the cork where the corner was.
 class _DogEar extends CustomPainter {
-  const _DogEar();
+  const _DogEar(this.ear, this.paper);
+
+  final _Ear ear;
+
+  /// The flap's side of the paper.
+  final Color paper;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width, h = size.height;
-    // the flap's shadow, falling on the cork
+    final b = size.width;
+    final (p1, p2, tip) = ear.points(b);
+    // the crease bows a little: the flap isn't pressed flat
+    final mid = Offset.lerp(p1, p2, 0.5)!;
+    final bow = mid + (tip - mid) * ear.curl * 0.3;
+    final flap = Path()
+      ..moveTo(p1.dx, p1.dy)
+      ..quadraticBezierTo(bow.dx, bow.dy, p2.dx, p2.dy)
+      ..quadraticBezierTo(
+        Offset.lerp(p2, tip, 0.6)!.dx + ear.curl * 2,
+        Offset.lerp(p2, tip, 0.6)!.dy,
+        tip.dx,
+        tip.dy,
+      )
+      ..quadraticBezierTo(
+        Offset.lerp(p1, tip, 0.6)!.dx,
+        Offset.lerp(p1, tip, 0.6)!.dy - ear.curl * 2,
+        p1.dx,
+        p1.dy,
+      )
+      ..close();
+    // its shadow: on the cork beyond the crease, and on the print under it
     canvas.drawPath(
       Path()
-        ..moveTo(w, 0)
-        ..lineTo(w * 0.55, h * 0.75)
-        ..lineTo(0, h)
+        ..moveTo(p1.dx, p1.dy)
+        ..lineTo(b + 1.5, b + 1.5)
+        ..lineTo(p2.dx, p2.dy)
         ..close(),
-      Paint()
-        ..color = const Color(0x44000000)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
-    );
-    // the flap: the back of the paper, a touch darker towards the crease
-    canvas.drawPath(
-      Path()
-        ..moveTo(w, 0)
-        ..lineTo(0, h)
-        ..lineTo(0, 0)
-        ..close(),
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFF1ECE1), Color(0xFFD9D2C3)],
-        ).createShader(Offset.zero & size),
-    );
-    canvas.drawLine(
-      Offset(w, 0),
-      Offset(0, h),
       Paint()
         ..color = const Color(0x40000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
+    );
+    canvas.drawPath(
+      flap.shift(const Offset(0.8, 1.0)),
+      Paint()
+        ..color = const Color(0x33000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.4),
+    );
+    // the flap: lighter at its tip, shaded into the crease
+    final dark = Color.lerp(paper, const Color(0xFF000000), 0.14)!;
+    canvas.drawPath(
+      flap,
+      Paint()
+        ..shader = ui.Gradient.linear(tip, mid, [
+          Color.lerp(paper, const Color(0xFFFFFFFF), 0.12 * (1 - ear.wear))!,
+          dark,
+        ]),
+    );
+    // a worn tip: a little grey where it's been handled
+    if (ear.wear > 0.55) {
+      canvas.drawCircle(
+        tip,
+        1.6 + ear.wear,
+        Paint()
+          ..color = Color.fromRGBO(120, 110, 95, 0.12 * ear.wear)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1),
+      );
+    }
+    canvas.drawPath(
+      Path()
+        ..moveTo(p1.dx, p1.dy)
+        ..quadraticBezierTo(bow.dx, bow.dy, p2.dx, p2.dy),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..color = const Color(0x45000000)
         ..strokeWidth = 0.7,
     );
   }
 
   @override
-  bool shouldRepaint(_DogEar old) => false;
+  bool shouldRepaint(_DogEar old) => old.ear != ear || old.paper != paper;
 }
 
 /// The back of a print: the paper maker's watermark and the lab's stamp
@@ -2889,6 +3040,88 @@ class _PrintTrayState extends State<_PrintTray> {
 
 /// "shake to clear", handwritten on a scrap of paper tucked into the board's
 /// corner.
+/// "Back to top": a kraft tag pinned to the cork, an arrow drawn on it.
+class _BackToTop extends StatelessWidget {
+  const _BackToTop({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: 'Back to top',
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        unawaited(Haptics.selectionClick());
+        onTap();
+      },
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Transform.rotate(
+          angle: 0.06,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.topCenter,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                padding: const EdgeInsets.fromLTRB(12, 10, 14, 6),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFD8B98A), Color(0xFFC29E6C)],
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                  boxShadow: const [BoxShadow(color: Color(0x77000000), blurRadius: 6, offset: Offset(2, 4))],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '↑',
+                      style: TextStyle(
+                        fontFamily: 'Caveat',
+                        fontSize: 24,
+                        height: 1,
+                        color: Color(0xFF3A2614),
+                      ),
+                    ),
+                    SizedBox(width: 5),
+                    Text(
+                      'back to top',
+                      style: TextStyle(
+                        fontFamily: 'Caveat',
+                        fontSize: 19,
+                        height: 1,
+                        color: Color(0xFF3A2614),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // its pin
+              Container(
+                width: 11,
+                height: 11,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    center: Alignment(-0.35, -0.35),
+                    colors: [Color(0xFFF08A7A), Color(0xFFB0281E)],
+                  ),
+                  boxShadow: [BoxShadow(color: Color(0x88000000), blurRadius: 2, offset: Offset(1, 2))],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 class _ShakeNote extends StatelessWidget {
   const _ShakeNote();
 

@@ -107,6 +107,8 @@ class ZoomController extends Notifier<ZoomState> {
       // left zoomed by a digital body that shared it.
       var hi = zoom == null ? lo : math.max(lo, math.min(zoom.max, hwMax));
       if (teleAt != null && !tele) hi = math.max(lo, math.min(hi, teleAt * 0.9));
+      // (the fish-eye doesn't zoom: its circle is the picture)
+      if (ref.read(filmLensProvider) == LensKind.fisheye) hi = lo;
       // Film: the same zoom (magnification) as the stock before, if this lens
       // goes that far; else as far as it does (2.1.4).
       final kept = _filmLevel;
@@ -152,9 +154,13 @@ class ZoomController extends Notifier<ZoomState> {
     lensMove = null;
     final was = _lastLens;
     _lastLens = lens;
-    // On or off the tele converter (Android): the range itself changes.
     final c0 = _controller;
-    if (c0 != null && _teleAt(c0) != null && (lens == LensKind.tele || was == LensKind.tele)) {
+    // On or off the fish-eye (it doesn't zoom), or the tele converter
+    // (Android): the range itself changes.
+    if (c0 != null &&
+        (lens == LensKind.fisheye ||
+            was == LensKind.fisheye ||
+            (_teleAt(c0) != null && (lens == LensKind.tele || was == LensKind.tele)))) {
       lensMove = _attach(c0);
       return;
     }

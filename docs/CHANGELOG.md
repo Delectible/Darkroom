@@ -1645,5 +1645,8 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 92. Page edge step capped (books of few pages grew too much a turn).
 - [x] 93. Scrapbook pages show their page number, under their pieces (pieces saved as a layer; older pages: faint on top).
 - [x] 94. The owner's name on The Book's cover, shrinks to fit.
-- [ ] 95. Empty book: only a line of text now (no book shown).
-- [ ] 96. Studio visual refresh: mockups A desk/felt box, B cutting mat/linen, C safelight/tray.
+- [x] 95. Empty book: the shut book and a handwritten lined card. Heading "Your Book"; cover "NAME'S".
+- [x] 96. Studio: walnut boards under a lamp, a wooden photo box with brass corners, green felt.
+- [x] 97. No zoom with the fish-eye.
+- [x] 98. Corkboard dog-ears: each its own size, slant, curl and wear; the back shows the same corner.
+- [x] 99. Corkboard: a pinned "back to top" tag past a screen down.

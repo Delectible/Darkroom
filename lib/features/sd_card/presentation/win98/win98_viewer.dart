@@ -155,18 +155,16 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                           onPressed: _index < _items.length - 1 ? () => _go(1) : null,
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${_index + 1} of ${_items.length}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: W98.text,
-                          ),
+                        // (its full width: the buttons shrink to fit around it)
+                        Text(
+                          '${_index + 1} of ${_items.length}',
+                          maxLines: 1,
+                          softWrap: false,
+                          style: W98.text,
                         ),
                         const SizedBox(width: 8),
                         // (large fonts: the three shrink to fit, not run off)
-                        Flexible(
-                          flex: 8,
+                        Expanded(
                           child: FittedBox(
                             fit: BoxFit.scaleDown,
                             alignment: Alignment.centerRight,

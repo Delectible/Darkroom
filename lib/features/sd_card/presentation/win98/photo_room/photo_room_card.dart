@@ -255,7 +255,7 @@ class CardEditorState extends State<CardEditor> {
   Future<String?> _ask(String title, String initial) => askWin98Text(context, title, initial);
 
   Future<void> _addWord() async {
-    final t = await _ask('WordArt', 'Happy Birthday!');
+    final t = await _ask('WordArt', 'Happy Anniversary!');
     if (t == null || t.isEmpty) return;
     setState(() {
       final b = CardBit.word(t, const Offset(0.5, 0.86), style: WordArtStyle.values[_d.bits.length % 5]);

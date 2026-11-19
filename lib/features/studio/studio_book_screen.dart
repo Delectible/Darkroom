@@ -73,6 +73,9 @@ class StudioBookScreen extends ConsumerStatefulWidget {
 class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with SingleTickerProviderStateMixin {
   final _turn = GlobalKey<PageTurnState>();
   final _shot = GlobalKey();
+
+  /// Sideways with both pages showing: the left one (saved on its own).
+  final _shotLeft = GlobalKey();
   final _aspects = <String, double>{};
   final _asking = <String>{};
   int _at = 0;
@@ -158,8 +161,8 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
     }
   }
 
-  Future<void> _savePage(double width) async {
-    final box = _shot.currentContext?.findRenderObject();
+  Future<void> _savePage(double width, [GlobalKey? which]) async {
+    final box = (which ?? _shot).currentContext?.findRenderObject();
     if (box is! RenderRepaintBoundary) return;
     setState(() => _saving = true);
     String? error;
@@ -315,6 +318,8 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                                             clipper: const _PageShape(left: true),
                                             child: c == shown
                                                 ? RepaintBoundary(key: _shot, child: page)
+                                                : c == 2 * open - 1
+                                                ? RepaintBoundary(key: _shotLeft, child: page)
                                                 : page,
                                           );
                                         },
@@ -351,6 +356,21 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                           icon: Icons.chevron_right,
                           onTap: !opened || open >= turns - 1 ? null : () => _turn.currentState?.next(),
                         );
+                        Widget saveOne(String label, VoidCallback onSave) => FilledButton(
+                          onPressed: _saving || !opened ? null : onSave,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: StudioInk.brass,
+                            foregroundColor: const Color(0xFF22150B),
+                            minimumSize: const Size(0, 44),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          child: Text(
+                            _saving ? 'Saving…' : label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
                         final save = FilledButton(
                           onPressed: _saving || !opened ? null : () => _savePage(pw),
                           style: FilledButton.styleFrom(
@@ -380,7 +400,22 @@ class _StudioBookScreenState extends ConsumerState<StudioBookScreen> with Single
                                       children: [prev, const SizedBox(width: 12), next],
                                     ),
                                     const SizedBox(height: 12),
-                                    Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: save),
+                                    if (open > 0 && 2 * open < n) ...[
+                                      // both pages showing: each saved on its own
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        child: saveOne('Save left page', () => _savePage(pw, _shotLeft)),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        child: saveOne('Save right page', () => _savePage(pw)),
+                                      ),
+                                    ] else
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        child: save,
+                                      ),
                                   ],
                                 ),
                               ),

@@ -1634,3 +1634,8 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
   disk with no workers. Launch Timing says why the launch picture is unused.
 - [x] 82. Lens pinning off on Android (the Pixel ignored it); zoom limits again.
 - [x] 83. Shutter and pile flip books lie in The Book as a still pile.
+- [x] 84. (2.4.1) Digital review screen: Photo Room pieces left out.
+- [x] 85. Win98 viewer: "1 of #" no longer cut short upright.
+- [x] 86. Photo Room WordArt default: "Happy Anniversary!".
+- [x] 87. The Book sideways: Save left page / Save right page.
+- [x] 88. Pile flip books warmed ahead: no flash as their page opens.

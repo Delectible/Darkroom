@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.4.0';
+  static const version = '2.4.1';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Wide and Tele lenses work again on Pixels. Shutter and pile flip books lie in The Book as a pile of prints. Much faster start.';
+      'Save either page of The Book on its own (sideways). The digital review screen shows only real photos. Fixes.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

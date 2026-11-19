@@ -960,7 +960,10 @@ class GalleryButton extends ConsumerWidget {
     // Digital with Auto Transfer on: the card stays empty (new pictures go
     // straight to C:), so the review screen shows C:'s newest instead
     final onC = !film && ref.watch(globalSettingsProvider.select((s) => s.autoSave));
-    final shown = onC ? all.where((m) => m.location == MediaLocation.c) : items;
+    // (real pictures only: not what the Photo Room made)
+    final shown = onC
+        ? all.where((m) => m.location == MediaLocation.c && m.cameraId != CameraCatalog.photoRoomId)
+        : items;
     final latest = shown.where((m) => m.isReady && m.thumbPath != null && (!film || m.isDevelopedAt(now)));
     final thumb = latest.isEmpty ? null : latest.first.thumbPath;
     final empty = onC ? 'STORAGE\nEMPTY' : 'SD\nEMPTY';

@@ -6,12 +6,13 @@ import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'game_help.dart';
 import 'high_scores.dart';
 import 'skin_awards.dart';
 
-/// SOL.EXE: Klondike, draw one, made for a phone: tap a card and it goes
-/// where it can (home to the foundations first, else onto a column). Tap
-/// the deck to deal; tap the empty deck to turn the pile over.
+/// SOL.EXE: Klondike, draw one: drag a card (or a run of them) onto a
+/// column or home to the foundations, as on the real thing. Tap the deck
+/// to deal; tap the empty deck to turn the pile over.
 Future<void> showSolitaire(BuildContext context) => showWin98Window<void>(
   context,
   title: 'Solitaire',
@@ -153,6 +154,52 @@ class Klondike {
     return true;
   }
 
+  // ---- dragging: a card (or a run) dropped on one place ----
+
+  /// The cards a drag from [from] picks up (bottom first), or none.
+  List<PlayingCard> pickUp(CardSpot from) => switch (from) {
+    WasteSpot() => waste.isEmpty ? const [] : [waste.last],
+    FoundationSpot(:final f) => foundations[f].isEmpty ? const [] : [foundations[f].last],
+    ColumnSpot(:final c, :final i) =>
+      i >= 0 && i < tableau[c].length && tableau[c][i].up ? tableau[c].sublist(i) : const [],
+  };
+
+  /// Drops what [from] holds on foundation [f] (one card) or column [c].
+  bool drop(CardSpot from, {int? f, int? c}) {
+    final run = pickUp(from);
+    if (run.isEmpty) return false;
+    if (f != null) {
+      if (run.length != 1 || (from is FoundationSpot && from.f == f)) return false;
+      final pile = foundations[f];
+      final card = run.first;
+      final ok = pile.isEmpty
+          ? card.rank == 1
+          : (pile.last.suit == card.suit && pile.last.rank == card.rank - 1);
+      if (!ok) return false;
+      _take(from, 1);
+      pile.add(card);
+    } else if (c != null) {
+      if (from is ColumnSpot && from.c == c) return false;
+      if (!_fitsOn(run.first, tableau[c])) return false;
+      _take(from, run.length);
+      tableau[c].addAll(run);
+    } else {
+      return false;
+    }
+    _flipTops();
+    moves++;
+    return true;
+  }
+
+  void _take(CardSpot from, int n) {
+    final pile = switch (from) {
+      WasteSpot() => waste,
+      FoundationSpot(:final f) => foundations[f],
+      ColumnSpot(:final c) => tableau[c],
+    };
+    pile.removeRange(pile.length - n, pile.length);
+  }
+
   bool tapFoundation(int f) {
     final pile = foundations[f];
     if (pile.isEmpty) return false;
@@ -162,6 +209,25 @@ class Klondike {
     moves++;
     return true;
   }
+}
+
+/// Where a dragged card comes from.
+sealed class CardSpot {
+  const CardSpot();
+}
+
+class WasteSpot extends CardSpot {
+  const WasteSpot();
+}
+
+class FoundationSpot extends CardSpot {
+  const FoundationSpot(this.f);
+  final int f;
+}
+
+class ColumnSpot extends CardSpot {
+  const ColumnSpot(this.c, this.i);
+  final int c, i;
 }
 
 class SolitaireGame extends StatefulWidget {
@@ -192,6 +258,65 @@ class _SolitaireGameState extends State<SolitaireGame> {
       _counted = false;
     });
   }
+
+  // the drag under way: what's held, where it was picked up from, and where
+  // the finger has it now (the held card's top left)
+  CardSpot? _from;
+  Offset _held = Offset.zero, _grab = Offset.zero;
+
+  // this layout's targets (set as it's built)
+  final _cards = <(Rect, CardSpot)>[];
+  final _foundationRects = <Rect>[];
+  final _columnRects = <Rect>[];
+
+  void _dragStart(DragStartDetails d) {
+    final p = d.localPosition;
+    for (final (r, spot) in _cards.reversed) {
+      if (r.contains(p) && _game.pickUp(spot).isNotEmpty) {
+        setState(() {
+          _from = spot;
+          _grab = p - r.topLeft;
+          _held = r.topLeft;
+        });
+        return;
+      }
+    }
+  }
+
+  void _dragUpdate(DragUpdateDetails d) {
+    if (_from == null) return;
+    setState(() => _held = d.localPosition - _grab);
+  }
+
+  void _dragEnd() {
+    final from = _from;
+    if (from == null) return;
+    // where the held card mostly is: the target it overlaps most
+    final held = _held & _cardSize;
+    double overlap(Rect r) {
+      final i = r.intersect(held);
+      return i.width <= 0 || i.height <= 0 ? 0 : i.width * i.height;
+    }
+
+    var best = 0.0;
+    int? f, c;
+    for (var k = 0; k < _foundationRects.length; k++) {
+      final o = overlap(_foundationRects[k]);
+      if (o > best) (best, f, c) = (o, k, null);
+    }
+    for (var k = 0; k < _columnRects.length; k++) {
+      final o = overlap(_columnRects[k]);
+      if (o > best) (best, f, c) = (o, null, k);
+    }
+    _from = null;
+    if (best <= 0) {
+      setState(() {});
+      return;
+    }
+    _act(() => _game.drop(from, f: f, c: c));
+  }
+
+  Size _cardSize = Size.zero;
 
   void _act(bool Function() move) {
     final ok = move();
@@ -229,6 +354,16 @@ class _SolitaireGameState extends State<SolitaireGame> {
         const topY = 6.0;
         final rowY = topY + h + 10;
         final children = <Widget>[];
+        _cardSize = Size(w, h);
+        _cards.clear();
+        _foundationRects
+          ..clear()
+          ..addAll([for (var f = 0; f < 4; f++) Rect.fromLTWH(x(3 + f), topY, w, h)]);
+        _columnRects
+          ..clear()
+          ..addAll([for (var c = 0; c < 7; c++) Rect.fromLTRB(x(c), rowY, x(c) + w, box.maxHeight)]);
+        final held = _from == null ? const <PlayingCard>[] : _game.pickUp(_from!);
+        bool isHeld(PlayingCard k) => held.any((h) => identical(h, k));
 
         Widget slot(double left, double top) =>
             Positioned(left: left, top: top, width: w, height: h, child: _Slot());
@@ -256,33 +391,27 @@ class _SolitaireGameState extends State<SolitaireGame> {
         // Waste.
         children.add(slot(x(1), topY));
         if (_game.waste.isNotEmpty) {
-          children.add(
-            Positioned(
-              left: x(1),
-              top: topY,
-              width: w,
-              height: h,
-              child: GestureDetector(onTap: () => _act(_game.tapWaste), child: _CardFace(_game.waste.last)),
-            ),
-          );
+          _cards.add((Rect.fromLTWH(x(1), topY, w, h), const WasteSpot()));
+          // (the one under it shows while the top one's held)
+          final shown = isHeld(_game.waste.last)
+              ? (_game.waste.length > 1 ? _game.waste[_game.waste.length - 2] : null)
+              : _game.waste.last;
+          if (shown != null) {
+            children.add(Positioned(left: x(1), top: topY, width: w, height: h, child: _CardFace(shown)));
+          }
         }
         // Foundations.
         for (var f = 0; f < 4; f++) {
           children.add(slot(x(3 + f), topY));
           final pile = _game.foundations[f];
           if (pile.isNotEmpty) {
-            children.add(
-              Positioned(
-                left: x(3 + f),
-                top: topY,
-                width: w,
-                height: h,
-                child: GestureDetector(
-                  onTap: () => _act(() => _game.tapFoundation(f)),
-                  child: _CardFace(pile.last),
-                ),
-              ),
-            );
+            _cards.add((Rect.fromLTWH(x(3 + f), topY, w, h), FoundationSpot(f)));
+            final shown = isHeld(pile.last) ? (pile.length > 1 ? pile[pile.length - 2] : null) : pile.last;
+            if (shown != null) {
+              children.add(
+                Positioned(left: x(3 + f), top: topY, width: w, height: h, child: _CardFace(shown)),
+              );
+            }
           }
         }
         // Columns: face-down cards tucked tight, face-up ones fanned.
@@ -296,20 +425,46 @@ class _SolitaireGameState extends State<SolitaireGame> {
           var y = rowY;
           for (var i = 0; i < pile.length; i++) {
             final card = pile[i];
-            children.add(
-              Positioned(
-                left: x(c),
-                top: y,
-                width: w,
-                height: h,
-                child: GestureDetector(
-                  onTap: () => _act(() => _game.tapTableau(c, i)),
+            final next = y + (card.up ? fan : 5);
+            if (card.up) {
+              // (grabbed by the strip that shows; the last one by all of it)
+              _cards.add((Rect.fromLTWH(x(c), y, w, i == pile.length - 1 ? h : next - y), ColumnSpot(c, i)));
+            }
+            if (!isHeld(card)) {
+              children.add(
+                Positioned(
+                  left: x(c),
+                  top: y,
+                  width: w,
+                  height: h,
                   child: card.up ? _CardFace(card) : const _CardBack(),
                 ),
-              ),
-            );
-            y += card.up ? fan : 5;
+              );
+            }
+            y = next;
           }
+        }
+        // what's held, under the finger, on top of everything (fanned)
+        for (var k = 0; k < held.length; k++) {
+          children.add(
+            Positioned(
+              left: _held.dx,
+              top: _held.dy + k * h * 0.28,
+              width: w,
+              height: h,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(3),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x66000000), blurRadius: 4, offset: Offset(2, 3)),
+                    ],
+                  ),
+                  child: _CardFace(held[k]),
+                ),
+              ),
+            ),
+          );
         }
         if (_game.won) {
           children.add(
@@ -320,7 +475,7 @@ class _SolitaireGameState extends State<SolitaireGame> {
                   color: Colors.black38,
                   alignment: Alignment.center,
                   child: Text(
-                    'You won in ${_game.moves} moves!\nTap to deal again.',
+                    'You won in ${_game.moves} moves!\nTap to play again.',
                     textAlign: TextAlign.center,
                     style: W98.text.copyWith(color: Colors.white, fontSize: 16),
                   ),
@@ -334,13 +489,37 @@ class _SolitaireGameState extends State<SolitaireGame> {
             Expanded(
               child: ColoredBox(
                 color: const Color(0xFF008000),
-                child: Stack(children: children),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onPanStart: _dragStart,
+                  onPanUpdate: _dragUpdate,
+                  onPanEnd: (_) => _dragEnd(),
+                  onPanCancel: _dragEnd,
+                  child: Stack(children: children),
+                ),
               ),
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                Win98Button(onPressed: _redeal, child: const Text('Deal')),
+                Win98Button(onPressed: _redeal, child: const Text('Restart')),
+                const SizedBox(width: 4),
+                Win98Button(
+                  onPressed: () => showGameHelp(
+                    context,
+                    game: 'Solitaire',
+                    icon: PixelIcon.cards,
+                    howTo: const [
+                      'Drag a face-up card onto another column, one lower and the other colour (red on black). '
+                          'Drag a run of cards to move them together.',
+                      'Only a King goes into an empty column.',
+                      'Build each suit home in the top right, Ace to King.',
+                      'Tap the deck for a new card; tap it empty to turn the pile over.',
+                      'Win by getting all 52 cards home.',
+                    ],
+                  ),
+                  child: const Text('Help'),
+                ),
                 const Spacer(),
                 Text('Moves: ${_game.moves}'),
               ],

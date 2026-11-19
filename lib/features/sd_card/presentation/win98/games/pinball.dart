@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/scheduler.dart';
@@ -8,6 +9,7 @@ import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'game_help.dart';
 import 'high_scores.dart';
 import 'skin_awards.dart';
 import '../../../../../core/device/haptics.dart';
@@ -33,13 +35,35 @@ Future<void> showPinball(BuildContext context) => showWin98Window<void>(
       children: [
         const PinballGame(),
         const SizedBox(height: 6),
-        Align(
-          alignment: Alignment.centerRight,
-          child: Win98Button(
-            minWidth: 76,
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
+        Row(
+          children: [
+            Win98Button(
+              onPressed: () => showGameHelp(
+                context,
+                game: 'Pinball',
+                icon: PixelIcon.pinball,
+                howTo: const [
+                  'Launch: with the ball in the lane on the right, hold anywhere to pull the plunger back, '
+                      'let go to fire. The longer you hold, the harder it goes.',
+                  'Flippers: hold the left half of the table for the left flipper, the right half for the '
+                      'right one. Both at once is fine.',
+                  'Bumpers, slingshots and rubber posts kick the ball about for points.',
+                  'Roll through the top lanes to light R-A-B-B-I-T. Knock down all the FUEL or BOOST '
+                      'targets for a bonus.',
+                  'Shoot the ball up into the WORMHOLE: it comes out at the top.',
+                  'Finish the mission shown at the top to be promoted, Cadet to Admiral.',
+                  'Three balls a game; a ball lost straight after launch is given back once.',
+                ],
+              ),
+              child: const Text('Help'),
+            ),
+            const Spacer(),
+            Win98Button(
+              minWidth: 76,
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
         ),
       ],
     ),
@@ -135,6 +159,20 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     const _Seg(Offset(208, 300), Offset(208, 352)),
     const _Seg(Offset(208, 352), Offset(180, 372)),
     const _Seg(Offset(208, 300), Offset(180, 372), kick: 300, thick: 2.5),
+    // the rollover lanes' guides, between the letters at the top
+    for (var k = 0; k < 5; k++) _Seg(Offset(82.5 + k * 25, 36), Offset(82.5 + k * 25, 56), thick: 1.2),
+    // the wormhole's hood: a ball falling from above glances off it; only a
+    // shot up from below goes in
+    const _Seg(Offset(46, 240), Offset(62, 234), thick: 2),
+    const _Seg(Offset(62, 234), Offset(78, 240), thick: 2),
+  ];
+
+  /// Rubber posts: a little kick off each (the one high on the left
+  /// breaks the orbit, so a launch doesn't just run round and down).
+  static const _posts = [
+    (Offset(34, 104), 6.0, 220.0),
+    (Offset(96, 270), 4.5, 140.0),
+    (Offset(164, 270), 4.5, 140.0),
   ];
 
   static const _slings = [
@@ -155,6 +193,18 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
   ];
   double _fuelReset = 0;
 
+  // the BOOST bank, down the left side
+  final _boost = [
+    _Target(const Offset(27, 156), const Offset(27, 172)),
+    _Target(const Offset(27, 178), const Offset(27, 194)),
+    _Target(const Offset(27, 200), const Offset(27, 216)),
+  ];
+  double _boostReset = 0;
+
+  /// Seconds of ball save left (a ball lost straight after launch comes back).
+  double _save = 0;
+  bool _saveUsed = false;
+
   static const _hole = Offset(62, 250), _holeOut = Offset(196, 92);
   double _captured = 0; // seconds left inside the wormhole
 
@@ -172,7 +222,9 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     _Mission('Spell R-A-B-B-I-T', 1, 'rabbit'),
     _Mission('Jump the wormhole twice', 2, 'warp'),
     _Mission('Bumper storm: hit 15 bumpers', 15, 'bumper'),
+    _Mission('Boost: knock down the 3 BOOST targets', 1, 'boost'),
     _Mission('Refuel twice', 2, 'fuel'),
+    _Mission('Jump the wormhole 3 times', 3, 'warp'),
   ];
   int _rank = 0;
   int _mission = 0;
@@ -220,6 +272,7 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     _vel = Offset.zero;
     _inLane = true;
     _pull = 0;
+    _saveUsed = false;
   }
 
   void _newGame() {
@@ -230,7 +283,7 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     _progress = 0;
     _over = false;
     _lit.fillRange(0, 6, false);
-    for (final t in _fuel) {
+    for (final t in [..._fuel, ..._boost]) {
       t.down = false;
     }
     _newBall();
@@ -274,6 +327,7 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
       _pulling = false;
       _vel = Offset(0, -(680 + 340 * _pull));
       _pull = 0;
+      if (!_saveUsed) _save = 6;
       Sfx.pinLaunch.play();
     }
     _touches.remove(e.pointer);
@@ -297,6 +351,15 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     if (_flashFor > 0) _flashFor -= dt;
     for (final b in _bumpers) {
       b.flash = math.max(0, b.flash - dt * 4);
+    }
+    if (_save > 0 && !_inLane) _save -= dt;
+    if (_boostReset > 0) {
+      _boostReset -= dt;
+      if (_boostReset <= 0) {
+        for (final t in _boost) {
+          t.down = false;
+        }
+      }
     }
     if (_fuelReset > 0) {
       _fuelReset -= dt;
@@ -388,6 +451,34 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
         }
       }
     }
+    for (final t in _boost) {
+      if (!t.down && collide(t.a, t.b, 2)) {
+        t.down = true;
+        _score += 400;
+        Sfx.pinDrop.play();
+        if (_boost.every((t) => t.down)) {
+          _score += 3000;
+          _boostReset = 2;
+          Sfx.pinChime.play();
+          _say('Boost ready! +3000');
+          _progressOn('boost');
+        }
+      }
+    }
+    for (final (c, rad, kick) in _posts) {
+      final d = p - c;
+      final dist = d.distance;
+      if (dist < rad + _r && dist > 0) {
+        final n = d / dist;
+        p = c + n * (rad + _r);
+        final vn = v.dx * n.dx + v.dy * n.dy;
+        if (vn < 0) {
+          v = v - n * (1.6 * vn) + n * kick * 0.4;
+          _score += 20;
+          Sfx.pinSling.play();
+        }
+      }
+    }
     for (final f in [_left, _right]) {
       collide(
         f.pivot,
@@ -428,8 +519,9 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
         }
       }
     }
-    // The wormhole swallows a ball that isn't going too fast.
-    if ((p - _hole).distance < 8 && v.distance < 750) {
+    // The wormhole swallows a ball shot up into it (moving up, not too
+    // fast); one dropping from above glances off its hood.
+    if ((p - _hole).distance < 8 && v.dy < 0 && v.distance < 650) {
       _captured = 1.0;
       _ball = const Offset(-50, -50);
       _vel = Offset.zero;
@@ -449,6 +541,15 @@ class _PinballGameState extends State<PinballGame> with SingleTickerProviderStat
     if (speed > 1000) v = v / speed * 1000;
     _ball = p;
     _vel = v;
+    if (p.dy > _tableH + 20 && _save > 0 && !_saveUsed) {
+      _saveUsed = true;
+      _save = 0;
+      Sfx.pinChime.play();
+      _say('Ball saved!', 2);
+      _newBall();
+      _saveUsed = true;
+      return;
+    }
     if (p.dy > _tableH + 20) {
       _balls--;
       Sfx.pinDrain.play();
@@ -598,44 +699,98 @@ class _TablePainter extends CustomPainter {
     );
     canvas.restore();
 
-    // Glowing guides.
-    final glow = Paint()
-      ..color = const Color(0x664FA8FF)
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    final wall = Paint()
-      ..color = const Color(0xFFA8CCFF)
-      ..strokeWidth = 2.6
+    // Chrome rails: a dark bed, the metal, a highlight along the top edge.
+    final bed = Paint()
+      ..color = const Color(0xCC000000)
+      ..strokeWidth = 4.6
+      ..strokeCap = StrokeCap.round;
+    final metal = Paint()
+      ..color = const Color(0xFF9AA6B8)
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    final shine = Paint()
+      ..color = const Color(0xDDF4F8FF)
+      ..strokeWidth = 0.9
       ..strokeCap = StrokeCap.round;
     for (final s in _PinballGameState._walls) {
       if (s.kick > 0) continue;
-      canvas.drawLine(s.a, s.b, glow);
-      canvas.drawLine(s.a, s.b, wall);
+      canvas.drawLine(s.a + const Offset(0.8, 1.2), s.b + const Offset(0.8, 1.2), bed);
+      canvas.drawLine(s.a, s.b, metal..strokeWidth = s.thick < 1.5 ? 2 : 3);
+      canvas.drawLine(s.a - const Offset(0.5, 0.6), s.b - const Offset(0.5, 0.6), shine);
     }
-    // Slingshots: filled plastic with a lit rubber face.
+    // Slingshots: tinted plastic over a lit insert, a white rubber face.
     for (final tri in _PinballGameState._slings) {
       final path = Path()..addPolygon(tri, true);
-      canvas.drawPath(path, Paint()..color = const Color(0xCC1E3A8A));
+      final box = path.getBounds();
+      canvas.drawPath(path.shift(const Offset(1, 2)), Paint()..color = const Color(0x88000000));
+      canvas.drawPath(
+        path,
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF3D6FE0), Color(0xFF142B6E)],
+          ).createShader(box),
+      );
+      final inner = Path()..addPolygon([for (final q in tri) Offset.lerp(q, box.center, 0.45)!], true);
+      canvas.drawPath(
+        inner,
+        Paint()
+          ..color = const Color(0xFFFFD23F)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
+      );
       canvas.drawLine(
         tri[0],
         tri[2],
         Paint()
-          ..color = const Color(0xFFFFFFFF)
+          ..color = const Color(0xFFF2F2F2)
           ..strokeWidth = 3.2
           ..strokeCap = StrokeCap.round,
       );
+      for (final q in tri) {
+        _post(canvas, q, 2.6);
+      }
     }
-    // Lane arrows on the inlanes.
-    for (final x in [24.0, 236.0]) {
-      final p = Path()
-        ..moveTo(x - 5, 330)
-        ..lineTo(x + 5, 330)
-        ..lineTo(x, 340)
+    // Lit arrow inserts on the inlanes and up the middle.
+    void arrow(Offset c, double angle, Color col, {bool lit = true}) {
+      canvas.save();
+      canvas.translate(c.dx, c.dy);
+      canvas.rotate(angle);
+      final pth = Path()
+        ..moveTo(0, -7)
+        ..lineTo(6, 4)
+        ..lineTo(-6, 4)
         ..close();
-      canvas.drawPath(p, Paint()..color = const Color(0x99FFD23F));
+      if (lit) {
+        canvas.drawPath(
+          pth,
+          Paint()
+            ..color = col.withValues(alpha: 0.55)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+        );
+      }
+      canvas.drawPath(
+        pth,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color.lerp(col, Colors.white, 0.5)!,
+              col.withValues(alpha: lit ? 1 : 0.35),
+            ],
+          ).createShader(const Rect.fromLTWH(-6, -7, 12, 11)),
+      );
+      canvas.restore();
     }
-    // R-A-B-B-I-T rollovers.
+
+    final blink = (g._clock * 2).floor().isEven;
+    arrow(const Offset(24, 334), math.pi, const Color(0xFFFFD23F));
+    arrow(const Offset(236, 334), math.pi, const Color(0xFFFFD23F));
+    arrow(const Offset(62, 262), 0, const Color(0xFFB07CFF), lit: blink);
+    arrow(const Offset(130, 232), 0, const Color(0xFF4FD8FF), lit: !blink);
+    arrow(const Offset(130, 246), 0, const Color(0xFF4FD8FF), lit: blink);
+    // R-A-B-B-I-T rollovers: round lit inserts in the top lanes.
     for (var i = 0; i < 6; i++) {
       final lit = g._lit[i];
       final c = _PinballGameState._letterPos(i);
@@ -644,82 +799,184 @@ class _TablePainter extends CustomPainter {
           c,
           11,
           Paint()
-            ..color = const Color(0x66FFD23F)
+            ..color = const Color(0x88FFD23F)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4),
         );
       }
-      canvas.drawCircle(c, 8, Paint()..color = lit ? const Color(0xFFFFD23F) : const Color(0x553A4A80));
-      _text(canvas, _PinballGameState._letters[i], c, lit ? Colors.black : Colors.white60, 10);
+      canvas.drawCircle(c, 8.5, Paint()..color = const Color(0xFF0A0F24));
+      canvas.drawCircle(
+        c,
+        7.5,
+        Paint()
+          ..shader = RadialGradient(
+            center: const Alignment(-0.3, -0.4),
+            colors: lit
+                ? const [Color(0xFFFFF4C2), Color(0xFFFFC21F), Color(0xFFB57A00)]
+                : const [Color(0xFF55607F), Color(0xFF2A3354), Color(0xFF151A30)],
+          ).createShader(Rect.fromCircle(center: c, radius: 7.5)),
+      );
+      _text(canvas, _PinballGameState._letters[i], c, lit ? const Color(0xFF3A2400) : Colors.white70, 9);
     }
-    // Attack bumpers.
+    // Rubber posts: chrome pins in white rings.
+    for (final (c, rad, _) in _PinballGameState._posts) {
+      canvas.drawCircle(c + const Offset(1, 1.5), rad + 1, Paint()..color = const Color(0x99000000));
+      canvas.drawCircle(c, rad, Paint()..color = const Color(0xFFEDEDED));
+      _post(canvas, c, rad * 0.55);
+    }
+    // Attack bumpers: a chrome skirt, a lit cap that flares when struck.
     for (final b in g._bumpers) {
       final f = b.flash;
+      final r = b.radius;
+      canvas.drawCircle(b.c + const Offset(1.5, 2.5), r + 1, Paint()..color = const Color(0xAA000000));
+      if (f > 0) {
+        canvas.drawCircle(
+          b.c,
+          r + 7 * f,
+          Paint()
+            ..color = Color.fromRGBO(255, 80, 140, 0.55 * f)
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+        );
+      }
       canvas.drawCircle(
         b.c,
-        b.radius + 4 * f,
+        r,
         Paint()
-          ..color = Color.lerp(const Color(0x00FF3B7A), const Color(0x88FF3B7A), f)!
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+          ..shader = const SweepGradient(
+            colors: [
+              Color(0xFFE9EEF6),
+              Color(0xFF7D8796),
+              Color(0xFFDDE3EC),
+              Color(0xFF6A7382),
+              Color(0xFFE9EEF6),
+            ],
+          ).createShader(Rect.fromCircle(center: b.c, radius: r)),
       );
       canvas.drawCircle(
         b.c,
-        b.radius,
-        Paint()..color = Color.lerp(const Color(0xFFE0447A), Colors.white, f)!,
-      );
-      canvas.drawCircle(b.c, b.radius * 0.72, Paint()..color = const Color(0xFF3A0F2E));
-      canvas.drawCircle(b.c, b.radius * 0.42, Paint()..color = const Color(0xFFFFB0CF));
-    }
-    // FUEL targets.
-    for (var i = 0; i < g._fuel.length; i++) {
-      final t = g._fuel[i];
-      canvas.drawLine(
-        t.a,
-        t.b,
+        r * 0.78,
         Paint()
-          ..color = t.down ? const Color(0x44FF8C1A) : const Color(0xFFFF8C1A)
-          ..strokeWidth = 5
-          ..strokeCap = StrokeCap.round,
+          ..shader = RadialGradient(
+            center: const Alignment(-0.35, -0.45),
+            colors: [
+              Color.lerp(const Color(0xFFFF7AA8), Colors.white, f)!,
+              Color.lerp(const Color(0xFFD0124F), const Color(0xFFFF6A9A), f)!,
+              const Color(0xFF5A0420),
+            ],
+          ).createShader(Rect.fromCircle(center: b.c, radius: r * 0.78)),
+      );
+      canvas.drawCircle(b.c, r * 0.3, Paint()..color = Color.lerp(const Color(0xFF2A0614), Colors.white, f)!);
+      canvas.drawOval(
+        Rect.fromCenter(center: b.c + Offset(-r * 0.28, -r * 0.36), width: r * 0.6, height: r * 0.3),
+        Paint()..color = const Color(0x88FFFFFF),
       );
     }
-    _text(canvas, 'FUEL', const Offset(236, 244), const Color(0xAAFF8C1A), 8, vertical: true);
-    // The wormhole, swirling.
+    // Drop targets: a coloured face with a lit edge; down, just a slot.
+    void bank(List<_Target> ts, Color col, String label, Offset at) {
+      for (final t in ts) {
+        if (t.down) {
+          canvas.drawLine(
+            t.a,
+            t.b,
+            Paint()
+              ..color = const Color(0xFF05070F)
+              ..strokeWidth = 3
+              ..strokeCap = StrokeCap.butt,
+          );
+          continue;
+        }
+        canvas.drawLine(
+          t.a + const Offset(1, 1.5),
+          t.b + const Offset(1, 1.5),
+          Paint()
+            ..color = const Color(0x99000000)
+            ..strokeWidth = 5.5,
+        );
+        canvas.drawLine(
+          t.a,
+          t.b,
+          Paint()
+            ..color = col
+            ..strokeWidth = 5.5,
+        );
+        canvas.drawLine(
+          t.a - const Offset(1.6, 0),
+          t.b - const Offset(1.6, 0),
+          Paint()
+            ..color = Color.lerp(col, Colors.white, 0.6)!
+            ..strokeWidth = 1.2,
+        );
+      }
+      _text(canvas, label, at, col.withValues(alpha: 0.8), 7, vertical: true);
+    }
+
+    bank(g._fuel, const Color(0xFFFF8C1A), 'FUEL', const Offset(236, 244));
+    bank(g._boost, const Color(0xFF34E08A), 'BOOST', const Offset(40, 186));
+    // The wormhole: a dark scoop under its chrome hood, swirling.
     const hole = _PinballGameState._hole;
-    canvas.drawCircle(hole, 13, Paint()..color = const Color(0xFF000000));
+    canvas.drawCircle(
+      hole,
+      15,
+      Paint()
+        ..color = const Color(0x66B07CFF)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
+    );
+    canvas.drawCircle(
+      hole,
+      12,
+      Paint()
+        ..shader = const RadialGradient(colors: [Color(0xFF000000), Color(0xFF12002A), Color(0xFF3A1A6E)])
+            .createShader(Rect.fromCircle(center: hole, radius: 12)),
+    );
     final swirl = Paint()
-      ..color = const Color(0xFFB07CFF)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
+      ..strokeWidth = 1.3;
     for (var k = 0; k < 3; k++) {
+      swirl.color = Color.fromRGBO(190, 140, 255, 0.9 - k * 0.22);
       canvas.drawArc(
-        Rect.fromCircle(center: hole, radius: 5.0 + k * 3),
-        g._clock * 3 + k * 2.1,
-        3.6,
+        Rect.fromCircle(center: hole, radius: 4.0 + k * 2.6),
+        g._clock * 4 + k * 2.1,
+        3.4,
         false,
         swirl,
       );
     }
-    _text(canvas, 'WORMHOLE', hole + const Offset(0, 20), const Color(0xAAB07CFF), 7);
-    // Plunger.
-    canvas.drawRect(Rect.fromLTWH(252, 436 + 10 * g._pull, 12, 10), Paint()..color = const Color(0xFFC0C0C0));
-    // Flippers: chrome with a red rubber edge.
+    _text(canvas, 'WORMHOLE', hole + const Offset(0, 22), const Color(0xCCB07CFF), 7);
+    // Plunger: a chrome rod and a red knob, pulled back as it's held.
+    final py = 436 + 10 * g._pull;
+    canvas.drawRect(Rect.fromLTWH(256.5, py - 6, 3, 20), Paint()..color = const Color(0xFFB8C0CC));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromLTWH(251, py, 14, 9), const Radius.circular(2)),
+      Paint()
+        ..shader = const LinearGradient(colors: [Color(0xFFFF5A4A), Color(0xFF8A0F06)])
+            .createShader(Rect.fromLTWH(251, py, 14, 9)),
+    );
+    // Flippers: tapered bats, white plastic in a red rubber ring.
     for (final f in [g._left, g._right]) {
-      canvas.drawLine(
-        f.pivot,
-        f.tip,
+      final dir = f.tip - f.pivot;
+      final n = Offset(-dir.dy, dir.dx) / dir.distance;
+      final bat = Path()
+        ..moveTo((f.pivot + n * 5.5).dx, (f.pivot + n * 5.5).dy)
+        ..lineTo((f.tip + n * 2.6).dx, (f.tip + n * 2.6).dy)
+        ..arcToPoint(f.tip - n * 2.6, radius: const Radius.circular(2.6))
+        ..lineTo((f.pivot - n * 5.5).dx, (f.pivot - n * 5.5).dy)
+        ..arcToPoint(f.pivot + n * 5.5, radius: const Radius.circular(5.5))
+        ..close();
+      canvas.drawPath(bat.shift(const Offset(1.2, 2)), Paint()..color = const Color(0x99000000));
+      canvas.drawPath(bat, Paint()..color = const Color(0xFFC8102E));
+      canvas.save();
+      canvas.translate(f.pivot.dx, f.pivot.dy);
+      canvas.scale(0.82);
+      canvas.translate(-f.pivot.dx, -f.pivot.dy);
+      canvas.drawPath(
+        bat,
         Paint()
-          ..color = const Color(0xFFD02030)
-          ..strokeWidth = 8.5
-          ..strokeCap = StrokeCap.round,
+          ..shader = ui.Gradient.linear(f.pivot + n * 5, f.pivot - n * 5, const [
+            Color(0xFFFFFFFF),
+            Color(0xFFC9CED6),
+          ]),
       );
-      canvas.drawLine(
-        f.pivot,
-        f.tip,
-        Paint()
-          ..color = const Color(0xFFE8ECF2)
-          ..strokeWidth = 5.5
-          ..strokeCap = StrokeCap.round,
-      );
-      canvas.drawCircle(f.pivot, 2, Paint()..color = const Color(0xFF555A60));
+      canvas.restore();
+      _post(canvas, f.pivot, 2.2);
     }
     // Ball.
     if (g._captured <= 0 && !g._over) {
@@ -729,10 +986,13 @@ class _TablePainter extends CustomPainter {
         _r,
         Paint()
           ..shader = const RadialGradient(
-            center: Alignment(-0.4, -0.4),
-            colors: [Colors.white, Color(0xFFB8BEC6), Color(0xFF4A4F55)],
+            center: Alignment(-0.4, -0.45),
+            colors: [Colors.white, Color(0xFFD5DAE2), Color(0xFF6A7280), Color(0xFF2A2F38)],
+            stops: [0, 0.3, 0.75, 1],
           ).createShader(Rect.fromCircle(center: g._ball, radius: _r)),
       );
+      // the table's lights caught in it
+      canvas.drawCircle(g._ball + const Offset(1.6, 1.8), 1.1, Paint()..color = const Color(0x99FF6AA0));
     }
     if (g._over) {
       _text(canvas, 'GAME OVER', const Offset(130, 250), const Color(0xFFFFD23F), 18);
@@ -740,6 +1000,19 @@ class _TablePainter extends CustomPainter {
     } else if (g._inLane && g._vel == Offset.zero) {
       _text(canvas, 'HOLD TO PULL', const Offset(258, 404), Colors.white54, 6, vertical: true);
     }
+  }
+
+  /// A chrome post head.
+  void _post(Canvas canvas, Offset c, double r) {
+    canvas.drawCircle(
+      c,
+      r,
+      Paint()
+        ..shader = const RadialGradient(
+          center: Alignment(-0.4, -0.4),
+          colors: [Color(0xFFFFFFFF), Color(0xFF9AA3B0), Color(0xFF3A404A)],
+        ).createShader(Rect.fromCircle(center: c, radius: r)),
+    );
   }
 
   void _text(Canvas canvas, String s, Offset c, Color color, double size, {bool vertical = false}) {

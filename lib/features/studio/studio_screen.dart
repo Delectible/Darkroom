@@ -287,21 +287,40 @@ class _StudioScreenState extends ConsumerState<StudioScreen> with SingleTickerPr
     unawaited(
       ready.timeout(const Duration(milliseconds: 1200), onTimeout: () => const []).whenComplete(() {
         if (!mounted) return;
-        PerfRecorder.mark('studio prints slide in', hold: const Duration(milliseconds: 1000));
+        // one after another: each the same time on the way, the next
+        // leaving a beat after the last
+        final n = math.min(prints.length, 8);
+        _arrive.duration = Duration(milliseconds: (_slideMs + (n - 1) * _staggerMs).round());
+        PerfRecorder.mark(
+          'studio prints slide in',
+          hold: _arrive.duration! + const Duration(milliseconds: 100),
+        );
         unawaited(_arrive.forward());
       }),
     );
   }
 
-  /// [child], the tray's [i]th print, where it is on its way in.
+  // each print's slide, and the beat before the next sets off
+  static const _slideMs = 620.0, _staggerMs = 260.0;
+
+  /// [child], the tray's [i]th print, where it is on its way in: from right
+  /// off the screen, slid across the felt, a little turn that settles as it
+  /// stops (each in turn, one after another).
   Widget _onItsWayIn(int i, Widget child) => AnimatedBuilder(
     animation: _arrive,
     child: child,
     builder: (context, child) {
       if (_arrive.isCompleted) return child!;
-      final t = ((_arrive.value - math.min(i, 7) * 0.08) / 0.44).clamp(0.0, 1.0);
-      final e = Curves.easeOutCubic.transform(t);
-      return Transform.translate(offset: Offset((1 - e) * MediaQuery.sizeOf(context).width, 0), child: child);
+      final ms = _arrive.value * (_arrive.duration?.inMilliseconds ?? 1);
+      final t = ((ms - math.min(i, 7) * _staggerMs) / _slideMs).clamp(0.0, 1.0);
+      if (t <= 0) return const SizedBox.shrink();
+      final e = Curves.easeOutBack.transform(t);
+      // (from beyond the screen's right edge, wherever it lies in the tray)
+      final from = MediaQuery.sizeOf(context).width * 1.05;
+      return Transform.translate(
+        offset: Offset((1 - e) * from, 0),
+        child: Transform.rotate(angle: (1 - Curves.easeOut.transform(t)) * 0.12, child: child),
+      );
     },
   );
 

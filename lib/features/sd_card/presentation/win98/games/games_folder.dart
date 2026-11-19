@@ -44,7 +44,8 @@ class _GamesFolder extends StatelessWidget {
               ink: W98.windowInk,
               child: IconGroup(
                 items: [for (final (icon, name, open) in items) (icon, name, () => open(context))],
-                builder: (icons) => Wrap(spacing: 4, runSpacing: 10, children: icons),
+                builder: (icons) =>
+                    Wrap(alignment: WrapAlignment.spaceEvenly, spacing: 14, runSpacing: 12, children: icons),
               ),
             ),
           ),
@@ -114,12 +115,24 @@ class DesktopIcon extends StatelessWidget {
                   : const BoxDecoration(),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: W98.text.copyWith(color: selected ? W98.selectInk : (ink ?? W98.selectInk)),
-                ),
+                // one word never breaks across lines (big text: it shrinks
+                // to fit); two may go on two
+                child: label.contains(' ')
+                    ? Text(
+                        label,
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        style: W98.text.copyWith(color: selected ? W98.selectInk : (ink ?? W98.selectInk)),
+                      )
+                    : FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: W98.text.copyWith(color: selected ? W98.selectInk : (ink ?? W98.selectInk)),
+                        ),
+                      ),
               ),
             ),
           ],

@@ -117,11 +117,23 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
     }
     await g.up();
-    var drained = false;
+    var drained = false, warped = false, relaunched = false;
     for (var i = 0; i < 4000 && !drained; i++) {
       await tester.pump(const Duration(milliseconds: 16));
+      // (the launch alone never runs round into the wormhole)
+      if (i < 300 && find.textContaining('Wormhole!').evaluate().isNotEmpty) warped = true;
       drained = find.textContaining('balls left').evaluate().isNotEmpty;
+      // lost straight after launch: given back once; fire it again
+      if (!relaunched && find.textContaining('Ball saved').evaluate().isNotEmpty) {
+        relaunched = true;
+        final again = await tester.startGesture(at);
+        for (var k = 0; k < 30; k++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await again.up();
+      }
     }
+    expect(warped, isFalse, reason: 'a plain launch should not end up in the wormhole');
     expect(drained, isTrue, reason: 'the ball should come down past the flippers eventually');
     expect(tester.takeException(), isNull);
   });

@@ -1651,3 +1651,9 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 98. Corkboard dog-ears: each its own size, slant, curl and wear; the back shows the same corner.
 - [x] 99. Corkboard: a pinned "back to top" tag past a screen down.
 - [x] 100. (2.4.3) Dog-ear from behind: folded away (cut corner, crease edge), not a second flap.
+- [x] 101. Studio prints slide in from off the right, one after another, settling with a little turn.
+- [x] 102. Games folder: one-word icon names never wrap (shrink at big text), spaced three to a row.
+- [x] 103. Pinball: launch no longer orbits into the wormhole (scoop takes only shots up into it, post breaks the orbit); rollover lane guides, BOOST bank, rubber posts, ball save; metal/lit look; Help.
+- [x] 104. Solitaire: Restart (was Deal); cards dragged (runs too) instead of tapped; Help.
+- [x] 105. Minefield: Help with high scores.
+- [x] 106. Bricks: power-up capsules (wide, multi-ball, slow, extra ball, catch); Help.

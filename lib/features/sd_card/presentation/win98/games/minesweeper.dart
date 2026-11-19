@@ -7,6 +7,7 @@ import '../../../../../core/audio/sfx.dart';
 import '../pixel_icons.dart';
 import '../../../../../core/skins/camera_skins.dart';
 import '../win98_widgets.dart';
+import 'game_help.dart';
 import 'high_scores.dart';
 import 'skin_awards.dart';
 import '../../../../../core/device/haptics.dart';
@@ -253,15 +254,42 @@ class _MinesweeperGameState extends State<MinesweeperGame> {
           const SizedBox(height: 6),
           Row(
             children: [
-              for (final l in MineLevel.values) ...[
-                Win98Button(
-                  toggled: l == _level,
-                  onPressed: () => _new(l),
-                  child: Text(l == MineLevel.beginner ? 'Beginner' : 'Intermediate'),
+              // (big text: the levels shrink to fit, never push the rest off)
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    children: [
+                      for (final l in MineLevel.values) ...[
+                        Win98Button(
+                          toggled: l == _level,
+                          onPressed: () => _new(l),
+                          child: Text(l == MineLevel.beginner ? 'Beginner' : 'Intermediate'),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 6),
-              ],
-              const Spacer(),
+              ),
+              const SizedBox(width: 4),
+              Win98Button(
+                onPressed: () => showGameHelp(
+                  context,
+                  game: 'Minefield',
+                  icon: PixelIcon.mine,
+                  howTo: const [
+                    'Tap a square to dig it. The first dig is always safe.',
+                    'A number tells how many mines touch that square.',
+                    'Hold a square to plant a flag where you think a mine is.',
+                    'Tap a number whose mines are all flagged to dig all round it.',
+                    'Dig every square without a mine to win; the faster the better.',
+                  ],
+                ),
+                child: const Text('Help'),
+              ),
+              const SizedBox(width: 4),
               Win98Button(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
             ],
           ),

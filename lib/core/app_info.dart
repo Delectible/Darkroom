@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Corkboard: a print\'s folded corner now looks right from behind.';
+      'Darkroom 98 games: a better Pinball, cards you drag in Solitaire, power-ups in Bricks, Help with high scores in every game. Prints slide into the Studio one by one.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

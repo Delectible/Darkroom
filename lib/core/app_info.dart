@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.4.2';
+  static const version = '2.4.3';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'A new look for the Studio. Your name on your book, page numbers on scrapbook pages, smoother page turns. Corkboard: back to top, worn folded corners. No zoom with the fish-eye.';
+      'Corkboard: a print\'s folded corner now looks right from behind.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

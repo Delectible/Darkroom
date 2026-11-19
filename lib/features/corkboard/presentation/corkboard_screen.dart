@@ -2422,7 +2422,6 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
         // the flap shows the paper's other side: the back's from the
         // front, the picture side's (its border) from the back
         final backPaper = widget.instant ? const Color(0xFF222222) : const Color(0xFFE9E3D6);
-        const frontPaper = Color(0xFFF7F5F0);
         return Transform(
           alignment: Alignment.center,
           transform: Matrix4.identity()
@@ -2470,8 +2469,8 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: _toggle,
-                      // the same corner, seen from behind: cut the same, its
-                      // flap showing the picture side
+                      // the same corner from behind: folded away from you,
+                      // so only the crease's edge, the flap out of sight
                       child: Stack(
                         fit: StackFit.passthrough,
                         children: [
@@ -2482,10 +2481,7 @@ class _FlipCardState extends State<_FlipCard> with SingleTickerProviderStateMixi
                             child: Transform(
                               alignment: Alignment.center,
                               transform: Matrix4.identity()..rotateY(math.pi),
-                              child: CustomPaint(
-                                size: Size.square(ear.box),
-                                painter: _DogEar(ear, frontPaper),
-                              ),
+                              child: CustomPaint(size: Size.square(ear.box), painter: _FoldedIn(ear)),
                             ),
                           ),
                         ],
@@ -2575,6 +2571,55 @@ class _CornerCut extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(_CornerCut old) => old.ear != ear || old.mirrored != mirrored;
+}
+
+/// The dog-ear seen from behind: the corner gone, folded away; only the
+/// crease's rounded edge catching the light, a little shade beside it.
+class _FoldedIn extends CustomPainter {
+  const _FoldedIn(this.ear);
+
+  final _Ear ear;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final b = size.width;
+    final (p1, p2, tip) = ear.points(b);
+    final mid = Offset.lerp(p1, p2, 0.5)!;
+    final bow = mid + (tip - mid) * ear.curl * 0.3;
+    final crease = Path()
+      ..moveTo(p1.dx, p1.dy)
+      ..quadraticBezierTo(bow.dx, bow.dy, p2.dx, p2.dy);
+    // the fold's shadow on the cork beyond it
+    canvas.drawPath(
+      Path()
+        ..moveTo(p1.dx, p1.dy)
+        ..lineTo(b + 1.2, b + 1.2)
+        ..lineTo(p2.dx, p2.dy)
+        ..close(),
+      Paint()
+        ..color = const Color(0x30000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2),
+    );
+    // shade on the paper just inside the fold, then its lit edge
+    canvas.drawPath(
+      crease.shift(Offset((mid - tip).dx * 0.08, (mid - tip).dy * 0.08)),
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.2
+        ..color = const Color(0x1F000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1),
+    );
+    canvas.drawPath(
+      crease,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.9
+        ..color = const Color(0x55FFFFFF),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FoldedIn old) => old.ear != ear;
 }
 
 /// A turned-up paper corner: the flap folded over onto the print (a little

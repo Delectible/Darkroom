@@ -1650,3 +1650,4 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 97. No zoom with the fish-eye.
 - [x] 98. Corkboard dog-ears: each its own size, slant, curl and wear; the back shows the same corner.
 - [x] 99. Corkboard: a pinned "back to top" tag past a screen down.
+- [x] 100. (2.4.3) Dog-ear from behind: folded away (cut corner, crease edge), not a second flap.

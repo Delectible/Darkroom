@@ -1657,3 +1657,6 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 104. Solitaire: Restart (was Deal); cards dragged (runs too) instead of tapped; Help.
 - [x] 105. Minefield: Help with high scores.
 - [x] 106. Bricks: power-up capsules (wide, multi-ball, slow, extra ball, catch); Help.
+- [x] 107. Store listing translated (19 languages, both stores; docs/STORES.md); What's new as one summary since the last publish, in every language.
+- [x] 108. Read-only Europe availability check (listing workflow, check-europe).
+- [x] 109. 2.4.3 published: Play production (build 238) and App Store review.

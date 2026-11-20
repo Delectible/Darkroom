@@ -38,7 +38,8 @@ How Darkroom's store text is kept (CLAUDE.md points here).
 - Written in `fastlane/whatsnew/en-AU.txt` (shown to the owner first), then
   translated into every listing language as `fastlane/whatsnew/<lang>.txt`.
 - **Sent on "publish":** `promote-production.yml` (notes on, the default)
-  gives Play every language; `appstore-release.yml` gives Apple every
+  gives Play every language (give it the build number: Play needs it to
+  attach notes); `appstore-release.yml` gives Apple every
   language (`fastlane/release_notes.py` maps the codes).
 - Test builds (internal / TestFlight) still carry `AppInfo.latest`, a
   one-line note of that build's change.

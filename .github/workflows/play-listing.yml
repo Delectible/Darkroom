@@ -12,6 +12,11 @@ on:
         description: 'Only these listing languages, space-separated (e.g. "es-ES fr-FR"). Empty = all, English included.'
         required: false
         default: ''
+      store:
+        description: 'Which store'
+        type: choice
+        options: [play, apple, both]
+        default: play
 permissions:
   contents: read
 concurrency:
@@ -20,6 +25,7 @@ concurrency:
 
 jobs:
   listing:
+    if: inputs.store != 'apple'
     runs-on: ubuntu-latest
     env:
       SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -54,3 +60,48 @@ jobs:
             skip_upload_screenshots:true \
             sync_image_upload:true \
             skip_upload_images:${{ inputs.languages != '' }}
+
+  # The App Store: the same text (tool/store/apple_listing.py maps the
+  # languages and Apple's 30-character subtitles) put on the version being
+  # prepared in App Store Connect; never English, never submitted for review
+  # (it goes out with the next "release to iPhone").
+  apple:
+    if: inputs.store != 'play' && inputs.languages != ''
+    runs-on: ubuntu-latest
+    env:
+      KEY: ${{ secrets.APPSTORE_KEY }}
+      KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+      ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+    steps:
+      - name: Look for the App Store Connect key
+        run: |
+          if [ -z "$KEY" ] || [ -z "$KEY_ID" ] || [ -z "$ISSUER" ]; then
+            echo "::error::App Store Connect key secrets missing."; exit 1
+          fi
+      - uses: actions/checkout@v4
+      - run: sudo gem install fastlane --no-document --quiet
+      - name: Upload the listing
+        env:
+          LANGS: ${{ inputs.languages }}
+        run: |
+          python3 -I tool/store/apple_listing.py "$RUNNER_TEMP/meta" $LANGS
+          python3 -I - <<'PY' > "$RUNNER_TEMP/asc.json"
+          import json, os
+          print(json.dumps({"key_id": os.environ["KEY_ID"], "issuer_id": os.environ["ISSUER"],
+                            "key": os.environ["KEY"], "in_house": False}))
+          PY
+          version=$(sed -n 's/^version: *\([0-9.]*\)+.*/\1/p' pubspec.yaml)
+          fastlane run deliver \
+            api_key_path:"$RUNNER_TEMP/asc.json" \
+            app_identifier:com.dingo.darkroom \
+            platform:ios \
+            app_version:"$version" \
+            metadata_path:"$RUNNER_TEMP/meta" \
+            skip_binary_upload:true \
+            skip_screenshots:true \
+            submit_for_review:false \
+            run_precheck_before_submit:false \
+            force:true
+      - name: Forget the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/asc.json"

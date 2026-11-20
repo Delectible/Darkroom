@@ -21,6 +21,10 @@ on:
         description: 'Percent of phones to roll out to (100 = everyone at once)'
         required: false
         default: '100'
+      notes:
+        description: "Send What's new from fastlane/whatsnew (every language). Off: keep the internal build's note."
+        type: boolean
+        default: true
 permissions:
   contents: read
 concurrency:
@@ -36,6 +40,7 @@ jobs:
       - name: Look for the Play service account
         run: |
           if [ -z "$SA" ]; then echo "::error::No PLAY_SERVICE_ACCOUNT_JSON secret."; exit 1; fi
+      - uses: actions/checkout@v4
       - run: sudo gem install fastlane --no-document --quiet
       - name: Promote internal -> production
         env:
@@ -44,6 +49,13 @@ jobs:
         run: |
           printf '%s' "$SA" > "$RUNNER_TEMP/play.json"
           extra=()
+          # What's new in every language (docs/STORES.md)
+          if [ "${{ inputs.notes }}" = true ]; then
+            python3 -I fastlane/release_notes.py "$RUNNER_TEMP/notes" play
+            extra+=("metadata_path:$RUNNER_TEMP/notes" "skip_upload_changelogs:false")
+          else
+            extra+=("skip_upload_changelogs:true")
+          fi
           if [ -n "$BUILD" ]; then extra+=("version_code:$BUILD"); fi
           pct="${ROLLOUT:-100}"
           if ! [[ "$pct" =~ ^[0-9]+$ ]] || [ "$pct" -lt 1 ] || [ "$pct" -gt 100 ]; then
@@ -63,7 +75,6 @@ jobs:
             skip_upload_apk:true \
             skip_upload_aab:true \
             skip_upload_metadata:true \
-            skip_upload_changelogs:true \
             skip_upload_images:true \
             skip_upload_screenshots:true \
             "${extra[@]}"

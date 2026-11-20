@@ -1,0 +1,6 @@
+Neu in 2.4:
+• Das Studio: Mach aus deinen Abzügen Fotostreifen, Collagen, Scrapbook-Seiten und Daumenkinos, gesammelt in deinem eigenen Buch.
+• Photo Room in Darkroom 98: Karten, Collagen, GIFs und Fotoautomaten-Streifen gestalten.
+• Besseres Pinball, Solitär per Drag-and-drop, Power-ups in Bricks und Hilfe in jedem Spiel.
+• Weitwinkel- und Tele-Vorsatzlinsen.
+• Schnellerer Start, flüssigeres Scrollen und viel Feinschliff.

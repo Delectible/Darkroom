@@ -72,7 +72,10 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           mkdir -p "$RUNNER_TEMP/meta/$LANG_CODE"
           # AppInfo.latest without the "1.2.3: " prefix Play uses.
-          python3 -I tool/play/whats_new.py | sed 's/^[0-9.]*: //' > "$RUNNER_TEMP/meta/$LANG_CODE/release_notes.txt"
+          # What's new in every language (fastlane/whatsnew; docs/STORES.md),
+          # as it is on main now (it's written after the build)
+          git fetch -q --depth 1 origin main && git checkout FETCH_HEAD -- fastlane
+          python3 -I fastlane/release_notes.py "$RUNNER_TEMP/meta" apple "$LANG_CODE"
           echo "Build ${{ steps.build.outputs.num }}, version $version:"; cat "$RUNNER_TEMP/meta/$LANG_CODE/release_notes.txt"
       - run: sudo gem install fastlane --no-document --quiet
       - name: Submit for review (released automatically once approved)

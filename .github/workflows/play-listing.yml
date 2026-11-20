@@ -15,7 +15,7 @@ on:
       store:
         description: 'Which store'
         type: choice
-        options: [play, apple, both]
+        options: [play, apple, both, check-europe]
         default: play
 permissions:
   contents: read
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   listing:
-    if: inputs.store != 'apple'
+    if: inputs.store == 'play' || inputs.store == 'both'
     runs-on: ubuntu-latest
     env:
       SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -66,7 +66,7 @@ jobs:
   # prepared in App Store Connect; never English, never submitted for review
   # (it goes out with the next "release to iPhone").
   apple:
-    if: inputs.store != 'play' && inputs.languages != ''
+    if: (inputs.store == 'apple' || inputs.store == 'both') && inputs.languages != ''
     runs-on: ubuntu-latest
     env:
       KEY: ${{ secrets.APPSTORE_KEY }}
@@ -105,3 +105,21 @@ jobs:
       - name: Forget the key
         if: always()
         run: rm -f "$RUNNER_TEMP/asc.json"
+
+  # Read-only: are the app and Pro on sale in Europe? (fastlane/eu_check.py)
+  europe:
+    if: inputs.store == 'check-europe'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install --quiet google-auth requests PyJWT cryptography
+      - name: Ask both stores
+        env:
+          SA: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          ASC_KEY: ${{ secrets.APPSTORE_KEY }}
+          ASC_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
+          ASC_ISSUER: ${{ secrets.APPSTORE_ISSUER_ID }}
+        run: |
+          printf '%s' "$SA" > "$RUNNER_TEMP/play.json"
+          PLAY_JSON="$RUNNER_TEMP/play.json" python3 fastlane/eu_check.py | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f "$RUNNER_TEMP/play.json"

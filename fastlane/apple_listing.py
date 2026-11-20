@@ -1,7 +1,7 @@
 """Builds the App Store listing folders (fastlane deliver's layout) from the
 Play listing in fastlane/metadata/android: one source for both stores.
 
-Usage: python3 -I tool/store/apple_listing.py OUT_DIR [lang ...]
+Usage: python3 -I fastlane/apple_listing.py OUT_DIR [lang ...]
 Only the languages given (Play codes); never English (kept by the owner in
 App Store Connect). The subtitle is the Play tagline, or apple_subtitle.txt
 where that's over Apple's 30 characters.

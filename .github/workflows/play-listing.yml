@@ -61,7 +61,7 @@ jobs:
             sync_image_upload:true \
             skip_upload_images:${{ inputs.languages != '' }}
 
-  # The App Store: the same text (tool/store/apple_listing.py maps the
+  # The App Store: the same text (fastlane/apple_listing.py maps the
   # languages and Apple's 30-character subtitles) put on the version being
   # prepared in App Store Connect; never English, never submitted for review
   # (it goes out with the next "release to iPhone").
@@ -84,7 +84,7 @@ jobs:
         env:
           LANGS: ${{ inputs.languages }}
         run: |
-          python3 -I tool/store/apple_listing.py "$RUNNER_TEMP/meta" $LANGS
+          python3 -I fastlane/apple_listing.py "$RUNNER_TEMP/meta" $LANGS
           python3 -I - <<'PY' > "$RUNNER_TEMP/asc.json"
           import json, os
           print(json.dumps({"key_id": os.environ["KEY_ID"], "issuer_id": os.environ["ISSUER"],

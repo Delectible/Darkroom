@@ -42,7 +42,7 @@ matching section of **`docs/NOTES.md`** before changing an area
   build number empty. `promote-closed.yml` only when he asks.
 - `appstore-release.yml` on "publish" or "release to iPhone", after
   checking App Store Connect; never cancel a submission in review.
-- Never run `play-listing.yml` unless asked, and never with English: the owner keeps the English text (both stores) himself. Translations live in `fastlane/metadata/android/<lang>` (Apple gets the same via `tool/store/apple_listing.py`); run it with `languages` set, store `both`.
+- Never run `play-listing.yml` unless asked, and never with English: the owner keeps the English text (both stores) himself. Translations live in `fastlane/metadata/android/<lang>` (Apple gets the same via `fastlane/apple_listing.py`); run it with `languages` set, store `both`.
 - Apple (ITMS-90725): from **April 2027** uploads must be built with the
   iOS 27 SDK (Xcode 27). The `ios` job picks Xcode 27 by itself once the
   runner has it, and warns while it's built with less.

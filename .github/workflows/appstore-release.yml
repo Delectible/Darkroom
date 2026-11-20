@@ -73,9 +73,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/meta/$LANG_CODE"
           # AppInfo.latest without the "1.2.3: " prefix Play uses.
           # What's new in every language (fastlane/whatsnew; docs/STORES.md),
-          # as it is on main now (it's written after the build)
-          git fetch -q --depth 1 origin main && git checkout FETCH_HEAD -- fastlane
+          # as on the branch this runs from (written after the build)
+          git fetch -q --depth 1 origin "${{ github.ref_name }}" && git checkout FETCH_HEAD -- fastlane
           python3 -I fastlane/release_notes.py "$RUNNER_TEMP/meta" apple "$LANG_CODE"
+          # and each translated listing in full (Apple wants keywords and a
+          # support URL in every language); never the English listing
+          pip install --quiet PyJWT cryptography
+          ASC_KEY="$KEY" ASC_KEY_ID="$KEY_ID" ASC_ISSUER="$ISSUER" python3 fastlane/apple_listing.py "$RUNNER_TEMP/meta"
           echo "Build ${{ steps.build.outputs.num }}, version $version:"; cat "$RUNNER_TEMP/meta/$LANG_CODE/release_notes.txt"
       - run: sudo gem install fastlane --no-document --quiet
       - name: Submit for review (released automatically once approved)

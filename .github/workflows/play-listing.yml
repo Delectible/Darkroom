@@ -84,7 +84,9 @@ jobs:
         env:
           LANGS: ${{ inputs.languages }}
         run: |
-          python3 -I fastlane/apple_listing.py "$RUNNER_TEMP/meta" $LANGS
+          pip install --quiet PyJWT cryptography
+          ASC_KEY="$KEY" ASC_KEY_ID="$KEY_ID" ASC_ISSUER="$ISSUER" \
+            python3 fastlane/apple_listing.py "$RUNNER_TEMP/meta" $LANGS
           python3 -I - <<'PY' > "$RUNNER_TEMP/asc.json"
           import json, os
           print(json.dumps({"key_id": os.environ["KEY_ID"], "issuer_id": os.environ["ISSUER"],

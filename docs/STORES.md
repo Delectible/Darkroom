@@ -10,7 +10,8 @@ How Darkroom's store text is kept (CLAUDE.md points here).
   is only a reference copy of his current text (2026-11-20).
 - **Translations live in the repo** so they stay consistent:
   `fastlane/metadata/android/<lang>/` (title, short_description = tagline,
-  full_description; `apple_subtitle.txt` where the tagline is over Apple's
+  full_description; `apple_keywords.txt` (Apple, max 100 characters);
+  `apple_subtitle.txt` where the tagline is over Apple's
   30 characters). Apple gets the same text through `fastlane/apple_listing.py`,
   which maps the language codes.
 - **Languages (19):** es-ES, es-419, pt-BR, fr-FR, de-DE, it-IT, ja-JP,
@@ -41,3 +42,4 @@ How Darkroom's store text is kept (CLAUDE.md points here).
   language (`fastlane/release_notes.py` maps the codes).
 - Test builds (internal / TestFlight) still carry `AppInfo.latest`, a
   one-line note of that build's change.
+- Apple also needs a support URL per language: copied from his English listing at upload.

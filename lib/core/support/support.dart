@@ -12,7 +12,7 @@ import '../diagnostics/crash_log.dart';
 class Support {
   const Support._();
 
-  static const email = 'lucaraheb1@gmail.com';
+  static const email = 'darkroomphotoapp@gmail.com';
   static const privacyUrl = 'https://github.com/Delectible/Darkroom/blob/main/docs/PRIVACY.md';
 
   static Future<bool> openPrivacy() async {

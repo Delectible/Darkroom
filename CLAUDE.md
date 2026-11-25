@@ -17,7 +17,8 @@ matching section of **`docs/NOTES.md`** before changing an area
   otherwise) = internal testing + TestFlight: fast-forward onto `main`
   (`git fetch origin main && git merge-base --is-ancestor origin/main HEAD
   && git push origin HEAD:main`). Then send_later ~20 min, check the run,
-  and once the `play` job has uploaded (+2 min) PushNotification: version,
+  and once the `play` job has uploaded (+2 min) run `promote-closed.yml`
+  (build number empty) and, when it's done, PushNotification: version,
   build, one line of what's new (or the failure).
 - **"publish"** = both stores' production: push first if needed, wait for
   that build to reach internal testing, then run `promote-production.yml`
@@ -39,7 +40,7 @@ matching section of **`docs/NOTES.md`** before changing an area
 - `main` → Play internal testing + TestFlight.
 - Android production: `promote-production.yml` on "publish" or "release
   to Android", straight from internal (no closed-testing step); leave the
-  build number empty. `promote-closed.yml` only when he asks.
+  build number empty. `promote-closed.yml` after every push, once the build is on internal.
 - `appstore-release.yml` on "publish" or "release to iPhone", after
   checking App Store Connect; never cancel a submission in review.
 - Listings, translations and What's new: **`docs/STORES.md`** (English is the owner's; never upload listing text unasked; What's new = a short summary of everything since the last publish, in every language).

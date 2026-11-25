@@ -9,6 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/note_box.dart';
+import '../../../core/diagnostics/sample_feed.dart';
 import '../../../core/device/device_memory.dart';
 import '../../../core/db/media_repository.dart';
 import '../../../core/providers.dart';
@@ -289,6 +290,7 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
             child: child,
           );
     final actions = _ActionBar(
+      feedPath: item.isVideo ? null : item.outputPath,
       vertical: landscape,
       saved: item.isSaved,
       gone: _gone(item),
@@ -576,7 +578,11 @@ class _ActionBar extends StatelessWidget {
     this.gone = false,
     this.sample = false,
     this.onStudio,
+    this.feedPath,
   });
+
+  /// The print's picture, for Debug > Sample Viewfinder.
+  final String? feedPath;
 
   /// Off the board to the Studio.
   final VoidCallback? onStudio;
@@ -647,6 +653,20 @@ class _ActionBar extends StatelessWidget {
               label: 'Frame',
               onTap: onFrame,
               highlighted: framing,
+            ),
+          if (feedPath != null)
+            Consumer(
+              builder: (context, ref, _) => ref.watch(sampleFeedButtonProvider)
+                  ? _RoundAction(
+                      icon: Icons.videocam_outlined,
+                      label: ref.watch(sampleFeedProvider) == feedPath ? 'In viewfinder' : 'Viewfinder',
+                      highlighted: ref.watch(sampleFeedProvider) == feedPath,
+                      onTap: () {
+                        final n = ref.read(sampleFeedProvider.notifier);
+                        n.use(ref.read(sampleFeedProvider) == feedPath ? null : feedPath);
+                      },
+                    )
+                  : const SizedBox.shrink(),
             ),
         ],
       ),

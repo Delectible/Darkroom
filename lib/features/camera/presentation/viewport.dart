@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -7,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/diagnostics/sample_feed.dart';
 
 import '../../../core/theme/note_box.dart';
 import '../../../core/monetization/allowance.dart';
@@ -267,7 +270,12 @@ class CameraViewport extends ConsumerWidget {
                                                 turns: turns,
                                                 spin: spin,
                                                 spinScale: spinScale,
-                                                child: _RotationCorrectedPreview(controller: controller),
+                                                child: Consumer(
+                                                  builder: (context, ref, _) {
+                                                    ref.watch(sampleFeedProvider);
+                                                    return _RotationCorrectedPreview(controller: controller);
+                                                  },
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -537,6 +545,14 @@ class _RotationCorrectedPreview extends StatelessWidget {
       builder: (context, value, _) {
         if (!value.isInitialized) return const SizedBox.shrink();
         // (its own layer, so the probe can read the raw frames)
+        // (Debug > Sample Viewfinder: a chosen picture instead of the feed)
+        final sample = ProviderScope.containerOf(context, listen: false).read(sampleFeedProvider);
+        if (sample != null) {
+          return RepaintBoundary(
+            key: PreviewProbe.key,
+            child: Image.file(File(sample), fit: BoxFit.cover, gaplessPlayback: true),
+          );
+        }
         final preview = RepaintBoundary(key: PreviewProbe.key, child: controller.buildPreview());
         if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return preview;
         return RotatedBox(quarterTurns: _turns(value.deviceOrientation), child: preview);

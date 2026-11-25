@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 
 import '../../../../core/db/media_repository.dart';
+import '../../../../core/diagnostics/sample_feed.dart';
 import '../../../../core/providers.dart';
 import '../../../cameras/domain/camera_catalog.dart';
 import '../../../viewer/presentation/media_actions.dart';
@@ -190,6 +191,21 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                                   onPressed: _delete,
                                   child: const Text('Delete'),
                                 ),
+                                if (ref.watch(sampleFeedButtonProvider) &&
+                                    !item.isVideo &&
+                                    item.outputPath != null) ...[
+                                  const SizedBox(width: 3),
+                                  Win98Button(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                    onPressed: () {
+                                      final on = ref.read(sampleFeedProvider) == item.outputPath;
+                                      ref.read(sampleFeedProvider.notifier).use(on ? null : item.outputPath);
+                                    },
+                                    child: Text(
+                                      ref.watch(sampleFeedProvider) == item.outputPath ? 'Unfeed' : 'Feed',
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),

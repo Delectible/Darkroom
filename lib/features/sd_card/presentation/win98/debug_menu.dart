@@ -18,6 +18,7 @@ import '../../../../core/device/device_memory.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/develop_stats.dart';
 import '../../../../core/diagnostics/fps_meter.dart';
+import '../../../../core/diagnostics/sample_feed.dart';
 import '../../../../core/diagnostics/lag_watch.dart';
 import '../../../../core/diagnostics/launch_timer.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
@@ -247,6 +248,17 @@ final _tools = <_Tool>[
         'still screen reads about 4.',
     (_, ref) async => ref.read(fpsMeterProvider.notifier).toggle(),
     on: (ref) => ref.watch(fpsMeterProvider),
+  ),
+  _Tool(
+    PixelIcon.camera,
+    'Sample Viewfinder',
+    'Photo viewers (corkboard and C:) get a "Use in viewfinder" button: the camera then shows that picture '
+        'instead of the live feed, for screen recordings. Turning this off goes back to the live camera.',
+    (_, ref) async {
+      ref.read(sampleFeedButtonProvider.notifier).toggle();
+      if (!ref.read(sampleFeedButtonProvider)) ref.read(sampleFeedProvider.notifier).use(null);
+    },
+    on: (ref) => ref.watch(sampleFeedButtonProvider),
   ),
   _Tool(
     PixelIcon.views,

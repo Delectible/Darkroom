@@ -1669,3 +1669,4 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 116. Privacy policy updated (Contact us email contents, Studio/Photo Room creations, ratings/links, Gmail contact); website darkroomcamera.app drafted (home, support, privacy, press).
 - [x] 117. (2.4.6) Privacy and support link to darkroomcamera.app (Contact sheet: Help & support; Darkroom 98 Help: Support on the Web).
 - [x] 118. What's new for 2.4.6 production (20 languages).
+- [x] 119. Debug > Sample Viewfinder: viewers get a button that puts the picture in the viewfinder instead of the live feed (for recordings).

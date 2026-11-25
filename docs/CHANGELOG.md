@@ -1666,3 +1666,4 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [ ] 113. Email on the domain (forwarding to the Gmail, Gmail "Send as"); used in app, listings, policy.
 - [ ] 114. Stores: developer name and public developer email checked; privacy/support/marketing URLs to the website.
 - [x] 115. (2.4.5) Darkroom 98: icon highlight at once (no double-tap wait); Photo Room folder: tap selects, second tap opens.
+- [x] 116. Privacy policy updated (Contact us email contents, Studio/Photo Room creations, ratings/links, Gmail contact); website darkroomcamera.app drafted (home, support, privacy, press).

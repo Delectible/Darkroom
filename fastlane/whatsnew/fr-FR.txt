@@ -1,6 +1,4 @@
-Nouveautés de la 2.4 :
-• Le Studio : transformez vos tirages en bandes de photomaton, collages, pages d'album et flip books, rangés dans votre propre livre.
-• Photo Room dans Darkroom 98 : créez des cartes, des collages, des GIF et des bandes de photomaton.
-• Pinball amélioré, Solitaire en glisser-déposer, bonus dans Bricks et aide dans chaque jeu.
-• Objectifs grand-angle et téléobjectif.
-• Démarrage plus rapide, défilement plus fluide et plein de finitions.
+Nouveautés de la 2.4.6 :
+• Nouvelle page Contact dans les Réglages : écris-nous, retrouve-nous sur Instagram, note Darkroom ou ouvre Aide et assistance.
+• Notre nouveau site, darkroomcamera.app, avec de l'aide, les questions fréquentes et la politique de confidentialité.
+• Aussi dans la 2.4 : le Studio pour bandes photo, collages, scrapbooks et flipbooks ; Photo Room dans Darkroom 98 ; de meilleurs jeux ; objectifs grand-angle et télé ; et des icônes Darkroom 98 plus fluides.

@@ -1,6 +1,4 @@
-Novidades da 2.4:
-• O Estúdio: transforme suas fotos em tiras de cabine, colagens, páginas de álbum e flipbooks, guardados no seu próprio livro.
-• Photo Room no Darkroom 98: crie cartões, colagens, GIFs e tiras de cabine de fotos.
-• Pinball melhorado, Paciência de arrastar as cartas, power-ups no Bricks e ajuda em todos os jogos.
-• Acessórios de lente grande-angular e teleobjetiva.
-• Abertura mais rápida, rolagem mais suave e muitos ajustes.
+Novidades da 2.4.6:
+• Nova página Fale conosco nos Ajustes: mande um e-mail, encontre a gente no Instagram, avalie o Darkroom ou abra Ajuda e suporte.
+• Nosso novo site, darkroomcamera.app, com ajuda, perguntas frequentes e a política de privacidade.
+• Também na 2.4: o Estúdio para tiras de fotos, colagens, scrapbooks e flipbooks; Photo Room no Darkroom 98; jogos melhores; lentes grande-angular e tele; e ícones do Darkroom 98 mais suaves.

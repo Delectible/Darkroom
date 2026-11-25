@@ -1,6 +1,4 @@
-Novità della 2.4:
-• Lo Studio: trasforma le tue stampe in strisce da fototessera, collage, pagine di album e flipbook, raccolti nel tuo libro.
-• Photo Room in Darkroom 98: crea biglietti, collage, GIF e strisce da cabina fotografica.
-• Pinball migliorato, Solitario con trascinamento, potenziamenti in Bricks e aiuto in ogni gioco.
-• Aggiuntivi grandangolo e teleobiettivo.
-• Avvio più rapido, scorrimento più fluido e tante rifiniture.
+Novità della 2.4.6:
+• Nuova pagina Contatti nelle Impostazioni: scrivici, trovaci su Instagram, valuta Darkroom o apri Aiuto e supporto.
+• Il nostro nuovo sito, darkroomcamera.app, con aiuto, domande frequenti e l'informativa sulla privacy.
+• Anche nella 2.4: lo Studio per strisce di foto, collage, scrapbook e flipbook; Photo Room in Darkroom 98; giochi migliori; obiettivi grandangolo e tele; e icone di Darkroom 98 più fluide.

@@ -1,6 +1,4 @@
-Neu in 2.4:
-• Das Studio: Mach aus deinen Abzügen Fotostreifen, Collagen, Scrapbook-Seiten und Daumenkinos, gesammelt in deinem eigenen Buch.
-• Photo Room in Darkroom 98: Karten, Collagen, GIFs und Fotoautomaten-Streifen gestalten.
-• Besseres Pinball, Solitär per Drag-and-drop, Power-ups in Bricks und Hilfe in jedem Spiel.
-• Weitwinkel- und Tele-Vorsatzlinsen.
-• Schnellerer Start, flüssigeres Scrollen und viel Feinschliff.
+Neu in 2.4.6:
+• Neue Kontaktseite in den Einstellungen: schreib uns, finde uns auf Instagram, bewerte Darkroom oder öffne Hilfe & Support.
+• Unsere neue Website darkroomcamera.app mit Hilfe, häufigen Fragen und der Datenschutzerklärung.
+• Außerdem in 2.4: das Studio für Fotostreifen, Collagen, Scrapbooks und Daumenkinos; Photo Room in Darkroom 98; bessere Spiele; Weitwinkel- und Tele-Linsen; und flüssigere Darkroom-98-Symbole.

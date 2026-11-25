@@ -1,6 +1,4 @@
-2.4'te yeni:
-• Stüdyo: Baskılarını fotoğraf şeritlerine, kolajlara, albüm sayfalarına ve flipbook'lara dönüştür, hepsi kendi kitabında.
-• Darkroom 98'de Photo Room: kart, kolaj, GIF ve fotoğraf kabini şeritleri yap.
-• Daha iyi Pinball, sürükle-bırak Solitaire, Bricks'te güçlendiriciler ve her oyunda yardım.
-• Geniş açı ve tele lens ekleri.
-• Daha hızlı açılış, daha akıcı kaydırma ve pek çok iyileştirme.
+2.4.6'daki yenilikler:
+• Ayarlar'da yeni Bize ulaşın sayfası: bize e-posta gönder, Instagram'da bizi bul, Darkroom'u değerlendir veya Yardım ve destek'i aç.
+• Yeni web sitemiz darkroomcamera.app: yardım, sık sorulan sorular ve gizlilik politikası.
+• Ayrıca 2.4'te: fotoğraf şeritleri, kolajlar, albümler ve flipbook'lar için Stüdyo; Darkroom 98'de Photo Room; daha iyi oyunlar; geniş açı ve tele lensler; ve daha akıcı Darkroom 98 simgeleri.

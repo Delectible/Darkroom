@@ -1,6 +1,4 @@
-Có gì mới ở 2.4:
-• Studio: biến ảnh của bạn thành dải ảnh, ảnh ghép, trang sổ lưu niệm và flipbook, cất trong cuốn sách của riêng bạn.
-• Photo Room trong Darkroom 98: làm thiệp, ảnh ghép, GIF và dải ảnh kiểu photobooth.
-• Pinball hay hơn, Solitaire kéo thả, vật phẩm hỗ trợ trong Bricks và hướng dẫn trong mọi trò chơi.
-• Ống kính gắn thêm góc rộng và tele.
-• Mở nhanh hơn, cuộn mượt hơn và nhiều cải tiến khác.
+Có gì mới trong 2.4.6:
+• Trang Liên hệ mới trong Cài đặt: gửi email cho chúng tôi, tìm chúng tôi trên Instagram, đánh giá Darkroom hoặc mở Trợ giúp và hỗ trợ.
+• Trang web mới của chúng tôi, darkroomcamera.app, có trợ giúp, câu hỏi thường gặp và chính sách quyền riêng tư.
+• Cũng trong 2.4: Studio cho dải ảnh, ảnh ghép, sổ lưu niệm và sách lật; Photo Room trong Darkroom 98; trò chơi hay hơn; ống kính góc rộng và tele; và biểu tượng Darkroom 98 mượt hơn.

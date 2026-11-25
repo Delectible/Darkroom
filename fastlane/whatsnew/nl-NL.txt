@@ -1,6 +1,4 @@
-Nieuw in 2.4:
-• De Studio: maak van je afdrukken fotostrips, collages, plakboekpagina's en flipboekjes, bewaard in je eigen boek.
-• Photo Room in Darkroom 98: maak kaarten, collages, GIF's en fotohokjesstrips.
-• Beter Pinball, Patience met slepen, power-ups in Bricks en hulp in elk spel.
-• Groothoek- en telelenzen om op te zetten.
-• Sneller opstarten, soepeler scrollen en veel verfijning.
+Nieuw in 2.4.6:
+• Nieuwe Contactpagina in Instellingen: mail ons, vind ons op Instagram, beoordeel Darkroom of open Hulp en support.
+• Onze nieuwe website, darkroomcamera.app, met hulp, veelgestelde vragen en het privacybeleid.
+• Ook in 2.4: de Studio voor fotostrips, collages, plakboeken en flipboekjes; Photo Room in Darkroom 98; betere games; groothoek- en telelenzen; en soepelere Darkroom 98-pictogrammen.

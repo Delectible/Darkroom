@@ -1,6 +1,4 @@
-Baru di 2.4:
-• Studio: ubah fotomu jadi strip foto, kolase, halaman scrapbook, dan flipbook, tersimpan di bukumu sendiri.
-• Photo Room di Darkroom 98: buat kartu, kolase, GIF, dan strip photobooth.
-• Pinball lebih seru, Solitaire dengan seret kartu, power-up di Bricks, dan bantuan di setiap game.
-• Lensa tambahan wide dan tele.
-• Buka lebih cepat, gulir lebih mulus, dan banyak penyempurnaan.
+Baru di 2.4.6:
+• Halaman Hubungi kami baru di Pengaturan: kirim email, temukan kami di Instagram, beri nilai Darkroom, atau buka Bantuan & dukungan.
+• Situs web baru kami, darkroomcamera.app, berisi bantuan, pertanyaan umum, dan kebijakan privasi.
+• Juga di 2.4: Studio untuk strip foto, kolase, scrapbook, dan flipbook; Photo Room di Darkroom 98; game yang lebih seru; lensa Wide dan Tele; serta ikon Darkroom 98 yang lebih mulus.

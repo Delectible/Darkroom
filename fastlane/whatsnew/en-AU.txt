@@ -1,6 +1,4 @@
-New in 2.4:
-• The Studio: turn your prints into photo strips, collages, scrapbook pages and flip books, kept in your own book.
-• Photo Room in Darkroom 98: make cards, collages, GIFs and photo-booth strips.
-• Better Pinball, drag-and-drop Solitaire, Bricks power-ups and help in every game.
-• Wide and Tele lens attachments.
-• A faster start, smoother scrolling and lots of polish.
+New in 2.4.6:
+• New Contact us page in Settings: email us, find us on Instagram, rate Darkroom, or open Help & support.
+• Our new website, darkroomcamera.app, with help, common questions and the privacy policy.
+• Also in 2.4: the Studio for photo strips, collages, scrapbooks and flip books; Photo Room in Darkroom 98; better games; Wide and Tele lenses; and smoother Darkroom 98 icons.

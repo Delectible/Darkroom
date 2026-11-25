@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Support emails now go to darkroomphotoapp@gmail.com.';
+      'New Contact us page in Settings: email us, find us on Instagram, rate Darkroom. Darkroom 98 has them in Help.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

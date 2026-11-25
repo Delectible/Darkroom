@@ -1660,3 +1660,8 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 107. Store listing translated (19 languages, both stores; docs/STORES.md); What's new as one summary since the last publish, in every language.
 - [x] 108. Read-only Europe availability check (listing workflow, check-europe).
 - [x] 109. 2.4.3 published: Play production (build 238) and App Store review.
+- [x] 110. (2.4.4) Support email: darkroomphotoapp@gmail.com.
+- [x] 111. Settings CONTACT (was FEEDBACK): a sheet with email, Instagram (@dark.roomphotos), rate, privacy; Darkroom 98 Help: Instagram and Rate items.
+- [ ] 112. Own website + domain: home, privacy, support, press kit (hosted off GitHub); app privacy URL and store URLs point there.
+- [ ] 113. Email on the domain (forwarding to the Gmail, Gmail "Send as"); used in app, listings, policy.
+- [ ] 114. Stores: developer name and public developer email checked; privacy/support/marketing URLs to the website.

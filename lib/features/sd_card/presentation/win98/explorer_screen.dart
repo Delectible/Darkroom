@@ -9,6 +9,7 @@ import '../../../../core/audio/sfx.dart';
 
 import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
+import '../../../../core/review/review_prompt.dart';
 import '../../../../core/support/support.dart';
 import '../../../viewer/presentation/media_actions.dart';
 import '../../application/sd_card_controller.dart';
@@ -1012,6 +1013,28 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                     'Send Feedback',
                                                     'No mail program was found.\n\nWrite to ${Support.email} (the address '
                                                         'is on the clipboard).',
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                            Win98MenuItem(
+                                              'Darkroom on Instagram',
+                                              onSelected: () async {
+                                                if (!await Support.openInstagram() && mounted) {
+                                                  await _box(
+                                                    'Darkroom on Instagram',
+                                                    'Find us at ${Support.instagram}.',
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                            Win98MenuItem(
+                                              'Rate Darkroom...',
+                                              onSelected: () async {
+                                                if (!await ReviewPrompt.show() && mounted) {
+                                                  await _box(
+                                                    'Rate Darkroom',
+                                                    "The store couldn't open its rating box right now.",
                                                   );
                                                 }
                                               },

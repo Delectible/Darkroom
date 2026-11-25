@@ -7,13 +7,24 @@ import '../app_info.dart';
 import '../diagnostics/crash_log.dart';
 
 /// Getting in touch: feedback and bug reports by email to the developer,
-/// and the privacy policy. Nothing is sent by the app itself: it opens the
+/// Instagram, and the privacy policy. Nothing is sent by the app itself: it opens the
 /// phone's mail app with a message the user can read and edit first.
 class Support {
   const Support._();
 
   static const email = 'darkroomphotoapp@gmail.com';
   static const privacyUrl = 'https://github.com/Delectible/Darkroom/blob/main/docs/PRIVACY.md';
+  static const instagram = '@dark.roomphotos';
+  static const instagramUrl = 'https://www.instagram.com/dark.roomphotos/';
+
+  /// Darkroom's Instagram (the Instagram app if it's installed).
+  static Future<bool> openInstagram() async {
+    try {
+      return await launchUrl(Uri.parse(instagramUrl), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
+  }
 
   static Future<bool> openPrivacy() async {
     try {

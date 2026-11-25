@@ -22,6 +22,7 @@ import '../../cameras/domain/camera_spec.dart';
 import '../../help/how_it_works_screen.dart';
 import '../../monetization/pro_sheet.dart';
 import '../../skins/presentation/camera_shop_screen.dart';
+import '../../support/contact_sheet.dart';
 import '../application/settings_controllers.dart';
 
 /// Settings, dressed as the camera in hand would have them: film, the
@@ -73,12 +74,6 @@ mixin _CameraPick<T extends ConsumerStatefulWidget> on ConsumerState<T> {
     final i = all.indexWhere((s) => s.id == pickedSpec(mode).id);
     unawaited(Haptics.selectionClick());
     setState(() => _picked = all[(i + by) % all.length].id);
-  }
-}
-
-Future<void> _feedback(BuildContext context) async {
-  if (!await Support.sendFeedback() && context.mounted) {
-    Notes.show('No mail app found. The address (${Support.email}) is copied.');
   }
 }
 
@@ -322,7 +317,7 @@ class _ManualState extends ConsumerState<_Manual> with _CameraPick<_Manual> {
                 children: [
                   _ManualLink('HOW IT WORKS', () => Navigator.of(context).push(HowItWorksScreen.route())),
                   _ManualLink('CAMERA SHOP', () => showCameraShop(context, mode: AppMode.film)),
-                  _ManualLink('FEEDBACK', () => unawaited(_feedback(context))),
+                  _ManualLink('CONTACT', () => unawaited(showContactSheet(context))),
                   _ManualLink('PRIVACY', () => unawaited(Support.openPrivacy())),
                 ],
               ),
@@ -1014,7 +1009,7 @@ class _MenuState extends ConsumerState<_Menu> with _CameraPick<_Menu> {
     final keys = [
       key('HOW IT WORKS', () => Navigator.of(context).push(HowItWorksScreen.route())),
       key('CAMERA SHOP', () => showCameraShop(context, mode: AppMode.digital)),
-      key('FEEDBACK', () => unawaited(_feedback(context))),
+      key('CONTACT', () => unawaited(showContactSheet(context))),
       key('PRIVACY', () => unawaited(Support.openPrivacy())),
     ];
     Widget row(List<Widget> ks) => Row(

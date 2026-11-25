@@ -1665,3 +1665,4 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [ ] 112. Own website + domain: home, privacy, support, press kit (hosted off GitHub); app privacy URL and store URLs point there.
 - [ ] 113. Email on the domain (forwarding to the Gmail, Gmail "Send as"); used in app, listings, policy.
 - [ ] 114. Stores: developer name and public developer email checked; privacy/support/marketing URLs to the website.
+- [x] 115. (2.4.5) Darkroom 98: icon highlight at once (no double-tap wait); Photo Room folder: tap selects, second tap opens.

@@ -136,6 +136,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
   final _aScroll = ScrollController();
   final Set<String> _selected = {};
 
+  /// The Photo Room folder picked (first tap; the second opens it).
+  bool _folderPicked = false;
+
   /// Edit > Multi-Select: taps add and remove files, nothing opens.
   bool _multi = false;
   ExplorerPlace? _place;
@@ -280,6 +283,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
     setState(() {
       _place = p;
       _selected.clear();
+      _folderPicked = false;
     });
     if (p == ExplorerPlace.photoRoom) {
       // (thumbnails from before 2.3.7 drawn again from their files, once)
@@ -1153,8 +1157,17 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                                           files: ref
                                                                               .watch(photoRoomFolderProvider)
                                                                               .length,
-                                                                          onOpen: () =>
-                                                                              _go(ExplorerPlace.photoRoom),
+                                                                          selected: _folderPicked,
+                                                                          onSelect: () => setState(() {
+                                                                            _selected.clear();
+                                                                            _folderPicked = true;
+                                                                          }),
+                                                                          onOpen: () {
+                                                                            setState(
+                                                                              () => _folderPicked = false,
+                                                                            );
+                                                                            _go(ExplorerPlace.photoRoom);
+                                                                          },
                                                                         ),
                                                                       ]
                                                                     : const [],
@@ -1183,6 +1196,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                                     : null,
                                                                 multi: _multi,
                                                                 onSelect: (m) => setState(() {
+                                                                  _folderPicked = false;
                                                                   if (_multi) {
                                                                     if (!_selected.remove(m.id)) {
                                                                       _selected.add(m.id);
@@ -1197,7 +1211,12 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                                 // (a stray tap on the blank part
                                                                 // doesn't throw away what's picked)
                                                                 onClearSelection: () {
-                                                                  if (!_multi) setState(_selected.clear);
+                                                                  if (!_multi) {
+                                                                    setState(() {
+                                                                      _selected.clear();
+                                                                      _folderPicked = false;
+                                                                    });
+                                                                  }
                                                                 },
                                                                 onSort: prefsN.sortBy,
                                                               ),

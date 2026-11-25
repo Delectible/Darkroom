@@ -91,8 +91,8 @@ class DesktopIcon extends StatelessWidget {
     label: label,
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
+      // (no onDoubleTap: it held the highlight back; the second tap opens)
       onTap: selected ? onOpen : onSelect,
-      onDoubleTap: onOpen,
       child: SizedBox(
         width: 64,
         child: Column(

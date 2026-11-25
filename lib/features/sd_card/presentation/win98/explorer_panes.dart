@@ -15,7 +15,13 @@ import 'win98_widgets.dart';
 enum ExplorerPlace { sd, floppy, c, photoRoom, myComputer }
 
 /// A folder shown before a folder's files (Photo Room, in C:).
-typedef ExplorerFolder = ({String name, int files, VoidCallback onOpen});
+typedef ExplorerFolder = ({
+  String name,
+  int files,
+  bool selected,
+  VoidCallback onSelect,
+  VoidCallback onOpen,
+});
 
 /// Files on the card are listed but locked; files on C: open normally.
 class ExplorerFilePane extends StatelessWidget {
@@ -92,8 +98,8 @@ class ExplorerFilePane extends StatelessWidget {
             onSelect(m);
           }
         },
-        // (no double tap to wait for in Multi-Select: taps land at once)
-        onDoubleTap: multi ? null : () => onOpen(m),
+        // (no onDoubleTap: waiting to rule one out held every tap's
+        // highlight back ~300 ms; the second tap opens anyway)
         onLongPress: multi
             ? null
             : () {
@@ -225,20 +231,29 @@ class _FolderTile extends StatelessWidget {
     final Widget look = switch (view) {
       ExplorerView.largeIcons => Column(
         children: [
-          const SizedBox(
+          SizedBox(
             width: 72,
             height: 72,
-            child: Center(child: PixelIconView(PixelIcon.folder, size: 48)),
+            child: Center(
+              child: ColorFiltered(
+                colorFilter: folder.selected
+                    ? ColorFilter.mode(W98.navy.withValues(alpha: 0.5), BlendMode.srcATop)
+                    : const ColorFilter.mode(Color(0x00000000), BlendMode.dst),
+                child: const PixelIconView(PixelIcon.folder, size: 48),
+              ),
+            ),
           ),
           const SizedBox(height: 4),
-          _Label(text: folder.name, selected: false, maxLines: 2),
+          _Label(text: folder.name, selected: folder.selected, maxLines: 2),
         ],
       ),
       ExplorerView.smallIcons => Row(
         children: [
           const PixelIconView(PixelIcon.folder),
           const SizedBox(width: 4),
-          Flexible(child: _Label(text: folder.name, selected: false, maxLines: 1)),
+          Flexible(
+            child: _Label(text: folder.name, selected: folder.selected, maxLines: 1),
+          ),
         ],
       ),
       ExplorerView.details => Row(
@@ -246,7 +261,10 @@ class _FolderTile extends StatelessWidget {
           const SizedBox(width: 2),
           const PixelIconView(PixelIcon.folder),
           const SizedBox(width: 4),
-          Expanded(flex: 5, child: _Label(text: folder.name, selected: false, maxLines: 1)),
+          Expanded(
+            flex: 5,
+            child: _Label(text: folder.name, selected: folder.selected, maxLines: 1),
+          ),
           Expanded(flex: 3, child: Text('${folder.files} file(s)', textAlign: TextAlign.right, maxLines: 1)),
           const SizedBox(width: 8),
           const Expanded(flex: 3, child: Text('File Folder', maxLines: 1, overflow: TextOverflow.clip)),
@@ -254,10 +272,16 @@ class _FolderTile extends StatelessWidget {
         ],
       ),
     };
+    // like a file: the first tap selects it, a second one opens it
     return Semantics(
       button: true,
+      selected: folder.selected,
       label: 'Folder ${folder.name}',
-      child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: folder.onOpen, child: look),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: folder.selected ? folder.onOpen : folder.onSelect,
+        child: look,
+      ),
     );
   }
 }

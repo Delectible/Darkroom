@@ -1022,6 +1022,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                               },
                                             ),
                                             Win98MenuItem(
+                                              'Darkroom Support on the Web',
+                                              onSelected: () => Support.openSupport(),
+                                            ),
+                                            Win98MenuItem(
                                               'Darkroom on Instagram',
                                               onSelected: () async {
                                                 if (!await Support.openInstagram() && mounted) {

@@ -72,6 +72,9 @@ class ContactSheet extends StatelessWidget {
               style: TextStyle(color: p.textMuted, fontSize: 14),
             ),
             const SizedBox(height: 12),
+            row(Icons.help_outline, 'Help & support', 'Common questions on our website', () async {
+              await Support.openSupport();
+            }),
             row(Icons.mail_outline, 'Email us', Support.email, email),
             row(Icons.camera_alt_outlined, 'Instagram', Support.instagram, instagram),
             row(Icons.star_outline, 'Rate Darkroom', 'Tell others what you think', rate),

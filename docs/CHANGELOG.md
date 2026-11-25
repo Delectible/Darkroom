@@ -1667,3 +1667,4 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [ ] 114. Stores: developer name and public developer email checked; privacy/support/marketing URLs to the website.
 - [x] 115. (2.4.5) Darkroom 98: icon highlight at once (no double-tap wait); Photo Room folder: tap selects, second tap opens.
 - [x] 116. Privacy policy updated (Contact us email contents, Studio/Photo Room creations, ratings/links, Gmail contact); website darkroomcamera.app drafted (home, support, privacy, press).
+- [x] 117. (2.4.6) Privacy and support link to darkroomcamera.app (Contact sheet: Help & support; Darkroom 98 Help: Support on the Web).

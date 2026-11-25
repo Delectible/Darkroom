@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.4.5';
+  static const version = '2.4.6';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98: icons highlight the moment you tap them. The Photo Room folder selects on the first tap and opens on the second, like every other icon.';
+      'Help & support and the privacy policy now open on our new website, darkroomcamera.app.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

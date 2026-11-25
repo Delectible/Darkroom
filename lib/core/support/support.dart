@@ -13,7 +13,8 @@ class Support {
   const Support._();
 
   static const email = 'darkroomphotoapp@gmail.com';
-  static const privacyUrl = 'https://github.com/Delectible/Darkroom/blob/main/docs/PRIVACY.md';
+  static const privacyUrl = 'https://darkroomcamera.app/privacy/';
+  static const supportUrl = 'https://darkroomcamera.app/support/';
   static const instagram = '@dark.roomphotos';
   static const instagramUrl = 'https://www.instagram.com/dark.roomphotos/';
 
@@ -21,6 +22,15 @@ class Support {
   static Future<bool> openInstagram() async {
     try {
       return await launchUrl(Uri.parse(instagramUrl), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// The help page on the website (common questions, contact).
+  static Future<bool> openSupport() async {
+    try {
+      return await launchUrl(Uri.parse(supportUrl), mode: LaunchMode.externalApplication);
     } catch (_) {
       return false;
     }

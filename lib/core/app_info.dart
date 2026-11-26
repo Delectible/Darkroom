@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Star your favourite prints and filter the corkboard by film, month or favourites. Darkroom 98 resolution now changes the pixels too: 1024 x 768 (as before) is the default.';
+      'Star your favourite prints and reels, and filter the corkboard by film, month or favourites. Darkroom 98: resolution changes the pixels too, and Options is now Settings.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

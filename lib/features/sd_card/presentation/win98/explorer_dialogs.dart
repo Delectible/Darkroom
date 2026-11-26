@@ -267,12 +267,12 @@ class _PiePainter extends CustomPainter {
 }
 
 // -----------------------------------------------------------------------------
-// Tools > Options (the same settings as the camera's settings sheet)
+// Tools > Settings (the same settings as the camera's settings sheet)
 // -----------------------------------------------------------------------------
 
 Future<void> showExplorerOptions(BuildContext context) => showWin98Window<void>(
   context,
-  title: 'Options',
+  title: 'Settings',
   width: 340,
   icon: const PixelIconView(PixelIcon.views),
   builder: (context) => const _OptionsBody(),
@@ -1009,7 +1009,8 @@ Future<void> showTipOfTheDay(BuildContext context) {
           children: [
             Win98Bevel(
               style: BevelStyle.sunken,
-              color: const Color(0xFFFFFFE1),
+              // (the window colour, so a dark scheme stays readable)
+              color: W98.window,
               padding: const EdgeInsets.all(12),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1022,10 +1023,14 @@ Future<void> showTipOfTheDay(BuildContext context) {
                       children: [
                         Text(
                           name == null ? 'Did you know...' : 'Welcome back, $name. Did you know...',
-                          style: W98.text.copyWith(fontWeight: FontWeight.w800, fontSize: 14),
+                          style: W98.text.copyWith(
+                            color: W98.windowInk,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 6),
-                        Text(_tips[i]),
+                        Text(_tips[i], style: W98.text.copyWith(color: W98.windowInk)),
                       ],
                     ),
                   ),
@@ -1245,7 +1250,7 @@ class StartMenuPanel extends StatelessWidget {
                     item(PixelIcon.camera, 'Camera', StartAction.camera),
                     item(PixelIcon.folder, 'My Pictures', StartAction.pictures),
                     item(PixelIcon.photoRoom, 'Photo Room', StartAction.photoRoom),
-                    item(PixelIcon.views, 'Settings', StartAction.options),
+                    item(PixelIcon.settings, 'Settings', StartAction.options),
                     item(PixelIcon.question, 'Help', StartAction.help),
                     item(PixelIcon.upFolder, 'Run...', StartAction.run),
                     Divider(height: 6, color: W98.shadow),

@@ -8,6 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/note_box.dart';
+import '../../../core/db/favourites.dart';
+
 import 'package:video_player/video_player.dart';
 
 import '../../../core/media/stop_short.dart';
@@ -632,6 +634,20 @@ class _ProjectorScreenState extends ConsumerState<ProjectorScreen> with SingleTi
                     icon: const Icon(Icons.download, size: 18),
                     label: Text(_saving ? 'Saving…' : 'Save'),
                   ),
+          ),
+          Consumer(
+            builder: (context, ref, _) {
+              final on = ref.watch(favouritesProvider).contains(item.id);
+              return TextButton.icon(
+                onPressed: () {
+                  unawaited(Haptics.selectionClick());
+                  ref.read(favouritesProvider.notifier).toggle(item.id);
+                },
+                icon: Icon(on ? Icons.star : Icons.star_border, size: 18),
+                label: const Text('Favourite'),
+                style: TextButton.styleFrom(foregroundColor: on ? const Color(0xFFF2C46D) : Colors.white70),
+              );
+            },
           ),
           TextButton.icon(
             onPressed: () => _delete(item),

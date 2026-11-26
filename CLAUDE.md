@@ -20,7 +20,12 @@ matching section of **`docs/NOTES.md`** before changing an area
   and once the `play` job has uploaded (+2 min) run `promote-closed.yml`
   (build number empty) and, when it's done, PushNotification: version,
   build, one line of what's new (or the failure).
-- **"publish"** = both stores' production: push first if needed, wait for
+- **"publish"** = both stores' production. First, before anything is
+  sent: show him the What's new draft (English, then say it's ready to
+  translate) and a compliance check against everything new since the last
+  publish (privacy policy in `docs/PRIVACY.md` and on the website, store
+  listing claims, Data safety / App Privacy answers, website copy); wait
+  for his OK. Then push first if needed, wait for
   that build to reach internal testing, then run `promote-production.yml`
   (straight to Play production; build number empty) and
   `appstore-release.yml` (rules under Stores).
@@ -28,6 +33,8 @@ matching section of **`docs/NOTES.md`** before changing an area
   `AppInfo.version`; set `AppInfo.latest` (Play's "What's new", plain
   words). Unpushed changes share one version. Only ever bump the last
   number (2.3.x); a bigger jump only when he says so.
+- A middle-number bump (2.4 → 2.5): add the version's main ideas to
+  `AppInfo.revisions` (Help > About in Darkroom 98) in the same change.
 - Commit messages plain: no session links, no Co-Authored-By.
 - Log requests in `docs/CHANGELOG.md` by number; new ideas go there and on
   "the checklist": artifact **Darkroom Release Sweep**,

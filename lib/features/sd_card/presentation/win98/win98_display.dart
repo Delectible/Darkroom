@@ -10,7 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/providers.dart';
 import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 
-/// The Darkroom 98 monitor's settings (Tools > Options > Monitor / Screen
+/// The Darkroom 98 monitor's settings (Tools > Settings > Monitor / Screen
 /// Saver): the kind of tube, the resolution the desktop runs at, the
 /// knobs, the colour, large fonts and the screen saver.
 ///

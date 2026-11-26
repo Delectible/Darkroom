@@ -151,7 +151,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
   @override
   void initState() {
     super.initState();
-    // The saved colour scheme (Tools > Options > Themes), before anything draws.
+    // The saved colour scheme (Tools > Settings > Themes), before anything draws.
     W98.scheme = Win98Scheme.byName(ref.read(win98ThemeProvider));
     for (final s in Sfx.windows98) {
       unawaited(s.preload());
@@ -964,7 +964,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                             Win98MenuItem('Photo Room...', onSelected: _photoRoom),
                                             const Win98MenuItem.separator(),
                                             Win98MenuItem(
-                                              'Options...',
+                                              'Settings...',
                                               onSelected: () => showExplorerOptions(context),
                                             ),
                                             const Win98MenuItem.separator(),

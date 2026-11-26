@@ -8,7 +8,7 @@ import '../../../../core/device/upright.dart';
 import 'win98_monitor.dart';
 import 'win98_display.dart';
 
-/// Darkroom 98's screen savers (Tools > Options > Screen Saver): 3D Pipes,
+/// Darkroom 98's screen savers (Tools > Settings > Screen Saver): 3D Pipes,
 /// Starfield and 3D Text, all drawn live (no assets). They start after
 /// [Win98Display.saverWait] minutes without a touch ([Win98SaverWatch]) and
 /// any touch puts them away.

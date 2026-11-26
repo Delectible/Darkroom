@@ -59,6 +59,7 @@ class FilmProfile {
     this.dust = 0,
     this.gate = 0,
     this.defects = 0,
+    this.instant = false,
     this.negative = true,
     this.lens,
     this.grainHighlights = 0,
@@ -141,6 +142,9 @@ class FilmProfile {
   /// leak (0 = never, 1 = a well-handled consumer roll). See FilmDefects.
   final double defects;
 
+  /// Instant film (its own chemistry flaws; see FilmDefects).
+  final bool instant;
+
   /// Negative film (dust scans white); false for positive / instant.
   final bool negative;
 
@@ -221,9 +225,9 @@ class FilmProfile {
       shadowTint: [-0.032, 0.015, -0.004],
       shadowMud: 0.25,
       highlightTint: [0.012, 0.0, -0.022],
-      grainAmount: 0.05,
+      grainAmount: 0.030,
       grainChroma: 0.4,
-      grainResolution: 1500,
+      grainResolution: 1800,
       halation: 0.20,
       vignette: 0.18,
       defects: 1.0,
@@ -263,10 +267,10 @@ class FilmProfile {
       white: 1.03,
       shadowLift: 0.008,
       highlightCap: 1.0,
-      grainAmount: 0.026,
+      grainAmount: 0.010,
       grainChroma: 0,
-      grainResolution: 1600,
-      grainHighlights: 3.0,
+      grainResolution: 1550,
+      grainHighlights: 1.4,
       halation: 0.12,
       halationColor: [1.0, 1.0, 1.0],
       vignette: 0.20,
@@ -318,7 +322,7 @@ class FilmProfile {
       highlightCap: 0.895,
       shadowTint: [-0.035, 0.002, 0.05],
       highlightTint: [0.012, 0.004, -0.05],
-      grainAmount: 0.022,
+      grainAmount: 0.018,
       grainChroma: 0.25,
       grainResolution: 1500,
       halation: 0.06,
@@ -350,6 +354,7 @@ class FilmProfile {
         // (fast enough for the 40 s develop), many small clouds.
         formation: GrainFormation(frameHeight: 1800, clouds: [1.5, 1.4, 1.8], crystals: 60, shared: 0.95),
       ),
+      instant: true,
     ),
     // --- Pro stocks (1.9): first passes, to tune on the phone ------------
     // Golden 200: the warm consumer film from every drugstore shelf. Golden
@@ -415,9 +420,9 @@ class FilmProfile {
       shadowTint: [-0.024, 0.014, 0.01],
       shadowMud: 0.45,
       highlightTint: [0.02, 0.008, -0.02],
-      grainAmount: 0.045,
+      grainAmount: 0.040,
       grainChroma: 0.45,
-      grainResolution: 1400,
+      grainResolution: 1450,
       halation: 0.95,
       halationColor: [1.0, 0.18, 0.08],
       vignette: 0.18,
@@ -504,9 +509,9 @@ class FilmProfile {
       shadowTint: [-0.02, 0.024, 0.0],
       shadowMud: 0.6,
       highlightTint: [0.008, 0.006, -0.012],
-      grainAmount: 0.026,
+      grainAmount: 0.034,
       grainChroma: 0.45,
-      grainResolution: 1300,
+      grainResolution: 1500,
       halation: 0.15,
       vignette: 0.58,
       flashStrength: 1.0,

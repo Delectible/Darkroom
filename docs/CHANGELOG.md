@@ -1670,3 +1670,4 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 117. (2.4.6) Privacy and support link to darkroomcamera.app (Contact sheet: Help & support; Darkroom 98 Help: Support on the Web).
 - [x] 118. What's new for 2.4.6 production (20 languages).
 - [x] 119. Debug > Sample Viewfinder: viewers get a button that puts the picture in the viewfinder instead of the live feed (for recordings).
+- [x] 120. (2.4.7) Film flaws: one at most per print, most prints clean, subtler (instant edge especially); slide film gets dust/scratches, not instant chemistry. Grain retuned (B&W, instant, Portrait, Single-Use, Night lighter; Golden 200 unchanged).

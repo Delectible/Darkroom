@@ -25,6 +25,7 @@ void main() {
       final f = frame();
       final d = FilmDefects(amount: 1, negative: true, seed: seed)..apply(f, w, h);
       if (d.applied.isEmpty) clean++;
+      expect(d.applied.length, lessThanOrEqualTo(1)); // one flaw at most
       if (d.applied.contains('light leak')) {
         leaks++;
         continue;
@@ -36,19 +37,29 @@ void main() {
       }
       expect(changed / f.length, lessThan(0.03), reason: 'seed $seed: ${d.applied}');
     }
-    expect(clean, inInclusiveRange(30, 120)); // some frames are spotless
-    expect(leaks, lessThan(40)); // leaks are rare
+    expect(clean, inInclusiveRange(170, 240)); // most frames are spotless
+    expect(leaks, lessThan(15)); // leaks are rare
     expect(kinds, containsAll(['dust', 'hair', 'scratch']));
   });
 
   test('instant film gets chemistry flaws, not hairs or scratches', () {
     final kinds = <String>{};
-    for (var seed = 0; seed < 200; seed++) {
-      final d = FilmDefects(amount: 1, negative: false, seed: seed)..apply(frame(), w, h);
+    for (var seed = 0; seed < 600; seed++) {
+      final d = FilmDefects(amount: 1, negative: false, instant: true, seed: seed)..apply(frame(), w, h);
       kinds.addAll(d.applied.map((k) => k.split(' x').first));
     }
     expect(kinds, containsAll(['sparkle', 'roller streaks', 'chemistry edge', 'corner fog']));
     expect(kinds, isNot(contains('hair')));
     expect(kinds, isNot(contains('scratch')));
+  });
+  test('slide film gets dust or a scratch, never instant chemistry', () {
+    final kinds = <String>{};
+    for (var seed = 0; seed < 400; seed++) {
+      final d = FilmDefects(amount: 1, negative: false, seed: seed)..apply(frame(), w, h);
+      kinds.addAll(d.applied.map((k) => k.split(' x').first));
+    }
+    expect(kinds, containsAll(['dust', 'scratch']));
+    expect(kinds, isNot(contains('sparkle')));
+    expect(kinds, isNot(contains('chemistry edge')));
   });
 }

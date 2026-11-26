@@ -371,6 +371,7 @@ class FilmRenderer {
     FilmDefects(
       amount: profile.defects,
       negative: profile.negative,
+      instant: profile.instant,
       colour: !profile.mono,
       seed: seed,
     ).apply(data, w, h);

@@ -17,14 +17,22 @@ import 'dart:typed_data';
 ///
 /// Only the developed still gets them; the viewfinder shows the scene.
 class FilmDefects {
-  FilmDefects({required this.amount, required this.negative, this.colour = true, required int seed})
-    : _rnd = math.Random(seed ^ 0x5DEECE6);
+  FilmDefects({
+    required this.amount,
+    required this.negative,
+    this.instant = false,
+    this.colour = true,
+    required int seed,
+  }) : _rnd = math.Random(seed ^ 0x5DEECE6);
 
   /// 0 = clean, 1 = a well-handled consumer roll.
   final double amount;
 
   /// Negative film (dust scans white) vs positive / instant (dust is dark).
   final bool negative;
+
+  /// Instant film: its chemistry's flaws instead of dust and scratches.
+  final bool instant;
 
   /// Colour film (a scratch can pick up a dye tint); false for B&W.
   final bool colour;
@@ -37,53 +45,59 @@ class FilmDefects {
     if (amount <= 0) return;
     // Sizes in pixels of a ~12MP frame; scaled to this one.
     final s = math.min(w, h) / 2000;
-    if (!negative) {
-      _instant(data, w, h, s);
+    // At most one flaw a frame, and most frames none: one roll for whether
+    // this frame got anything, a second for what.
+    final odds = instant ? 0.45 : (negative ? 0.33 : 0.25);
+    if (_rnd.nextDouble() >= odds * amount) return;
+    final pick = _rnd.nextDouble();
+    if (instant) {
+      if (pick < 0.4) {
+        final n = 1 + _rnd.nextInt(3);
+        for (var i = 0; i < n; i++) {
+          _sparkle(data, w, h, s);
+        }
+        applied.add('sparkle x$n');
+      } else if (pick < 0.6) {
+        _streaks(data, w, h, s);
+        applied.add('roller streaks');
+      } else if (pick < 0.78) {
+        _chemistryEdge(data, w, h);
+        applied.add('chemistry edge');
+      } else if (pick < 0.9) {
+        _cornerFog(data, w, h);
+        applied.add('corner fog');
+      } else {
+        _speck(data, w, h, s);
+        applied.add('dust x1');
+      }
       return;
     }
-
-    final specks = _poisson(1.6 * amount);
-    for (var i = 0; i < specks; i++) {
-      _speck(data, w, h, s);
+    if (!negative) {
+      // Slide film: a speck of dust (dark on a positive) or a faint scratch.
+      if (pick < 0.7) {
+        _speck(data, w, h, s);
+        applied.add('dust x1');
+      } else {
+        _scratch(data, w, h, s);
+        applied.add('scratch');
+      }
+      return;
     }
-    if (specks > 0) applied.add('dust x$specks');
-    if (_rnd.nextDouble() < 0.12 * amount) {
-      _hair(data, w, h, s);
-      applied.add('hair');
-    }
-    if (_rnd.nextDouble() < 0.22 * amount) {
+    if (pick < 0.6) {
+      final n = _rnd.nextDouble() < 0.8 ? 1 : 2;
+      for (var i = 0; i < n; i++) {
+        _speck(data, w, h, s);
+      }
+      applied.add('dust x$n');
+    } else if (pick < 0.78) {
       _scratch(data, w, h, s);
       applied.add('scratch');
-    }
-    if (_rnd.nextDouble() < 0.06 * amount) {
+    } else if (pick < 0.93) {
+      _hair(data, w, h, s);
+      applied.add('hair');
+    } else {
       _leak(data, w, h);
       applied.add('light leak');
-    }
-  }
-
-  /// Instant film's own flaws: the chemistry, not dust on a negative.
-  void _instant(Uint8List d, int w, int h, double s) {
-    final sparkles = _poisson(2.5 * amount);
-    for (var i = 0; i < sparkles; i++) {
-      _sparkle(d, w, h, s);
-    }
-    if (sparkles > 0) applied.add('sparkle x$sparkles');
-    final specks = _poisson(0.5 * amount);
-    for (var i = 0; i < specks; i++) {
-      _speck(d, w, h, s);
-    }
-    if (specks > 0) applied.add('dust x$specks');
-    if (_rnd.nextDouble() < 0.3 * amount) {
-      _streaks(d, w, h, s);
-      applied.add('roller streaks');
-    }
-    if (_rnd.nextDouble() < 0.3 * amount) {
-      _chemistryEdge(d, w, h);
-      applied.add('chemistry edge');
-    }
-    if (_rnd.nextDouble() < 0.15 * amount) {
-      _cornerFog(d, w, h);
-      applied.add('corner fog');
     }
   }
 
@@ -91,7 +105,7 @@ class FilmDefects {
   void _sparkle(Uint8List d, int w, int h, double s) {
     final cx = _rnd.nextDouble() * w, cy = _rnd.nextDouble() * h;
     final r = (0.6 + 1.2 * _rnd.nextDouble()) * s;
-    final a = 0.4 + 0.45 * _rnd.nextDouble();
+    final a = 0.3 + 0.3 * _rnd.nextDouble();
     final ext = (r + 1.5).ceil();
     for (var y = (cy - ext).floor(); y <= (cy + ext).ceil(); y++) {
       for (var x = (cx - ext).floor(); x <= (cx + ext).ceil(); x++) {
@@ -109,7 +123,7 @@ class FilmDefects {
     for (var k = 0; k < n; k++) {
       var x = x0 + (_rnd.nextDouble() - 0.5) * 0.08 * w;
       final length = h * (0.25 + 0.55 * _rnd.nextDouble());
-      final opacity = 0.08 + 0.12 * _rnd.nextDouble();
+      final opacity = 0.06 + 0.08 * _rnd.nextDouble();
       final pts = <(double, double, double)>[];
       for (var t = 0.0; t < length; t += 0.5) {
         x += (_rnd.nextDouble() - 0.5) * 0.05;
@@ -128,9 +142,9 @@ class FilmDefects {
     // 0 bottom, 1 top, 2 left, 3 right
     final edge = pick < 0.7 ? 0 : (pick < 0.85 ? 1 : (_rnd.nextBool() ? 2 : 3));
     final along = edge < 2 ? w : h;
-    final base = math.min(w, h) * (0.012 + 0.03 * _rnd.nextDouble());
+    final base = math.min(w, h) * (0.006 + 0.014 * _rnd.nextDouble());
     final feather = math.max(2.0, base * 0.45);
-    final strength = 0.5 + 0.35 * _rnd.nextDouble();
+    final strength = 0.22 + 0.18 * _rnd.nextDouble();
     final col = _rnd.nextDouble() < 0.6 ? const [0.92, 0.88, 0.72] : const [0.58, 0.67, 0.78];
     final waves = [
       for (var i = 0; i < 4; i++)
@@ -169,7 +183,7 @@ class FilmDefects {
   void _cornerFog(Uint8List d, int w, int h) {
     final cx = _rnd.nextBool() ? 0.0 : w - 1.0, cy = _rnd.nextBool() ? 0.0 : h - 1.0;
     final r = math.min(w, h) * (0.22 + 0.22 * _rnd.nextDouble());
-    final strength = 0.25 + 0.25 * _rnd.nextDouble();
+    final strength = 0.15 + 0.15 * _rnd.nextDouble();
     const col = [1.0, 0.96, 0.86];
     final x0 = math.max(0, (cx - r * 2).floor()), x1 = math.min(w - 1, (cx + r * 2).ceil());
     final y0 = math.max(0, (cy - r * 2).floor()), y1 = math.min(h - 1, (cy + r * 2).ceil());
@@ -187,17 +201,6 @@ class FilmDefects {
     }
   }
 
-  int _poisson(double mean) {
-    final l = math.exp(-mean);
-    var k = 0;
-    var p = _rnd.nextDouble();
-    while (p > l) {
-      k++;
-      p *= _rnd.nextDouble();
-    }
-    return k;
-  }
-
   /// Blends [tone] (0 black .. 1 white) into the pixel by [a].
   void _mark(Uint8List d, int w, int h, int x, int y, double a, double tone, [List<double>? tint]) {
     if (x < 0 || y < 0 || x >= w || y >= h || a <= 0) return;
@@ -213,7 +216,7 @@ class FilmDefects {
   /// An irregular blob: a few overlapping soft discs.
   void _speck(Uint8List d, int w, int h, double s) {
     final cx = _rnd.nextDouble() * w, cy = _rnd.nextDouble() * h;
-    final opacity = 0.45 + 0.45 * _rnd.nextDouble();
+    final opacity = 0.35 + 0.3 * _rnd.nextDouble();
     final parts = 1 + _rnd.nextInt(3);
     for (var k = 0; k < parts; k++) {
       final r = (0.8 + 2.4 * _rnd.nextDouble()) * s;
@@ -264,7 +267,7 @@ class FilmDefects {
     var angle = _rnd.nextDouble() * math.pi * 2;
     var turn = (_rnd.nextDouble() - 0.5) * 0.02;
     final length = (120 + 260 * _rnd.nextDouble()) * s;
-    final opacity = 0.5 + 0.3 * _rnd.nextDouble();
+    final opacity = 0.35 + 0.25 * _rnd.nextDouble();
     final pts = <(double, double, double)>[];
     for (var t = 0.0; t < length; t += 0.5) {
       pts.add((x, y, opacity));
@@ -285,7 +288,7 @@ class FilmDefects {
     final end = start + len * (0.35 + 0.65 * _rnd.nextDouble());
     var pos = (0.08 + 0.84 * _rnd.nextDouble()) * across;
     final drift = (_rnd.nextDouble() - 0.5) * 0.02;
-    final opacity = 0.22 + 0.18 * _rnd.nextDouble();
+    final opacity = 0.15 + 0.13 * _rnd.nextDouble();
     final tint = negative && colour && _rnd.nextDouble() < 0.4 ? const [0.82, 1.0, 1.0] : null;
     final pts = <(double, double, double)>[];
     for (var t = start; t < math.min(end, len.toDouble()); t += 0.5) {

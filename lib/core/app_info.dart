@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.4.6';
+  static const version = '2.4.7';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Help & support and the privacy policy now open on our new website, darkroomcamera.app.';
+      'Film flaws are rarer and subtler (one at most per print), and grain is more true to life, especially black and white and instant.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

@@ -41,7 +41,11 @@ class ExplorerFilePane extends StatelessWidget {
     this.emptyNote,
     this.folders = const [],
     this.multi = false,
+    this.marked = const {},
   });
+
+  /// Debug > Hide Photos: photos marked to hide (drawn dimmed).
+  final Set<String> marked;
 
   /// Multi-Select: a tap adds a file to the selection or takes it out
   /// (nothing opens), like holding Ctrl.
@@ -106,7 +110,12 @@ class ExplorerFilePane extends StatelessWidget {
                 onSelect(m);
                 if (m.isReady && !locked) unawaited(shareMedia(anchor, m));
               },
-        child: builder(selected.contains(m.id)),
+        child: marked.contains(m.id)
+            ? ColorFiltered(
+                colorFilter: const ColorFilter.mode(Color(0xA0808080), BlendMode.srcATop),
+                child: builder(selected.contains(m.id)),
+              )
+            : builder(selected.contains(m.id)),
       ),
     );
 

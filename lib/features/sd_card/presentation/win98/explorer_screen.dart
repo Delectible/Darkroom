@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/audio/sfx.dart';
+import '../../../../core/diagnostics/screenshot_hide.dart';
 
 import '../../../../core/db/media_repository.dart';
 import '../../../../core/providers.dart';
@@ -701,7 +702,10 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
     final onFloppy = place == ExplorerPlace.floppy;
     final visible = place == ExplorerPlace.myComputer
         ? const <MediaItem>[]
-        : ref.watch(explorerItemsProvider(drive));
+        : ref
+              .watch(explorerItemsProvider(drive))
+              .where((m) => !ref.watch(photosToHideProvider).contains(m.id))
+              .toList();
     final floppyBytes = floppyFiles.fold<int>(0, (s, m) => s + (m.bytes ?? 0));
     final readyOnFloppy = floppyFiles.where((m) => m.isReady).length;
     final prefs = ref.watch(explorerPrefsProvider);
@@ -1199,7 +1203,16 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                                     ? 'Auto Transfer is Enabled'
                                                                     : null,
                                                                 multi: _multi,
+                                                                marked: ref.watch(hideModeProvider)
+                                                                    ? ref.watch(hiddenPhotosProvider)
+                                                                    : const {},
                                                                 onSelect: (m) => setState(() {
+                                                                  if (ref.read(hideModeProvider)) {
+                                                                    ref
+                                                                        .read(hiddenPhotosProvider.notifier)
+                                                                        .toggle(m.id);
+                                                                    return;
+                                                                  }
                                                                   _folderPicked = false;
                                                                   if (_multi) {
                                                                     if (!_selected.remove(m.id)) {
@@ -1211,7 +1224,11 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                                                       ..add(m.id);
                                                                   }
                                                                 }),
-                                                                onOpen: _open,
+                                                                onOpen: (m) => ref.read(hideModeProvider)
+                                                                    ? ref
+                                                                          .read(hiddenPhotosProvider.notifier)
+                                                                          .toggle(m.id)
+                                                                    : _open(m),
                                                                 // (a stray tap on the blank part
                                                                 // doesn't throw away what's picked)
                                                                 onClearSelection: () {
@@ -1399,6 +1416,13 @@ class _Toolbar extends ConsumerWidget {
         child: Row(
           children: [
             tool(PixelIcon.upFolder, 'Up', onUp),
+            if (ref.watch(hidePhotosButtonProvider))
+              tool(
+                PixelIcon.imageFile,
+                'Hide',
+                () => ref.read(hideModeProvider.notifier).toggle(),
+                toggled: ref.watch(hideModeProvider),
+              ),
             tool(PixelIcon.folderOpen, 'Folders', onFolders, toggled: foldersOn),
             Builder(
               builder: (anchor) => tool(PixelIcon.views, 'Views', () {

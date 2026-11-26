@@ -19,6 +19,7 @@ import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/diagnostics/develop_stats.dart';
 import '../../../../core/diagnostics/fps_meter.dart';
 import '../../../../core/diagnostics/sample_feed.dart';
+import '../../../../core/diagnostics/screenshot_hide.dart';
 import '../../../../core/diagnostics/lag_watch.dart';
 import '../../../../core/diagnostics/launch_timer.dart';
 import '../../../../core/diagnostics/perf_recorder.dart';
@@ -248,6 +249,17 @@ final _tools = <_Tool>[
         'still screen reads about 4.',
     (_, ref) async => ref.read(fpsMeterProvider.notifier).toggle(),
     on: (ref) => ref.watch(fpsMeterProvider),
+  ),
+  _Tool(
+    PixelIcon.imageFile,
+    'Hide Photos',
+    'A Hide button on the corkboard and in the Darkroom 98 toolbar: press it, tap the photos to hide, press it '
+        'again and they are left out, for clean screenshots. Turning this off shows everything again.',
+    (_, ref) async {
+      ref.read(hidePhotosButtonProvider.notifier).toggle();
+      if (ref.read(hideModeProvider)) ref.read(hideModeProvider.notifier).toggle();
+    },
+    on: (ref) => ref.watch(hidePhotosButtonProvider),
   ),
   _Tool(
     PixelIcon.camera,
@@ -688,6 +700,7 @@ final _groups = <(String, List<String>)>[
   ('Pro & Unlocks', ['Darkroom Pro', 'Refill Film & Battery', 'Unlock All Skins']),
   ('Speed Test Switches', [for (final (name, _, _) in _speedTests) name]),
   ('Diagnostics', ['Camera Log', 'Picture Readback Test', 'Crash Reports', 'Test Crash']),
+  ('Marketing', ['Sample Viewfinder', 'Hide Photos']),
   ('First Run & Prompts', ['Welcome Tour', 'Tour On Next Start', 'Rating Prompt', 'Lag Prompt']),
 ];
 

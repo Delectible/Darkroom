@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/note_box.dart';
+import '../../../core/diagnostics/screenshot_hide.dart';
 import '../../../core/device/gallery_check.dart';
 import '../../../core/device/system_gestures.dart';
 import '../../../core/theme/darkroom_mark.dart';
@@ -506,7 +507,8 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
   Widget build(BuildContext context) {
     final items = ref.watch(filmItemsProvider).value ?? const <MediaItem>[];
     final now = DateTime.now();
-    final developed = items.where((m) => m.isDevelopedAt(now)).toList();
+    final hide = ref.watch(photosToHideProvider);
+    final developed = items.where((m) => m.isDevelopedAt(now) && !hide.contains(m.id)).toList();
     final inDarkroom = items.where((m) => !m.isDevelopedAt(now)).toList()
       ..sort((a, b) => a.readyAt.compareTo(b.readyAt));
     // (built again when the next one's ready, not on every tick: the
@@ -649,7 +651,9 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                           i,
                                         ) {
                                           final m = shown[i];
-                                          void open() => _open(context, shown, m);
+                                          void open() => ref.read(hideModeProvider)
+                                              ? ref.read(hiddenPhotosProvider.notifier).toggle(m.id)
+                                              : _open(context, shown, m);
                                           void unpin() => _unpin(m);
                                           final falling = _falling.contains(m.id);
                                           final pinned = inStudio.contains(m.id) && !m.isVideo
@@ -681,6 +685,28 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                                   onPinTap: unpin,
                                                   showPin: !falling,
                                                 );
+                                          final marked = ref.watch(markedHiddenProvider(m.id));
+                                          final shownPin = marked
+                                              ? Stack(
+                                                  alignment: Alignment.center,
+                                                  children: [
+                                                    ColorFiltered(
+                                                      colorFilter: const ColorFilter.mode(
+                                                        Color(0xB0000000),
+                                                        BlendMode.srcATop,
+                                                      ),
+                                                      child: pinned,
+                                                    ),
+                                                    const IgnorePointer(
+                                                      child: Icon(
+                                                        Icons.visibility_off,
+                                                        color: Color(0xFFF3E9D8),
+                                                        size: 40,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                )
+                                              : pinned;
                                           final child = _Falling(
                                             falling: falling,
                                             pinColor:
@@ -694,7 +720,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                             },
                                             child: KeyedSubtree(
                                               key: _keys.putIfAbsent(m.id, GlobalKey.new),
-                                              child: pinned,
+                                              child: shownPin,
                                             ),
                                           );
                                           if (!_animatePin(m, i)) {
@@ -946,6 +972,19 @@ class _Header extends StatelessWidget {
             onPressed: onBack,
             icon: const Icon(Icons.arrow_back, color: ink),
             tooltip: 'Back to camera',
+          ),
+          // Debug > Marketing > Hide Photos
+          Consumer(
+            builder: (context, ref, _) => ref.watch(hidePhotosButtonProvider)
+                ? IconButton(
+                    onPressed: () => ref.read(hideModeProvider.notifier).toggle(),
+                    icon: Icon(
+                      ref.watch(hideModeProvider) ? Icons.check_circle : Icons.visibility_off_outlined,
+                      color: ref.watch(hideModeProvider) ? const Color(0xFFFFD27A) : ink,
+                    ),
+                    tooltip: ref.watch(hideModeProvider) ? 'Done hiding' : 'Hide photos',
+                  )
+                : const SizedBox.shrink(),
           ),
           Expanded(
             child: Column(

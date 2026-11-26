@@ -9,6 +9,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/note_box.dart';
+import '../../../core/db/favourites.dart';
 import '../../../core/diagnostics/sample_feed.dart';
 import '../../../core/device/device_memory.dart';
 import '../../../core/db/media_repository.dart';
@@ -360,6 +361,40 @@ class _PrintViewerScreenState extends ConsumerState<PrintViewerScreen> {
                                 style: const TextStyle(color: Colors.white54),
                               ),
                               const SizedBox(width: 10),
+                              // Star: a favourite (the Favourites filter)
+                              Consumer(
+                                builder: (context, ref, _) {
+                                  final on = ref.watch(favouritesProvider).contains(item.id);
+                                  return Tooltip(
+                                    message: on ? 'Remove from favourites' : 'Add to favourites',
+                                    child: Material(
+                                      color: on ? const Color(0x33F2C46D) : const Color(0x1AFFFFFF),
+                                      shape: CircleBorder(
+                                        side: BorderSide(
+                                          color: on ? const Color(0x99F2C46D) : const Color(0x33FFFFFF),
+                                        ),
+                                      ),
+                                      child: InkWell(
+                                        customBorder: const CircleBorder(),
+                                        onTap: () {
+                                          unawaited(Haptics.selectionClick());
+                                          ref.read(favouritesProvider.notifier).toggle(item.id);
+                                        },
+                                        child: SizedBox(
+                                          width: 44,
+                                          height: 44,
+                                          child: Icon(
+                                            on ? Icons.star : Icons.star_border,
+                                            color: on ? const Color(0xFFF2C46D) : Colors.white70,
+                                            size: 24,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 8),
                               // Throw away: up here, away from the everyday buttons
                               Tooltip(
                                 message: 'Throw away',

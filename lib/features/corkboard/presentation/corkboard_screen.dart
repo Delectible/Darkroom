@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/note_box.dart';
+import '../../../core/db/favourites.dart';
 import '../../../core/diagnostics/screenshot_hide.dart';
 import '../../../core/device/gallery_check.dart';
 import '../../../core/device/system_gestures.dart';
@@ -105,6 +106,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
   /// The board's filters: one film (or reels) and one month; null = all.
   String? _stockFilter;
   String? _monthFilter;
+  bool _starredOnly = false;
 
   /// Prints whose tiny copy has been asked for (BoardPhoto.warm).
   final _previewed = <String>{};
@@ -516,7 +518,10 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     // (a filter whose last print is gone lets go)
     if (_stockFilter != null && !onBoard.any((m) => m.cameraId == _stockFilter)) _stockFilter = null;
     if (_monthFilter != null && !onBoard.any((m) => _monthKey(m) == _monthFilter)) _monthFilter = null;
+    final stars = ref.watch(favouritesProvider);
+    if (_starredOnly && !onBoard.any((m) => stars.contains(m.id))) _starredOnly = false;
     final developed = onBoard
+        .where((m) => !_starredOnly || stars.contains(m.id))
         .where(
           (m) =>
               (_stockFilter == null || m.cameraId == _stockFilter) &&
@@ -637,10 +642,13 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                     onSaveAll: () => _saveAll(developed),
                                   ),
                                 ),
-                                if (_BoardFilters.worthShowing(onBoard))
+                                if (_BoardFilters.worthShowing(onBoard, stars))
                                   SliverToBoxAdapter(
                                     child: _BoardFilters(
                                       items: onBoard,
+                                      starred: _starredOnly,
+                                      hasStars: onBoard.any((m) => stars.contains(m.id)),
+                                      onStarred: (v) => setState(() => _starredOnly = v),
                                       stock: _stockFilter,
                                       month: _monthFilter,
                                       onStock: (v) => setState(() => _stockFilter = v),
@@ -971,8 +979,14 @@ class _BoardFilters extends StatelessWidget {
     required this.month,
     required this.onStock,
     required this.onMonth,
+    required this.starred,
+    required this.hasStars,
+    required this.onStarred,
   });
 
+  final bool starred;
+  final bool hasStars;
+  final ValueChanged<bool> onStarred;
   final List<MediaItem> items;
   final String? stock;
   final String? month;
@@ -981,7 +995,8 @@ class _BoardFilters extends StatelessWidget {
 
   /// Only once there's something to sort: a dozen prints, more than one
   /// film or month among them.
-  static bool worthShowing(List<MediaItem> items) {
+  static bool worthShowing(List<MediaItem> items, Set<String> stars) {
+    if (items.any((m) => stars.contains(m.id))) return true;
     if (items.length < 12) return false;
     return items.map((m) => m.cameraId).toSet().length > 1 || items.map(_monthKey).toSet().length > 1;
   }
@@ -1003,7 +1018,7 @@ class _BoardFilters extends StatelessWidget {
       return y == thisYear ? _months[mo - 1] : "${_months[mo - 1]} '${(y % 100).toString().padLeft(2, '0')}";
     }
 
-    Widget chip(String label, bool on, VoidCallback tap) => Padding(
+    Widget chip(String label, bool on, VoidCallback tap, {IconData? icon}) => Padding(
       padding: const EdgeInsets.only(right: 6),
       child: Semantics(
         button: true,
@@ -1021,13 +1036,22 @@ class _BoardFilters extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: on ? const Color(0xFFF3E3C8) : const Color(0x55F3E3C8)),
             ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: on ? const Color(0xFF3A2414) : const Color(0xFFF3E3C8),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 14, color: on ? const Color(0xFF3A2414) : const Color(0xFFF2C46D)),
+                  const SizedBox(width: 4),
+                ],
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: on ? const Color(0xFF3A2414) : const Color(0xFFF3E3C8),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -1045,10 +1069,12 @@ class _BoardFilters extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
         children: [
-          chip('All', stock == null && month == null, () {
+          chip('All', stock == null && month == null && !starred, () {
             onStock(null);
             onMonth(null);
+            onStarred(false);
           }),
+          if (hasStars) chip('Favourites', starred, () => onStarred(!starred), icon: Icons.star),
           if (stocks.length > 1) ...[
             gap(),
             for (final id in stocks)

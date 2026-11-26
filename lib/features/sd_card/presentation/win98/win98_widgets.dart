@@ -564,14 +564,24 @@ class Win98Window extends StatelessWidget {
 
 class Win98MenuItem {
   const Win98MenuItem(this.label, {this.onSelected, this.checked = false, this.radio = false})
-    : separator = false;
+    : separator = false,
+      children = null;
+
+  /// "Filters >": opens a second menu of [children] in its place.
+  const Win98MenuItem.cascade(String label, List<Win98MenuItem> this.children)
+    : label = '$label >',
+      onSelected = null,
+      checked = false,
+      radio = false,
+      separator = false;
 
   const Win98MenuItem.separator()
     : label = '',
       onSelected = null,
       checked = false,
       radio = false,
-      separator = true;
+      separator = true,
+      children = null;
 
   final String label;
   final VoidCallback? onSelected;
@@ -580,6 +590,9 @@ class Win98MenuItem {
   /// Radio-style bullet instead of a check mark.
   final bool radio;
   final bool separator;
+
+  /// A cascade's own items.
+  final List<Win98MenuItem>? children;
 }
 
 /// Opens a drop-down menu under [anchor]. [siblings] are the other titles
@@ -640,6 +653,13 @@ Future<void> showWin98Menu(
   );
   if (picked is int) {
     onSwitch?.call(picked);
+    return;
+  }
+  if (picked is Win98MenuItem && picked.children != null) {
+    Sfx.w98Click.play();
+    if (anchor.mounted) {
+      await showWin98Menu(anchor, picked.children!, siblings: siblings, onSwitch: onSwitch);
+    }
     return;
   }
   if (picked is Win98MenuItem) {
@@ -716,7 +736,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                       GestureDetector(
                         onTapDown: (_) => setState(() => _hot = i),
                         onTapCancel: () => setState(() => _hot = null),
-                        onTap: widget.items[i].onSelected == null
+                        onTap: widget.items[i].onSelected == null && widget.items[i].children == null
                             ? null
                             : () => Navigator.of(context).pop(widget.items[i]),
                         child: Container(
@@ -745,7 +765,7 @@ class _MenuPanelState extends State<_MenuPanel> {
                               ),
                               Text(
                                 widget.items[i].label,
-                                style: widget.items[i].onSelected == null
+                                style: widget.items[i].onSelected == null && widget.items[i].children == null
                                     ? W98.disabledText
                                     : W98.text.copyWith(color: _hot == i ? W98.selectInk : W98.ink),
                               ),

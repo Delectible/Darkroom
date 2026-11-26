@@ -1673,3 +1673,4 @@ reviews yet. Ideas kept (on the checklist under App Inspiration):
 - [x] 120. (2.4.7) Film flaws: one at most per print, most prints clean, subtler (instant edge especially); slide film gets dust/scratches, not instant chemistry. Grain retuned (B&W, instant, Portrait, Single-Use, Night lighter; Golden 200 unchanged).
 - [x] 121. Debug > Marketing (Sample Viewfinder, Hide Photos): a Hide button on the corkboard and in the Darkroom 98 toolbar to tap photos out of screenshots.
 - [x] 122. (2.4.8) Audit fixes: About lists 2.4; Rate opens the store page; shop hints point to Games; long notes put their action underneath; Help > Contact Us. Corkboard filters (film, month) once a board has a dozen prints.
+- [x] 123. (2.4.8) Favourites: star in the print viewer (and Favourite in the Darkroom 98 viewer); corkboard Favourites chip; Darkroom 98 View > Filters > (all, pictures, movies, favourites); Sort by. Switch-phones transfer added to the checklist.

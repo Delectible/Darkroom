@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Corkboard filters: show one film or one month at a time. Rate Darkroom opens the store page, and a few small fixes.';
+      'Star your favourite prints and filter the corkboard by film, month or favourites. Darkroom 98 has Favourites under View > Filters. Rate Darkroom opens the store page.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
@@ -21,7 +21,7 @@ class AppInfo {
         'Help and privacy on darkroomcamera.app',
         'Rarer, subtler film flaws',
         'Finer, truer film grain',
-        'Corkboard filters',
+        'Favourites and corkboard filters',
         'Better Pinball, Solitaire and Bricks',
       ],
     ),

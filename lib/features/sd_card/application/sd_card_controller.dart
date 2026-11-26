@@ -9,6 +9,7 @@ import 'package:gal/gal.dart';
 import '../../viewer/presentation/media_actions.dart';
 
 import '../../../core/db/media_repository.dart';
+import '../../../core/db/favourites.dart';
 import '../../../core/device/gallery_check.dart';
 import '../../../core/providers.dart';
 import '../../camera/application/camera_ui_state.dart';
@@ -19,7 +20,7 @@ enum ExplorerView { largeIcons, smallIcons, details }
 
 enum ExplorerSort { name, date, size }
 
-enum ExplorerFilter { all, photos, videos }
+enum ExplorerFilter { all, photos, videos, favourites }
 
 @immutable
 class ExplorerPrefs {
@@ -169,7 +170,8 @@ class CSeenNotifier extends Notifier<({Set<String> ids, DateTime since})> {
     unawaited(ref.read(sharedPrefsProvider).setStringList(PrefKeys.cSeen, onC.toList()));
   }
 
-  bool isNew(MediaItem m) => !m.onSdCard && m.savedAt != null && m.savedAt!.isAfter(state.since) && !state.ids.contains(m.id);
+  bool isNew(MediaItem m) =>
+      !m.onSdCard && m.savedAt != null && m.savedAt!.isAfter(state.since) && !state.ids.contains(m.id);
 }
 
 final cSeenProvider = NotifierProvider<CSeenNotifier, ({Set<String> ids, DateTime since})>(CSeenNotifier.new);
@@ -193,11 +195,13 @@ final explorerItemsProvider = Provider.family<List<MediaItem>, Drive>((ref, driv
     Drive.c => ref.watch(darkroomFolderProvider),
     Drive.photoRoom => ref.watch(photoRoomFolderProvider),
   };
+  final stars = ref.watch(favouritesProvider);
   final items = source.where(
     (m) => switch (prefs.filter) {
       ExplorerFilter.all => true,
       ExplorerFilter.photos => !m.isVideo,
       ExplorerFilter.videos => m.isVideo,
+      ExplorerFilter.favourites => stars.contains(m.id),
     },
   );
   int cmp(MediaItem a, MediaItem b) => switch (prefs.sort) {

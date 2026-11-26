@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' as img;
 
 import '../../../../core/db/media_repository.dart';
+import '../../../../core/db/favourites.dart';
 import '../../../../core/diagnostics/sample_feed.dart';
 import '../../../../core/providers.dart';
 import '../../../cameras/domain/camera_catalog.dart';
@@ -190,6 +191,13 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                                   onPressed: _delete,
                                   child: const Text('Delete'),
+                                ),
+                                const SizedBox(width: 3),
+                                Win98Button(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                  toggled: ref.watch(favouritesProvider).contains(item.id),
+                                  onPressed: () => ref.read(favouritesProvider.notifier).toggle(item.id),
+                                  child: const Text('Favourite'),
                                 ),
                                 if (ref.watch(sampleFeedButtonProvider) &&
                                     !item.isVideo &&

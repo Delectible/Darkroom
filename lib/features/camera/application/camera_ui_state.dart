@@ -26,6 +26,9 @@ class PrefKeys {
   static const explorerFilter = 'ui.explorer.filter';
   static const explorerTree = 'ui.explorer.tree';
 
+  /// Starred photos and reels (ids): the Favourites filters.
+  static const favourites = 'media.favourites';
+
   /// First-run tour seen (and the name the user gave, if any).
   static const onboarded = 'user.onboarded';
   static const userName = 'user.name';
@@ -144,6 +147,7 @@ class PrefKeys {
     galleryAsked,
     galleryDismissed,
     galleryGone,
+    favourites,
     printFrames,
     pro,
     proBought,

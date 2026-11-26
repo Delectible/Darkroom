@@ -935,19 +935,21 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                             const Win98MenuItem.separator(),
                                             for (final s in ExplorerSort.values)
                                               Win98MenuItem(
-                                                'Arrange by ${_sortLabel(s)}',
+                                                'Sort by ${_sortLabel(s)}',
                                                 radio: true,
                                                 checked: prefs.sort == s,
                                                 onSelected: () => prefsN.sortBy(s),
                                               ),
                                             const Win98MenuItem.separator(),
-                                            for (final f in ExplorerFilter.values)
-                                              Win98MenuItem(
-                                                _filterLabel(f),
-                                                radio: true,
-                                                checked: prefs.filter == f,
-                                                onSelected: () => prefsN.setFilter(f),
-                                              ),
+                                            Win98MenuItem.cascade('Filters', [
+                                              for (final f in ExplorerFilter.values)
+                                                Win98MenuItem(
+                                                  _filterLabel(f),
+                                                  radio: true,
+                                                  checked: prefs.filter == f,
+                                                  onSelected: () => prefsN.setFilter(f),
+                                                ),
+                                            ]),
                                             const Win98MenuItem.separator(),
                                             Win98MenuItem(
                                               'Folders',
@@ -1356,6 +1358,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
     ExplorerFilter.all => 'Show All Files',
     ExplorerFilter.photos => 'Show Pictures Only',
     ExplorerFilter.videos => 'Show Movies Only',
+    ExplorerFilter.favourites => 'Show Favourites Only',
   };
 }
 

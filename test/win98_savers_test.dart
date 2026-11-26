@@ -145,10 +145,13 @@ void main() {
       saverWait: 5,
     );
     final json =
-        '{"crt":true,"res":"vga","brightness":0.3,"contrast":0.8,"tint":"amber","largeFonts":true,'
+        '{"crt":true,"res2":"vga","brightness":0.3,"contrast":0.8,"tint":"amber","largeFonts":true,'
         '"saver":"text","saverText":"Hello","saverWait":5}';
     expect(Win98Display.fromJson(json), d);
     expect(Win98Display.fromJson('nonsense'), const Win98Display());
+    // The old scale-only setting (saved with its old default) is left behind.
+    expect(Win98Display.fromJson('{"res":"svga"}').res, Win98Res.xga);
+    expect(const Win98Display().res.pixel, 0);
     expect(const Win98Display().matrix, isNull);
     // A green screen turns white green and leaves black (nearly) black.
     final m = const Win98Display(tint: Win98Tint.green).matrix!;

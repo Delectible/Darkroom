@@ -19,12 +19,25 @@ import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 /// way `W98.scheme` holds the colour scheme.
 
 /// The desktop's resolution: chunkier or finer pixels on the same glass.
+///
+/// Lower resolutions make everything bigger and draw the whole screen in
+/// chunkier pixels ([pixel]); 1024 x 768, the default, is the picture as
+/// made (no filter).
 enum Win98Res {
-  vga('640 x 480', portrait: 1.42, landscape: 1.12, scanline: 3.0),
-  svga('800 x 600', portrait: 1.3, landscape: 1.0, scanline: 2.5),
-  xga('1024 x 768', portrait: 1.12, landscape: 0.88, scanline: 2.0);
+  vga('640 x 480', portrait: 1.55, landscape: 1.22, scanline: 3.0, pixel: 2.6),
+  svga('800 x 600', portrait: 1.42, landscape: 1.12, scanline: 2.5, pixel: 1.7),
+  xga('1024 x 768', portrait: 1.3, landscape: 1.0, scanline: 2.0, pixel: 0);
 
-  const Win98Res(this.label, {required this.portrait, required this.landscape, required this.scanline});
+  const Win98Res(
+    this.label, {
+    required this.portrait,
+    required this.landscape,
+    required this.scanline,
+    required this.pixel,
+  });
+
+  /// One screen pixel's size in dp on the glass (0: drawn as is).
+  final double pixel;
 
   final String label;
 
@@ -65,7 +78,7 @@ enum Win98Saver {
 class Win98Display {
   const Win98Display({
     this.crt = false,
-    this.res = Win98Res.svga,
+    this.res = Win98Res.xga,
     this.brightness = 0.5,
     this.contrast = 0.5,
     this.tint = Win98Tint.normal,
@@ -119,7 +132,9 @@ class Win98Display {
 
   Map<String, Object> toJson() => {
     'crt': crt,
-    'res': res.name,
+    // ("res" held the old scale-only setting, saved with its old default:
+    // everyone starts again on the new default)
+    'res2': res.name,
     'brightness': brightness,
     'contrast': contrast,
     'tint': tint.name,
@@ -138,7 +153,7 @@ class Win98Display {
       const d = Win98Display();
       return Win98Display(
         crt: m['crt'] as bool? ?? d.crt,
-        res: pick(Win98Res.values, m['res'], d.res),
+        res: pick(Win98Res.values, m['res2'], d.res),
         brightness: (m['brightness'] as num?)?.toDouble() ?? d.brightness,
         contrast: (m['contrast'] as num?)?.toDouble() ?? d.contrast,
         tint: pick(Win98Tint.values, m['tint'], d.tint),
@@ -289,7 +304,10 @@ class _Win98GlassState extends State<Win98Glass> {
       valueListenable: Win98Display.current,
       builder: (context, d, _) {
         final m = d.matrix;
-        final child = KeyedSubtree(key: _content, child: widget.child);
+        final child = Win98Pixels(
+          pixel: d.res.pixel,
+          child: KeyedSubtree(key: _content, child: widget.child),
+        );
         Widget out = m == null ? child : ColorFiltered(colorFilter: ColorFilter.matrix(m), child: child);
         if (d.crt) {
           out = Stack(
@@ -314,6 +332,39 @@ class _Win98GlassState extends State<Win98Glass> {
         }
         return out;
       },
+    );
+  }
+}
+
+/// The resolution's pixels: the picture drawn small (averaged) and blown
+/// back up without smoothing, so it comes out in [pixel]-dp blocks. Under
+/// the scan lines and the colour, on top of everything else. Always the
+/// same layers, so switching it keeps what's inside (the key in
+/// [_Win98GlassState]); 0 is the identity, no off-screen layer.
+class Win98Pixels extends StatelessWidget {
+  const Win98Pixels({super.key, required this.pixel, required this.child});
+
+  final double pixel;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final block = pixel * MediaQuery.devicePixelRatioOf(context);
+    final on = block > 1.01;
+    final down = on ? 1 / block : 1.0;
+    return ImageFiltered(
+      enabled: on,
+      imageFilter: ui.ImageFilter.compose(
+        outer: ui.ImageFilter.matrix(
+          Matrix4.diagonal3Values(1 / down, 1 / down, 1).storage,
+          filterQuality: FilterQuality.none,
+        ),
+        inner: ui.ImageFilter.matrix(
+          Matrix4.diagonal3Values(down, down, 1).storage,
+          filterQuality: FilterQuality.medium,
+        ),
+      ),
+      child: child,
     );
   }
 }

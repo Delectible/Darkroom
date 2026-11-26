@@ -78,6 +78,7 @@ void main() {
   // phones, with the insets they report (a punch hole / notch at a side);
   // then the chunkiest and the finest monitor settings.
   const big = Win98Display(crt: true, res: Win98Res.vga, largeFonts: true, tint: Win98Tint.green);
+  const medium = Win98Display(crt: true, res: Win98Res.svga, tint: Win98Tint.cool);
   const fine = Win98Display(res: Win98Res.xga, tint: Win98Tint.amber, brightness: 0.7, contrast: 0.3);
   for (final (tag, size, dpr, pad, display) in [
     ('', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75), const Win98Display()),
@@ -94,6 +95,8 @@ void main() {
     ('_640', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75), big),
     ('_640_land', const Size(2856, 1280), 3.1, const FakeViewPadding(left: 150), big),
     ('_640_land_small', const Size(1480, 720), 2.0, const FakeViewPadding(left: 60), big),
+    ('_800', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75), medium),
+    ('_800_land', const Size(2856, 1280), 3.1, const FakeViewPadding(left: 150), medium),
     ('_1024', const Size(1280, 2856), 3.1, const FakeViewPadding(top: 150, bottom: 75), fine),
     ('_1024_land', const Size(2856, 1280), 3.1, const FakeViewPadding(left: 150), fine),
   ]) {

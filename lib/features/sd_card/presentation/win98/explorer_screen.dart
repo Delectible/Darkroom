@@ -32,6 +32,7 @@ import 'games/pinball.dart';
 import 'games/solitaire.dart';
 import 'win98_programs.dart';
 import 'win98_shutdown.dart';
+import 'win98_display.dart';
 import 'win98_widgets.dart';
 import 'win98_monitor.dart';
 import 'win98_savers.dart';
@@ -454,7 +455,9 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
       barrierColor: Colors.black12,
       transitionDuration: const Duration(milliseconds: 120),
       transitionBuilder: (context, a, _, child) => Win98ZoomTransition(animation: a, child: child),
-      pageBuilder: (_, _, _) => Win98Scale(child: CopyingDialog(fromFloppy: fromFloppy)),
+      pageBuilder: (_, _, _) => Win98Scale(
+        child: Win98Glass(child: CopyingDialog(fromFloppy: fromFloppy)),
+      ),
     );
     final outcome = await notifier.moveToC(ids: ids);
     if (mounted) Navigator.of(context).pop();

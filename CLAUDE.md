@@ -37,9 +37,11 @@ matching section of **`docs/NOTES.md`** before changing an area
   `AppInfo.revisions` (Help > About in Darkroom 98) in the same change.
 - Commit messages plain: no session links, no Co-Authored-By.
 - Log requests in `docs/CHANGELOG.md` by number; new ideas go there and on
-  "the checklist": artifact **Darkroom Release Sweep**,
-  https://claude.ai/artifact/KrvhMZrV3RUNie7YHxYewQ (republish to the same
-  URL; finished items are removed).
+  "the checklist": artifact **Darkroom Roadmap**,
+  https://claude.ai/artifact/KrvhMZrV3RUNie7YHxYewQ. Its items live in the
+  page's database (ArtifactData: `sections`, `items` with sec, pos, title,
+  details, notes, tag you/me, done); read and edit them there, never
+  republish over them. Finished items are removed.
 - Every ~3 main builds, remind him if the iPhone App Store is behind.
 
 ## Stores

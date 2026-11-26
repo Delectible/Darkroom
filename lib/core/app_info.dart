@@ -3,16 +3,28 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.4.7';
+  static const version = '2.4.8';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Film flaws are rarer and subtler (one at most per print), and grain is more true to life, especially black and white and instant.';
+      'Corkboard filters: show one film or one month at a time. Rate Darkroom opens the store page, and a few small fixes.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[
+    (
+      '2.4',
+      [
+        'Wide and Tele lens attachments',
+        'Contact us: email, Instagram, rating',
+        'Help and privacy on darkroomcamera.app',
+        'Rarer, subtler film flaws',
+        'Finer, truer film grain',
+        'Corkboard filters',
+        'Better Pinball, Solitaire and Bricks',
+      ],
+    ),
     (
       '2.3',
       [

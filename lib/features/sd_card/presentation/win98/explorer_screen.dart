@@ -1014,11 +1014,11 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                               ),
                                             ),
                                             Win98MenuItem(
-                                              'Send Feedback...',
+                                              'Contact Us...',
                                               onSelected: () async {
                                                 if (!await Support.sendFeedback() && mounted) {
                                                   await _box(
-                                                    'Send Feedback',
+                                                    'Contact Us',
                                                     'No mail program was found.\n\nWrite to ${Support.email} (the address '
                                                         'is on the clipboard).',
                                                   );
@@ -1043,7 +1043,7 @@ class _ExplorerScreenState extends ConsumerState<ExplorerScreen> with SingleTick
                                             Win98MenuItem(
                                               'Rate Darkroom...',
                                               onSelected: () async {
-                                                if (!await ReviewPrompt.show() && mounted) {
+                                                if (!await openStorePage() && mounted) {
                                                   await _box(
                                                     'Rate Darkroom',
                                                     "The store couldn't open its rating box right now.",

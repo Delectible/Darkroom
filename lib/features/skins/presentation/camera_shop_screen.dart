@@ -557,7 +557,8 @@ class _Caption extends StatelessWidget {
     } else {
       final done = math.min(progress[unlock.stat] ?? 0, unlock.target);
       final count = unlock.target > 1 ? ' ($done of ${unlock.target})' : '';
-      text = '${unlock.goal}$count. Darkroom 98 > Start > Run > ${unlock.game}';
+      const games = {'SOL': 'Solitaire', 'MINES': 'Minefield', 'BRICKS': 'Bricks', 'PINBALL': 'Pinball'};
+      text = '${unlock.goal}$count. Darkroom 98 > Games > ${games[unlock.game] ?? unlock.game}';
     }
     return SizedBox(
       height: 70,

@@ -55,6 +55,53 @@ class NoteBox extends StatelessWidget {
       ),
       child: action == null
           ? Padding(padding: const EdgeInsets.fromLTRB(18, 11, 18, 12), child: label)
+          // (a long message gets the whole width, its action underneath)
+          : text.length > 48
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(padding: const EdgeInsets.fromLTRB(18, 11, 18, 10), child: label),
+                const Divider(height: 1, thickness: 1, color: edge),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onAction,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            child: Text(
+                              action!.toUpperCase(),
+                              textAlign: TextAlign.center,
+                              style: style.copyWith(color: accent, fontSize: 13, letterSpacing: 1.2),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (onClose != null)
+                      Semantics(
+                        button: true,
+                        label: 'Close',
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: onClose,
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 4, 16, 4),
+                            child: Text(
+                              '×',
+                              style: style.copyWith(color: ink.withValues(alpha: 0.6), fontSize: 20),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            )
           : IntrinsicHeight(
               child: Row(
                 mainAxisSize: MainAxisSize.min,

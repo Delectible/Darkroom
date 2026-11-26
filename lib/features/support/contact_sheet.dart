@@ -34,7 +34,7 @@ class ContactSheet extends StatelessWidget {
   }
 
   static Future<void> rate() async {
-    if (!await ReviewPrompt.show()) Notes.show("The store couldn't open its rating box right now.");
+    if (!await openStorePage()) Notes.show("Couldn't open the store right now.");
   }
 
   @override

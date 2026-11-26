@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../theme/note_box.dart';
+
 import 'package:in_app_review/in_app_review.dart';
 
 import '../../features/camera/application/camera_ui_state.dart' show PrefKeys;
@@ -72,6 +73,18 @@ class ReviewPrompt {
       debugPrint('Rating prompt unavailable: $e');
       return false;
     }
+  }
+}
+
+/// The store's own page for Darkroom (a rating someone asked for: the
+/// pop-up rating box may be held back by the store and show nothing).
+Future<bool> openStorePage() async {
+  try {
+    await InAppReview.instance.openStoreListing(appStoreId: '6826318702');
+    return true;
+  } catch (e) {
+    debugPrint('Store page unavailable: $e');
+    return false;
   }
 }
 

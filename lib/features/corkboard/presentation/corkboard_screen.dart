@@ -102,6 +102,10 @@ class CorkboardScreen extends ConsumerStatefulWidget {
 class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerProviderStateMixin {
   bool _saving = false;
 
+  /// The board's filters: one film (or reels) and one month; null = all.
+  String? _stockFilter;
+  String? _monthFilter;
+
   /// Prints whose tiny copy has been asked for (BoardPhoto.warm).
   final _previewed = <String>{};
 
@@ -508,7 +512,17 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
     final items = ref.watch(filmItemsProvider).value ?? const <MediaItem>[];
     final now = DateTime.now();
     final hide = ref.watch(photosToHideProvider);
-    final developed = items.where((m) => m.isDevelopedAt(now) && !hide.contains(m.id)).toList();
+    final onBoard = items.where((m) => m.isDevelopedAt(now) && !hide.contains(m.id)).toList();
+    // (a filter whose last print is gone lets go)
+    if (_stockFilter != null && !onBoard.any((m) => m.cameraId == _stockFilter)) _stockFilter = null;
+    if (_monthFilter != null && !onBoard.any((m) => _monthKey(m) == _monthFilter)) _monthFilter = null;
+    final developed = onBoard
+        .where(
+          (m) =>
+              (_stockFilter == null || m.cameraId == _stockFilter) &&
+              (_monthFilter == null || _monthKey(m) == _monthFilter),
+        )
+        .toList();
     final inDarkroom = items.where((m) => !m.isDevelopedAt(now)).toList()
       ..sort((a, b) => a.readyAt.compareTo(b.readyAt));
     // (built again when the next one's ready, not on every tick: the
@@ -623,6 +637,16 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                     onSaveAll: () => _saveAll(developed),
                                   ),
                                 ),
+                                if (_BoardFilters.worthShowing(onBoard))
+                                  SliverToBoxAdapter(
+                                    child: _BoardFilters(
+                                      items: onBoard,
+                                      stock: _stockFilter,
+                                      month: _monthFilter,
+                                      onStock: (v) => setState(() => _stockFilter = v),
+                                      onMonth: (v) => setState(() => _monthFilter = v),
+                                    ),
+                                  ),
                                 if (inDarkroom.isNotEmpty)
                                   SliverToBoxAdapter(
                                     child: Consumer(
@@ -930,6 +954,112 @@ class _PinInState extends State<_PinIn> with SingleTickerProviderStateMixin {
           child: Transform.scale(scale: 1.08 - 0.08 * t, child: child),
         );
       },
+    );
+  }
+}
+
+/// "2026-11": the month a print was taken in (the board's month filter).
+String _monthKey(MediaItem m) => '${m.capturedAt.year}-${m.capturedAt.month.toString().padLeft(2, '0')}';
+
+/// Filters along the top of a well-filled board: the films on it (each
+/// stock by name) and the months they were taken in. One of each at most;
+/// All clears both.
+class _BoardFilters extends StatelessWidget {
+  const _BoardFilters({
+    required this.items,
+    required this.stock,
+    required this.month,
+    required this.onStock,
+    required this.onMonth,
+  });
+
+  final List<MediaItem> items;
+  final String? stock;
+  final String? month;
+  final ValueChanged<String?> onStock;
+  final ValueChanged<String?> onMonth;
+
+  /// Only once there's something to sort: a dozen prints, more than one
+  /// film or month among them.
+  static bool worthShowing(List<MediaItem> items) {
+    if (items.length < 12) return false;
+    return items.map((m) => m.cameraId).toSet().length > 1 || items.map(_monthKey).toSet().length > 1;
+  }
+
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  @override
+  Widget build(BuildContext context) {
+    // films by how many prints they have, months newest first
+    final counts = <String, int>{};
+    for (final m in items) {
+      counts[m.cameraId] = (counts[m.cameraId] ?? 0) + 1;
+    }
+    final stocks = counts.keys.toList()..sort((a, b) => counts[b]!.compareTo(counts[a]!));
+    final months = items.map(_monthKey).toSet().toList()..sort((a, b) => b.compareTo(a));
+    final thisYear = DateTime.now().year;
+    String monthLabel(String k) {
+      final y = int.parse(k.substring(0, 4)), mo = int.parse(k.substring(5));
+      return y == thisYear ? _months[mo - 1] : "${_months[mo - 1]} '${(y % 100).toString().padLeft(2, '0')}";
+    }
+
+    Widget chip(String label, bool on, VoidCallback tap) => Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Semantics(
+        button: true,
+        selected: on,
+        child: GestureDetector(
+          onTap: () {
+            unawaited(Haptics.selectionClick());
+            tap();
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: on ? const Color(0xFFF3E3C8) : const Color(0x8C3A2414),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: on ? const Color(0xFFF3E3C8) : const Color(0x55F3E3C8)),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: on ? const Color(0xFF3A2414) : const Color(0xFFF3E3C8),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    Widget gap() => Container(
+      width: 1,
+      height: 18,
+      margin: const EdgeInsets.only(right: 8, left: 2),
+      color: const Color(0x55F3E3C8),
+    );
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+        children: [
+          chip('All', stock == null && month == null, () {
+            onStock(null);
+            onMonth(null);
+          }),
+          if (stocks.length > 1) ...[
+            gap(),
+            for (final id in stocks)
+              chip(CameraCatalog.byId(id).name, stock == id, () => onStock(stock == id ? null : id)),
+          ],
+          if (months.length > 1) ...[
+            gap(),
+            for (final k in months) chip(monthLabel(k), month == k, () => onMonth(month == k ? null : k)),
+          ],
+        ],
+      ),
     );
   }
 }

@@ -105,7 +105,7 @@ class FilmDefects {
   void _sparkle(Uint8List d, int w, int h, double s) {
     final cx = _rnd.nextDouble() * w, cy = _rnd.nextDouble() * h;
     final r = (0.6 + 1.2 * _rnd.nextDouble()) * s;
-    final a = 0.3 + 0.3 * _rnd.nextDouble();
+    final a = 0.45 + 0.45 * _rnd.nextDouble();
     final ext = (r + 1.5).ceil();
     for (var y = (cy - ext).floor(); y <= (cy + ext).ceil(); y++) {
       for (var x = (cx - ext).floor(); x <= (cx + ext).ceil(); x++) {
@@ -123,7 +123,7 @@ class FilmDefects {
     for (var k = 0; k < n; k++) {
       var x = x0 + (_rnd.nextDouble() - 0.5) * 0.08 * w;
       final length = h * (0.25 + 0.55 * _rnd.nextDouble());
-      final opacity = 0.06 + 0.08 * _rnd.nextDouble();
+      final opacity = 0.09 + 0.12 * _rnd.nextDouble();
       final pts = <(double, double, double)>[];
       for (var t = 0.0; t < length; t += 0.5) {
         x += (_rnd.nextDouble() - 0.5) * 0.05;
@@ -144,7 +144,7 @@ class FilmDefects {
     final along = edge < 2 ? w : h;
     final base = math.min(w, h) * (0.006 + 0.014 * _rnd.nextDouble());
     final feather = math.max(2.0, base * 0.45);
-    final strength = 0.22 + 0.18 * _rnd.nextDouble();
+    final strength = 0.33 + 0.27 * _rnd.nextDouble();
     final col = _rnd.nextDouble() < 0.6 ? const [0.92, 0.88, 0.72] : const [0.58, 0.67, 0.78];
     final waves = [
       for (var i = 0; i < 4; i++)
@@ -183,7 +183,7 @@ class FilmDefects {
   void _cornerFog(Uint8List d, int w, int h) {
     final cx = _rnd.nextBool() ? 0.0 : w - 1.0, cy = _rnd.nextBool() ? 0.0 : h - 1.0;
     final r = math.min(w, h) * (0.22 + 0.22 * _rnd.nextDouble());
-    final strength = 0.15 + 0.15 * _rnd.nextDouble();
+    final strength = 0.22 + 0.23 * _rnd.nextDouble();
     const col = [1.0, 0.96, 0.86];
     final x0 = math.max(0, (cx - r * 2).floor()), x1 = math.min(w - 1, (cx + r * 2).ceil());
     final y0 = math.max(0, (cy - r * 2).floor()), y1 = math.min(h - 1, (cy + r * 2).ceil());
@@ -216,7 +216,7 @@ class FilmDefects {
   /// An irregular blob: a few overlapping soft discs.
   void _speck(Uint8List d, int w, int h, double s) {
     final cx = _rnd.nextDouble() * w, cy = _rnd.nextDouble() * h;
-    final opacity = 0.35 + 0.3 * _rnd.nextDouble();
+    final opacity = 0.52 + 0.45 * _rnd.nextDouble();
     final parts = 1 + _rnd.nextInt(3);
     for (var k = 0; k < parts; k++) {
       final r = (0.8 + 2.4 * _rnd.nextDouble()) * s;
@@ -267,7 +267,7 @@ class FilmDefects {
     var angle = _rnd.nextDouble() * math.pi * 2;
     var turn = (_rnd.nextDouble() - 0.5) * 0.02;
     final length = (120 + 260 * _rnd.nextDouble()) * s;
-    final opacity = 0.35 + 0.25 * _rnd.nextDouble();
+    final opacity = 0.52 + 0.38 * _rnd.nextDouble();
     final pts = <(double, double, double)>[];
     for (var t = 0.0; t < length; t += 0.5) {
       pts.add((x, y, opacity));
@@ -288,7 +288,7 @@ class FilmDefects {
     final end = start + len * (0.35 + 0.65 * _rnd.nextDouble());
     var pos = (0.08 + 0.84 * _rnd.nextDouble()) * across;
     final drift = (_rnd.nextDouble() - 0.5) * 0.02;
-    final opacity = 0.15 + 0.13 * _rnd.nextDouble();
+    final opacity = 0.22 + 0.2 * _rnd.nextDouble();
     final tint = negative && colour && _rnd.nextDouble() < 0.4 ? const [0.82, 1.0, 1.0] : null;
     final pts = <(double, double, double)>[];
     for (var t = start; t < math.min(end, len.toDouble()); t += 0.5) {
@@ -306,7 +306,7 @@ class FilmDefects {
     final fromLow = _rnd.nextBool();
     final across = alongX ? h : w;
     final depth = across * (0.06 + 0.1 * _rnd.nextDouble());
-    final strength = 0.18 + 0.2 * _rnd.nextDouble();
+    final strength = 0.27 + 0.3 * _rnd.nextDouble();
     // Where along the edge it's brightest, and how wide.
     final len = alongX ? w : h;
     final centre = _rnd.nextDouble() * len, spread = len * (0.25 + 0.35 * _rnd.nextDouble());

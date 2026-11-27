@@ -64,13 +64,20 @@ class ExplorerScreen extends ConsumerStatefulWidget {
     settings: UprightApp.landscape,
     transitionDuration: slideDuration,
     reverseTransitionDuration: const Duration(milliseconds: 460),
-    pageBuilder: (context, _, _) => UprightPage(
-      child: _SwipeToClose(
-        child: ExplorerMonitor(
-          child: Win98SaverWatch(child: ExplorerScreen(playGame: playGame)),
+    pageBuilder: (context, _, _) {
+      final off = GlobalKey<CrtSwitchOffState>();
+      return UprightPage(
+        child: _SwipeToClose(
+          off: off,
+          child: ExplorerMonitor(
+            child: CrtSwitchOff(
+              key: off,
+              child: Win98SaverWatch(child: ExplorerScreen(playGame: playGame)),
+            ),
+          ),
         ),
-      ),
-    ),
+      );
+    },
     transitionsBuilder: (context, a, _, child) => SlideTransition(
       position: Tween(begin: const Offset(1, 0), end: Offset.zero).animate(
         CurvedAnimation(parent: a, curve: const Cubic(0.3, 0.0, 0.5, 0.94), reverseCurve: Curves.easeInCubic),
@@ -1611,14 +1618,16 @@ class _ShuttableWindow extends StatelessWidget {
   );
 }
 
-/// Swipe right to put the explorer away (it slides back out to the right),
+/// Swipe right to put the explorer away: the monitor switches off ([off]),
+/// then it slides back out to the right (the phone's back does the same),
 /// like the corkboard's swipe left. A clear swipe triggers it; it doesn't
 /// follow the thumb. Sideways drags inside (scrollbars, sliders, games)
 /// win their own touch; touches from the side strips are left to the
 /// phone's back gesture.
 class _SwipeToClose extends ConsumerStatefulWidget {
-  const _SwipeToClose({required this.child});
+  const _SwipeToClose({required this.off, required this.child});
 
+  final GlobalKey<CrtSwitchOffState> off;
   final Widget child;
 
   @override
@@ -1628,6 +1637,19 @@ class _SwipeToClose extends ConsumerStatefulWidget {
 class _SwipeToCloseState extends ConsumerState<_SwipeToClose> {
   double? _from;
   double _d = 0;
+  bool _closing = false, _canPop = false;
+
+  /// The screen switches off, then the route goes.
+  Future<void> _close() async {
+    if (_closing) return;
+    _closing = true;
+    await widget.off.currentState?.run();
+    if (!mounted) return;
+    setState(() => _canPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.of(context).maybePop();
+    });
+  }
 
   void _start(DragStartDetails d) {
     _d = 0;
@@ -1639,7 +1661,7 @@ class _SwipeToCloseState extends ConsumerState<_SwipeToClose> {
     if (_from == null) return;
     _from = null;
     final v = (d.primaryVelocity ?? 0) * sign;
-    if (v > 700 || (_d * sign > 110 && v > -200)) Navigator.of(context).maybePop();
+    if (v > 700 || (_d * sign > 110 && v > -200)) unawaited(_close());
   }
 
   @override
@@ -1651,14 +1673,20 @@ class _SwipeToCloseState extends ConsumerState<_SwipeToClose> {
     // this only fires on the parts that don't scroll.
     final land = mq.size.width > mq.size.height;
     final up = ref.watch(physicalOrientationProvider) == DeviceOrientation.landscapeLeft;
-    return GestureDetector(
-      onHorizontalDragStart: _start,
-      onHorizontalDragUpdate: (d) => _d += d.primaryDelta ?? 0,
-      onHorizontalDragEnd: (d) => _end(d, 1),
-      onVerticalDragStart: land ? _start : null,
-      onVerticalDragUpdate: land ? (d) => _d += d.primaryDelta ?? 0 : null,
-      onVerticalDragEnd: land ? (d) => _end(d, up ? -1 : 1) : null,
-      child: widget.child,
+    return PopScope(
+      canPop: _canPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_close());
+      },
+      child: GestureDetector(
+        onHorizontalDragStart: _start,
+        onHorizontalDragUpdate: (d) => _d += d.primaryDelta ?? 0,
+        onHorizontalDragEnd: (d) => _end(d, 1),
+        onVerticalDragStart: land ? _start : null,
+        onVerticalDragUpdate: land ? (d) => _d += d.primaryDelta ?? 0 : null,
+        onVerticalDragEnd: land ? (d) => _end(d, up ? -1 : 1) : null,
+        child: widget.child,
+      ),
     );
   }
 }

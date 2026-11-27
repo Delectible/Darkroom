@@ -102,7 +102,7 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
         color: Colors.black,
         child: switch (_stage) {
           _Stage.shuttingDown => RepaintBoundary(key: _screenKey, child: const _ShuttingDownScreen()),
-          _Stage.crt => CustomPaint(size: Size.infinite, painter: _CrtOffPainter(_crt, still)),
+          _Stage.crt => CustomPaint(size: Size.infinite, painter: CrtOffPainter(_crt, still)),
           _Stage.off => const SizedBox.expand(),
         },
       ),
@@ -113,13 +113,80 @@ class _ShutDownState extends State<_ShutDown> with SingleTickerProviderStateMixi
 /// A CRT losing power: the picture snaps into a white-hot line almost at
 /// once (like the plug being pulled), the line pulls in to a dot, and the
 /// dot's phosphor glow lingers for a second before it fades.
-class _CrtOffPainter extends CustomPainter {
-  _CrtOffPainter(this.t, this.still) : super(repaint: t);
+/// The monitor switching off over whatever it shows: the picture taken
+/// as a still, then [CrtOffPainter] on black, with the click. [run] plays it
+/// (the explorer swiped away: it switches off, then slides out).
+class CrtSwitchOff extends StatefulWidget {
+  const CrtSwitchOff({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<CrtSwitchOff> createState() => CrtSwitchOffState();
+}
+
+class CrtSwitchOffState extends State<CrtSwitchOff> with SingleTickerProviderStateMixin {
+  late final AnimationController _t = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 650),
+  );
+  final _screen = GlobalKey();
+  ui.Image? _still;
+  bool _on = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(Sfx.crtOff.preload());
+  }
+
+  @override
+  void dispose() {
+    _t.dispose();
+    _still?.dispose();
+    super.dispose();
+  }
+
+  /// Switches the picture off; done when only black is left.
+  Future<void> run() async {
+    if (_on) return _t.isCompleted ? null : _t.forward().orCancel.catchError((Object _) {});
+    try {
+      final b = _screen.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      _still = b?.toImageSync(pixelRatio: MediaQuery.devicePixelRatioOf(context));
+    } catch (_) {
+      _still = null;
+    }
+    setState(() => _on = true);
+    Sfx.crtOff.play();
+    unawaited(Haptics.lightImpact());
+    await _t.forward().orCancel.catchError((Object _) {});
+  }
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      RepaintBoundary(key: _screen, child: widget.child),
+      if (_on)
+        Positioned.fill(
+          child: AbsorbPointer(
+            child: ColoredBox(
+              color: Colors.black,
+              child: CustomPaint(size: Size.infinite, painter: CrtOffPainter(_t, _still)),
+            ),
+          ),
+        ),
+    ],
+  );
+}
+
+class CrtOffPainter extends CustomPainter {
+  CrtOffPainter(this.t, this.still) : super(repaint: t);
 
   final Animation<double> t;
   final ui.Image? still;
 
-  // Phases, as fractions of the 1.4 s run.
+  // Phases, as fractions of the run (1.4 s at Shut Down, 0.65 s on a swipe).
   static const _cut = 0.07, _line = 0.16;
 
   @override
@@ -198,7 +265,7 @@ class _CrtOffPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CrtOffPainter old) => old.still != still;
+  bool shouldRepaint(CrtOffPainter old) => old.still != still;
 }
 
 /// "Darkroom is shutting down...": the sky with soft clouds and the rabbit.

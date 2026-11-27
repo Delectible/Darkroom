@@ -504,6 +504,11 @@ Film Mode
   rendered by `tool/render/blender/reel.py`) resting on two pins under its
   rim, with an instant photo of the first frame (file name in Caveat)
   taped on its front (`PinnedReel`, `_ReelCard`).
+- Board drawing cost (2.4.9): Impeller keeps nothing between frames, so
+  shadows of things shown many times (prints, reels, worn sheets, trays) are
+  `BakedShadow` / `BakedBoxShadow` (blurred once into a nine-patch), never a
+  live BoxShadow or MaskFilter blur. The darkroom strip's loops stop while it's
+  scrolled away (`_OnScreen`); the board builds 6 prints a frame on opening.
 - Darkroom strip: prints go DEV -> STOP -> FIX -> WASH trays under the
   safelight (image comes up in DEV); reels turn in a developing tank; instant
   prints develop in the open. Tap one for a close-up of it developing

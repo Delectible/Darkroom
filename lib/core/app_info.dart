@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Multiple exposures keep each shot\'s own lens, and developing prints show the lens and both exposures. Darkroom 98\'s resolution draws chunkier pixels, and its screen switches off like an old CRT when you swipe it away.';
+      'Smoother corkboard. Multiple exposures keep each shot\'s own lens, and developing prints show the lens and both exposures. Darkroom 98\'s resolution draws chunkier pixels, and it switches off like an old CRT when you swipe it away.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

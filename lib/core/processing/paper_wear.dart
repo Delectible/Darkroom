@@ -1,4 +1,7 @@
 import 'dart:math' as math;
+
+import '../ui/baked_shadow.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
@@ -149,7 +152,10 @@ class PaperWear {
         );
       }
       // a thumbprint, where a print is held
-      final at = Offset(size.width * (0.7 + r.nextDouble() * 0.2), size.height * (0.82 + r.nextDouble() * 0.12));
+      final at = Offset(
+        size.width * (0.7 + r.nextDouble() * 0.2),
+        size.height * (0.82 + r.nextDouble() * 0.12),
+      );
       final ridge = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = u * 0.0022
@@ -310,10 +316,7 @@ class WornSheet extends StatelessWidget {
         painter: shadow ? _SheetShadow(shape, wear.seed) : null,
         child: ClipPath(
           clipper: _PathClip(shape),
-          child: CustomPaint(
-            foregroundPainter: _Over(wear, window?.call(size), paper, corner),
-            child: child,
-          ),
+          child: CustomPaint(foregroundPainter: _Over(wear, window?.call(size), paper, corner), child: child),
         ),
       );
     },
@@ -367,11 +370,14 @@ class _SheetShadow extends CustomPainter {
     final m = Matrix4.identity()
       ..translateByDouble(u * 0.01, u * 0.02, 0, 1)
       ..scaleByDouble(1, lift ? 1.01 : 0.997, 1, 1);
-    canvas.drawPath(
-      shape.transform(m.storage),
-      Paint()
-        ..color = const Color(0x66000000)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, math.max(2, u * 0.02)),
+    // (pre-blurred from the outline's box: a live blur per print cost the
+    // GPU most of each frame on a full board)
+    BakedShadow.paint(
+      canvas,
+      shape.transform(m.storage).getBounds(),
+      sigma: math.max(2, u * 0.02),
+      color: const Color(0x66000000),
+      radius: u * 0.01,
     );
   }
 

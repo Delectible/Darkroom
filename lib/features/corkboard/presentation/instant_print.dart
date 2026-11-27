@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../core/ui/baked_shadow.dart';
 import '../../../core/processing/instant_frame.dart';
 import '../../../core/processing/paper_wear.dart';
 
@@ -9,6 +10,8 @@ import '../../../core/processing/paper_wear.dart';
 /// [develop] runs 0 -> 1 while the print develops: it starts as an even
 /// blue-grey sheet, the picture surfaces through it, and the colour comes in
 /// last, like the real chemistry.
+const _shadow = [BoxShadow(color: Color(0x73000000), blurRadius: 7, offset: Offset(3, 5))];
+
 class InstantPrint extends StatelessWidget {
   const InstantPrint({
     super.key,
@@ -62,12 +65,7 @@ class InstantPrint extends StatelessWidget {
           final wear = this.wear;
           final worn = wear != null && wear.on;
           final print = DecoratedBox(
-            decoration: BoxDecoration(
-              color: style.paper,
-              boxShadow: shadow && !worn
-                  ? const [BoxShadow(color: Colors.black45, blurRadius: 7, offset: Offset(3, 5))]
-                  : null,
-            ),
+            decoration: BoxDecoration(color: style.paper),
             child: Stack(
               children: [
                 // Embossed off-white surface, like the real frame.
@@ -116,9 +114,8 @@ class InstantPrint extends StatelessWidget {
                                   ? const SizedBox.shrink()
                                   : Text(
                                       'tap to write…',
-                                      style: InstantFrame.noteStyle(
-                                        s,
-                                      ).copyWith(color: style.ink.withValues(alpha: 0.3)),
+                                      style: InstantFrame.noteStyle(s)
+                                          .copyWith(color: style.ink.withValues(alpha: 0.3)),
                                     ))
                             : SizedBox(
                                 // Same line width as the exported file.
@@ -138,7 +135,10 @@ class InstantPrint extends StatelessWidget {
               ],
             ),
           );
-          if (!worn) return print;
+          if (!worn) {
+            // (pre-blurred, BakedShadow: a board holds many)
+            return shadow ? BakedBoxShadow(shadows: _shadow, child: print) : print;
+          }
           return WornSheet(wear: wear, shadow: shadow, paper: style.paper, window: (_) => pic, child: print);
         },
       ),

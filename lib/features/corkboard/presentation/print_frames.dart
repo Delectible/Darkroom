@@ -1,4 +1,7 @@
 import 'dart:convert';
+
+import '../../../core/ui/baked_shadow.dart';
+
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -315,12 +318,11 @@ class FramedPrint extends StatelessWidget {
           child: sheet,
         );
       }
-      return DecoratedBox(
-        // (the deckle's: the rectangle's, the scallops too small for their own)
-        decoration: BoxDecoration(
-          boxShadow: shadows,
-          borderRadius: frame == PrintFrame.snapshot ? BorderRadius.circular(s * snapshotCorner) : null,
-        ),
+      // (the deckle's: the rectangle's, the scallops too small for their
+      // own; pre-blurred, BakedShadow: a board holds many)
+      return BakedBoxShadow(
+        shadows: shadows,
+        radius: frame == PrintFrame.snapshot ? s * snapshotCorner : 0,
         child: sheet,
       );
     },

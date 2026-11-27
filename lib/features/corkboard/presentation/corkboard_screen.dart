@@ -1,4 +1,7 @@
 import 'dart:convert';
+
+import '../../../core/ui/baked_shadow.dart';
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:math' as math;
@@ -104,6 +107,17 @@ class CorkboardScreen extends ConsumerStatefulWidget {
 class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerProviderStateMixin {
   bool _saving = false;
 
+  /// Prints built so far: the board opens with a few and adds more each
+  /// frame while it slides in (all at once cost a 130 ms stall on a full
+  /// board, 2.4.9 Performance Report). The rest are blank spots meanwhile.
+  int _built = 6;
+
+  void _buildMore() {
+    if (!mounted || _built > 1000) return;
+    setState(() => _built = _built >= 48 ? 1 << 30 : _built + 6);
+    if (_built < 1000) WidgetsBinding.instance.addPostFrameCallback((_) => _buildMore());
+  }
+
   /// The board's filters: one film (or reels) and one month; null = all.
   String? _stockFilter;
   String? _monthFilter;
@@ -187,6 +201,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _buildMore());
     // Looking at the board clears "new print" badges and the notification.
     Future.microtask(() => ref.read(darkroomEngineProvider).markSeen());
     _shaker.start();
@@ -659,9 +674,11 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                 if (inDarkroom.isNotEmpty)
                                   SliverToBoxAdapter(
                                     child: Consumer(
-                                      builder: (context, ref, _) => _DarkroomStrip(
-                                        items: inDarkroom,
-                                        now: ref.watch(secondTickerProvider).value ?? DateTime.now(),
+                                      builder: (context, ref, _) => _OnScreen(
+                                        child: _DarkroomStrip(
+                                          items: inDarkroom,
+                                          now: ref.watch(secondTickerProvider).value ?? DateTime.now(),
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -683,6 +700,7 @@ class _CorkboardScreenState extends ConsumerState<CorkboardScreen> with TickerPr
                                           context,
                                           i,
                                         ) {
+                                          if (i >= _built) return const SizedBox.shrink();
                                           final m = shown[i];
                                           void open() => ref.read(hideModeProvider)
                                               ? ref.read(hiddenPhotosProvider.notifier).toggle(m.id)
@@ -1826,48 +1844,48 @@ class _ReelCard extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, box) {
         final w = box.maxWidth, pad = w * 0.06;
-        return DecoratedBox(
-          decoration: const BoxDecoration(
-            color: InstantFrame.paper,
-            boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 3, offset: Offset(2, 3))],
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(pad, pad, pad, 0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                AspectRatio(
-                  aspectRatio: 1,
-                  child: thumb == null
-                      ? const ColoredBox(color: Color(0xFF2A211B))
-                      : Image.file(
-                          File(thumb!),
-                          fit: BoxFit.cover,
-                          cacheWidth: 200,
-                          gaplessPlayback: true,
-                          errorBuilder: (_, _, _) => const ColoredBox(color: Color(0xFF2A211B)),
-                        ),
-                ),
-                SizedBox(
-                  height: w * 0.26,
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        reelLabel(item),
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontFamily: 'Caveat',
-                          fontSize: w * 0.17,
-                          height: 1,
-                          color: const Color(0xFF2B2A4A),
+        return BakedBoxShadow(
+          shadows: const [BoxShadow(color: Color(0x66000000), blurRadius: 3, offset: Offset(2, 3))],
+          child: DecoratedBox(
+            decoration: const BoxDecoration(color: InstantFrame.paper),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(pad, pad, pad, 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AspectRatio(
+                    aspectRatio: 1,
+                    child: thumb == null
+                        ? const ColoredBox(color: Color(0xFF2A211B))
+                        : Image.file(
+                            File(thumb!),
+                            fit: BoxFit.cover,
+                            cacheWidth: 200,
+                            gaplessPlayback: true,
+                            errorBuilder: (_, _, _) => const ColoredBox(color: Color(0xFF2A211B)),
+                          ),
+                  ),
+                  SizedBox(
+                    height: w * 0.26,
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          reelLabel(item),
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontFamily: 'Caveat',
+                            fontSize: w * 0.17,
+                            height: 1,
+                            color: const Color(0xFF2B2A4A),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -3233,11 +3251,9 @@ class _PrintTrayState extends State<_PrintTray> {
                 fit: StackFit.expand,
                 children: [
                   // Wet paper.
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF2E9E4),
-                      boxShadow: [BoxShadow(color: Color(0x66000000), blurRadius: 3, offset: Offset(1, 2))],
-                    ),
+                  const BakedBoxShadow(
+                    shadows: [BoxShadow(color: Color(0x66000000), blurRadius: 3, offset: Offset(1, 2))],
+                    child: ColoredBox(color: Color(0xFFF2E9E4)),
                   ),
                   if (thumb != null)
                     Padding(
@@ -3551,4 +3567,50 @@ class BoardPhoto extends StatelessWidget {
       errorBuilder: (_, _, _) => const ColoredBox(color: Colors.black12),
     );
   }
+}
+
+/// Stops [child]'s animations (TickerMode, which the trays' and tank's
+/// loops follow) while it's scrolled out of sight: a rocking tray above the
+/// screen still asked for a new frame 30 times a second, and every frame
+/// redraws the whole board.
+class _OnScreen extends StatefulWidget {
+  const _OnScreen({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_OnScreen> createState() => _OnScreenState();
+}
+
+class _OnScreenState extends State<_OnScreen> {
+  ScrollPosition? _position;
+  bool _visible = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final p = Scrollable.maybeOf(context)?.position;
+    if (p != _position) {
+      _position?.removeListener(_check);
+      _position = p?..addListener(_check);
+    }
+  }
+
+  @override
+  void dispose() {
+    _position?.removeListener(_check);
+    super.dispose();
+  }
+
+  void _check() {
+    final box = context.findRenderObject() as RenderBox?;
+    final view = Scrollable.maybeOf(context)?.context.findRenderObject() as RenderBox?;
+    if (box == null || view == null || !box.attached || !view.attached || !box.hasSize) return;
+    final top = box.localToGlobal(Offset.zero, ancestor: view).dy;
+    final visible = top < view.size.height && top + box.size.height > 0;
+    if (visible != _visible) setState(() => _visible = visible);
+  }
+
+  @override
+  Widget build(BuildContext context) => TickerMode(enabled: _visible, child: widget.child);
 }

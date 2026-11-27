@@ -67,9 +67,9 @@ jobs:
             echo "::error::Rollout must be a whole number from 1 to 100 (got '$pct')."; exit 1
           fi
           if [ "${{ inputs.draft }}" = true ]; then
-            extra+=("release_status:draft")
+            extra+=("release_status:draft" "track_promote_release_status:draft")
           elif [ "$pct" -lt 100 ]; then
-            extra+=("release_status:inProgress" "rollout:$(awk "BEGIN{print $pct/100}")")
+            extra+=("release_status:inProgress" "track_promote_release_status:inProgress" "rollout:$(awk "BEGIN{print $pct/100}")")
           else
             extra+=("release_status:completed")
           fi

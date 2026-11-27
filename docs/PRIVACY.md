@@ -38,7 +38,7 @@ Contact us in Settings opens your own mail app with a message addressed to us. I
 
 ## This website
 
-darkroomcamera.app sets no cookies and runs no tracking or analytics code. Its host, Cloudflare, counts visits in anonymous totals (visits per day, country and page), which we use only to see how many people find the site. We never see who you are.
+darkroomcamera.app sets no cookies and has no ads or trackers. Its host, Cloudflare, counts visits with a small cookie-free counter (Cloudflare Web Analytics) that keeps only anonymous totals: visits per day, country and page. We use them only to see how many people find the site. We never see who you are, and nothing follows you to other sites.
 
 ## Battery and notifications
 

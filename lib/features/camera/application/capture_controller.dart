@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
@@ -10,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/device/physical_orientation.dart';
 import '../../../core/monetization/allowance.dart';
 import '../../../core/processing/capture_processor.dart';
-import '../../../core/processing/multi_exposure.dart';
 import '../../../core/processing/photo_pipeline.dart';
 import '../../../core/providers.dart';
 import '../../cameras/domain/camera_spec.dart';
@@ -239,26 +237,18 @@ class CaptureController extends Notifier<CaptureState> {
       // lands on it and the two go on as one capture.
       final path = file.path;
       final me = ref.read(multiExposureProvider);
-      Future<void> Function(String raw)? prepare;
+      (String, LensKind)? firstExposure;
       if (me.armed && ctx.spec.special == CameraSpecial.multipleExposure) {
         final first = me.first;
         if (first == null) {
-          await ref.read(multiExposureProvider.notifier).hold(path);
+          await ref.read(multiExposureProvider.notifier).hold(path, ctx.lens);
           state = state.copyWith(busy: false);
           return;
         }
-        // The second exposure goes to the darkroom at once, like any shot;
-        // the first is blended into it there before it develops.
-        final notifier = ref.read(multiExposureProvider.notifier)..done();
-        prepare = (raw) async {
-          final out = '$raw.me';
-          try {
-            await MultiExposure.blend(first, raw, out);
-            await File(out).rename(raw);
-          } finally {
-            notifier.release(first);
-          }
-        };
+        // The second exposure goes to the darkroom at once, like any shot,
+        // with the first (each through its own lens) to be added on there.
+        firstExposure = (first, me.firstLens);
+        ref.read(multiExposureProvider.notifier).done();
       }
       // Read before the hand-off moves the file.
       final note = await LabNote.forFile(
@@ -269,7 +259,9 @@ class CaptureController extends Notifier<CaptureState> {
       );
       // Hand-off: moves the file into our cache + writes the queue row.
       // Processing then continues in the background isolate.
-      final id = await ref.read(captureProcessorProvider).enqueuePhoto(path, ctx, prepare: prepare);
+      final id = await ref
+          .read(captureProcessorProvider)
+          .enqueuePhoto(path, ctx, firstExposure: firstExposure);
       // The lab says so once the print is developed (DarkroomController).
       if (note != null) await LabNote.keep(ref.read(sharedPrefsProvider), id, note);
       ref.read(allowanceProvider.notifier).usePhoto(ctx.spec);

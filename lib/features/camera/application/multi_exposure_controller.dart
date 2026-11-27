@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../cameras/domain/camera_spec.dart';
 import 'camera_ui_state.dart';
 
 /// Multiple exposure (35 mm stills): armed on the viewfinder's ME chip, the
@@ -12,9 +13,12 @@ import 'camera_ui_state.dart';
 /// camera, lets the held exposure go.
 @immutable
 class MultiExposureState {
-  const MultiExposureState({this.armed = false, this.first});
+  const MultiExposureState({this.armed = false, this.first, this.firstLens = LensKind.standard});
 
   final bool armed;
+
+  /// The lens the first exposure was taken through.
+  final LensKind firstLens;
 
   /// The first exposure, waiting for the second.
   final String? first;
@@ -41,7 +45,7 @@ class MultiExposureController extends Notifier<MultiExposureState> {
   void toggle() => state.armed ? cancel() : state = const MultiExposureState(armed: true);
 
   /// Holds the capture at [captured] as the first exposure.
-  Future<void> hold(String captured) async {
+  Future<void> hold(String captured, LensKind lens) async {
     final dest = _firstPath;
     try {
       await File(captured).rename(dest);
@@ -49,11 +53,11 @@ class MultiExposureController extends Notifier<MultiExposureState> {
       await File(captured).copy(dest);
       await File(captured).delete();
     }
-    state = MultiExposureState(armed: true, first: dest);
+    state = MultiExposureState(armed: true, first: dest, firstLens: lens);
   }
 
-  /// The second exposure is in: done (the held one is the caller's now, to
-  /// [release] once it's blended).
+  /// The second exposure is in: done (the held one is the caller's now: it
+  /// goes into the queue with the second).
   void done() => state = const MultiExposureState();
 
   /// A held first exposure that has been used.

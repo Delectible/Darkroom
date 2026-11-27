@@ -15,6 +15,7 @@ import '../../settings/application/settings_controllers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/processing/photo_pipeline.dart' show PhotoJob;
 import '../../../core/theme/note_box.dart';
 import '../../../core/db/favourites.dart';
 import '../../../core/diagnostics/screenshot_hide.dart';
@@ -3389,7 +3390,16 @@ class _ShakeNote extends StatelessWidget {
 /// taken while it's still being made (a big frame on a slow phone could
 /// leave the tray blank for most of its time).
 String? _trayPicture(MediaItem item) =>
-    item.thumbPath ?? (item.status == MediaStatus.processing ? item.rawPath : null);
+    item.thumbPath ?? (item.status == MediaStatus.processing ? _queuedPicture(item) : null);
+
+/// A queued shot's picture: its preview (lens and every exposure in, made
+/// moments after the shutter), or the photo as taken until that's ready.
+String? _queuedPicture(MediaItem item) {
+  final raw = item.rawPath;
+  if (raw == null) return null;
+  final preview = PhotoJob.previewPathOf(raw);
+  return File(preview).existsSync() ? preview : raw;
+}
 
 /// m:ss.
 String _clock(Duration d) => '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
@@ -3402,8 +3412,9 @@ double _instantDevelop(MediaItem item, double progress) =>
 /// The picture in an instant print: the finished print, or the original
 /// photo while the print is still being made (it swaps in when ready).
 Widget _instantPicture(MediaItem item, int cacheWidth) {
-  final raw = item.status == MediaStatus.processing;
-  final path = raw ? item.rawPath : item.thumbPath;
+  final processing = item.status == MediaStatus.processing;
+  final path = processing ? _queuedPicture(item) : item.thumbPath;
+  final raw = processing && path == item.rawPath;
   if (path == null || item.status == MediaStatus.failed) return const SizedBox.shrink();
   final image = Image.file(
     File(path),

@@ -4,7 +4,7 @@ description: >-
   darkroom and pins them to a corkboard; Digital Mode buffers shots on a
   virtual SD card browsed through a Windows 98 explorer.
 publish_to: none
-version: 2.4.8+180
+version: 2.4.9+181
 
 environment:
   sdk: ^3.14.0
@@ -147,4 +147,5 @@ flutter:
     - shaders/vhs_scanline.frag
     - shaders/cork_board.frag
     - shaders/crt_bulge.frag
+    - shaders/win98_pixels.frag
     - shaders/lens.frag

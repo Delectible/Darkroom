@@ -31,25 +31,30 @@ class MultiExposure {
     b0 = img.copyCrop(b0, x: (b0.width - cw) ~/ 2, y: (b0.height - ch) ~/ 2, width: cw, height: ch);
     b0 = img.copyResize(b0, width: a0.width, height: a0.height, interpolation: img.Interpolation.average);
     b0 = b0.convert(format: img.Format.uint8, numChannels: 3);
-    final pa = a0.toUint8List(), pb = b0.toUint8List();
-    final out = Uint8List(pa.length);
+    final out = a0.toUint8List();
+    blendBytes(out, b0.toUint8List());
+    final result = img.Image.fromBytes(width: a0.width, height: a0.height, bytes: out.buffer, numChannels: 3);
+    exif.imageIfd.orientation = 1;
+    result.exif = exif;
+    File(outPath).writeAsBytesSync(img.encodeJpg(result, quality: 95), flush: true);
+  }
+
+  /// Adds the light of [b] onto [a] (same-size RGB bytes), in place: in
+  /// linear terms, each frame about two thirds of a stop under, with a soft
+  /// shoulder instead of a hard clip.
+  static void blendBytes(Uint8List a, Uint8List b) {
     final lin = Float64List(256);
     for (var i = 0; i < 256; i++) {
       final c = i / 255;
       lin[i] = c <= 0.04045 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
     }
-    // light added in linear terms, each frame about two thirds of a stop
-    // under; a soft shoulder instead of a hard clip
     const gain = 0.62;
-    for (var i = 0; i < pa.length; i++) {
-      final l = (lin[pa[i]] + lin[pb[i]]) * gain;
+    final n = math.min(a.length, b.length);
+    for (var i = 0; i < n; i++) {
+      final l = (lin[a[i]] + lin[b[i]]) * gain;
       final s = l / (1 + l * 0.18) * 1.18;
       final v = s <= 0.0031308 ? s * 12.92 : 1.055 * math.pow(s, 1 / 2.4) - 0.055;
-      out[i] = (v * 255).round().clamp(0, 255);
+      a[i] = (v * 255).round().clamp(0, 255);
     }
-    final result = img.Image.fromBytes(width: a0.width, height: a0.height, bytes: out.buffer, numChannels: 3);
-    exif.imageIfd.orientation = 1;
-    result.exif = exif;
-    File(outPath).writeAsBytesSync(img.encodeJpg(result, quality: 95), flush: true);
   }
 }

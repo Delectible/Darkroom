@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -178,12 +179,17 @@ class CaptureProcessor {
     String capturedPath,
     CaptureContext ctx, {
     Future<void> Function(String raw)? prepare,
+    (String, LensKind)? firstExposure,
   }) async {
     final id = _newId();
     final now = DateTime.now();
     final spec = ctx.spec;
     final raw = await _moveIntoCache(capturedPath, id, '.jpg');
     _inFlightRaw.add(raw);
+    // a multiple exposure's held first frame comes along with it
+    final first = firstExposure == null
+        ? null
+        : await _moveIntoCache(firstExposure.$1, '${id}_first', '.jpg');
     final fileName = await _fileName(spec, MediaKind.photo);
     final outDir = spec.mode == AppMode.film ? paths.filmDir : paths.sdCardDir;
     final job = PhotoJob(
@@ -203,6 +209,8 @@ class CaptureProcessor {
       lens: ctx.lens,
       leak: ctx.leak,
       colorFx: ctx.colorFx,
+      firstPath: first,
+      firstLens: firstExposure?.$2 ?? LensKind.standard,
       originalCopyPath: ctx.global.saveOriginalCopy
           ? p.join(paths.captureCacheDir.path, '${id}_original.jpg')
           : null,
@@ -220,6 +228,13 @@ class CaptureProcessor {
     );
     if (spec.mode == AppMode.film) unawaited(onFilmQueueChanged());
     final ready = prepare?.call(raw).catchError((Object _) {});
+    // the darkroom's picture while it develops: lens and exposures in
+    unawaited(
+      Future(() async {
+        await ready;
+        await Isolate.run(() => PhotoPipeline.preview(job), debugName: 'preview-$id');
+      }).catchError((Object _) {}),
+    );
     _enqueue(_readyAt(ctx, now), () async {
       await ready;
       await _runPhoto(repo, job);
@@ -326,6 +341,8 @@ class CaptureProcessor {
       );
       if (!resumed) unawaited(_record(repo, job.id, started));
       await _deleteQuietly(job.rawPath);
+      await _deleteQuietly(PhotoJob.previewPathOf(job.rawPath));
+      if (job.firstPath != null) await _deleteQuietly(job.firstPath!);
       if (r.originalCopyPath != null) {
         await _saveOriginalToGallery(r.originalCopyPath!);
       }
@@ -459,6 +476,14 @@ class CaptureProcessor {
     await for (final e in dir.list()) {
       final path = e.path;
       if (referenced.contains(path)) continue;
+      // An in-flight photo's first exposure and preview sit beside it.
+      if (e is File &&
+          _inFlightRaw.any((r) {
+            final id = p.basenameWithoutExtension(r), name = p.basename(path);
+            return name == '${id}_first.jpg' || name == PhotoJob.previewPathOf(p.basename(r));
+          })) {
+        continue;
+      }
       // Work dirs of in-flight video jobs are named after the job id.
       if (e is Directory &&
           _inFlightRaw.any((r) => p.basename(path) == 'work_${p.basenameWithoutExtension(r)}')) {

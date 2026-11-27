@@ -12,6 +12,7 @@ import 'film/film_profile.dart';
 import 'film/film_process.dart';
 import 'film/film_renderer.dart';
 import 'lens_renderer.dart';
+import 'multi_exposure.dart';
 import 'specials.dart';
 import 'look_renderer.dart';
 import 'look_spec.dart';
@@ -43,7 +44,18 @@ class PhotoJob {
     this.lens = LensKind.standard,
     this.leak = false,
     this.colorFx = ColorFx.none,
+    this.firstPath,
+    this.firstLens = LensKind.standard,
   });
+
+  /// A multiple exposure's first exposure (a capture in the cache), added
+  /// onto this one before the film; taken through [firstLens].
+  final String? firstPath;
+  final LensKind firstLens;
+
+  /// The quick, small picture of a queued shot (lens and both exposures
+  /// in, no film yet) that the darkroom shows while it develops.
+  static String previewPathOf(String rawPath) => '$rawPath.preview.jpg';
 
   /// The lens on the camera: drawn in before the film's look.
   final LensKind lens;
@@ -105,6 +117,8 @@ class PhotoJob {
     'lens': lens.name,
     'leak': leak,
     'colorFx': colorFx.name,
+    'firstPath': firstPath,
+    'firstLens': firstLens.name,
   };
 
   factory PhotoJob.fromJson(Map<String, Object?> j) => PhotoJob(
@@ -125,6 +139,8 @@ class PhotoJob {
     lens: LensKind.values.asNameMap()[j['lens']] ?? LensKind.standard,
     leak: j['leak'] as bool? ?? false,
     colorFx: ColorFx.values.asNameMap()[j['colorFx']] ?? ColorFx.none,
+    firstPath: j['firstPath'] as String?,
+    firstLens: LensKind.values.asNameMap()[j['firstLens']] ?? LensKind.standard,
   );
 }
 
@@ -163,57 +179,7 @@ class PhotoPipeline {
     final spec = CameraCatalog.byId(job.cameraId);
     final profile = spec.output;
 
-    final raw = File(job.rawPath).readAsBytesSync();
-    img.Image? decoded = img.decodeJpg(raw) ?? img.decodeImage(raw);
-    if (decoded == null) {
-      throw const FormatException('Capture could not be decoded');
-    }
-    final orientation = decoded.exif.imageIfd.orientation ?? 1;
-    // (the scene's own brightness: the phone's exposure, less the
-    // compensation it was told to add)
-    final sceneEv = switch (sceneEvOf(decoded.exif)) {
-      final ev? => ev + job.exposureComp,
-      null => null,
-    };
-    final swap = orientation >= 5 && orientation <= 8;
-    final ow = swap ? decoded.height : decoded.width;
-    final oh = swap ? decoded.width : decoded.height;
-
-    final crop = CropMath.stillCrop(
-      width: ow,
-      height: oh,
-      previewAspect: job.previewAspect,
-      ratio: job.aspect,
-    );
-    final rawCrop = CropMath.toRawSpace(
-      oriented: crop,
-      rawWidth: decoded.width,
-      rawHeight: decoded.height,
-      exifOrientation: orientation,
-    );
-    var image = img.copyCrop(
-      decoded,
-      x: rawCrop.x,
-      y: rawCrop.y,
-      width: rawCrop.width,
-      height: rawCrop.height,
-    );
-    decoded = null; // let the full frame be collected before we allocate more
-
-    // Target size: low-res pipelines render small then upscale at the end.
-    final targetLong = profile.lowResLongEdge ?? profile.maxLongEdge;
-    final (tw, th) = CropMath.fitLongEdge(image.width, image.height, targetLong);
-    if (tw != image.width || th != image.height) {
-      image = img.copyResize(image, width: tw, height: th, interpolation: img.Interpolation.average);
-    }
-    image = _bakeOrientation(image, orientation);
-    // Only re-orient if the platform honoured the portrait lock (a landscape
-    // buffer means it already applied the device orientation itself).
-    if (job.rotationTurns % 4 != 0 && oh > ow) {
-      image = img.copyRotate(image, angle: (job.rotationTurns % 4) * 90);
-    }
-    image = _ensureRgb8(image);
-    image.exif = img.ExifData();
+    var (image, sceneEv) = _load(job, job.rawPath, profile.lowResLongEdge ?? profile.maxLongEdge);
 
     String? originalPath;
     if (job.originalCopyPath != null) {
@@ -223,8 +189,9 @@ class PhotoPipeline {
 
     final w = image.width, h = image.height;
     var data = image.toUint8List();
-    // the lens first: it's in front of the film
-    LensRenderer(job.lens).render(data, w, h);
+    // the lens first: it's in front of the film (and a first exposure
+    // through its own lens, added on)
+    _exposures(job, data, w, h);
     // light getting in at the back, onto the film
     if (job.leak) Specials.lightLeak(data, w, h, seed: job.seed);
     final flashFired = switch (job.flash) {
@@ -268,7 +235,7 @@ class PhotoPipeline {
     }
 
     // (the fish-eye's black stays unexposed: no grain on it)
-    LensRenderer(job.lens).finish(data, w, h);
+    _finish(job, data, w, h);
     Specials.colorFx(data, job.colorFx);
 
     if (job.timestamp && spec.timestampStyle != TimestampStyle.none) {
@@ -322,6 +289,99 @@ class PhotoPipeline {
       flashFired: flashFired,
       originalCopyPath: originalPath,
     );
+  }
+
+  /// Decodes the capture at [path], crops it to the job's frame, shrinks it
+  /// to [targetLong] and turns it upright: the RGB picture to develop, and
+  /// the scene's brightness from its EXIF.
+  static (img.Image, double?) _load(PhotoJob job, String path, int targetLong) {
+    final raw = File(path).readAsBytesSync();
+    img.Image? decoded = img.decodeJpg(raw) ?? img.decodeImage(raw);
+    if (decoded == null) {
+      throw const FormatException('Capture could not be decoded');
+    }
+    final orientation = decoded.exif.imageIfd.orientation ?? 1;
+    // (the scene's own brightness: the phone's exposure, less the
+    // compensation it was told to add)
+    final sceneEv = switch (sceneEvOf(decoded.exif)) {
+      final ev? => ev + job.exposureComp,
+      null => null,
+    };
+    final swap = orientation >= 5 && orientation <= 8;
+    final ow = swap ? decoded.height : decoded.width;
+    final oh = swap ? decoded.width : decoded.height;
+
+    final crop = CropMath.stillCrop(
+      width: ow,
+      height: oh,
+      previewAspect: job.previewAspect,
+      ratio: job.aspect,
+    );
+    final rawCrop = CropMath.toRawSpace(
+      oriented: crop,
+      rawWidth: decoded.width,
+      rawHeight: decoded.height,
+      exifOrientation: orientation,
+    );
+    var image = img.copyCrop(
+      decoded,
+      x: rawCrop.x,
+      y: rawCrop.y,
+      width: rawCrop.width,
+      height: rawCrop.height,
+    );
+    decoded = null; // let the full frame be collected before we allocate more
+
+    // Target size: low-res pipelines render small then upscale at the end.
+    final (tw, th) = CropMath.fitLongEdge(image.width, image.height, targetLong);
+    if (tw != image.width || th != image.height) {
+      image = img.copyResize(image, width: tw, height: th, interpolation: img.Interpolation.average);
+    }
+    image = _bakeOrientation(image, orientation);
+    // Only re-orient if the platform honoured the portrait lock (a landscape
+    // buffer means it already applied the device orientation itself).
+    if (job.rotationTurns % 4 != 0 && oh > ow) {
+      image = img.copyRotate(image, angle: (job.rotationTurns % 4) * 90);
+    }
+    image = _ensureRgb8(image);
+    image.exif = img.ExifData();
+
+    return (image, sceneEv);
+  }
+
+  /// The lens, and a multiple exposure's first frame through its own lens
+  /// added on: what reaches the film.
+  static void _exposures(PhotoJob job, Uint8List data, int w, int h) {
+    LensRenderer(job.lens).render(data, w, h);
+    final fp = job.firstPath;
+    if (fp == null || !File(fp).existsSync()) return;
+    var (first, _) = _load(job, fp, math.max(w, h));
+    if (first.width != w || first.height != h) {
+      first = _ensureRgb8(
+        img.copyResize(first, width: w, height: h, interpolation: img.Interpolation.average),
+      );
+    }
+    final fd = first.toUint8List();
+    LensRenderer(job.firstLens).render(fd, w, h);
+    MultiExposure.blendBytes(data, fd);
+  }
+
+  /// The fish-eye's unexposed black and rim: only where no exposure lit it
+  /// (a second frame through another lens covers it).
+  static void _finish(PhotoJob job, Uint8List data, int w, int h) {
+    if (job.firstPath == null || job.firstLens == job.lens) LensRenderer(job.lens).finish(data, w, h);
+  }
+
+  /// The darkroom's picture of a shot still developing: small, the lens and
+  /// both exposures in, no film. Written to [PhotoJob.previewPathOf].
+  static void preview(PhotoJob job) {
+    final (image, _) = _load(job, job.rawPath, 900);
+    final w = image.width, h = image.height;
+    final data = image.toUint8List();
+    _exposures(job, data, w, h);
+    _finish(job, data, w, h);
+    final out = img.Image.fromBytes(width: w, height: h, bytes: data.buffer, numChannels: 3);
+    _writeAtomic(PhotoJob.previewPathOf(job.rawPath), img.encodeJpg(out, quality: 85));
   }
 
   static img.Image _ensureRgb8(img.Image i) {

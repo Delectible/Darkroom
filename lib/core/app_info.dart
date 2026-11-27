@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.4.8';
+  static const version = '2.4.9';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Star your favourite prints and reels, and filter the corkboard by film, month or favourites. Darkroom 98: resolution changes the pixels too, and Options is now Settings.';
+      'Multiple exposures keep each shot\'s own lens, and developing prints show the lens and both exposures. Darkroom 98\'s resolution now really draws chunkier pixels.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

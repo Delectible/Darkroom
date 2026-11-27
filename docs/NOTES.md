@@ -558,7 +558,9 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   The monitor's settings (`Win98Display`, `win98_display.dart`, pref
   `ui.win98.display`, live in the static `Win98Display.current` so dialogs
   and `Win98Scale` read it): Tube (CRT) / Flat panel, resolution (640 /
-  800 / 1024 = `Win98Scale` factor), colour (warm, cool, green, amber),
+  800 / 1024 = `Win98Scale` factor, plus real pixel blocks: `Win98Pixels`,
+  `shaders/win98_pixels.frag` through ImageFilter.shader, off while a route
+  moves; two scale ImageFilters in a row get merged into nothing), colour (warm, cool, green, amber),
   brightness/contrast (knobs on the bezel, `win98_monitor.dart`, eager
   gestures so they never swipe the explorer away; OSD bar), Large fonts
   (TextScaler 1.15 in `Win98Scale`). `Win98Glass` applies the colour
@@ -946,7 +948,10 @@ UI
   stopped camera or a held still left behind at rest (logged "unstuck").
 - Specials (`CameraSpecial`): one per camera, the film viewfinder's
   top-right chip / the digital OSD's key (`CameraSpecials.press/chip`).
-  ME has its own controller; the rest step `specialProvider` (per camera,
+  ME has its own controller (the first exposure is held with its lens and
+  queued with the second, `PhotoJob.firstPath/firstLens`; the pipeline draws
+  each lens before adding them). A queued shot gets a quick preview (lens and
+  exposures, no film, `PhotoJob.previewPathOf`) for the darkroom trays; the rest step `specialProvider` (per camera,
   0 = off). LEAK and FX change the photo (`Specials`, PhotoJob.leak /
   colorFx), FADE the video graph (VideoJob.fade), SELF the shutter
   (`CaptureController`, `countdown`). Digital cameras get lenses too

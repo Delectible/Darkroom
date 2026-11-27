@@ -336,35 +336,72 @@ class _Win98GlassState extends State<Win98Glass> {
   }
 }
 
-/// The resolution's pixels: the picture drawn small (averaged) and blown
-/// back up without smoothing, so it comes out in [pixel]-dp blocks. Under
-/// the scan lines and the colour, on top of everything else. Always the
-/// same layers, so switching it keeps what's inside (the key in
-/// [_Win98GlassState]); 0 is the identity, no off-screen layer.
-class Win98Pixels extends StatelessWidget {
+/// The resolution's pixels: the picture drawn in [pixel]-dp blocks, each
+/// the average of the picture under it (`shaders/win98_pixels.frag` through
+/// ImageFilter.shader). Under the scan lines and the colour, on top of
+/// everything else. Always the same layers, so switching it keeps what's
+/// inside (the key in [_Win98GlassState]); 0 is the identity. A shader
+/// filter under a moving route or dialog draws in the wrong place (see
+/// [CrtWarp]), so it waits until the route has settled. (Two scale filters
+/// in a row were merged into nothing by the engine: no pixels at all.)
+class Win98Pixels extends StatefulWidget {
   const Win98Pixels({super.key, required this.pixel, required this.child});
 
   final double pixel;
   final Widget child;
 
   @override
+  State<Win98Pixels> createState() => _Win98PixelsState();
+}
+
+class _Win98PixelsState extends State<Win98Pixels> {
+  static Future<ui.FragmentProgram>? _program;
+  ui.FragmentShader? _shader;
+  Animation<double>? _route;
+
+  @override
+  void initState() {
+    super.initState();
+    if (ui.ImageFilter.isShaderFilterSupported) {
+      _program ??= ui.FragmentProgram.fromAsset('shaders/win98_pixels.frag');
+      _program!.then((p) {
+        if (mounted) setState(() => _shader = p.fragmentShader());
+      }, onError: (Object _) {});
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final a = ModalRoute.of(context)?.animation;
+    if (a != _route) {
+      _route?.removeStatusListener(_onStatus);
+      _route = a?..addStatusListener(_onStatus);
+    }
+  }
+
+  void _onStatus(AnimationStatus _) {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _route?.removeStatusListener(_onStatus);
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final block = pixel * MediaQuery.devicePixelRatioOf(context);
-    final on = block > 1.01;
-    final down = on ? 1 / block : 1.0;
+    final block = widget.pixel * MediaQuery.devicePixelRatioOf(context);
+    final settled = _route == null || _route!.status == AnimationStatus.completed;
+    final shader = _shader;
+    final on = block > 1.01 && shader != null && settled;
+    if (on) shader.setFloat(2, block);
     return ImageFiltered(
       enabled: on,
-      imageFilter: ui.ImageFilter.compose(
-        outer: ui.ImageFilter.matrix(
-          Matrix4.diagonal3Values(1 / down, 1 / down, 1).storage,
-          filterQuality: FilterQuality.none,
-        ),
-        inner: ui.ImageFilter.matrix(
-          Matrix4.diagonal3Values(down, down, 1).storage,
-          filterQuality: FilterQuality.medium,
-        ),
-      ),
-      child: child,
+      // A fresh filter each build: the engine snapshots the uniforms.
+      imageFilter: on ? ui.ImageFilter.shader(shader) : ui.ImageFilter.matrix(Matrix4.identity().storage),
+      child: widget.child,
     );
   }
 }

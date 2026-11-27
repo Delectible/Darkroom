@@ -1,4 +1,6 @@
-Neu in 2.4.6:
-• Neue Kontaktseite in den Einstellungen: schreib uns, finde uns auf Instagram, bewerte Darkroom oder öffne Hilfe & Support.
-• Unsere neue Website darkroomcamera.app mit Hilfe, häufigen Fragen und der Datenschutzerklärung.
-• Außerdem in 2.4: das Studio für Fotostreifen, Collagen, Scrapbooks und Daumenkinos; Photo Room in Darkroom 98; bessere Spiele; Weitwinkel- und Tele-Linsen; und flüssigere Darkroom-98-Symbole.
+Neu in 2.4.8:
+• Favoriten: Markiere deine besten Abzüge mit Stern und zeig auf der Pinnwand nur Favoriten.
+• Pinnwand-Filter und Sortieren, um jedes Foto schnell zu finden.
+• Echterer Film: feineres Korn und dezentere Filmfehler.
+• Darkroom 98: neue Einstellungen, Startmenü-Symbol, klarere Tipps und eine Retro-Pixel-Auflösung.
+• „Darkroom bewerten“ öffnet jetzt die Store-Seite.

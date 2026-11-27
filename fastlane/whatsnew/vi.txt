@@ -1,4 +1,6 @@
-Có gì mới trong 2.4.6:
-• Trang Liên hệ mới trong Cài đặt: gửi email cho chúng tôi, tìm chúng tôi trên Instagram, đánh giá Darkroom hoặc mở Trợ giúp và hỗ trợ.
-• Trang web mới của chúng tôi, darkroomcamera.app, có trợ giúp, câu hỏi thường gặp và chính sách quyền riêng tư.
-• Cũng trong 2.4: Studio cho dải ảnh, ảnh ghép, sổ lưu niệm và sách lật; Photo Room trong Darkroom 98; trò chơi hay hơn; ống kính góc rộng và tele; và biểu tượng Darkroom 98 mượt hơn.
+Mới trong 2.4.8:
+• Yêu thích: gắn sao cho ảnh đẹp nhất và chỉ hiện ảnh yêu thích trên bảng ghim.
+• Bộ lọc và Sắp xếp trên bảng ghim để tìm ảnh thật nhanh.
+• Phim chân thực hơn: hạt mịn hơn, lỗi phim tinh tế hơn.
+• Darkroom 98: Cài đặt mới, biểu tượng Start, mẹo rõ hơn và độ phân giải pixel cổ điển.
+• Đánh giá Darkroom giờ mở trang cửa hàng.

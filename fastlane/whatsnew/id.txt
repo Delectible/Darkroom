@@ -1,4 +1,6 @@
-Baru di 2.4.6:
-• Halaman Hubungi kami baru di Pengaturan: kirim email, temukan kami di Instagram, beri nilai Darkroom, atau buka Bantuan & dukungan.
-• Situs web baru kami, darkroomcamera.app, berisi bantuan, pertanyaan umum, dan kebijakan privasi.
-• Juga di 2.4: Studio untuk strip foto, kolase, scrapbook, dan flipbook; Photo Room di Darkroom 98; game yang lebih seru; lensa Wide dan Tele; serta ikon Darkroom 98 yang lebih mulus.
+Baru di 2.4.8:
+• Favorit: beri bintang pada cetakan terbaikmu dan tampilkan hanya favorit di papan gabus.
+• Filter dan Urutkan di papan gabus untuk menemukan foto dengan cepat.
+• Film lebih realistis: butiran lebih halus, cacat lebih halus.
+• Darkroom 98: Pengaturan baru, ikon Start, tips lebih jelas, dan resolusi piksel retro.
+• Beri Nilai Darkroom kini membuka halaman toko.

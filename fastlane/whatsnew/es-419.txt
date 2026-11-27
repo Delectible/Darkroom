@@ -1,4 +1,6 @@
-Novedades en 2.4.6:
-• Nueva página de Contacto en Configuración: escríbenos, encuéntranos en Instagram, califica Darkroom o abre Ayuda y soporte.
-• Nuestro nuevo sitio web, darkroomcamera.app, con ayuda, preguntas frecuentes y la política de privacidad.
-• También en 2.4: el Estudio para tiras de fotos, collages, álbumes y flipbooks; Photo Room en Darkroom 98; mejores juegos; lentes gran angular y tele; e íconos de Darkroom 98 más fluidos.
+Novedades en 2.4.8:
+• Favoritos: marca tus mejores copias con una estrella y muestra solo favoritos en el corcho.
+• Filtros y Ordenar por en el corcho para encontrar cualquier foto.
+• Rollo más realista: grano más fino y defectos más sutiles.
+• Darkroom 98: nueva Configuración, ícono en Inicio, consejos más claros y una resolución de píxeles retro.
+• Calificar Darkroom ahora abre la tienda.

@@ -25,6 +25,11 @@ on:
         description: "Send What's new from fastlane/whatsnew (every language). Off: keep the internal build's note."
         type: boolean
         default: true
+      draft:
+        description: "Draft only: set up the production release (build, What's new) without sending it; you roll it out in Play Console"
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -61,7 +66,9 @@ jobs:
           if ! [[ "$pct" =~ ^[0-9]+$ ]] || [ "$pct" -lt 1 ] || [ "$pct" -gt 100 ]; then
             echo "::error::Rollout must be a whole number from 1 to 100 (got '$pct')."; exit 1
           fi
-          if [ "$pct" -lt 100 ]; then
+          if [ "${{ inputs.draft }}" = true ]; then
+            extra+=("release_status:draft")
+          elif [ "$pct" -lt 100 ]; then
             extra+=("release_status:inProgress" "rollout:$(awk "BEGIN{print $pct/100}")")
           else
             extra+=("release_status:completed")

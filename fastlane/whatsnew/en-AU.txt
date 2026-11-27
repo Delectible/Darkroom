@@ -1,4 +1,6 @@
-New in 2.4.6:
-• New Contact us page in Settings: email us, find us on Instagram, rate Darkroom, or open Help & support.
-• Our new website, darkroomcamera.app, with help, common questions and the privacy policy.
-• Also in 2.4: the Studio for photo strips, collages, scrapbooks and flip books; Photo Room in Darkroom 98; better games; Wide and Tele lenses; and smoother Darkroom 98 icons.
+New in 2.4.8:
+• Favourites: star your best prints and show only favourites on the corkboard.
+• Corkboard filters and Sort by, to find any photo fast.
+• More realistic film: finer grain and subtler film flaws.
+• Darkroom 98: new Settings, a Start menu icon, clearer tips and a retro pixel resolution.
+• Rate Darkroom now opens the store page.

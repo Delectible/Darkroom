@@ -1,4 +1,6 @@
-Novidades da 2.4.6:
-• Nova página Fale conosco nos Ajustes: mande um e-mail, encontre a gente no Instagram, avalie o Darkroom ou abra Ajuda e suporte.
-• Nosso novo site, darkroomcamera.app, com ajuda, perguntas frequentes e a política de privacidade.
-• Também na 2.4: o Estúdio para tiras de fotos, colagens, scrapbooks e flipbooks; Photo Room no Darkroom 98; jogos melhores; lentes grande-angular e tele; e ícones do Darkroom 98 mais suaves.
+Novidades na 2.4.8:
+• Favoritos: marque suas melhores fotos com estrela e mostre só os favoritos no mural.
+• Filtros e Ordenar por no mural para achar qualquer foto rápido.
+• Filme mais realista: grão mais fino e defeitos mais sutis.
+• Darkroom 98: novas Configurações, ícone no Iniciar, dicas mais claras e uma resolução de pixels retrô.
+• Avaliar o Darkroom agora abre a loja.

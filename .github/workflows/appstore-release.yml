@@ -24,6 +24,11 @@ on:
         type: boolean
         required: false
         default: false
+      submit:
+        description: "Submit for review. Off: only prepare the version (build, What's new) so you can submit it yourself"
+        type: boolean
+        required: false
+        default: true
 permissions:
   contents: read
   actions: read
@@ -82,7 +87,7 @@ jobs:
           ASC_KEY="$KEY" ASC_KEY_ID="$KEY_ID" ASC_ISSUER="$ISSUER" python3 fastlane/apple_listing.py "$RUNNER_TEMP/meta"
           echo "Build ${{ steps.build.outputs.num }}, version $version:"; cat "$RUNNER_TEMP/meta/$LANG_CODE/release_notes.txt"
       - run: sudo gem install fastlane --no-document --quiet
-      - name: Submit for review (released automatically once approved)
+      - name: Prepare the version and submit for review (released automatically once approved)
         # Never cancels a submission that's already waiting for review (that
         # restarts Apple's queue) unless replace_pending is ticked: deliver
         # then stops with an error instead.
@@ -102,7 +107,7 @@ jobs:
             skip_binary_upload:true \
             skip_screenshots:true \
             skip_app_version_update:false \
-            submit_for_review:true \
+            submit_for_review:${{ inputs.submit }} \
             automatic_release:true \
             reject_if_possible:${{ inputs.replace_pending }} \
             run_precheck_before_submit:false \

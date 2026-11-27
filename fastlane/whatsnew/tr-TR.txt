@@ -1,4 +1,6 @@
-2.4.6'daki yenilikler:
-• Ayarlar'da yeni Bize ulaşın sayfası: bize e-posta gönder, Instagram'da bizi bul, Darkroom'u değerlendir veya Yardım ve destek'i aç.
-• Yeni web sitemiz darkroomcamera.app: yardım, sık sorulan sorular ve gizlilik politikası.
-• Ayrıca 2.4'te: fotoğraf şeritleri, kolajlar, albümler ve flipbook'lar için Stüdyo; Darkroom 98'de Photo Room; daha iyi oyunlar; geniş açı ve tele lensler; ve daha akıcı Darkroom 98 simgeleri.
+2.4.8'de yeni:
+• Favoriler: En iyi baskılarını yıldızla, mantar panoda yalnızca favorileri göster.
+• Mantar pano filtreleri ve Sırala ile her fotoğrafı hızla bul.
+• Daha gerçekçi film: daha ince gren, daha zarif kusurlar.
+• Darkroom 98: yeni Ayarlar, Başlat simgesi, daha net ipuçları ve retro piksel çözünürlüğü.
+• Darkroom'u Değerlendir artık mağaza sayfasını açıyor.

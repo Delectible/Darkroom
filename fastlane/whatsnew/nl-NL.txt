@@ -1,4 +1,6 @@
-Nieuw in 2.4.6:
-• Nieuwe Contactpagina in Instellingen: mail ons, vind ons op Instagram, beoordeel Darkroom of open Hulp en support.
-• Onze nieuwe website, darkroomcamera.app, met hulp, veelgestelde vragen en het privacybeleid.
-• Ook in 2.4: de Studio voor fotostrips, collages, plakboeken en flipboekjes; Photo Room in Darkroom 98; betere games; groothoek- en telelenzen; en soepelere Darkroom 98-pictogrammen.
+Nieuw in 2.4.8:
+• Favorieten: geef je beste afdrukken een ster en toon alleen favorieten op het prikbord.
+• Prikbordfilters en Sorteren op, zodat je elke foto snel vindt.
+• Echtere film: fijnere korrel en subtielere filmfoutjes.
+• Darkroom 98: nieuwe Instellingen, Start-icoon, duidelijkere tips en een retro pixelresolutie.
+• Darkroom beoordelen opent nu de storepagina.

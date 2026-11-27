@@ -36,6 +36,10 @@ Contact us in Settings opens your own mail app with a message addressed to us. I
 
 "Rate Darkroom" shows Google Play's or the App Store's own rating box; Darkroom never sees your rating. Links to Instagram or this website open outside the app, where those services' own privacy policies apply.
 
+## This website
+
+darkroomcamera.app sets no cookies and runs no tracking or analytics code. Its host, Cloudflare, counts visits in anonymous totals (visits per day, country and page), which we use only to see how many people find the site. We never see who you are.
+
 ## Battery and notifications
 
 Battery level is read only to show it on the digital cameras' displays. Notifications tell you when film has finished developing; they are created on your phone and nothing is sent to a server.

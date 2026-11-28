@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../brand/app_look.dart';
 import '../brand/rabbit_mark.dart';
 import '../diagnostics/launch_timer.dart';
 
@@ -147,13 +148,7 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Where the launch screen had it (96 dp), its face
-                    // centred (the ears lean right, so the picture's own
-                    // centre left the face off to the left).
-                    Transform.translate(
-                      offset: const Offset(96 * LaunchCurtain.faceShift, 0),
-                      child: const _CurtainRabbit(),
-                    ),
+                    const _CurtainRabbit(),
                     Transform.translate(
                       offset: const Offset(0, 86),
                       child: _Chatter(line: _line),
@@ -168,7 +163,8 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
   }
 }
 
-/// The curtain's rabbit. Android's splash already showed it in this spot,
+/// The curtain's rabbit (or the camera icon picked instead, app_look.dart).
+/// Android's splash already showed it in this spot,
 /// so it's simply there. The iPhone's launch screen is plain (it can't
 /// follow the icon picked, app_look.dart), so there it fades in instead of
 /// popping.
@@ -194,9 +190,20 @@ class _CurtainRabbitState extends State<_CurtainRabbit> with SingleTickerProvide
 
   @override
   Widget build(BuildContext context) {
+    // A camera icon picked: that icon is the splash (Android draws it there
+    // first, the same size), not the rabbit.
+    final icon = Look.splashIcon;
     return FadeTransition(
       opacity: CurvedAnimation(parent: _in, curve: Curves.easeOut),
-      child: const RabbitMark(width: 96, height: 96),
+      child: icon != null
+          ? Image.asset(icon, width: 96, height: 96, filterQuality: FilterQuality.medium)
+          // Where the launch screen had it (96 dp), its face centred (the
+          // ears lean right, so the picture's own centre left the face off
+          // to the left).
+          : Transform.translate(
+              offset: const Offset(96 * LaunchCurtain.faceShift, 0),
+              child: const RabbitMark(width: 96, height: 96),
+            ),
     );
   }
 }

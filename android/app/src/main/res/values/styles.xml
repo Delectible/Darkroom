@@ -10,6 +10,14 @@
     <style name="LaunchTheme.Eyeless" parent="@style/LaunchTheme">
         <item name="android:windowBackground">@drawable/launch_background_eyeless</item>
     </style>
+    <!-- The instant icon's own splash (Looks.kt): the icon itself. -->
+    <style name="LaunchTheme.Instant" parent="@style/LaunchTheme">
+        <item name="android:windowBackground">@drawable/launch_background_instant</item>
+    </style>
+    <!-- The lens icon's own splash (Looks.kt): the icon itself. -->
+    <style name="LaunchTheme.Lens" parent="@style/LaunchTheme">
+        <item name="android:windowBackground">@drawable/launch_background_lens</item>
+    </style>
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@color/launch_background</item>
     </style>

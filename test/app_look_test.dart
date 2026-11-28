@@ -22,7 +22,11 @@ void main() {
     for (final f in dartFiles('lib')) {
       if (f.path.endsWith('core/brand/app_look.dart')) continue;
       final src = f.readAsStringSync();
-      expect(src.contains('rabbit_mark.png'), isFalse, reason: '${f.path}: use RabbitMark / Look.rabbitAsset');
+      expect(
+        src.contains('rabbit_mark.png'),
+        isFalse,
+        reason: '${f.path}: use RabbitMark / Look.rabbitAsset',
+      );
       expect(src.contains('rabbit_mark_eyeless'), isFalse, reason: f.path);
       // the drawn rabbit: its eyes are whatever Look allows, never forced on
       expect(RegExp(r'eyes:\s*true').hasMatch(src), isFalse, reason: f.path);
@@ -101,13 +105,20 @@ void main() {
       expect(delegate, contains('"AppIcon$cap"'));
       expect(workflow, contains('AppIcon$cap'), reason: 'build-apk.yml lists AppIcon$cap');
     }
-    // the splash for the other icons: the faceless rabbit
-    for (final d in dens) {
-      expect(File('$res/drawable-$d/splash_rabbit_eyeless.png').existsSync(), isTrue);
+    // each icon's own splash: the faceless rabbit, or the camera icon itself
+    for (final (theme, splash) in [('Eyeless', 'rabbit_eyeless'), ('Instant', 'instant'), ('Lens', 'lens')]) {
+      for (final d in dens) {
+        expect(File('$res/drawable-$d/splash_$splash.png').existsSync(), isTrue, reason: '$d $splash');
+      }
+      for (final dir in ['values', 'values-night', 'values-v31', 'values-night-v31']) {
+        expect(File('$res/$dir/styles.xml').readAsStringSync(), contains('LaunchTheme.$theme"'), reason: dir);
+      }
+      expect(manifest, contains('@style/LaunchTheme.$theme"'), reason: theme);
     }
-    for (final dir in ['values', 'values-night', 'values-v31', 'values-night-v31']) {
-      expect(File('$res/$dir/styles.xml').readAsStringSync(), contains('LaunchTheme.Eyeless'), reason: dir);
-    }
+    Look.reset(AppLook.instant);
+    expect(Look.splashIcon, 'assets/artwork/looks/instant.png');
+    Look.reset(AppLook.eyeless);
+    expect(Look.splashIcon, isNull);
     // the iPhone's launch screen can't follow the pick: it has no rabbit
     final launch = File('ios/Runner/Base.lproj/LaunchScreen.storyboard').readAsStringSync();
     expect(launch.contains('<imageView'), isFalse);

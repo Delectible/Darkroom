@@ -66,6 +66,13 @@ abstract final class Look {
   static String get rabbitAsset =>
       eyes ? 'assets/artwork/rabbit_mark.png' : 'assets/artwork/rabbit_mark_eyeless.png';
 
+  /// The launch splash and curtain picture for a camera icon (the icon
+  /// itself, rounded), or null for the rabbit ones.
+  static String? get splashIcon => switch (notifier.value) {
+    AppLook.instant || AppLook.lens => notifier.value.preview,
+    _ => null,
+  };
+
   /// Stock artwork whose rendered logo shows the rabbit's eyes has a copy
   /// with them painted out (tool/icon/eyeless_artwork.py).
   static const eyelessArtwork = {

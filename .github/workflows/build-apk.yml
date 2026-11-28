@@ -114,13 +114,18 @@ jobs:
           sed -i '' -E 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/IPHONEOS_DEPLOYMENT_TARGET = 15.0;/' ios/Runner.xcodeproj/project.pbxproj
           # The app icons people can pick instead of the rabbit (Assets.xcassets,
           # lib/core/brand/app_look.dart): built in as alternate icons.
-          perl -0pi -e 's/(\s*)ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/$1ASSETCATALOG_COMPILER_ALTERNATE_APP_ICON_NAMES = "AppIconEyeless AppIconInstant AppIconLens";$1ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' ios/Runner.xcodeproj/project.pbxproj
+          perl -0pi -e 's/(\s*)ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/$1ASSETCATALOG_COMPILER_ALTERNATE_APP_ICON_NAMES = "AppIconEyeless AppIconInstant AppIconLens";$1ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;$1ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;/g' ios/Runner.xcodeproj/project.pbxproj
           grep -q 'ASSETCATALOG_COMPILER_ALTERNATE_APP_ICON_NAMES' ios/Runner.xcodeproj/project.pbxproj || { echo "::error::Couldn't list the alternate app icons"; exit 1; }
       - env:
           DEBUG_PASSWORD: ${{ secrets.DEBUG_PASSWORD }}
         run: |
           KEY=""; if [ -n "$DEBUG_PASSWORD" ]; then KEY=$(printf 'darkroom-debug:%s' "$DEBUG_PASSWORD" | shasum -a 256 | cut -d' ' -f1); fi
           flutter build ios --release --no-codesign --build-number=${{ github.run_number }} --dart-define=DEBUG_KEY=$KEY
+          # The alternate app icons made it in (else the icon picker can't change it).
+          grep -n 'ALTERNATE_APP_ICON\|INCLUDE_ALL_APPICON' ios/Runner.xcodeproj/project.pbxproj
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons' build/ios/iphoneos/Runner.app/Info.plist
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIcons:CFBundleAlternateIcons:AppIconLens' build/ios/iphoneos/Runner.app/Info.plist \
+            || { echo "::error::The alternate app icons aren't in the app"; exit 1; }
       - name: Package an unsigned .ipa (signed on your computer when sideloading)
         run: |
           mkdir -p dist/Payload

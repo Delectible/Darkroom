@@ -7,6 +7,7 @@ import '../../core/review/review_prompt.dart';
 import '../../core/support/support.dart';
 import '../../core/theme/note_box.dart';
 import '../../core/theme/retro_theme.dart';
+import '../../core/brand/rabbit_mark.dart';
 
 /// Settings > CONTACT: email, Instagram, a rating, the privacy policy.
 Future<void> showContactSheet(BuildContext context) {
@@ -59,7 +60,7 @@ class ContactSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset('assets/artwork/rabbit_mark.png', height: 64, filterQuality: FilterQuality.medium),
+            const RabbitMark(height: 64),
             const SizedBox(height: 12),
             Text(
               'Contact us',

@@ -5,6 +5,11 @@
         <item name="android:windowBackground">@drawable/launch_background</item>
     </style>
     <!-- Behind Flutter once it runs: the same near-black, so no flash. -->
+    <!-- The same, for the other icons people can pick (Looks.kt): the
+         rabbit with no face, as the app's own launch curtain then shows. -->
+    <style name="LaunchTheme.Eyeless" parent="@style/LaunchTheme">
+        <item name="android:windowBackground">@drawable/launch_background_eyeless</item>
+    </style>
     <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
         <item name="android:windowBackground">@color/launch_background</item>
     </style>

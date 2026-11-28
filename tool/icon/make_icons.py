@@ -7,6 +7,12 @@ like a mis-converged CRT. Where the three overlap they add up to white.
 
 Writes:
   App      assets/artwork/rabbit_mark.png, the welcome tour's rabbit.
+  Looks    the icons people can pick instead (lib/core/brand/app_look.dart):
+           the rabbit with no face ("eyeless": every file below again,
+           *_eyeless) and two plain cameras (camera_looks.py), as Android
+           launcher entries, notification glyphs and iOS alternate icons,
+           plus assets/artwork/looks/*.png for the picker. The stock
+           artwork's baked-in logos: eyeless_artwork.py.
   Splash   drawable-*/splash_rabbit.png: that rabbit at 96 dp on Android's
            288 dp splash canvas (the launch curtain's size and place).
   Android  adaptive icon (background colour, foreground, monochrome for
@@ -19,9 +25,12 @@ Writes:
   Play     512 icon + 1024x500 feature graphic for the store listing
            (fastlane/metadata/android/en-AU/images).
 """
-import json, os, shutil
+import json, os, shutil, sys
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import camera_looks  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 SS = 4                       # supersampling factor
@@ -33,6 +42,12 @@ SCAN = 0.84                  # scanline brightness on the rabbit
 # Design units: the mark is drawn on a 192 grid whose circle (r = 96) is
 # the visible icon. Glyph-only variants use the head + ears bounding box.
 GLYPH_BOX = (52, 29, 157, 158)
+
+# The X eyes. Off while the "eyeless" set is drawn: the rabbit with no
+# face at all, for everyone who picked any icon but the original
+# (lib/core/brand/app_look.dart). Every drawing below cuts its eyes with
+# _mask(eyes_only=True), so this one switch covers them all.
+EYES = True
 
 
 def _mask(S, cx, cy, D, dx=0.0, bust=True, eyes_only=False):
@@ -56,6 +71,8 @@ def _mask(S, cx, cy, D, dx=0.0, bust=True, eyes_only=False):
         d.ellipse((a[0], a[1], b[0], b[1]), fill=255)
 
     if eyes_only:
+        if not EYES:
+            return np.asarray(m, dtype=np.float32) / 255
         for ex, ey in ((80, 118), (108, 118)):
             stroke([(ex - 7, ey - 7), (ex + 7, ey + 7)], 5.5)
             stroke([(ex + 7, ey - 7), (ex - 7, ey + 7)], 5.5)
@@ -181,8 +198,8 @@ def splash_rabbit(k):
     canvas = Image.new('RGBA', (round(288 * k),) * 2, (0, 0, 0, 0))
     rabbit = intro_mark(round(96 * k))
     # (its face centred, not the picture: the ears lean right; the app's
-    # LaunchCurtain.faceShift. iOS's LaunchImage is this rabbit too, at
-    # 96 pt, shifted as much.)
+    # LaunchCurtain.faceShift. iOS's launch screen has no rabbit: it can't
+    # follow the icon picked, app_look.dart.)
     dx = round(FACE_SHIFT * rabbit.width)
     canvas.paste(rabbit, ((canvas.width - rabbit.width) // 2 + dx, (canvas.height - rabbit.height) // 2), rabbit)
     return canvas
@@ -245,6 +262,84 @@ def save(img, *parts):
     return path
 
 
+ADAPTIVE = '''<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="%s" />
+    <foreground android:drawable="@mipmap/%s_foreground" />
+    <monochrome android:drawable="@mipmap/%s_monochrome" />
+</adaptive-icon>
+'''
+
+
+def _ios_set(name, default, dark, tinted):
+    ios = os.path.join(ROOT, 'ios', 'Runner', 'Assets.xcassets', f'{name}.appiconset')
+    shutil.rmtree(ios, ignore_errors=True)
+    save(default, ios, f'{name}-1024.png')
+    save(dark, ios, f'{name}-Dark-1024.png')
+    save(tinted, ios, f'{name}-Tinted-1024.png')
+    entry = lambda f, look=None: dict(
+        {'filename': f, 'idiom': 'universal', 'platform': 'ios', 'size': '1024x1024'},
+        **({'appearances': [{'appearance': 'luminosity', 'value': look}]} if look else {}))
+    with open(os.path.join(ios, 'Contents.json'), 'w') as f:
+        json.dump({'images': [entry(f'{name}-1024.png'), entry(f'{name}-Dark-1024.png', 'dark'),
+                              entry(f'{name}-Tinted-1024.png', 'tinted')],
+                   'info': {'version': 1, 'author': 'xcode'}}, f, indent=2)
+
+
+def looks(res, dens):
+    """The icons people can pick instead (app_look.dart): the rabbit with no
+    face ("eyeless"), and two plain cameras (camera_looks.py). Whatever is
+    picked, the rabbits inside the app lose their eyes too, so the eyeless
+    rabbit also gets its own in-app mark and splash."""
+    global EYES
+    EYES = False
+    try:
+        for name, k in dens.items():
+            save(full_icon(round(48 * k), 'circle'), *res, f'mipmap-{name}', 'ic_launcher_eyeless.png')
+            save(foreground(round(108 * k)), *res, f'mipmap-{name}', 'ic_launcher_eyeless_foreground.png')
+            save(monochrome(round(108 * k)), *res, f'mipmap-{name}', 'ic_launcher_eyeless_monochrome.png')
+            save(status_glyph(round(24 * k)), *res, f'drawable-{name}', 'ic_stat_eyeless.png')
+            save(splash_rabbit(k), *res, f'drawable-{name}', 'splash_rabbit_eyeless.png')
+        _ios_set('AppIconEyeless', full_icon(1024), full_icon(1024, transparent=True), tinted_icon(1024))
+        save(intro_mark(384), 'assets', 'artwork', 'rabbit_mark_eyeless.png')
+    finally:
+        EYES = True
+    with open(os.path.join(ROOT, *res, 'mipmap-anydpi-v26', 'ic_launcher_eyeless.xml'), 'w') as f:
+        f.write(ADAPTIVE % ('@color/ic_launcher_background', 'ic_launcher_eyeless', 'ic_launcher_eyeless'))
+
+    C = camera_looks
+    for look in C.LOOKS:
+        base = f'ic_launcher_{look}'
+        for name, k in dens.items():
+            save(C.legacy_round(look, round(48 * k)), *res, f'mipmap-{name}', f'{base}.png')
+            save(C.adaptive_background(look, round(108 * k)), *res, f'mipmap-{name}', f'{base}_background.png')
+            save(C.adaptive_foreground(look, round(108 * k)), *res, f'mipmap-{name}', f'{base}_foreground.png')
+            save(C.monochrome(look, round(108 * k)), *res, f'mipmap-{name}', f'{base}_monochrome.png')
+            save(C.status_glyph(look, round(24 * k)), *res, f'drawable-{name}', f'ic_stat_{look}.png')
+        with open(os.path.join(ROOT, *res, 'mipmap-anydpi-v26', f'{base}.xml'), 'w') as f:
+            f.write(ADAPTIVE % (f'@mipmap/{base}_background', base, base))
+        _ios_set(f'AppIcon{look.capitalize()}', C.full(look, 1024), C.dark(look, 1024), C.tinted(look, 1024))
+
+    # The picker's pictures of each icon (app_look.dart: AppLook.preview),
+    # rounded like a home screen does.
+    def preview(img):
+        px = 192
+        img = img.convert('RGB').resize((px, px), Image.LANCZOS)
+        m = Image.new('L', (px * 4, px * 4), 0)
+        ImageDraw.Draw(m).rounded_rectangle((0, 0, px * 4 - 1, px * 4 - 1), radius=px * 4 * 0.225, fill=255)
+        out = Image.new('RGBA', (px, px), (0, 0, 0, 0))
+        out.paste(img, (0, 0), m.resize((px, px), Image.LANCZOS))
+        return out
+    save(preview(full_icon(768)), 'assets', 'artwork', 'looks', 'classic.png')
+    EYES = False
+    try:
+        save(preview(full_icon(768)), 'assets', 'artwork', 'looks', 'eyeless.png')
+    finally:
+        EYES = True
+    for look in C.LOOKS:
+        save(preview(C.full(look, 768)), 'assets', 'artwork', 'looks', f'{look}.png')
+
+
 def main():
     res = ['android', 'app', 'src', 'main', 'res']
     dens = {'mdpi': 1, 'hdpi': 1.5, 'xhdpi': 2, 'xxhdpi': 3, 'xxxhdpi': 4}
@@ -286,6 +381,7 @@ def main():
                    'info': {'version': 1, 'author': 'xcode'}}, f, indent=2)
 
     save(intro_mark(384), 'assets', 'artwork', 'rabbit_mark.png')
+    looks(res, dens)
     save(social_preview(), 'docs', 'social_preview.png')
     # Play Store listing images (published by .github/workflows/play-listing.yml).
     play = ['fastlane', 'metadata', 'android', 'en-AU', 'images']

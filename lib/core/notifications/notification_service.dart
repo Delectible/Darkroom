@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import '../brand/app_look.dart';
+
 /// Local notifications for the Darkroom.
 ///
 /// Consolidation strategy: there is exactly ONE darkroom notification id.
@@ -31,7 +33,8 @@ class NotificationService {
   static const _channelId = 'darkroom_quiet';
   static const _legacyChannelId = 'darkroom';
 
-  static const _android = AndroidNotificationDetails(
+  /// The status-bar glyph follows the app icon picked (Look).
+  static AndroidNotificationDetails get _android => AndroidNotificationDetails(
     _channelId,
     'Darkroom',
     channelDescription: 'Quietly tells you when film has finished developing.',
@@ -43,7 +46,7 @@ class NotificationService {
     onlyAlertOnce: true,
     category: AndroidNotificationCategory.status,
     groupKey: 'darkroom',
-    icon: '@drawable/ic_stat_darkroom',
+    icon: Look.notificationIcon,
   );
 
   static const _darwin = DarwinNotificationDetails(
@@ -54,12 +57,12 @@ class NotificationService {
     interruptionLevel: InterruptionLevel.passive, // no sound, no vibration, no wake
   );
 
-  static const _details = NotificationDetails(android: _android, iOS: _darwin);
+  static NotificationDetails get _details => NotificationDetails(android: _android, iOS: _darwin);
 
   Future<void> init({void Function(String? payload)? onTap}) async {
-    const settings = InitializationSettings(
-      android: AndroidInitializationSettings('@drawable/ic_stat_darkroom'),
-      iOS: DarwinInitializationSettings(
+    final settings = InitializationSettings(
+      android: AndroidInitializationSettings(Look.notificationIcon),
+      iOS: const DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
         requestSoundPermission: false,

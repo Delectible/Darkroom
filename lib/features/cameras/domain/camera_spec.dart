@@ -1,3 +1,4 @@
+import '../../../core/brand/app_look.dart';
 import '../../../core/processing/crop_math.dart';
 import '../../../core/processing/film/film_profile.dart';
 import '../../../core/processing/look_spec.dart';
@@ -190,7 +191,7 @@ class CameraSpec {
     required this.output,
     required this.aspects,
     required this.defaultAspect,
-    required this.artwork,
+    required String artwork,
     this.look,
     this.timestampStyle = TimestampStyle.none,
     this.recordsVideo = false,
@@ -210,7 +211,9 @@ class CameraSpec {
     this.boxColor = 0xFFE3D8C3,
     this.boxInk = 0xFF2A2420,
     this.pro = false,
-  });
+    // (stored privately: read through [artwork], which picks the copy to show)
+    // ignore: prefer_initializing_formals
+  }) : _artwork = artwork;
 
   /// Darkroom time for film shots unless a stock says otherwise.
   static const defaultDevelopTime = Duration(minutes: 5);
@@ -230,8 +233,11 @@ class CameraSpec {
   final List<AspectRatioOption> aspects;
   final AspectRatioOption defaultAspect;
 
-  /// Rendered product shot used by the stock picker (asset path).
-  final String artwork;
+  /// Rendered product shot used by the stock picker (asset path): the copy
+  /// with the logo's rabbit eyes painted out, when the icon picked says so
+  /// (Look.artwork).
+  String get artwork => Look.artwork(_artwork);
+  final String _artwork;
   final TimestampStyle timestampStyle;
 
   /// The camera style decides the medium: video cameras (camcorder, Super 8)

@@ -1,5 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../core/brand/app_look.dart';
+
 /// 16x16 pixel-art icons drawn from character maps (no bitmap assets).
 enum PixelIcon {
   folder,
@@ -63,9 +65,42 @@ class PixelIconView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (icon == PixelIcon.rabbit) {
+      // X'd-out eyes only with the original app icon (Look.eyes).
+      return ValueListenableBuilder<AppLook>(
+        valueListenable: Look.notifier,
+        builder: (context, _, _) =>
+            CustomPaint(size: Size.square(size), painter: _SpritePainter(_rowsOf(icon))),
+      );
+    }
     return CustomPaint(size: Size.square(size), painter: _SpritePainter(_sprites[icon]!));
   }
 }
+
+/// [icon]'s pixels; the rabbit with no face unless the icon picked allows
+/// its X'd-out eyes (Look.eyes).
+List<String> _rowsOf(PixelIcon icon) =>
+    icon == PixelIcon.rabbit && !Look.eyes ? _rabbitNoFace : _sprites[icon]!;
+
+/// [PixelIcon.rabbit] with no face, for anyone who picked another app icon.
+const _rabbitNoFace = [
+  '................',
+  '..rwwb..........',
+  '..rwwb..rwwb....',
+  '..rwwb..rwwwwb..',
+  '..rwwb..rwwwwwb.',
+  '...rwwbrwwb.....',
+  '...rwwbrwwb.....',
+  '...rwwwwwwb.....',
+  '..rwwwwwwwwb....',
+  '.rwwwwwwwwwwb...',
+  '.rwwwwwwwwwwb...',
+  '.rwwwwwwwwwwb...',
+  '.rwwwwwwwwwwb...',
+  '..rwwwwwwwwb....',
+  '...rwwwwwwb.....',
+  '................',
+];
 
 const _palette = <String, Color>{
   'k': Color(0xFF000000),
@@ -930,10 +965,12 @@ const Map<PixelIcon, List<String>> _sprites = {
 void paintPixelIcon(Canvas canvas, PixelIcon icon, Rect dst) {
   canvas.save();
   canvas.translate(dst.left, dst.top);
-  _SpritePainter(_sprites[icon]!).paint(canvas, dst.size);
+  _SpritePainter(_rowsOf(icon)).paint(canvas, dst.size);
   canvas.restore();
 }
 
 /// Debug helper used by tests: every sprite is 16x16.
-bool spritesAreValid() =>
-    _sprites.values.every((rows) => rows.length == 16 && rows.every((r) => r.length == 16));
+bool spritesAreValid() => [
+  ..._sprites.values,
+  _rabbitNoFace,
+].every((rows) => rows.length == 16 && rows.every((r) => r.length == 16));

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Launch screen before Android 12, for the icons people can pick instead
+     of the original (Looks.kt): the rabbit with no face, as the launch
+     curtain then draws it (splash_rabbit_eyeless). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_background" />
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/splash_rabbit_eyeless" />
+    </item>
+</layer-list>

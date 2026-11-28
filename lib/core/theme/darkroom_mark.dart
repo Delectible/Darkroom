@@ -2,10 +2,14 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../brand/app_look.dart';
+
 /// The Darkroom rabbit (the app icon's drawing, tool/icon/make_icons.py):
-/// two ears, a round head and X'd-out eyes. Flat [color], or [rgbSplit] for
-/// the icon's mis-converged red / green / blue look. Used sparingly: the lab
-/// stamp on the back of prints, the camera bodies' badge, the projector.
+/// two ears, a round head and X'd-out eyes (no face at all once someone
+/// picks any icon but the original: Look.eyes). Flat [color], or [rgbSplit]
+/// for the icon's mis-converged red / green / blue look. Used sparingly:
+/// the lab stamp on the back of prints, the camera bodies' badge, the
+/// projector.
 class DarkroomMark extends StatelessWidget {
   const DarkroomMark({super.key, this.size = 24, required this.color, this.rgbSplit = false});
 
@@ -19,18 +23,24 @@ class DarkroomMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(size * aspect, size),
-      painter: DarkroomMarkPainter(color: color, rgbSplit: rgbSplit),
+    return ValueListenableBuilder<AppLook>(
+      valueListenable: Look.notifier,
+      builder: (context, _, _) => CustomPaint(
+        size: Size(size * aspect, size),
+        painter: DarkroomMarkPainter(color: color, rgbSplit: rgbSplit),
+      ),
     );
   }
 }
 
 class DarkroomMarkPainter extends CustomPainter {
-  DarkroomMarkPainter({required this.color, this.rgbSplit = false});
+  /// [eyes]: the X'd-out eyes; by default whatever the icon picked allows
+  /// (Look.eyes), which is what every rabbit in the app should use.
+  DarkroomMarkPainter({required this.color, this.rgbSplit = false, bool? eyes}) : eyes = eyes ?? Look.eyes;
 
   final Color color;
   final bool rgbSplit;
+  final bool eyes;
 
   // Glyph bounds on the icon's 192 design grid.
   static const _x0 = 52.0, _y0 = 29.0, _y1 = 158.0;
@@ -83,6 +93,10 @@ class DarkroomMarkPainter extends CustomPainter {
     } else {
       _glyph(canvas, s, Offset.zero, color.withValues(alpha: 1));
     }
+    if (!eyes) {
+      canvas.restore();
+      return;
+    }
     // X'd-out eyes, cut through.
     final eye = Paint()
       ..blendMode = BlendMode.clear
@@ -97,5 +111,6 @@ class DarkroomMarkPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(DarkroomMarkPainter old) => old.color != color || old.rgbSplit != rgbSplit;
+  bool shouldRepaint(DarkroomMarkPainter old) =>
+      old.color != color || old.rgbSplit != rgbSplit || old.eyes != eyes;
 }

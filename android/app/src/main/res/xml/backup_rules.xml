@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 6-11 backup: only the app icon people picked (Looks.kt), so a
+     reinstall keeps it. Nothing else of the app's is backed up. -->
+<full-backup-content>
+    <include domain="sharedpref" path="darkroom_look.xml" />
+</full-backup-content>

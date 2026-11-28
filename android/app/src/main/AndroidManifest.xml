@@ -25,7 +25,9 @@
         android:label="Darkroom"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:allowBackup="false"
+        android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:requestLegacyExternalStorage="true">
         <!-- The live 3D camera bodies (Flutter Scene) draw with Flutter GPU. -->
         <meta-data android:name="io.flutter.embedding.android.EnableFlutterGPU" android:value="true" />
@@ -35,6 +37,71 @@
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The other app icons people can pick (Looks.kt): launcher entries
+             of their own, off until picked, with the rabbit-free icon and a
+             splash with the faceless rabbit. Same settings as MainActivity
+             above: keep them in step. -->
+        <activity
+            android:name=".LookEyeless"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_eyeless"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme.Eyeless"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".LookInstant"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_instant"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme.Eyeless"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".LookLens"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_lens"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme.Eyeless"
             android:screenOrientation="portrait"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"

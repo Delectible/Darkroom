@@ -13,6 +13,7 @@ import '../navigation.dart';
 import '../providers.dart';
 import '../theme/retro_theme.dart';
 import '../performance/quality.dart';
+import '../brand/rabbit_mark.dart';
 
 /// Keeps an eye out for a phone that can't keep up with Fancy graphics, and
 /// offers once to turn it off, in case the user doesn't know the setting
@@ -128,7 +129,7 @@ class LagSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset('assets/artwork/rabbit_mark.png', height: 64, filterQuality: FilterQuality.medium),
+            const RabbitMark(height: 64),
             const SizedBox(height: 14),
             Text(
               'Things feeling slow?',

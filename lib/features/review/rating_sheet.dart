@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/device/upright.dart';
 import '../../core/theme/retro_theme.dart';
+import '../../core/brand/rabbit_mark.dart';
 
 /// Our own ask before the store's rating prompt: the store's prompt out of
 /// nowhere feels like begging. True = "Yea!" (show the store's prompt).
@@ -27,7 +28,7 @@ class RatingSheet extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset('assets/artwork/rabbit_mark.png', height: 76, filterQuality: FilterQuality.medium),
+            const RabbitMark(height: 76),
             const SizedBox(height: 14),
             Text(
               'Give us a shoutout!',

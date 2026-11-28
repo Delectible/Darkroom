@@ -13,6 +13,8 @@ import '../camera/application/camera_ui_state.dart';
 import '../camera/presentation/whole_body.dart';
 import '../settings/application/settings_controllers.dart';
 import '../help/gesture_demo.dart';
+import '../../core/brand/rabbit_mark.dart';
+import '../settings/presentation/look_picker.dart';
 
 /// First-run tour: what the app is, how to drive it (gestures), a name for
 /// the lab to write on your prints, then every permission asked for at once
@@ -185,40 +187,54 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                child: !last
-                    ? TextButton(
-                        key: const ValueKey('skip'),
-                        onPressed: () => unawaited(_skip()),
-                        child: const Text('Skip', style: TextStyle(color: _muted)),
-                      )
-                    : TextButton(
-                        key: const ValueKey('later'),
-                        // Keeps its height once asked, so nothing below moves.
-                        onPressed: asked ? null : () => unawaited(_finish()),
-                        child: AnimatedOpacity(
-                          opacity: asked ? 0 : 1,
-                          duration: const Duration(milliseconds: 200),
-                          child: const Text('Maybe later', style: TextStyle(color: _muted)),
-                        ),
+            Row(
+              children: [
+                // The app icon, for anyone who'd rather not have the rabbit
+                // with the X'd-out eyes (app_look.dart). Only on the first
+                // page, quietly.
+                IgnorePointer(
+                  ignoring: _page != 0,
+                  child: AnimatedOpacity(
+                    opacity: _page == 0 ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: TextButton(
+                      onPressed: () => unawaited(showLookPicker(context)),
+                      child: Text(
+                        'Want a different look?',
+                        style: TextStyle(color: _muted.withValues(alpha: 0.85), fontSize: 13),
                       ),
-              ),
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: !last
+                      ? TextButton(
+                          key: const ValueKey('skip'),
+                          onPressed: () => unawaited(_skip()),
+                          child: const Text('Skip', style: TextStyle(color: _muted)),
+                        )
+                      : TextButton(
+                          key: const ValueKey('later'),
+                          // Keeps its height once asked, so nothing below moves.
+                          onPressed: asked ? null : () => unawaited(_finish()),
+                          child: AnimatedOpacity(
+                            opacity: asked ? 0 : 1,
+                            duration: const Duration(milliseconds: 200),
+                            child: const Text('Maybe later', style: TextStyle(color: _muted)),
+                          ),
+                        ),
+                ),
+              ],
             ),
             Expanded(
               child: PageView(
                 controller: _pages,
                 onPageChanged: (i) => setState(() => _page = i),
                 children: [
-                  _Page(
-                    hero: Image.asset(
-                      'assets/artwork/rabbit_mark.png',
-                      width: 140,
-                      height: 140,
-                      filterQuality: FilterQuality.medium,
-                    ),
+                  const _Page(
+                    hero: RabbitMark(width: 140, height: 140),
                     title: 'Hey, this is your Darkroom.',
                     body:
                         'Experience photography like it used to be. A little more physical, a lot more fun.',

@@ -1,13 +1,17 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:darkroom/core/brand/app_look.dart';
 import 'package:darkroom/core/db/media_repository.dart';
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/settings/settings_repository.dart';
+import 'package:darkroom/features/camera/application/camera_ui_state.dart'
+    show UserNameNotifier, userNameProvider;
 import 'package:darkroom/features/sd_card/application/sd_card_controller.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/debug_menu.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_dialogs.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/explorer_screen.dart';
+import 'package:darkroom/features/sd_card/presentation/win98/look_choice.dart';
 import 'package:darkroom/features/sd_card/presentation/win98/win98_viewer.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
@@ -47,6 +51,7 @@ void main() {
     overrides: [
       initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
       cSeenProvider.overrideWith(_Seen.new),
+      userNameProvider.overrideWith(_Name.new),
     ],
     child: RepaintBoundary(
       key: boundary,
@@ -191,6 +196,55 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
   });
+  testWidgets('user profile picks the app icon, applied with OK', (tester) async {
+    await phone(tester);
+    addTearDown(Look.reset);
+    await tester.pumpWidget(
+      app(
+        Builder(
+          builder: (context) => Scaffold(
+            backgroundColor: const Color(0xFF008080),
+            body: Center(
+              child: ElevatedButton(onPressed: () => showUserProfile(context), child: const Text('go')),
+            ),
+          ),
+        ),
+      ),
+    );
+    Future<void> open() async {
+      await tester.tap(find.text('go'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.runAsync(() async {
+        for (final l in AppLook.values) {
+          await precacheImage(AssetImage(l.preview), tester.element(find.byType(Win98LookChoice)));
+        }
+      });
+      await tester.pumpAndSettle();
+    }
+
+    await open();
+    await shoot(tester, 'win98_profile');
+    await tester.tap(find.text('Lens'));
+    await tester.pumpAndSettle();
+    // nothing changes until OK; then it's picked, and the rabbit's eyes go
+    expect(Look.current, AppLook.classic);
+    expect(find.textContaining('takes the eyes off the rabbit'), findsOneWidget);
+    await shoot(tester, 'win98_profile_lens');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(Look.current, AppLook.lens);
+    expect(Look.eyes, isFalse);
+    await tester.pump(const Duration(milliseconds: 500));
+  });
+}
+
+class _Name extends UserNameNotifier {
+  @override
+  String? build() => 'Sam';
+
+  @override
+  Future<void> set(String? name) async => state = name;
 }
 
 class _Seen extends CSeenNotifier {

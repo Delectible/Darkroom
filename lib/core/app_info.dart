@@ -3,13 +3,13 @@ class AppInfo {
   const AppInfo._();
 
   static const name = 'Darkroom';
-  static const version = '2.4.10';
+  static const version = '2.4.11';
   static const build = '1998.10.05';
 
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98 photo viewer: bigger buttons, and in landscape the controls run down both sides so the picture gets the full height. A gentler 640 x 480, and the monitor slides away straight off while its screen switches off.';
+      'Pick a different app icon: the rabbit with no face, or a plain instant camera or lens. Find it on the first welcome screen, or in Darkroom 98 under User Profile.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

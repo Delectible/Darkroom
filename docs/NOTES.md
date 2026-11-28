@@ -1034,6 +1034,21 @@ UI
   (themed icons), legacy round, notification glyph, iOS 1024
   default/dark/tinted, and the GitHub social preview `docs/social_preview.png`
   (the owner sets it by hand: repo Settings > General > Social preview).
+- **App icon picker (2.4.11)** — `lib/core/brand/app_look.dart`: Original,
+  eyeless rabbit, Instant, Lens. Promise to the owner: once anything but
+  Original is picked, the X-eyed rabbit never shows again, anywhere (store
+  listings aside). So every rabbit asks `Look.eyes` (`RabbitMark`,
+  `DarkroomMarkPainter`'s default, `PixelIcon.rabbit`, `CameraSpec.artwork`
+  → `assets/artwork/eyeless/` copies made by `tool/icon/eyeless_artwork.py`;
+  re-run it after re-rendering artwork), and `test/app_look_test.dart` fails
+  on any rabbit that skips it. Android: one launcher activity per icon
+  (`MainActivity` + `LookEyeless/Instant/Lens` subclasses, same manifest
+  attributes — keep in step; `LaunchTheme.Eyeless` splash), swapped in
+  `onStop` (`Looks.kt`); the pick is in `darkroom_look.xml`, the only file
+  Android backup keeps (`res/xml/*rules.xml`). iPhone: alternate icons
+  (`AppIcon{Eyeless,Instant,Lens}`, listed by build-apk.yml's perl line) and
+  the keychain (survives a reinstall); the launch screen is plain dark for
+  everyone. Icons: `make_icons.py` (`EYES` switch) + `camera_looks.py`.
 - The rabbit in the app, used sparingly: `DarkroomMark`
   (`core/theme/darkroom_mark.dart`) pressed into the camera
   bodies' lens-flip cap and on the lab stamp on the back of prints; the

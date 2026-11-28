@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'app.dart';
+import 'core/brand/app_look.dart';
 import 'core/device/camera_control.dart';
 import 'core/background/background_worker.dart';
 import 'core/db/app_database.dart';
@@ -80,6 +81,8 @@ Future<void> _start() async {
   ).wait;
 
   LaunchTimer.prefs = prefs;
+  // The app icon picked, before any rabbit is drawn (app_look.dart).
+  await Look.load(paths.supportDir);
   // The phone's RAM sizes the work the app takes on (prints developing at
   // once, the picture cache): read alongside the rest of the start-up.
   // The quality manager: the steps saved last time (core/performance).
@@ -184,6 +187,8 @@ Future<void> _start() async {
   AppShortcuts.start(container);
   WidgetsBinding.instance.addPostFrameCallback((_) {
     LaunchTimer.mark('first frame');
+    // iPhone: the icon picked, on the home screen too (after a reinstall).
+    unawaited(Look.ensureIcon());
     // Opened from a notification: go where it points.
     unawaited(
       notifications.launchPayload().then((p) {

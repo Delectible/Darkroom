@@ -24,6 +24,10 @@ The one-time purchase is handled entirely by Google Play or the App Store. Darkr
 
 If you give your name in the welcome tour or under User Profile, or write captions and notes on prints, they are kept on your phone and only used inside the app (for example on the back of your prints).
 
+## App icon
+
+If you pick a different app icon, that one choice is remembered so it stays after updates or a reinstall: on Android it is the only thing included in your phone's own Google backup, and on iPhone it is kept in your phone's keychain. It never reaches us.
+
 ## Crash reports
 
 Crash reports are kept on your phone, in the app (Help > Crash Reports). They are never sent anywhere automatically.

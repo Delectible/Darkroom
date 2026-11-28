@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ backup and phone-to-phone transfer: only the app icon people
+     picked (Looks.kt), so a reinstall or a new phone keeps it. Nothing else
+     of the app's is backed up. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="darkroom_look.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="darkroom_look.xml" />
+    </device-transfer>
+</data-extraction-rules>

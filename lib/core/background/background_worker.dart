@@ -13,6 +13,7 @@ import '../paths/app_paths.dart';
 import '../processing/isolate_jobs.dart';
 import '../processing/photo_pipeline.dart';
 import '../settings/settings_repository.dart';
+import '../brand/app_look.dart';
 
 /// WorkManager wiring for the Darkroom on Android.
 ///
@@ -82,6 +83,8 @@ class BackgroundDarkroom {
   static Future<void> run({required String nextSlot}) async {
     final db = await AppDatabase.open();
     final paths = await AppPaths.resolve();
+    // (the notification glyph follows the app icon picked)
+    Look.loadCopy(paths.supportDir);
     final film = MediaRepository(db, paths, table: AppDatabase.filmTable);
     final notifications = NotificationService(FlutterLocalNotificationsPlugin());
     await notifications.init();

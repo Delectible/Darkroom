@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../brand/rabbit_mark.dart';
 import '../diagnostics/launch_timer.dart';
 
 /// The launch screen carried on into the app: the rabbit on near-black (as
@@ -150,12 +152,7 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
                     // centre left the face off to the left).
                     Transform.translate(
                       offset: const Offset(96 * LaunchCurtain.faceShift, 0),
-                      child: Image.asset(
-                        'assets/artwork/rabbit_mark.png',
-                        width: 96,
-                        height: 96,
-                        filterQuality: FilterQuality.medium,
-                      ),
+                      child: const _CurtainRabbit(),
                     ),
                     Transform.translate(
                       offset: const Offset(0, 86),
@@ -167,6 +164,39 @@ class _LaunchCurtainState extends State<LaunchCurtain> with SingleTickerProvider
             ),
           ),
       ],
+    );
+  }
+}
+
+/// The curtain's rabbit. Android's splash already showed it in this spot,
+/// so it's simply there. The iPhone's launch screen is plain (it can't
+/// follow the icon picked, app_look.dart), so there it fades in instead of
+/// popping.
+class _CurtainRabbit extends StatefulWidget {
+  const _CurtainRabbit();
+
+  @override
+  State<_CurtainRabbit> createState() => _CurtainRabbitState();
+}
+
+class _CurtainRabbitState extends State<_CurtainRabbit> with SingleTickerProviderStateMixin {
+  late final _in = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 350),
+    value: defaultTargetPlatform == TargetPlatform.iOS ? 0 : 1,
+  )..forward();
+
+  @override
+  void dispose() {
+    _in.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: CurvedAnimation(parent: _in, curve: Curves.easeOut),
+      child: const RabbitMark(width: 96, height: 96),
     );
   }
 }

@@ -2,6 +2,7 @@ import AVFoundation
 import AVKit
 import Flutter
 import Photos
+import Security
 import UIKit
 import UserNotifications
 import os
@@ -179,6 +180,34 @@ import os
       self?.captureButtons(call.arguments as? Bool == true)
       result(nil)
     }
+    // darkroom/look: the app icon people picked (lib/core/brand/app_look.dart).
+    // Kept in the keychain, which iOS leaves in place when the app is
+    // deleted, so a reinstall keeps the pick (and "ensure" puts the icon
+    // right on its first launch).
+    let look = FlutterMethodChannel(name: "darkroom/look", binaryMessenger: registrar.messenger())
+    look.setMethodCallHandler { call, result in
+      switch call.method {
+      case "get":
+        result(Looks.saved() ?? Looks.fromIcon(UIApplication.shared.alternateIconName))
+      case "set":
+        guard let name = call.arguments as? String, Looks.icons.keys.contains(name) else {
+          result(false)
+          return
+        }
+        Looks.save(name)
+        Looks.showIcon(name) { ok in result(ok) }
+      case "ensure":
+        // the saved pick, on the home screen too (after a reinstall)
+        let name = Looks.saved() ?? "classic"
+        if Looks.fromIcon(UIApplication.shared.alternateIconName) == name {
+          result(true)
+        } else {
+          Looks.showIcon(name) { ok in result(ok) }
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
     let channel = FlutterMethodChannel(name: "darkroom/background", binaryMessenger: registrar.messenger())
     channel.setMethodCallHandler { [weak self] call, result in
       switch call.method {
@@ -278,5 +307,73 @@ import os
     guard backgroundTask != .invalid else { return }
     UIApplication.shared.endBackgroundTask(backgroundTask)
     backgroundTask = .invalid
+  }
+}
+
+/// The app icons people can pick: the original rabbit (the primary icon),
+/// or one of the alternate icon sets in Assets.xcassets (the build lists
+/// them: ASSETCATALOG_COMPILER_ALTERNATE_APP_ICON_NAMES, build-apk.yml).
+enum Looks {
+  static let icons: [String: String?] = [
+    "classic": nil,
+    "eyeless": "AppIconEyeless",
+    "instant": "AppIconInstant",
+    "lens": "AppIconLens",
+  ]
+
+  private static let service = "com.dingo.darkroom.look"
+  private static let account = "look"
+
+  static func fromIcon(_ icon: String?) -> String {
+    icons.first { $0.value == icon }?.key ?? "classic"
+  }
+
+  /// The pick in the keychain, if one was ever made.
+  static func saved() -> String? {
+    let query: [String: Any] = [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: service,
+      kSecAttrAccount as String: account,
+      kSecReturnData as String: true,
+      kSecMatchLimit as String: kSecMatchLimitOne,
+    ]
+    var out: AnyObject?
+    guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess,
+      let data = out as? Data, let name = String(data: data, encoding: .utf8), icons.keys.contains(name)
+    else { return nil }
+    return name
+  }
+
+  static func save(_ name: String) {
+    let base: [String: Any] = [
+      kSecClass as String: kSecClassGenericPassword,
+      kSecAttrService as String: service,
+      kSecAttrAccount as String: account,
+    ]
+    let data = Data(name.utf8)
+    let update: [String: Any] = [
+      kSecValueData as String: data,
+      kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+    ]
+    if SecItemUpdate(base as CFDictionary, update as CFDictionary) == errSecItemNotFound {
+      SecItemAdd(base.merging(update) { $1 } as CFDictionary, nil)
+    }
+  }
+
+  /// Puts [name]'s icon on the home screen (iOS says so in a small alert of
+  /// its own, every app's the same).
+  static func showIcon(_ name: String, done: @escaping (Bool) -> Void) {
+    let app = UIApplication.shared
+    guard app.supportsAlternateIcons, let icon = icons[name] else {
+      done(false)
+      return
+    }
+    if app.alternateIconName == icon {
+      done(true)
+      return
+    }
+    app.setAlternateIconName(icon) { error in
+      DispatchQueue.main.async { done(error == nil) }
+    }
   }
 }

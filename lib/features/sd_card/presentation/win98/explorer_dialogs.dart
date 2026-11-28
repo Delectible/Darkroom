@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/audio/sfx.dart';
 
 import '../../../../core/app_info.dart';
+import '../../../../core/brand/app_look.dart';
 import '../../../../core/db/media_repository.dart';
 import '../../../../core/diagnostics/crash_log.dart';
 import '../../../../core/providers.dart';
@@ -21,6 +22,7 @@ import '../../application/sd_card_controller.dart';
 import 'explorer_screen.dart' show ExplorerMonitor;
 import 'win98_display.dart';
 import 'win98_savers.dart';
+import 'look_choice.dart';
 import 'pixel_icons.dart';
 import 'win98_widgets.dart';
 import '../../../../core/device/haptics.dart';
@@ -1286,10 +1288,12 @@ Widget _startItemOf(PixelIcon icon, String label, VoidCallback onTap) => InkWell
 );
 
 /// Start > User Profile: the name the tour asked for (on the lab stamp on
-/// the back of prints, and in Tip of the Day). Empty clears it.
+/// the back of prints, and in Tip of the Day; empty clears it), and the app
+/// icon (app_look.dart).
 Future<void> showUserProfile(BuildContext context) async {
   final container = ProviderScope.containerOf(context);
   final ctrl = TextEditingController(text: container.read(userNameProvider) ?? '');
+  var look = Look.current;
   final name = await showWin98Window<String>(
     context,
     title: 'User Profile',
@@ -1321,7 +1325,7 @@ Future<void> showUserProfile(BuildContext context) async {
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: TextField(
                     controller: ctrl,
-                    autofocus: true,
+                    autofocus: ctrl.text.isEmpty,
                     maxLength: 24,
                     textCapitalization: TextCapitalization.words,
                     style: W98.text,
@@ -1336,6 +1340,10 @@ Future<void> showUserProfile(BuildContext context) async {
                 ),
               ),
             ],
+          ),
+          StatefulBuilder(
+            builder: (context, setState) =>
+                Win98LookChoice(selected: look, onChanged: (l) => setState(() => look = l)),
           ),
           const SizedBox(height: 10),
           Row(
@@ -1358,8 +1366,11 @@ Future<void> showUserProfile(BuildContext context) async {
       ),
     ),
   );
-  ctrl.dispose();
-  if (name != null) await container.read(userNameProvider.notifier).set(name);
+  // (once the window's closing zoom, which still draws the field, is over)
+  unawaited(Future<void>.delayed(const Duration(milliseconds: 400), ctrl.dispose));
+  if (name == null) return;
+  if (look != Look.current) await Look.choose(look);
+  await container.read(userNameProvider.notifier).set(name);
 }
 
 /// File > Rename: the new name for [fileName] (the extension stays), or

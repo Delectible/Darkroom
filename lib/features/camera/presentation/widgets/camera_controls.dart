@@ -31,6 +31,7 @@ import '../../application/capture_controller.dart';
 import '../../application/zoom_controller.dart';
 import '../../../../core/device/battery.dart';
 import '../../../../core/device/haptics.dart';
+import '../../../../core/brand/app_look.dart';
 
 export 'shutters.dart' show ShutterButton, pressShutter;
 
@@ -1605,12 +1606,17 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
                   child: SizedBox(
                     width: 40,
                     height: 40,
-                    child: CustomPaint(
-                      painter: _LensFlipPainter(
-                        ring: palette.metal,
-                        ringDark: palette.metalDark,
-                        front: front,
-                        accent: palette.accent,
+                    // (the rabbit on the cap follows the icon picked)
+                    child: ValueListenableBuilder<AppLook>(
+                      valueListenable: Look.notifier,
+                      builder: (context, _, _) => CustomPaint(
+                        painter: _LensFlipPainter(
+                          ring: palette.metal,
+                          ringDark: palette.metalDark,
+                          front: front,
+                          accent: palette.accent,
+                          eyes: Look.eyes,
+                        ),
                       ),
                     ),
                   ),
@@ -1622,12 +1628,19 @@ class _LensFlipButtonState extends ConsumerState<LensFlipButton> {
 }
 
 class _LensFlipPainter extends CustomPainter {
-  _LensFlipPainter({required this.ring, required this.ringDark, required this.front, required this.accent});
+  _LensFlipPainter({
+    required this.ring,
+    required this.ringDark,
+    required this.front,
+    required this.accent,
+    required this.eyes,
+  });
 
   final Color ring;
   final Color ringDark;
   final bool front;
   final Color accent;
+  final bool eyes;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1695,7 +1708,7 @@ class _LensFlipPainter extends CustomPainter {
     ]) {
       canvas.save();
       canvas.translate(c.dx - gw / 2 + o.dx, c.dy - gh / 2 + o.dy);
-      DarkroomMarkPainter(color: color).paint(canvas, Size(gw, gh));
+      DarkroomMarkPainter(color: color, eyes: eyes).paint(canvas, Size(gw, gh));
       canvas.restore();
     }
     if (front) canvas.drawCircle(c + Offset(r * 0.62, -r * 0.62), 2.6, Paint()..color = accent);
@@ -1703,7 +1716,11 @@ class _LensFlipPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LensFlipPainter old) =>
-      old.front != front || old.ring != ring || old.ringDark != ringDark || old.accent != accent;
+      old.front != front ||
+      old.ring != ring ||
+      old.ringDark != ringDark ||
+      old.accent != accent ||
+      old.eyes != eyes;
 }
 
 /// A pan recognizer that wins the gesture arena as soon as the finger lands,

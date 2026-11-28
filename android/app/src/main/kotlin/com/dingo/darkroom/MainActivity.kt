@@ -41,7 +41,9 @@ import kotlin.math.abs
 //    album that are still there (deleted ones are offered again).
 //  * darkroom/permissions: camera / microphone granted?, ask for one, and
 //    open the app's settings page when Android won't ask any more.
-class MainActivity : FlutterActivity() {
+//  * darkroom/look: the app icon people picked (Looks.kt). Open: each icon
+//    is a launcher entry of its own, a subclass of this activity.
+open class MainActivity : FlutterActivity() {
     private var permissionResult: MethodChannel.Result? = null
 
     private var volumeChannel: MethodChannel? = null
@@ -273,6 +275,13 @@ class MainActivity : FlutterActivity() {
     override fun onFlutterUiDisplayed() {
         super.onFlutterUiDisplayed()
         voteFrameRate()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // A new icon picked: the launcher shows it once the app is out of
+        // sight (also puts it right after a reinstall restored the pick).
+        if (!isChangingConfigurations && !Looks.isShown(this)) Looks.swap(this)
     }
 
     override fun onDestroy() {
@@ -517,6 +526,24 @@ class MainActivity : FlutterActivity() {
                             )
                             result.success(true)
                         } catch (e: Exception) {
+                            result.success(false)
+                        }
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+        // darkroom/look: the icon picked (Looks.kt), read before the first
+        // frame so no rabbit is drawn with the wrong face.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "darkroom/look")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "get" -> result.success(Looks.current(this))
+                    "set" -> {
+                        val look = call.arguments as? String
+                        if (Looks.isLook(look)) {
+                            Looks.save(this, look!!)
+                            result.success(true)
+                        } else {
                             result.success(false)
                         }
                     }

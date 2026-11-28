@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:darkroom/core/brand/app_look.dart';
 import 'package:darkroom/core/providers.dart';
 import 'package:darkroom/core/settings/settings_repository.dart';
 import 'package:darkroom/features/camera/application/camera_ui_state.dart';
@@ -73,6 +74,70 @@ void main() {
     });
   }
 
+  testWidgets('"Want a different look?" opens the icon picker; a pick takes the eyes off', (tester) async {
+    tester.view.physicalSize = const Size(1280, 2856);
+    tester.view.devicePixelRatio = 3.1;
+    addTearDown(tester.view.reset);
+    addTearDown(Look.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userNameProvider.overrideWith(_NoName.new),
+          initialGlobalSettingsProvider.overrideWithValue(const GlobalSettings()),
+        ],
+        child: RepaintBoundary(
+          key: boundary,
+          child: MaterialApp(debugShowCheckedModeBanner: false, home: OnboardingScreen(onDone: () {})),
+        ),
+      ),
+    );
+    final ctx = tester.element(find.byType(OnboardingScreen));
+    await tester.runAsync(() async {
+      for (final a in [
+        'assets/artwork/rabbit_mark.png',
+        'assets/artwork/rabbit_mark_eyeless.png',
+        ...AppLook.values.map((l) => 'assets/artwork/looks/${l.name}.png'),
+      ]) {
+        await precacheImage(AssetImage(a), ctx, onError: (e, _) => throw e);
+      }
+    });
+    await tester.pumpAndSettle();
+    Future<void> shot(String name) async {
+      if (shots == null) return;
+      await tester.runAsync(() async {
+        final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+        final image = await ro.toImage(pixelRatio: 1);
+        final png = await image.toByteData(format: ui.ImageByteFormat.png);
+        await File('$shots/$name.png').writeAsBytes(png!.buffer.asUint8List());
+      });
+    }
+
+    await tester.tap(find.text('Want a different look?'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pick your app icon'), findsOneWidget);
+    await shot('onboarding_look_sheet');
+    await tester.tap(find.text('Instant'));
+    await tester.pumpAndSettle();
+    expect(Look.current, AppLook.instant);
+    await shot('onboarding_look_instant');
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    await shot('onboarding_look_after');
+    // the button is only on the first page
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<AnimatedOpacity>(
+            find
+                .ancestor(of: find.text('Want a different look?'), matching: find.byType(AnimatedOpacity))
+                .first,
+          )
+          .opacity,
+      0,
+    );
+  });
+
   for (final (scale, land) in [(1.0, false), (1.3, false), (1.0, true)]) {
     testWidgets('how it works, text x$scale${land ? ', landscape' : ''}', (tester) async {
       tester.view.physicalSize = land ? const Size(2856, 1280) : const Size(1280, 2856);
@@ -92,7 +157,8 @@ void main() {
           final ro = boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
           final image = await ro.toImage(pixelRatio: 1);
           final png = await image.toByteData(format: ui.ImageByteFormat.png);
-          await File('$shots/how_it_works_$scale${land ? '_land' : ''}.png').writeAsBytes(png!.buffer.asUint8List());
+          await File('$shots/how_it_works_$scale${land ? '_land' : ''}.png')
+              .writeAsBytes(png!.buffer.asUint8List());
         });
       }
       expect(find.text('Turn the lens dial'), findsOneWidget);

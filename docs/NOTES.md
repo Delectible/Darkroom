@@ -558,8 +558,9 @@ Digital Mode (1999 Floppy Cam, 2003 CCD Compact, Y2K Flip Phone, 90s Camcorder)
   Tools > Options > Monitor picks the monitor's plastic (`MonitorFinish` in
   win98_widgets.dart: Beige, Platinum, Graphite, Ocean, Tangerine;
   `win98MonitorProvider`, `PrefKeys.win98Monitor`); swiping it away (or back)
-  plays the CRT switch-off first (`CrtSwitchOff` in win98_shutdown.dart, run
-  by `_SwipeToClose`, which holds the pop in a PopScope); `ExplorerMonitor` wraps
+  plays the CRT switch-off as it slides away (`CrtSwitchOff` in win98_shutdown.dart,
+  started by `_SwipeToClose`, which holds the pop in a PopScope until then; the
+  CRT bulge leaves flat and live, `CrtWarp.flatExit`, so the switch-off shows); `ExplorerMonitor` wraps
   every Darkroom 98 screen (explorer, viewer, shut down, blue screen), so
   the bezel never changes between them (`win98_monitor_test`).
   The monitor's settings (`Win98Display`, `win98_display.dart`, pref

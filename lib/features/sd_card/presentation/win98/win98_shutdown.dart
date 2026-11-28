@@ -10,6 +10,7 @@ import '../../../../core/theme/darkroom_mark.dart';
 import '../../../../core/device/haptics.dart';
 import '../../../../core/device/upright.dart';
 import 'explorer_screen.dart' show ExplorerMonitor;
+import 'win98_display.dart' show CrtWarp;
 
 /// Start > Shut Down: the "shutting down" screen (sky, clouds and a pixel
 /// rabbit, with a shutdown tune), then the monitor switching off: the
@@ -142,6 +143,7 @@ class CrtSwitchOffState extends State<CrtSwitchOff> with SingleTickerProviderSta
 
   @override
   void dispose() {
+    if (_on) CrtWarp.flatExit = false;
     _t.dispose();
     _still?.dispose();
     super.dispose();
@@ -156,6 +158,7 @@ class CrtSwitchOffState extends State<CrtSwitchOff> with SingleTickerProviderSta
     } catch (_) {
       _still = null;
     }
+    CrtWarp.flatExit = true;
     setState(() => _on = true);
     Sfx.crtOff.play();
     unawaited(Haptics.lightImpact());

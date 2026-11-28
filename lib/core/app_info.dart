@@ -9,7 +9,7 @@ class AppInfo {
   /// What changed in this build, in plain words: Google Play's "What's new"
   /// (tool/play/whats_new.py). Replace it every build.
   static const latest =
-      'Darkroom 98 photo viewer: bigger Send, Rename, Delete and Favourite buttons, laid out for portrait and landscape.';
+      'Darkroom 98: bigger photo viewer buttons, a gentler 640 x 480, and the monitor slides away straight off while its screen switches off.';
 
   /// Help > About: the main ideas of each version, a few words each.
   static const revisions = <(String, List<String>)>[

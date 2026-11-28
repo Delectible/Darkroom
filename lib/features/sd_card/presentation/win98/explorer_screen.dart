@@ -1639,12 +1639,13 @@ class _SwipeToCloseState extends ConsumerState<_SwipeToClose> {
   double _d = 0;
   bool _closing = false, _canPop = false;
 
-  /// The screen switches off, then the route goes.
+  /// The screen starts switching off and the monitor slides away at once,
+  /// the switch-off playing on as it goes.
   Future<void> _close() async {
     if (_closing) return;
     _closing = true;
-    await widget.off.currentState?.run();
-    if (!mounted) return;
+    final off = widget.off.currentState?.run();
+    if (off != null) unawaited(off);
     setState(() => _canPop = true);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) Navigator.of(context).maybePop();

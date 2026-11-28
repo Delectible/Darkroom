@@ -24,8 +24,9 @@ import '../../../camera/application/camera_ui_state.dart' show PrefKeys;
 /// chunkier pixels ([pixel]); 1024 x 768, the default, is the picture as
 /// made (no filter).
 enum Win98Res {
-  vga('640 x 480', portrait: 1.55, landscape: 1.22, scanline: 3.0, pixel: 2.6),
-  svga('800 x 600', portrait: 1.42, landscape: 1.12, scanline: 2.5, pixel: 1.7),
+  // (2.4.10: the old 800 is the new 640, the chunkiest; 800 in between)
+  vga('640 x 480', portrait: 1.42, landscape: 1.12, scanline: 2.5, pixel: 1.7),
+  svga('800 x 600', portrait: 1.36, landscape: 1.06, scanline: 2.25, pixel: 0.9),
   xga('1024 x 768', portrait: 1.3, landscape: 1.0, scanline: 2.0, pixel: 0);
 
   const Win98Res(
@@ -531,6 +532,10 @@ class CrtGlassPainter extends CustomPainter {
 class CrtWarp extends StatefulWidget {
   const CrtWarp({super.key, required this.on, required this.child, this.inPlace = false});
 
+  /// Set while the monitor switches off on its way out ([CrtSwitchOff]):
+  /// it leaves flat and live instead of as a bulged still.
+  static bool flatExit = false;
+
   final bool on;
 
   /// The screen stays where it is while its route animates (a window
@@ -630,6 +635,12 @@ class _CrtWarpState extends State<CrtWarp> {
         WidgetsBinding.instance.addPostFrameCallback((_) => _snap());
       case AnimationStatus.reverse:
         _live = false;
+        // switching off as it goes: the live (flat) screen, so the
+        // switch-off keeps playing while it slides away
+        if (CrtWarp.flatExit) {
+          _drop();
+          return;
+        }
         _snap();
       case AnimationStatus.dismissed:
         break;

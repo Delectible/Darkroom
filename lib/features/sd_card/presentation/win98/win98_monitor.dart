@@ -690,9 +690,8 @@ class _BezelPainter extends CustomPainter {
       lamp,
       7,
       Paint()
-        ..shader = const RadialGradient(
-          colors: [Color(0x667CFF6B), Color(0x007CFF6B)],
-        ).createShader(Rect.fromCircle(center: lamp, radius: 7)),
+        ..shader = const RadialGradient(colors: [Color(0x667CFF6B), Color(0x007CFF6B)])
+            .createShader(Rect.fromCircle(center: lamp, radius: 7)),
     );
     final badge = TextPainter(
       text: TextSpan(

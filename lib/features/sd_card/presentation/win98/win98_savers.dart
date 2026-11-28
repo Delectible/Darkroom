@@ -210,6 +210,7 @@ class _Pipes {
   }
 
   final math.Random rng;
+
   /// The box of space, cells across, up and deep: shaped like the screen.
   int nx = 16, ny = 12, nz = 12;
   static const lanes = 3, perScreen = 21, steps = 18.0;
@@ -256,7 +257,7 @@ class _Pipes {
     _reset();
   }
 
-    bool _free(_V3 p) =>
+  bool _free(_V3 p) =>
       p.x >= 0 && p.x < nx && p.y >= 0 && p.y < ny && p.z >= 0 && p.z < nz && !_used.contains(p);
 
   void _reset() {

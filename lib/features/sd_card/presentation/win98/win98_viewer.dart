@@ -153,78 +153,51 @@ class _Win98ViewerScreenState extends ConsumerState<Win98ViewerScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: Row(
-                        children: [
-                          _NavButton(glyph: Win98Glyph.left, onPressed: _index > 0 ? () => _go(-1) : null),
-                          const SizedBox(width: 3),
-                          _NavButton(
-                            glyph: Win98Glyph.right,
-                            onPressed: _index < _items.length - 1 ? () => _go(1) : null,
-                          ),
-                          const SizedBox(width: 8),
-                          // (its full width: the buttons shrink to fit around it)
-                          Text(
-                            '${_index + 1} of ${_items.length}',
-                            maxLines: 1,
-                            softWrap: false,
-                            style: W98.text,
-                          ),
-                          const SizedBox(width: 8),
-                          // (large fonts: the three shrink to fit, not run off)
-                          Expanded(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerRight,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Builder(
-                                    builder: (anchor) => Win98Button(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                      onPressed: () => unawaited(shareMedia(anchor, item)),
-                                      child: const Text('Send'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Win98Button(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                    onPressed: _rename,
-                                    child: const Text('Rename'),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Win98Button(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                    onPressed: _delete,
-                                    child: const Text('Delete'),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Win98Button(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                    toggled: ref.watch(favouritesProvider).contains(item.id),
-                                    onPressed: () => ref.read(favouritesProvider.notifier).toggle(item.id),
-                                    child: const Text('Favourite'),
-                                  ),
-                                  if (ref.watch(sampleFeedButtonProvider) &&
-                                      !item.isVideo &&
-                                      item.outputPath != null) ...[
-                                    const SizedBox(width: 3),
-                                    Win98Button(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                                      onPressed: () {
-                                        final on = ref.read(sampleFeedProvider) == item.outputPath;
-                                        ref
-                                            .read(sampleFeedProvider.notifier)
-                                            .use(on ? null : item.outputPath);
-                                      },
-                                      child: Text(
-                                        ref.watch(sampleFeedProvider) == item.outputPath ? 'Unfeed' : 'Feed',
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
+                      child: _Toolbar(
+                        previous: _index > 0 ? () => _go(-1) : null,
+                        next: _index < _items.length - 1 ? () => _go(1) : null,
+                        position: '${_index + 1} of ${_items.length}',
+                        actions: [
+                          Builder(
+                            builder: (anchor) => Win98Button(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              onPressed: () => unawaited(shareMedia(anchor, item)),
+                              child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Send')),
                             ),
                           ),
+                          Win98Button(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            onPressed: _rename,
+                            child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Rename')),
+                          ),
+                          Win98Button(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            onPressed: _delete,
+                            child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Delete')),
+                          ),
+                          Win98Button(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            toggled: ref.watch(favouritesProvider).contains(item.id),
+                            onPressed: () => ref.read(favouritesProvider.notifier).toggle(item.id),
+                            child: const FittedBox(fit: BoxFit.scaleDown, child: Text('Favourite')),
+                          ),
+                          if (ref.watch(sampleFeedButtonProvider) &&
+                              !item.isVideo &&
+                              item.outputPath != null) ...[
+                            Win98Button(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                              onPressed: () {
+                                final on = ref.read(sampleFeedProvider) == item.outputPath;
+                                ref.read(sampleFeedProvider.notifier).use(on ? null : item.outputPath);
+                              },
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  ref.watch(sampleFeedProvider) == item.outputPath ? 'Unfeed' : 'Feed',
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -370,6 +343,80 @@ class _StatusBar extends StatelessWidget {
       },
     );
   }
+}
+
+/// The viewer's toolbar. Wide enough (landscape): the arrows, the count
+/// and the actions in one row. Otherwise (portrait, large fonts, 640 x 480)
+/// the arrows and count on top and the actions in a row of their own
+/// underneath (each sized to its label), each a full-height button (their labels shrink a little if
+/// they must, never the buttons).
+class _Toolbar extends StatelessWidget {
+  const _Toolbar({required this.previous, required this.next, required this.position, required this.actions});
+
+  final VoidCallback? previous, next;
+  final String position;
+  final List<Widget> actions;
+
+  /// The actions' labels at full size, in a row (for the one-row test).
+  static double _labelsWidth(BuildContext context, List<Widget> actions) {
+    var w = 0.0;
+    final scaler = MediaQuery.textScalerOf(context);
+    final style = DefaultTextStyle.of(context).style;
+    const labels = ['Send', 'Rename', 'Delete', 'Favourite', 'Unfeed'];
+    for (final label in labels.take(actions.length)) {
+      final tp = TextPainter(
+        text: TextSpan(text: label, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+      )..layout();
+      w += tp.width + 24; // the button's padding and bevel
+    }
+    return w + 3 * (actions.length - 1);
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final arrows = [
+        _NavButton(glyph: Win98Glyph.left, onPressed: previous),
+        const SizedBox(width: 3),
+        _NavButton(glyph: Win98Glyph.right, onPressed: next),
+        const SizedBox(width: 8),
+        Text(position, maxLines: 1, softWrap: false),
+      ];
+      final count = TextPainter(
+        text: TextSpan(text: position, style: DefaultTextStyle.of(context).style),
+        textDirection: TextDirection.ltr,
+        textScaler: MediaQuery.textScalerOf(context),
+      )..layout();
+      final oneRow = 46 * 2 + 3 + 8 + count.width + 12 + _labelsWidth(context, actions) <= box.maxWidth;
+      if (oneRow) {
+        return Row(
+          children: [
+            ...arrows,
+            const Spacer(),
+            for (final (i, a) in actions.indexed) ...[if (i > 0) const SizedBox(width: 3), a],
+          ],
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(children: arrows),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              // (each as wide as its label needs: Favourite gets the most)
+              for (final (i, a) in actions.indexed) ...[
+                if (i > 0) const SizedBox(width: 3),
+                Expanded(flex: const [4, 6, 6, 9, 6][i.clamp(0, 4)] + 3, child: a),
+              ],
+            ],
+          ),
+        ],
+      );
+    },
+  );
 }
 
 /// Chunky arrow button for the toolbar (big enough for a thumb).
